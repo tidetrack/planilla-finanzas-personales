@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Transacción - Tidetrack</title>
+
+    <!-- GOOGLE FONTS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- MATERIAL SYMBOLS -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+
+    <!-- EMBEDDED CSS - Ocean Theme (Matching Managers) -->
+    <style>
+        /* ===== CSS VARIABLES ===== */
+        :root {
+            --ocean-bg: #eff2f9;
+            --ocean-card: #f4f7fc;
+            --ocean-primary: #39444d;
+            --ocean-secondary: #6e7f8d;
+            --accent-success: #27ae60;
+            --accent-error: #e74c3c;
+            --accent-warning: #f39c12;
+        }
+
+        /* ===== RESET ===== */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: 16px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            color: var(--ocean-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-family: inherit;
+        }
+
+        /* ===== MAIN CONTAINER ===== */
+        .transaction-container {
+            width: 750px;
+            height: 900px;
+            background-color: var(--ocean-bg);
+            border-radius: 2.5rem;
+            box-shadow: 0 40px 100px rgba(57, 68, 77, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            z-index: 10000;
+        }
+
+        /* ===== HEADER ===== */
+        .transaction-header {
+            padding: 2rem 2.5rem 1.5rem;
+            border-bottom: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 2rem;
+        }
+
+        .header-text {
+            flex: 1;
+        }
+
+        .header-text h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--ocean-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .header-text p {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--ocean-secondary);
+        }
+
+        .btn-back {
+            padding: 0.625rem 1.25rem;
+            background-color: var(--ocean-primary);
+            color: #ffffff;
+            border-radius: 1rem;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(57, 68, 77, 0.08);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .btn-back:hover {
+            background-color: #2c3640;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(57, 68, 77, 0.3);
+        }
+
+        .btn-back .material-symbols-outlined {
+            font-size: 1rem;
+        }
+
+        /* ===== CONTENT ===== */
+        .transaction-content {
+            flex: 1;
+            padding: 2rem 2.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .transaction-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* ===== FORM SECTION ===== */
+        .form-section {
+            background-color: var(--ocean-card);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 10px 25px rgba(57, 68, 77, 0.05),
+                inset 2px 2px 5px rgba(255, 255, 255, 0.8);
+        }
+
+        .form-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--ocean-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        /* ===== FORM ===== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.625rem;
+        }
+
+        .form-field.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .field-label {
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ocean-secondary);
+        }
+
+        .field-label-required::after {
+            content: ' *';
+            color: var(--accent-error);
+        }
+
+        .field-input,
+        .field-select,
+        .field-textarea {
+            width: 100%;
+            background-color: #ffffff;
+            border: 2px solid transparent;
+            color: var(--ocean-primary);
+            border-radius: 0.875rem;
+            padding: 0.875rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(57, 68, 77, 0.04);
+        }
+
+        .field-input:focus,
+        .field-select:focus,
+        .field-textarea:focus {
+            border-color: var(--ocean-primary);
+            outline: none;
+            box-shadow: 0 4px 12px rgba(57, 68, 77, 0.1);
+        }
+
+        .field-input.error,
+        .field-select.error {
+            border-color: var(--accent-error);
+        }
+
+        .field-select {
+            appearance: none;
+            cursor: pointer;
+            padding-right: 2.5rem;
+            background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%236e7f8d' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+        }
+
+        .field-textarea {
+            resize: none;
+            min-height: 5rem;
+            font-family: inherit;
+        }
+
+        .field-input-wrapper {
+            position: relative;
+        }
+
+        .field-icon {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--ocean-secondary);
+            opacity: 0.5;
+            pointer-events: none;
+            font-size: 1.125rem;
+        }
+
+        .field-error {
+            display: none;
+            font-size: 0.75rem;
+            color: var(--accent-error);
+            margin-top: 0.25rem;
+        }
+
+        .field-error.show {
+            display: block;
+        }
+
+        /* FX Warning */
+        .fx-warning {
+            background: rgba(243, 156, 18, 0.1);
+            border-left: 3px solid var(--accent-warning);
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--ocean-secondary);
+        }
+
+        /* ===== FORM ACTIONS ===== */
+        .form-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 1rem;
+            padding-top: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.875rem 1.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 0.875rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            background-color: transparent;
+            color: var(--ocean-secondary);
+            border: 1px solid rgba(110, 127, 141, 0.2);
+        }
+
+        .btn-cancel:hover {
+            background-color: rgba(110, 127, 141, 0.05);
+        }
+
+        .btn-save {
+            flex: 1;
+            background-color: var(--ocean-primary);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(57, 68, 77, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-save:hover {
+            background-color: #2c3640;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(57, 68, 77, 0.2);
+        }
+
+        .btn-save:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ===== ALERT ===== */
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 0.875rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            margin-bottom: 0rem;
+        }
+
+        .alert-success {
+            background: rgba(39, 174, 96, 0.1);
+            color: var(--accent-success);
+            border-left: 3px solid var(--accent-success);
+        }
+
+        .alert-error {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--accent-error);
+            border-left: 3px solid var(--accent-error);
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        #alert-container {
+            display: none;
+        }
+
+        #alert-container.show {
+            display: block;
+        }
+
+        /* ===== SUCCESS MODAL ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(57, 68, 77, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--ocean-card);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(57, 68, 77, 0.3);
+            text-align: center;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+            background: var(--accent-success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .modal-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--ocean-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .modal-btn {
+            padding: 0.875rem 1.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 0.875rem;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .modal-btn-primary {
+            background-color: var(--ocean-primary);
+            color: #ffffff;
+        }
+
+        .modal-btn-primary:hover {
+            background-color: #2c3640;
+        }
+
+        .modal-btn-secondary {
+            background-color: transparent;
+            color: var(--ocean-secondary);
+            border: 1px solid rgba(110, 127, 141, 0.2);
+        }
+
+        .modal-btn-secondary:hover {
+            background-color: rgba(110, 127, 141, 0.05);
+        }
+
+        /* ===== SPINNER ===== */
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .transaction-container {
+                width: 100%;
+                height: 100vh;
+                border-radius: 0;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .transaction-header {
+                padding: 1.5rem 1.5rem 1rem;
+                flex-direction: column-reverse;
+                gap: 1rem;
+            }
+
+            .btn-back {
+                align-self: flex-start;
+            }
+
+            .transaction-content {
+                padding: 1.5rem;
+            }
+
+            .form-section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- MAIN CONTAINER -->
+    <div class="transaction-container">
+        <!-- HEADER -->
+        <div class="transaction-header">
+            <div class="header-text">
+                <h1>Nueva Transacción</h1>
+                <p>Registra ingresos y egresos de forma rápida</p>
+            </div>
+            <button class="btn-back" onclick="backToDashboard()">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Dashboard
+            </button>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="transaction-content">
+            <!-- ALERT CONTAINER -->
+            <div id="alert-container"></div>
+
+            <!-- FORM SECTION -->
+            <div class="form-section">
+                <div class="form-title">Detalles de la Transacción</div>
+                <form id="transaction-form" class="form-grid" onsubmit="event.preventDefault(); submitTransaction();"
+                    autocomplete="off">
+                    <!-- Fecha -->
+                    <div class="form-field">
+                        <label class="field-label field-label-required" for="fecha">Fecha</label>
+                        <div class="field-input-wrapper">
+                            <input type="date" id="fecha" class="field-input" required>
+                            <span class="material-symbols-outlined field-icon">calendar_today</span>
+                        </div>
+                        <span id="fecha_error" class="field-error"></span>
+                    </div>
+
+                    <!-- Monto -->
+                    <div class="form-field">
+                        <label class="field-label field-label-required" for="monto">Monto</label>
+                        <input type="number" id="monto" class="field-input" placeholder="0.00" step="0.01" min="0.01"
+                            required style="font-weight: 700;">
+                        <span id="monto_error" class="field-error"></span>
+                    </div>
+
+                    <!-- Moneda -->
+                    <div class="form-field">
+                        <label class="field-label field-label-required" for="moneda_id">Moneda</label>
+                        <select id="moneda_id" class="field-select" required onchange="onMonedaChange()">
+                            <option value="">Cargando...</option>
+                        </select>
+                        <span id="moneda_id_error" class="field-error"></span>
+                    </div>
+
+                    <!-- Tipo -->
+                    <div class="form-field">
+                        <label class="field-label field-label-required" for="sentido">Tipo</label>
+                        <select id="sentido" class="field-select" required onchange="onSentidoChange()">
+                            <option value="Egreso">Egreso</option>
+                            <option value="Ingreso">Ingreso</option>
+                        </select>
+                        <span id="sentido_error" class="field-error"></span>
+                    </div>
+
+                    <!-- Cuenta / Categoría -->
+                    <div class="form-field full-width">
+                        <label class="field-label field-label-required" for="cuenta_id">Cuenta / Categoría</label>
+                        <select id="cuenta_id" class="field-select" required>
+                            <option value="">Seleccione una cuenta...</option>
+                        </select>
+                        <span id="cuenta_id_error" class="field-error"></span>
+                    </div>
+
+                    <!-- Medio de Pago -->
+                    <div class="form-field full-width">
+                        <label class="field-label field-label-required" for="medio_id">Medio de Pago</label>
+                        <select id="medio_id" class="field-select" required>
+                            <option value="">Seleccione un medio...</option>
+                        </select>
+                        <span id="medio_id_error" class="field-error"></span>
+                    </div>
+
+                    <!-- FX (Conditional) -->
+                    <div class="form-field full-width" id="fx_field" style="display: none;">
+                        <label class="field-label field-label-required" for="fx_id">Tipo de Cambio</label>
+                        <select id="fx_id" class="field-select">
+                            <option value="">Cargando...</option>
+                        </select>
+                        <div class="fx-warning">
+                            Transacción en moneda extranjera requiere tipo de cambio
+                        </div>
+                        <span id="fx_id_error" class="field-error"></span>
+                    </div>
+
+                    <!-- Nota -->
+                    <div class="form-field full-width">
+                        <label class="field-label" for="nota">Nota (Opcional)</label>
+                        <textarea id="nota" class="field-textarea"
+                            placeholder="Escribe detalles adicionales aquí..."></textarea>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-cancel" onclick="cancelForm()">Cancelar</button>
+                        <button type="submit" id="submit-btn" class="btn btn-save">
+                            <span id="btn-text">Guardar</span>
+                            <span id="spinner" class="spinner" style="display: none;"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUCCESS MODAL -->
+    <div id="success-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="success-icon">✓</div>
+            <div class="modal-title">Transacción registrada exitosamente</div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-primary" onclick="resetForm()">Nueva Transacción</button>
+                <button class="modal-btn modal-btn-secondary" onclick="backToDashboard()">Ir al Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EMBEDDED JAVASCRIPT -->
+    <script>
+        // ===== GLOBAL STATE =====
+        let baseMonedaId = null;
+        let formData = {
+            monedas: [],
+            cuentas: [],
+            medios: [],
+            fxRates: []
+        };
+
+        // ===== INITIALIZATION =====
+        window.onload = function () {
+            loadFormData();
+            setDefaultDate();
+        };
+
+        function loadFormData() {
+            google.script.run
+                .withSuccessHandler(onFormDataLoaded)
+                .withFailureHandler(onError)
+                .getFormData();
+        }
+
+        function onFormDataLoaded(data) {
+            formData = data;
+            baseMonedaId = data.baseMoneda;
+            populateMonedas();
+            populateCuentas();
+            populateMedios();
+        }
+
+        function setDefaultDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('fecha').value = today;
+        }
+
+        // ===== POPULATE DROPDOWNS =====
+        function populateMonedas() {
+            const select = document.getElementById('moneda_id');
+            select.innerHTML = '<option value="">Selecciona...</option>' +
+                formData.monedas.map(m => `<option value="${m.moneda_id}">${m.simbolo} ${m.nombre_moneda}</option>`).join('');
+
+            // Set default to base moneda
+            if (baseMonedaId) {
+                select.value = baseMonedaId;
+            }
+        }
+
+        function populateCuentas() {
+            const select = document.getElementById('cuenta_id');
+            const sentido = document.getElementById('sentido').value;
+
+            // Filter cuentas by sentido
+            const filteredCuentas = formData.cuentas.filter(c => {
+                if (sentido === 'Ingreso') return c.macro_tipo === 'Ingreso';
+                else return c.macro_tipo !== 'Ingreso';
+            });
+
+            select.innerHTML = '<option value="">Seleccione una cuenta...</option>' +
+                filteredCuentas.map(c => `<option value="${c.cuenta_id}">${c.nombre_cuentas}</option>`).join('');
+        }
+
+        function populateMedios() {
+            const select = document.getElementById('medio_id');
+            select.innerHTML = '<option value="">Seleccione un medio...</option>' +
+                formData.medios.map(m => `<option value="${m.medio_id}">${m.nombre_medio}</option>`).join('');
+        }
+
+        function populateFxRates() {
+            const monedaId = document.getElementById('moneda_id').value;
+            google.script.run
+                .withSuccessHandler(onFxRatesLoaded)
+                .withFailureHandler(onError)
+                .getLatestRatesForMoneda(monedaId);
+        }
+
+        function onFxRatesLoaded(rates) {
+            const select = document.getElementById('fx_id');
+            if (!rates || rates.length === 0) {
+                select.innerHTML = '<option value="">No hay tipos de cambio disponibles</option>';
+            } else {
+                select.innerHTML = '<option value="">Selecciona...</option>' +
+                    rates.map(r => {
+                        const fecha = new Date(r.fecha).toLocaleDateString('es-AR');
+                        return `<option value="${r.fx_id}">${r.par} - ${r.tasa} (${r.fuente} - ${fecha})</option>`;
+                    }).join('');
+            }
+        }
+
+        // ===== EVENT HANDLERS =====
+        function onMonedaChange() {
+            const monedaId = document.getElementById('moneda_id').value;
+            const fxField = document.getElementById('fx_field');
+            const fxSelect = document.getElementById('fx_id');
+
+            if (monedaId && monedaId !== baseMonedaId) {
+                fxField.style.display = 'block';
+                fxSelect.setAttribute('required', 'true');
+                populateFxRates();
+            } else {
+                fxField.style.display = 'none';
+                fxSelect.removeAttribute('required');
+            }
+            clearFieldError('moneda_id');
+        }
+
+        function onSentidoChange() {
+            populateCuentas();
+            clearFieldError('sentido');
+        }
+
+        // ===== VALIDATION =====
+        function validateRequired(value, fieldName) {
+            if (!value || value.toString().trim() === '') return `${fieldName} es obligatorio`;
+            return null;
+        }
+
+        function validatePositive(value, fieldName) {
+            const num = parseFloat(value);
+            if (isNaN(num) || num <= 0) return `${fieldName} debe ser mayor a 0`;
+            return null;
+        }
+
+        function validateDate(value, fieldName) {
+            if (!value) return `${fieldName} es obligatoria`;
+            const date = new Date(value);
+            if (isNaN(date.getTime())) return `${fieldName} tiene formato inválido`;
+            return null;
+        }
+
+        function showFieldError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            const errorSpan = document.getElementById(fieldId + '_error');
+            if (field) field.classList.add('error');
+            if (errorSpan) {
+                errorSpan.textContent = message;
+                errorSpan.classList.add('show');
+            }
+        }
+
+        function clearFieldError(fieldId) {
+            const field = document.getElementById(fieldId);
+            const errorSpan = document.getElementById(fieldId + '_error');
+            if (field) field.classList.remove('error');
+            if (errorSpan) {
+                errorSpan.textContent = '';
+                errorSpan.classList.remove('show');
+            }
+        }
+
+        function clearAllErrors() {
+            document.querySelectorAll('.field-error').forEach(span => {
+                span.textContent = '';
+                span.classList.remove('show');
+            });
+            document.querySelectorAll('.error').forEach(input => {
+                input.classList.remove('error');
+            });
+        }
+
+        function validateForm() {
+            clearAllErrors();
+            let isValid = true;
+
+            // Validate fecha
+            const fecha = document.getElementById('fecha').value;
+            const fechaError = validateDate(fecha, 'Fecha');
+            if (fechaError) {
+                showFieldError('fecha', fechaError);
+                isValid = false;
+            }
+
+            // Validate monto
+            const monto = document.getElementById('monto').value;
+            const montoError = validatePositive(monto, 'Monto');
+            if (montoError) {
+                showFieldError('monto', montoError);
+                isValid = false;
+            }
+
+            // Validate moneda_id
+            const monedaId = document.getElementById('moneda_id').value;
+            const monedaError = validateRequired(monedaId, 'Moneda');
+            if (monedaError) {
+                showFieldError('moneda_id', monedaError);
+                isValid = false;
+            }
+
+            // Validate sentido
+            const sentido = document.getElementById('sentido').value;
+            const sentidoError = validateRequired(sentido, 'Tipo');
+            if (sentidoError) {
+                showFieldError('sentido', sentidoError);
+                isValid = false;
+            }
+
+            // Validate cuenta_id
+            const cuentaId = document.getElementById('cuenta_id').value;
+            const cuentaError = validateRequired(cuentaId, 'Cuenta');
+            if (cuentaError) {
+                showFieldError('cuenta_id', cuentaError);
+                isValid = false;
+            }
+
+            // Validate medio_id
+            const medioId = document.getElementById('medio_id').value;
+            const medioError = validateRequired(medioId, 'Medio de Pago');
+            if (medioError) {
+                showFieldError('medio_id', medioError);
+                isValid = false;
+            }
+
+            // Validate fx_id (conditional)
+            const fxField = document.getElementById('fx_field');
+            if (fxField.style.display !== 'none') {
+                const fxId = document.getElementById('fx_id').value;
+                const fxError = validateRequired(fxId, 'Tipo de Cambio');
+                if (fxError) {
+                    showFieldError('fx_id', fxError);
+                    isValid = false;
+                }
+            }
+
+            return isValid;
+        }
+
+        // ===== SUBMIT =====
+        function submitTransaction() {
+            if (!validateForm()) {
+                showAlert('Por favor corrige los errores en el formulario', 'error');
+                return;
+            }
+
+            setLoading(true);
+
+            const data = {
+                fecha: document.getElementById('fecha').value,
+                monto: parseFloat(document.getElementById('monto').value),
+                moneda_id: document.getElementById('moneda_id').value,
+                sentido: document.getElementById('sentido').value,
+                cuenta_id: document.getElementById('cuenta_id').value,
+                medio_id: document.getElementById('medio_id').value,
+                fx_id: document.getElementById('fx_id').value || null,
+                nota: document.getElementById('nota').value.trim() || ''
+            };
+
+            google.script.run
+                .withSuccessHandler(onSubmitSuccess)
+                .withFailureHandler(onSubmitError)
+                .createTransaccionFromUI(data);
+        }
+
+        function onSubmitSuccess(response) {
+            setLoading(false);
+            if (response.success) {
+                showSuccessModal();
+            } else {
+                showAlert(response.error || 'Error al guardar la transacción', 'error');
+            }
+        }
+
+        function onSubmitError(error) {
+            setLoading(false);
+            showAlert('Error: ' + error.message, 'error');
+        }
+
+        function setLoading(isLoading) {
+            const btn = document.getElementById('submit-btn');
+            const btnText = document.getElementById('btn-text');
+            const spinner = document.getElementById('spinner');
+
+            btn.disabled = isLoading;
+            btnText.style.display = isLoading ? 'none' : 'inline';
+            spinner.style.display = isLoading ? 'inline-block' : 'none';
+        }
+
+        // ===== FORM ACTIONS =====
+        function cancelForm() {
+            if (confirm('¿Estás seguro de cancelar? Se perderán los datos ingresados.')) {
+                resetForm();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('transaction-form').reset();
+            clearAllErrors();
+            hideAlert();
+            hideSuccessModal();
+            setDefaultDate();
+
+            // Reset to base moneda
+            if (baseMonedaId) {
+                document.getElementById('moneda_id').value = baseMonedaId;
+            }
+
+            // Reset sentido to Egreso
+            document.getElementById('sentido').value = 'Egreso';
+            onSentidoChange();
+            onMonedaChange();
+        }
+
+        function backToDashboard() {
+            google.script.run.showMainDashboard();
+            google.script.host.close();
+        }
+
+        // ===== ALERTS =====
+        function showAlert(message, type) {
+            const container = document.getElementById('alert-container');
+            const iconName = type === 'success' ? 'check_circle' : 'error';
+            const className = type === 'success' ? 'alert-success' : 'alert-error';
+
+            container.innerHTML = `
+                <div class="alert ${className}">
+                    <span class="material-symbols-outlined alert-icon">${iconName}</span>
+                    <span>${message}</span>
+                </div>
+            `;
+            container.classList.add('show');
+
+            // Auto-hide after 5 seconds
+            setTimeout(hideAlert, 5000);
+        }
+
+        function hideAlert() {
+            const container = document.getElementById('alert-container');
+            container.classList.remove('show');
+        }
+
+        // ===== SUCCESS MODAL =====
+        function showSuccessModal() {
+            document.getElementById('success-modal').classList.add('active');
+        }
+
+        function hideSuccessModal() {
+            document.getElementById('success-modal').classList.remove('active');
+        }
+
+        // ===== ERROR HANDLER =====
+        function onError(error) {
+            console.error('Error:', error);
+            showAlert('Error: ' + error.message, 'error');
+        }
+    </script>
+</body>
+
+</html>
