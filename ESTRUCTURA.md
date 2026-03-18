@@ -8,6 +8,7 @@ Este documento describe la organización de carpetas del proyecto.
 
 ```
 planilla-finanzas-personales/  # Tid etrack Personal Finance Tracker
+├── 📁 scripts/                  # Scripts locales auxiliares (.js)
 │
 ├── 📁 src/                     # Código fuente
 │   ├── Bloques .js (00-12, 98-99) # 16 módulos backend (v0.4.0)
@@ -22,6 +23,7 @@ planilla-finanzas-personales/  # Tid etrack Personal Finance Tracker
 │   │   ├── GUIA_ARQUITECTURA.md      # ADRs y arquitectura técnica
 │   │   ├── GUIA_MODULOS.md           # Documentación de módulos .js
 │   │   ├── HISTORIAL_DESARROLLO.md   # Evolución cronológica completa
+│   │   ├── planilla-reinversión.md   # Documento base de reinversión del alcance
 │   │   ├── RESUMEN_PROYECTO.md       # Visión general de Tidetrack
 │   │   ├── CONTEXTO_NEGOCIO.md       # Círculo de Oro, modelo de negocio
 │   │   ├── ROADMAP_PRODUCTO.md       # Etapas y prioridades
@@ -86,6 +88,7 @@ Documentos que se mantienen actualizados:
 | `GUIA_ARQUITECTURA.md` | ADRs y decisiones de arquitectura técnica |
 | `GUIA_MODULOS.md` | Documentación técnica de módulos .js |
 | `HISTORIAL_DESARROLLO.md` | Evolución cronológica del proyecto |
+| `planilla-reinversión.md` | Hito de reinversión: Principios de simplificación y modularidad |
 | `RESUMEN_PROYECTO.md` | Visión, propuesta de valor, diferenciadores |
 | `CONTEXTO_NEGOCIO.md` | Círculo de oro, modelo de negocio, estrategia |
 | `ROADMAP_PRODUCTO.md` | Etapas de desarrollo y prioridades |

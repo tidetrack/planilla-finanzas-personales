@@ -1,0 +1,7 @@
+node_modules/
+.clasp/
+.claspignore
+*.command
+package-lock.json
+# Apps Script metadata if desired to ignore local ones
+# .clasp.json

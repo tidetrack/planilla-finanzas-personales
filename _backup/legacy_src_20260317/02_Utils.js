@@ -26,7 +26,59 @@ function generateId() {
     return `${timestamp}-${random}`;
 }
 
+/**
+ * Genera el próximo ID secuencial para una tabla (SKU)
+ * @param {string} tableName Nombre de la tabla
+ * @param {string} prefix Prefijo del SKU (ej: 'MON', 'MED')
+ * @param {number} padding Cantidad de dígitos (default: 3)
+ * @returns {string} Próximo ID (ej: 'MON-004')
+ */
+function generateNextId(tableName, prefix, padding = 3) {
+    try {
+        // Obtener datos de la tabla
+        const data = getTableData(tableName);
 
+        if (data.length === 0) {
+            // Primera entrada
+            const firstNumber = '0'.repeat(padding - 1) + '1';
+            return `${prefix}-${firstNumber}`;
+        }
+
+        // Obtener todos los IDs existentes
+        const colIndexes = getColumnIndexes(tableName);
+        const idColumnIndex = 0; // Primera columna siempre es el ID
+
+        let maxNumber = 0;
+
+        data.forEach(row => {
+            const id = row[idColumnIndex];
+            if (id && id.toString().startsWith(prefix)) {
+                // Extraer número del SKU (ej: 'MON-003' -> 3)
+                const parts = id.toString().split('-');
+                if (parts.length === 2) {
+                    const number = parseInt(parts[1], 10);
+                    if (!isNaN(number) && number > maxNumber) {
+                        maxNumber = number;
+                    }
+                }
+            }
+        });
+
+        // Siguiente número
+        const nextNumber = maxNumber + 1;
+        const paddedNumber = nextNumber.toString().padStart(padding, '0');
+
+        return `${prefix}-${paddedNumber}`;
+    } catch (e) {
+        logError('Error en generateNextId', {
+            tableName,
+            prefix,
+            error: e.toString()
+        });
+        // Fallback: timestamp-based
+        return `${prefix}-${Date.now()}`;
+    }
+}
 
 /**
  * Genera un ID simple numérico secuencial

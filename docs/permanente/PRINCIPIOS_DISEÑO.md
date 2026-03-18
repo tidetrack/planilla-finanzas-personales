@@ -123,6 +123,13 @@ El modo viaje no es un "feature simpático". Es una **prueba de estrés para el 
 
 **Objetivo:** El histórico no se "mueve" según cambie una cotización futura
 
+#### 4. Flexibilidad Bi-monetaria en el Registro (Moneda por Defecto)
+
+**Regla:** Las cuentas se crean en el Plan de Cuentas asociadas a una única moneda "por defecto" (la de mayor uso) para acelerar la carga, pero el usuario debe poder sobrescribir libremente dicha moneda al momento de registrar la transacción particular.
+
+❌ No duplicar conceptos o cuentas (evitar "Sueldo ARS" y "Sueldo USD").
+✅ Un solo concepto maestral ("Sueldo") que autocompleta la moneda más probable, pero permite iterarla con 1 clic.
+
 ### Pipeline de Conversión
 
 ```

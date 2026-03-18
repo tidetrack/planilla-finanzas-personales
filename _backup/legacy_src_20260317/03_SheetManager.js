@@ -42,7 +42,7 @@ function getSheet(sheetName) {
  */
 function getTableRange(tableName) {
     const config = RANGES[tableName];
-
+    
     if (!config) {
         throw new Error(`Tabla no configurada: ${tableName}`);
     }

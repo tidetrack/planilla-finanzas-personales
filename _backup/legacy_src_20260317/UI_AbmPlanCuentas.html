@@ -81,26 +81,9 @@
         <div class="spinner"></div>
     </div>
 
-    <div class="header" id="headerSection">
+    <div class="header">
         <h1>Plan de Cuentas</h1>
         <p>Alta, Baja y Modificación de Catálogos</p>
-    </div>
-
-    <!-- UI: Estado de Éxito (Oculto por defecto) -->
-    <div id="successState" class="hidden" style="text-align: center; padding: 32px 16px;">
-        <div style="background-color: var(--success-bg); color: var(--success); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px auto;">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-        </div>
-        <h2 style="color: var(--primary-color); margin-bottom: 8px;">¡Registro Creado!</h2>
-        <p id="successMessage" style="color: var(--text-secondary); margin-bottom: 32px; font-size: 15px;"></p>
-        
-        <div style="display: flex; gap: 12px; justify-content: center;">
-            <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cerrar Ventana</button>
-            <button type="button" class="btn btn-primary" onclick="resetFormForNew()">Agregar Otro</button>
-        </div>
     </div>
 
     <form id="abmForm" onsubmit="handleFormSubmit(event)">
@@ -116,21 +99,12 @@
                     <option value="COSTOS_VARIABLES">Costos Variables</option>
                     <option value="MEDIOS_PAGO">Medios Bancarios</option>
                     <option value="PROYECTOS">Proyectos</option>
+                    <option value="MONEDAS">Monedas</option>
                 </select>
             </div>
         </div>
 
         <hr class="divider">
-
-        <!-- Mensaje de Error (Oculto por defecto) -->
-        <div id="errorAlert" class="hidden" style="background-color: var(--danger-bg); color: #DC2626; padding: 12px 16px; border-radius: var(--border-radius-md); margin-bottom: 24px; font-size: 14px; border: 1px solid #F87171; display: flex; align-items: flex-start; gap: 8px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            <div id="errorMessageText" style="flex-grow: 1;"></div>
-        </div>
 
         <!-- Contenedor Dinámico para cada caso -->
         <div id="dynamicFields" class="dynamic-fields hidden">
@@ -141,7 +115,12 @@
                 <input type="text" id="nombre" name="nombre" class="form-input" placeholder="Ej. Sueldo, Viaje al Sur, Dólar MEP..." required>
             </div>
 
-            <!-- Campo Específico para Proyectos -->
+            <!-- Campos Específicos para Monedas y Proyectos -->
+            <div id="groupAbreviacion" class="form-group hidden">
+                <label for="abreviacion" class="form-label">Abreviación (Símbolo o ISO)</label>
+                <input type="text" id="abreviacion" name="abreviacion" class="form-input" placeholder="Ej. USD, ARS, €, CAD">
+            </div>
+
             <div id="groupTipoProyecto" class="form-group hidden">
                 <label for="tipoProyecto" class="form-label">Tipo de Proyecto</label>
                 <input type="text" id="tipoProyecto" name="tipoProyecto" class="form-input" placeholder="Ej. Financiación, Ahorro, Vacaciones">
@@ -226,8 +205,6 @@
      * Manejador visual cuando el usuario elige qué va a gestionar
      */
     function handleEntityChange() {
-        document.getElementById('errorAlert').classList.add('hidden');
-        
         const entity = document.getElementById('entityType').value;
         const dynamicFields = document.getElementById('dynamicFields');
         const lblNombre = document.getElementById('lblNombre');
@@ -256,12 +233,20 @@
             case 'COSTOS_VARIABLES':
                 lblNombre.textContent = "Nombre de la Cuenta";
                 grpMoneda.classList.remove('hidden');
+                document.getElementById('monedaRelacionada').setAttribute('required', 'true');
                 grpProy.classList.remove('hidden');
                 break;
                 
             case 'MEDIOS_PAGO':
                 lblNombre.textContent = "Nombre del Medio Bancario";
                 grpMoneda.classList.remove('hidden');
+                document.getElementById('monedaRelacionada').setAttribute('required', 'true');
+                grpProy.classList.remove('hidden');
+                break;
+                
+            case 'MONEDAS':
+                lblNombre.textContent = "Nombre de Moneda";
+                grpAbreviacion.classList.remove('hidden');
                 grpProy.classList.remove('hidden');
                 break;
                 
@@ -280,8 +265,6 @@
         
         const btnSubmit = document.getElementById('btnSubmit');
         const loader = document.getElementById('loader');
-        
-        document.getElementById('errorAlert').classList.add('hidden');
         
         btnSubmit.disabled = true;
         btnSubmit.textContent = 'Guardando...';
@@ -306,45 +289,24 @@
     }
 
     function onSaveSuccess(response) {
-        // Ocultar Formulario y Header, Mostrar Éxito
-        document.getElementById('headerSection').classList.add('hidden');
-        document.getElementById('abmForm').classList.add('hidden');
-        
-        // Cargar Mensaje
-        const entityNames = {
-            'INGRESOS': 'Ingreso', 'COSTOS_FIJOS': 'Costo Fijo', 'COSTOS_VARIABLES': 'Costo Variable',
-            'MEDIOS_PAGO': 'Medio de Pago', 'PROYECTOS': 'Proyecto', 'MONEDAS': 'Moneda'
-        };
-        const prettyEntity = entityNames[response.entityType] || response.entityType;
-        document.getElementById('successMessage').innerHTML = `El registro <b>${response.nombre}</b> fue añadido correctamente al módulo de ${prettyEntity}s.`;
-        
-        document.getElementById('successState').classList.remove('hidden');
-        document.getElementById('loader').classList.add('hidden');
-        
-        // Refrescamos silenciosamente los proyectos/monedas por si acaban de agregar uno
-        google.script.run.withSuccessHandler(onDataLoaded).getAbmFormData();
-    }
-
-    function resetFormForNew() {
-        // Volver atrás para agregar otro
+        // Recargar campos pero no cerrar para agilizar flujos repetitivos
         document.getElementById('abmForm').reset();
         document.getElementById('dynamicFields').classList.add('hidden');
         
         const btnSubmit = document.getElementById('btnSubmit');
         btnSubmit.disabled = false;
         btnSubmit.textContent = 'Guardar Registro';
-
-        document.getElementById('successState').classList.add('hidden');
-        document.getElementById('headerSection').classList.remove('hidden');
-        document.getElementById('abmForm').classList.remove('hidden');
+        
+        document.getElementById('loader').classList.add('hidden');
+        
+        alert(`¡✅ Guardado Exitoso! \nSe añadió: ${response.nombre} a ${response.entityType}`);
+        
+        // Refrescamos silenciosamente los proyectos/monedas por si acaban de agregar uno
+        google.script.run.withSuccessHandler(onDataLoaded).getAbmFormData();
     }
 
     function onSaveError(error) {
-        let msg = error.message;
-        if (msg.startsWith("Error: ")) msg = msg.substring(7);
-        
-        document.getElementById('errorMessageText').textContent = msg;
-        document.getElementById('errorAlert').classList.remove('hidden');
+        alert("Ocurrió un error al intentar guardar:\n" + error.message);
         
         const btnSubmit = document.getElementById('btnSubmit');
         btnSubmit.disabled = false;

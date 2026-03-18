@@ -6,6 +6,17 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-17 - Organización de Estructura Canónica (Agente Contextual)
+
+### Evento
+Aplicación de reglas de organización dictadas por el skill `agente-contextual` para eliminar archivos huérfanos e incongruencias en la raíz del proyecto.
+
+### Acciones Tomadas
+- Se movió el archivo resolutivo `planilla-reinversión.md` (un doc valioso dictando la reestructuración completa del proyecto) desde la raíz (`/`) a la ruta canónica `docs/permanente/`.
+- Se registró el directorio de utilidades locales `scripts/` y el archivo `planilla-reinversión.md` en el documento oficial `ESTRUCTURA.md` asegurando que todos los archivos queden correctamente mapeados sin Context Rot.
+
+---
+
 ## 2026-03-17 - Reinversión del Proyecto y Simplificación Arquitectónica
 
 ### Evento

@@ -55,6 +55,54 @@ Implementación:
 - Schema actual es 1:1 transferible a SQL
 - Scripts de conversión simples (CSV export → SQL import)
 
+### ADR-002: Manejo de Cuentas Bi-monetarias (Moneda por Defecto)
+
+**Fecha**: 2026-03-17
+
+#### Contexto
+Existen flujos de ingreso o egreso que ocurren intrínsecamente en monedas paralelas o rotativas (ej. un "Sueldo" cobrado 80% en ARS y 20% en USD). Se analizó si la integridad referencial obligaba a duplicar cada cuenta por moneda ("Sueldo ARS", "Sueldo USD").
+
+#### Decisión
+**Elegimos utilizar un modelo de "Moneda por Defecto" reactiva (UX Ágil).** 
+
+Implementación:
+- En el catálogo **Plan de Cuentas**, se registra un único identificador conceptual (ej. "Sueldo") atado a su moneda de mayor frecuencia estadística (ej. "ARS").
+- En el frontend de la **Hoja de Cargas**, seleccionar la cuenta disparará un auto-fill de la moneda para acelerar la carga en el 80% de los casos rutinarios.
+- El objeto "Moneda" del formulario siempre estará desbloqueado, permitiendo al usuario mutar la divisa a voluntad y de forma específica para esa única transacción.
+
+#### Consecuencias
+**Positivas:**
+- ✅ Plan de cuentas minimalista, limpio y sin duplicidad conceptual de entidades.
+- ✅ Ingreso de datos (Data Entry) ultrarrápido garantizado por la predicción UI.
+- ✅ Flexibilidad funcional para transacciones aisladas o atípicas.
+
+**Negativas:**
+- ⚠️ Demanda programar escuchadores de eventos DOM (`onchange`) y lógica reactiva en el formulario HTML futuro de transacciones. 
+
+### ADR-003: Monedas como Constante de Backend (sin tabla en BD)
+
+**Fecha**: 2026-03-17
+
+#### Contexto
+Inicialmente se teniía una tabla `MONEDAS` en la hoja de cálculo. Las monedas son un catálogo estable (ARS, USD, EUR, etc.) que rara vez varía, y su mantenimiento en una BD generaba complejidad innecesaria en el UI (un ABM extra, validaciones relacionales, etc.).
+
+#### Decisión
+**Eliminar la tabla `MONEDAS` de la hoja de cálculo. Definirlas como constante `MONEDAS_DISPONIBLES` en `00_Config.js`.**
+
+Implementación:
+- La constante se gestiona desde el código fuente (Apps Script).
+- El select de moneda en el formulario ABM y de cargas se puebla dinámicamente desde el backend.
+- Para agregar/quitar una moneda, se edita el array en `00_Config.js`.
+
+#### Consecuencias
+**Positivas:**
+- ✅ Plan de cuentas simplificado: 5 tablas en vez de 6.
+- ✅ El ABM "Plan de Cuentas" gana foco: sólo gestiona entidades realmente variables (Ingresos, Costos, Medios, Proyectos).
+- ✅ Elimina una DB table en la hoja, reduciendo superficie de errores.
+
+**Negativas:**
+- ⚠️ Agregar una nueva moneda requiere un deploy de código (no apto para usuario final sin acceso al repo).
+
 ---
 
 ## 🏗️ Arquitectura del Sistema
@@ -81,28 +129,20 @@ Implementación:
 ┌─────────────────────────────────────────┐
 │     Google Apps Script (Backend Logic)   │
 ├─────────────────────────────────────────┤
-│ • Validaciones de integridad            │
-│ • Cálculo automático de monto_base      │
-│ • Fetch de tipos de cambio (API)        │
-│ • Triggers y automatizaciones            │
+│ • Validaciones e integridad (ABM)       │
+│ • Navegación entre hojas                │
+│ • Catálogos fijos: MONEDAS_DISPONIBLES  │ ← ADR-003
 └──────────────────┬──────────────────────┘
                    │
                    ↓
 ┌─────────────────────────────────────────┐
-│   DATA-ENTRY (Google Sheets "Database")  │
+│   Plan de Cuentas (Google Sheet)         │
 ├─────────────────────────────────────────┤
-│ • DB_MONEDAS          (B:D)             │
-│ • DB_TIPOS_CAMBIO     (F:Q)             │
-│ • DB_MEDIOS_PAGO      (S:W)             │
-│ • DB_CUENTAS          (Y:AB)            │
-│ • DB_TRANSACCIONES    (AD:AM)           │
-│ • DB_CONFIG           (AO:AQ)           │
-└──────────────────┬──────────────────────┘
-                   │
-                   ↓
-┌─────────────────────────────────────────┐
-│      API Externa (Tipos de Cambio)       │
-│   (exchangerate-api.com o similar)      │
+│ • INGRESOS         (I:K)                │
+│ • COSTOS_FIJOS     (M:O)                │
+│ • COSTOS_VARIABLES (Q:S)                │
+│ • MEDIOS_PAGO      (U:W)                │
+│ • PROYECTOS        (AC:AD)              │
 └─────────────────────────────────────────┘
 ```
 
@@ -164,10 +204,10 @@ Generar tabla resumen
 Ver [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) para detalles completos.
 
 **Resumen:**
-- 6 tablas en hoja DATA-ENTRY
-- Modelo "estrella" con `DB_TRANSACCIONES` como centro
-- Catálogos: Monedas, Medios, Cuentas
-- Operativa: Tipos de Cambio (con auditoría completa)
+- 5 tablas en hoja Plan de Cuentas (Ingresos, Costos Fijos, Costos Variables, Medios de Pago, Proyectos)
+- Monedas: constante `MONEDAS_DISPONIBLES` en `00_Config.js` (ADR-003)
+- Catálogos: Medios, Cuentas, Proyectos
+- Operativa: Tipos de Cambio (con auditoría completa, a implementar)
 - Config: Parámetros globales (moneda base, fuente preferida)
 
 **Innovación clave:**
@@ -310,6 +350,6 @@ function validateIntegrity() {
 
 ---
 
-**Versión de Arquitectura**: 1.0  
+**Versión de Arquitectura**: 1.1  
 **Stack Actual**: Google Sheets + Apps Script  
-**Última actualización**: 2026-01-17
+**Última actualización**: 2026-03-17

@@ -2,8 +2,8 @@
 
 Documentación detallada de cada módulo del sistema modular de Tidetrack.
 
-**Última actualización**: 2026-01-23  
-**Versión Actual**: v0.4.0 (Sprint 3 completo)
+**Última actualización**: 2026-03-17  
+**Versión Actual**: v0.4.8
 
 ---
 
@@ -11,30 +11,17 @@ Documentación detallada de cada módulo del sistema modular de Tidetrack.
 
 | # | Módulo | Capa | Estado |
 |---|--------|------|--------|
-| 00 | Config | Configuración | ✅ v0.4.0 |
+| 00 | Config | Configuración | ✅ v0.4.8 |
 | 01 | Version | Configuración | ✅ v0.1.0 |
 | 02 | Utils | Utilidades | ✅ v0.3.0 |
 | 03 | SheetManager | Acceso a Datos | ✅ v0.3.0 |
-| 04 | DataValidation | Validación | ✅ v0.3.0 |
-| 05 | MonedaService | Servicio | ✅ v0.3.0 |
-| 06 | ExchangeRateService | Servicio | ✅ v0.2.0 |
-| 07 | MedioPagoService | Servicio | ✅ v0.3.0 |
-| 08 | CuentaService | Servicio | ✅ v0.3.0 |
-| 09 | TransactionService | Servicio | ✅ v0.3.0 |
-| 10 | ConfigService | Servicio | ✅ v0.2.0 |
-| 11 | UIService | Interfaz | ✅ v0.4.0 |
-| 12 | MenuService | Interfaz | ✅ v0.4.0 |
-| 98 | DataSeeder | Testing | ✅ v0.3.0 |
-| 99 | SetupDirect | Utilidades | ✅ v0.2.0 |
+| 11 | UIService | Interfaz / ABM | ✅ v0.4.8 |
+| 12 | MenuService | Interfaz | ✅ v0.4.8 |
+| 13 | NavigationService | Interfaz | ✅ v0.4.0 |
 
 **Archivos HTML UI:**
-- CSS_DesignSystem.html - ✅ v0.4.0
-- CSS_Components.html - ✅ v0.4.0
-- UI_DesignSystemTest.html - ✅ v0.4.0
-- UI_TransactionForm.html - ✅ v0.4.0
-- UI_MainDashboard.html - ✅ v0.4.0
-- JS_FormValidation.html - ✅ v0.4.0
-- JS_ApiClient.html - ✅ v0.4.0
+- UI_AbmPlanCuentas.html - ✅ v0.4.8 (ABM multi-entidad del Plan de Cuentas)
+- UI_SharedStyles.html - ✅ v0.4.8 (Design System compartido)
 
 ---
 
@@ -77,23 +64,26 @@ Documentación detallada de cada módulo del sistema modular de Tidetrack.
 **Propósito**: Almacenar todas las constantes del sistema en un único lugar.
 
 **Responsabilidades:**
-- Definir nombre de hoja (`DATA-ENTRY`)
+- Definir nombre de hoja (`Plan de Cuentas`)
 - Definir filas de encabezado y datos (3 y 4)
-- **Rangos de columnas fijos** para las 6 tablas
+- **Rangos de columnas fijos** para las 5 tablas del Plan de Cuentas
+- **Catálogo de Monedas** como constante `MONEDAS_DISPONIBLES` (ADR-003)
 - **Enums** (valores cerrados) para validación
-- Configuración de API externa
-- Defaults del sistema
+- Configuración de menús y navegación
 - Mensajes de error centralizados
 
 **Uso por Otros Módulos:**
 - `SheetManager` usa `RANGES` para determinar columnas
-- `DataValidation` usa `ENUM_*` para validar valores
-- `ExchangeRateService` usa `API_CONFIG` para fetch
+- `UIService` usa `MONEDAS_DISPONIBLES` para poblar selects
+- `MenuService` usa `MENU_CONFIG` para construir el menú
 
 **Ejemplo de Uso:**
 ```javascript
-// Obtener rango de monedas
-const monedasConfig = RANGES.MONEDAS; // {start: 'B', end: 'D', columns: {...}}
+// Tablas disponibles
+const config = RANGES.INGRESOS; // {start: 'I', end: 'K', ...}
+
+// Monedas como constante (no BD) ← ADR-003
+const monedas = MONEDAS_DISPONIBLES; // ['ARS', 'USD', 'AUD', 'EUR', ...]
 
 // Validar sentido
 if (!ENUM_SENTIDO.includes(valor)) {
@@ -101,7 +91,7 @@ if (!ENUM_SENTIDO.includes(valor)) {
 }
 ```
 
-**Regla Crítica:** Si cambias los rangos de columnas, **actualiza solo este archivo**. No hardcodees rangos en otros módulos.
+**Regla Crítica:** Si cambías los rangos de columnas, **actualizá solo este archivo**. No hardcodees rangos en otros módulos.
 
 ---
 
@@ -223,34 +213,34 @@ Evita que los servicios tengan que conocer detalles de rangos de columnas. Si ca
 #### Lectura
 ```javascript
 // Obtener datos de tabla
-const data = getTableData('MONEDAS');
-// Retorna: [['ARS', 'Peso argentino', '$'], ['USD', '...', '...']]
+const data = getTableData('INGRESOS');
+// Retorna: [['Sueldo', 'ARS', ''], ['Freelance', 'USD', '']]
 
 // Contar filas
-const count = countTableRows('MONEDAS'); // 3
+const count = countTableRows('PROYECTOS'); // 2
 ```
 
 #### Escritura
 ```javascript
 // Agregar fila
-const newRow = ['EUR', 'Euro', '€'];
-appendRow('MONEDAS', newRow);
+const newRow = ['Alquiler', 'ARS', ''];
+appendRow('COSTOS_FIJOS', newRow);
 
-// Actualizar fila (índice 0-based relativo a DATA_START_ROW)
-updateRow('MONEDAS', 0, ['ARS', 'Peso Argentino', '$']);
+// Actualizar fila (index 0-based relativo a DATA_START_ROW)
+updateRow('INGRESOS', 0, ['Sueldo Actualizado', 'ARS', '']);
 
 // Eliminar fila
-deleteRow('MONEDAS', 2); // Elimina fila índice 2 (EUR)
+deleteRow('MEDIOS_PAGO', 1);
 ```
 
 #### Búsqueda
 ```javascript
-// Buscar por ID
-const result = findById('MONEDAS', 'USD', 0); // 0 = columna del ID
-// Retorna: {rowIndex: 1, rowData: ['USD', 'Dólar estadounidense', 'US$']}
+// Buscar por nombre (columna 0)
+const result = findById('PROYECTOS', 'Remitly', 0);
+// Retorna: {rowIndex: 0, rowData: ['Remitly', 'Ahorro']}
 
 // Verificar existencia
-const existe = existsById('MONEDAS', 'EUR', 0); // true/false
+const existe = existsById('INGRESOS', 'Sueldo', 0); // true/false
 ```
 
 **Regla Crítica:** Todos los servicios deben usar `SheetManager`, **nunca** acceder directamente a `getRange()` o `getValues()`.
@@ -498,7 +488,7 @@ Cuando crees un nuevo módulo (ej: `07_MedioPagoService.js`):
 
 ---
 
-**Versión de la Guía**: 2.0  
-**Última actualización**: 2026-01-23  
-**Módulos Documentados**: 15 de 15 (100% completo)  
-**Archivos HTML UI**: 7 de 7 (100% completo)
+**Versión de la Guía**: 3.0  
+**Última actualización**: 2026-03-17  
+**Módulos Documentados**: 7 de 7 (100% corresponden a archivos existentes)  
+**Archivos HTML UI**: 2 de 2 (activos en producción)

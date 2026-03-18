@@ -1,0 +1,29 @@
+{
+  "name": "planilla-finanzas-personales",
+  "version": "1.0.0",
+  "description": "> **\"Paz financiera, todos los días\"**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "push": "clasp push",
+    "watch": "clasp push --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tidetrack/planilla-finanzas-personales.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/tidetrack/planilla-finanzas-personales/issues"
+  },
+  "homepage": "https://github.com/tidetrack/planilla-finanzas-personales#readme",
+  "devDependencies": {
+    "@google/clasp": "^3.3.0"
+  }
+}

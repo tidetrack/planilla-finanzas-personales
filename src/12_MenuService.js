@@ -39,64 +39,6 @@ function createCustomMenu() {
 
 // ===== HANDLERS DEL MENÚ =====
 
-/**
- * Abre el diálogo de nueva transacción
- */
-function showTransactionDialog() {
-    // Delegar al servicio de UI
-    if (typeof showTransactionForm === 'function') {
-        showTransactionForm();
-    } else {
-        SpreadsheetApp.getUi().alert('Error: showTransactionForm no está definido en 11_UIService.js');
-    }
-}
-
-/**
- * Abre el dashboard principal
- */
-function showDashboard() {
-    // Delegar al servicio de UI
-    if (typeof showMainDashboard === 'function') {
-        showMainDashboard();
-    } else {
-        SpreadsheetApp.getUi().alert('Próximamente: Dashboard (Day 3)');
-    }
-}
-
-
-
-/**
- * Wrapper para ejecutar seed de datos
- */
-function runDataSeed() {
-    if (typeof runDataSeedWithConfirmation === 'function') {
-        runDataSeedWithConfirmation();
-    } else {
-        SpreadsheetApp.getUi().alert('Error: runDataSeedWithConfirmation no está definido en 98_DataSeeder.js');
-    }
-}
-
-/**
- * Limpia las transacciones (para testing)
- */
-function confirmClearTransactions() {
-    const ui = SpreadsheetApp.getUi();
-    const result = ui.alert(
-        'Limpiar Transacciones',
-        '¿Estás seguro de que quieres BORRAR TODAS las transacciones? Esta acción no se puede deshacer.',
-        ui.ButtonSet.YES_NO
-    );
-
-    if (result == ui.Button.YES) {
-        if (typeof TransactionService !== 'undefined' && TransactionService.clearAllTransacciones) {
-            try {
-                TransactionService.clearAllTransacciones();
-                ui.alert('Todas las transacciones han sido eliminadas.');
-            } catch (e) {
-                ui.alert('Error al limpiar: ' + e.message);
-            }
-        } else {
-            ui.alert('Error: TransactionService no disponible');
-        }
-    }
-}
+// Los handlers de opciones del menú (ej. showTransactionForm, showDashboard) 
+// han sido eliminados de esta versión simplificada orientada únicamente
+// a la gestión del Plan de Cuentas (Gestor ABM).
