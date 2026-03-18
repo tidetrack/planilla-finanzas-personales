@@ -8,6 +8,8 @@
  * @lastModified 2026-01-18
  */
 
+// [AGILE-VALOR] Módulo base del Plan de Cuentas. Estructura simplificada e integral.
+
 // ============================================
 // OPERACIONES DE LECTURA
 // ============================================

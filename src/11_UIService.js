@@ -7,6 +7,8 @@
  * @lastModified 2026-01-18
  */
 
+// [AGILE-VALOR] Punto de entrada para la UI de los módulos validados.
+
 /**
  * Incluye el contenido de un archivo HTML dentro de otro (para CSS/JS parciales)
  * Uso: <?!= include('FileName'); ?>
@@ -374,6 +376,110 @@ function getTransactionsList(year, month, filters) {
             error: e.message,
             errorDetails: e.toString()
         };
+    }
+}
+
+// ============================================
+// PLAN DE CUENTAS - ABM API
+// ============================================
+
+/**
+ * Abre el gestor centralizado Multi-ABM del Plan de Cuentas
+ */
+function showAbmPlanCuentas() {
+    const html = HtmlService.createHtmlOutputFromFile('UI_AbmPlanCuentas')
+        .setWidth(600)
+        .setHeight(650);
+    SpreadsheetApp.getUi().showModalDialog(html, 'Plan de Cuentas');
+}
+
+/**
+ * Obtiene Monedas y Proyectos base para poblar los Selects del Pop-Up ABM
+ */
+function getAbmFormData() {
+    try {
+        // Obtenemos directamente de las columnas deducidas en Config
+        let dataMonedas = [];
+        try { dataMonedas = getTableData('MONEDAS'); } catch(e) {}
+        
+        // Si hay data, usamos Columna 1 (Z) que es la abreviación
+        const monedasActivas = dataMonedas.map(row => row[1]).filter(a => a); 
+
+        let dataProyectos = [];
+        try { dataProyectos = getTableData('PROYECTOS'); } catch(e) {}
+        
+        // Si hay data, usamos Columna 0 (AC) que es el Nombre del proyecto
+        const proyectosActivos = dataProyectos.map(row => row[0]).filter(p => p);
+        
+        return {
+            monedas: monedasActivas.length > 0 ? monedasActivas : ['ARS', 'USD', 'AUD'], // Fallback 
+            proyectos: proyectosActivos
+        };
+    } catch (e) {
+        Logger.log('Error getAbmFormData: ' + e.toString());
+        return { monedas: ['ARS', 'USD', 'AUD'], proyectos: [] };
+    }
+}
+
+/**
+ * Recibe un payload desde el UI y lo anexa al carril/tabla correspondiente 
+ * @param {Object} payload 
+ */
+function saveAbmRecord(payload) {
+    try {
+        Logger.log('Guardando ABM Plan de Cuentas: ' + JSON.stringify(payload));
+        
+        if (!payload.nombre || payload.nombre.trim() === '') {
+            throw new Error('El nombre es un campo obligatorio.');
+        }
+
+        let rowData = [];
+        const entity = payload.entityType;
+        
+        switch(entity) {
+            case 'INGRESOS':
+            case 'COSTOS_FIJOS':
+            case 'COSTOS_VARIABLES':
+            case 'MEDIOS_PAGO':
+                if (!payload.monedaRelacionada) throw new Error('Se requiere una moneda base para esta entidad.');
+                rowData = [
+                    payload.nombre.trim(), 
+                    payload.monedaRelacionada, 
+                    payload.proyectoRelacionado || ''
+                ];
+                break;
+                
+            case 'MONEDAS':
+                if (!payload.abreviacion) throw new Error('Se requiere una abreviación para las Monedas (ej. USD).');
+                rowData = [
+                    payload.nombre.trim(),
+                    payload.abreviacion.toUpperCase().trim(),
+                    payload.proyectoRelacionado || ''
+                ];
+                break;
+                
+            case 'PROYECTOS':
+                rowData = [
+                    payload.nombre.trim(),
+                    payload.tipoProyecto || 'General'
+                ];
+                break;
+                
+            default:
+                throw new Error('Entidad desconocida: ' + entity);
+        }
+
+        appendRow(entity, rowData);
+        
+        return {
+            success: true,
+            entityType: entity,
+            nombre: payload.nombre
+        };
+        
+    } catch (e) {
+        Logger.log('Error saveAbmRecord: ' + e.toString());
+        throw new Error(e.message);
     }
 }
 

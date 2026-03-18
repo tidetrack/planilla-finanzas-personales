@@ -8,6 +8,8 @@
  * @lastModified 2026-01-17
  */
 
+// [AGILE-VALOR] Funciones utilitarias transversales necesarias para la base de datos centralizada.
+
 // ============================================
 // GENERACIÓN DE IDs
 // ============================================

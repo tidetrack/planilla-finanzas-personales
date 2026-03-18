@@ -8,6 +8,8 @@
  * @lastModified 2026-02-06
  */
 
+// [AGILE-VALOR] Módulo de Navegación básico que permite la coexistencia independiente de Hojas/Módulos.
+
 // ============================================
 // NAVEGACIÓN ENTRE HOJAS
 // ============================================

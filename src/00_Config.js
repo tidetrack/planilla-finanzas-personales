@@ -8,11 +8,17 @@
  * @lastModified 2026-01-17
  */
 
+// [AGILE-VALOR] Configuración Core y Central. Define el esqueleto del Plan de Cuentas y Hoja de cargas.
+
 // ============================================
-// CONFIGURACIÓN DE HOJA
+// CONFIGURACIÓN DE HOJAS
 // ============================================
 
-const SHEET_NAME = 'DATA-ENTRY';
+const SHEETS = {
+  PLAN_CUENTAS: 'Plan de Cuentas',
+  DATA_ENTRY: 'Hoja de Cargas'
+};
+
 const HEADER_ROW = 3;
 const DATA_START_ROW = 4;
 
@@ -49,77 +55,41 @@ const AVAILABLE_CURRENCY_IDS = Object.keys(CURRENCIES);
 // ============================================
 
 const RANGES = {
-  TIPOS_CAMBIO: {
-    start: 'G',
-    end: 'R',
-    columns: {
-      fx_id: 'G',
-      fecha: 'H',
-      base_moneda_id: 'I',
-      quote_moneda_id: 'J',
-      tc: 'K',
-      fuente: 'L',
-      provider: 'M',
-      api_endpoint: 'N',
-      request_params: 'O',
-      fetched_at: 'P',
-      status: 'Q',
-      raw_payload: 'R'
-    }
+  INGRESOS: {
+    sheet: SHEETS.PLAN_CUENTAS,
+    start: 'I',
+    end: 'K',
+    columns: { nombre: 'I', moneda: 'J', proyecto: 'K' }
   },
-
+  COSTOS_FIJOS: {
+    sheet: SHEETS.PLAN_CUENTAS,
+    start: 'M',
+    end: 'O',
+    columns: { nombre: 'M', moneda: 'N', proyecto: 'O' }
+  },
+  COSTOS_VARIABLES: {
+    sheet: SHEETS.PLAN_CUENTAS,
+    start: 'Q',
+    end: 'S',
+    columns: { nombre: 'Q', moneda: 'R', proyecto: 'S' }
+  },
   MEDIOS_PAGO: {
-    start: 'T',
-    end: 'X',
-    columns: {
-      medio_id: 'T',
-      nombre_medio: 'U',
-      tipo: 'V',
-      moneda_id: 'W',
-      uso_principal: 'X'
-    }
+    sheet: SHEETS.PLAN_CUENTAS,
+    start: 'U',
+    end: 'W',
+    columns: { nombre: 'U', moneda: 'V', proyecto: 'W' }
   },
-
-  CUENTAS: {
-    start: 'Z',
-    end: 'AC',
-    columns: {
-      cuenta_id: 'Z',
-      nombre_cuentas: 'AA',
-      macro_tipo: 'AB',
-      es_recurrente: 'AC'
-    }
+  MONEDAS: {
+    sheet: SHEETS.PLAN_CUENTAS,
+    start: 'Y',
+    end: 'AA',
+    columns: { nombre: 'Y', abreviacion: 'Z', proyecto: 'AA' }
   },
-
-  TRANSACCIONES: {
-    start: 'AE',
-    end: 'AP',
-    columns: {
-      trx_id: 'AE',
-      fecha: 'AF',
-      monto: 'AG',
-      moneda_id: 'AH',
-      sentido: 'AI',
-      cuenta_id: 'AJ',
-      medio_id: 'AK',
-      nota: 'AL',
-      fx_id: 'AM',
-      monto_base: 'AN',
-      cuenta_nombre: 'AO',
-      medio_nombre: 'AP'
-    }
-  },
-
-  AUX_COTIZACIONES: {
-    start: 'AV',
-    end: 'AZ',
-    columns: {
-      moneda: 'AV',
-      compra: 'AW',
-      venta: 'AX',
-      updated_at: 'AY',
-      fuente: 'AZ'
-    }
+  PROYECTOS: {
+    sheet: SHEETS.PLAN_CUENTAS,
+    start: 'AC',
+    end: 'AD',
+    columns: { nombre: 'AC', tipo: 'AD' }
   }
 };
 
@@ -216,10 +186,11 @@ const ERROR_MESSAGES = {
 const MENU_CONFIG = {
   MAIN_MENU: 'Tidetrack',
   ITEMS: [
-    { name: 'Nueva Transacción', function: 'showTransactionDialog' },
-    { name: 'Ver Dashboard', function: 'showDashboard' },
+    { name: 'Gestor: Plan de Cuentas', function: 'showAbmPlanCuentas' },
     { separator: true },
-    { name: 'Generar Datos Demo', function: 'runDataSeed' },
+    { name: 'Nueva Transacción', function: 'showTransactionForm' },
+    { name: 'Ver Dashboard', function: 'showMainDashboard' },
+    { separator: true },
     { name: 'Limpiar Transacciones', function: 'confirmClearTransactions' }
   ]
 };

@@ -3,6 +3,8 @@
  * Servicio de menús personalizados para Tidetrack
  */
 
+// [AGILE-VALOR] Interfaz básica desde el menú para las funciones del core.
+
 /**
  * Trigger que se ejecuta automáticamente al abrir la hoja de cálculo
  */

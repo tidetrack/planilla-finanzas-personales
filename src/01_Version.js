@@ -8,6 +8,8 @@
  * @lastModified 2026-01-17
  */
 
+// [AGILE-VALOR] Control de versiones esencial para el mantenimiento del entorno.
+
 const VERSION = {
     major: 0,
     minor: 1,

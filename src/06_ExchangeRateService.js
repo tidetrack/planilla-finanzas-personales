@@ -8,6 +8,8 @@
  * @lastModified 2026-01-17
  */
 
+// [AGILE-VALOR] Integración con APIs para multimoneda, clave para la integridad del sistema financiero (DolarAPI/ExchangeRate).
+
 // ============================================
 // OPERACIONES DE LECTURA
 // ============================================

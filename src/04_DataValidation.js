@@ -8,6 +8,8 @@
  * @lastModified 2026-01-17
  */
 
+// [AGILE-VALOR] Funciones necesarias para proteger la integridad de la base de datos centralizada.
+
 // ============================================
 // VALIDACIONES DE MONEDAS
 // ============================================

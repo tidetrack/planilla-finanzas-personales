@@ -8,6 +8,8 @@
  * @lastModified 2026-01-18
  */
 
+// [AGILE-VALOR] Herramienta robusta de testing y populación de datos controlada.
+
 // ============================================
 // UI WRAPPERS
 // ============================================

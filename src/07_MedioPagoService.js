@@ -8,6 +8,8 @@
  * @lastModified 2026-01-18
  */
 
+// [AGILE-VALOR] Módulo base para el Catálogo de Cuentas y referenciación en transacciones.
+
 // ============================================
 // OPERACIONES DE LECTURA
 // ============================================

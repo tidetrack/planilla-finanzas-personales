@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <!-- Incluir Tipografía Institucional -> Ver CSS_DesignSystem.html -->
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Inyectar Shared Styles -->
+    <?!= include('UI_SharedStyles'); ?>
+
+    <style>
+        /* Estilos Específicos para este Pop-up */
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            color: var(--primary-dark);
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin: 0;
+        }
+
+        /* Selector Router */
+        .entity-selector-wrapper {
+            background-color: var(--bg-secondary);
+            padding: 16px;
+            border-radius: var(--border-radius-md);
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .dynamic-fields {
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .hidden {
+            display: none !important;
+            opacity: 0;
+        }
+
+        /* Loading Overlay Mínimo */
+        .loading-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            border-radius: var(--border-radius-lg);
+            backdrop-filter: blur(2px);
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container container-xs">
+    
+    <!-- Loader Global -->
+    <div id="loader" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="header">
+        <h1>Plan de Cuentas</h1>
+        <p>Alta, Baja y Modificación de Catálogos</p>
+    </div>
+
+    <form id="abmForm" onsubmit="handleFormSubmit(event)">
+        
+        <!-- Dropdown Router Maestro -->
+        <div class="entity-selector-wrapper">
+            <div class="form-group">
+                <label for="entityType" class="form-label">¿Qué elemento querés gestionar?</label>
+                <select id="entityType" name="entityType" class="form-select" required onchange="handleEntityChange()">
+                    <option value="" disabled selected>Seleccioná una entidad...</option>
+                    <option value="INGRESOS">Ingresos</option>
+                    <option value="COSTOS_FIJOS">Costos Fijos</option>
+                    <option value="COSTOS_VARIABLES">Costos Variables</option>
+                    <option value="MEDIOS_PAGO">Medios Bancarios</option>
+                    <option value="PROYECTOS">Proyectos</option>
+                    <option value="MONEDAS">Monedas</option>
+                </select>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Contenedor Dinámico para cada caso -->
+        <div id="dynamicFields" class="dynamic-fields hidden">
+
+            <!-- Columna Universal: Nombre / Identificador -->
+            <div class="form-group">
+                <label id="lblNombre" for="nombre" class="form-label">Nombre</label>
+                <input type="text" id="nombre" name="nombre" class="form-input" placeholder="Ej. Sueldo, Viaje al Sur, Dólar MEP..." required>
+            </div>
+
+            <!-- Campos Específicos para Monedas y Proyectos -->
+            <div id="groupAbreviacion" class="form-group hidden">
+                <label for="abreviacion" class="form-label">Abreviación (Símbolo o ISO)</label>
+                <input type="text" id="abreviacion" name="abreviacion" class="form-input" placeholder="Ej. USD, ARS, €, CAD">
+            </div>
+
+            <div id="groupTipoProyecto" class="form-group hidden">
+                <label for="tipoProyecto" class="form-label">Tipo de Proyecto</label>
+                <input type="text" id="tipoProyecto" name="tipoProyecto" class="form-input" placeholder="Ej. Financiación, Ahorro, Vacaciones">
+            </div>
+
+            <!-- Selectores Relacionales (Cargados por la IA al abrir el popup) -->
+            <div id="groupMonedaRel" class="form-group hidden">
+                <label for="monedaRelacionada" class="form-label">Moneda</label>
+                <select id="monedaRelacionada" name="monedaRelacionada" class="form-select">
+                    <!-- Opciones inyectadas por JS -->
+                </select>
+            </div>
+
+            <div id="groupProyectoRel" class="form-group hidden">
+                <label for="proyectoRelacionado" class="form-label">Asignar a un Proyecto <span style="font-weight: 300; font-size: 12px; color: var(--text-secondary)">(Opcional)</span></label>
+                <select id="proyectoRelacionado" name="proyectoRelacionado" class="form-select">
+                    <!-- Opciones inyectadas por JS -->
+                </select>
+            </div>
+
+            <div class="form-actions" style="margin-top: 32px;">
+                <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnSubmit">Guardar Registro</button>
+            </div>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+    // Variables globales
+    let systemData = {
+        monedas: [],
+        proyectos: []
+    };
+
+    /**
+     * Inicialización del Pop-up
+     */
+    document.addEventListener('DOMContentLoaded', () => {
+        // Traer datos de proyectos y monedas en background para llenar los selects cuando se necesiten
+        google.script.run
+            .withSuccessHandler(onDataLoaded)
+            .withFailureHandler(onError)
+            .getAbmFormData();
+    });
+
+    /**
+     * Handler cuando la data basal llega desde Google Apps Script
+     */
+    function onDataLoaded(data) {
+        systemData = data;
+        
+        // Cargar Select de Monedas
+        const selectMoneda = document.getElementById('monedaRelacionada');
+        selectMoneda.innerHTML = '<option value="" disabled selected>Seleccionar moneda...</option>';
+        systemData.monedas.forEach(m => {
+            selectMoneda.innerHTML += `<option value="${m}">${m}</option>`;
+        });
+
+        // Cargar Select de Proyectos
+        const selectProyecto = document.getElementById('proyectoRelacionado');
+        selectProyecto.innerHTML = '<option value="">Ninguno (Flujo General)</option>';
+        systemData.proyectos.forEach(p => {
+            selectProyecto.innerHTML += `<option value="${p}">${p}</option>`;
+        });
+
+        // Ocultar Loader
+        document.getElementById('loader').classList.add('hidden');
+    }
+
+    /**
+     * Manejador de Error general
+     */
+    function onError(error) {
+        alert("Ocurrió un error al cargar el popup: " + error.message);
+        document.getElementById('loader').classList.add('hidden');
+    }
+
+    /**
+     * Manejador visual cuando el usuario elige qué va a gestionar
+     */
+    function handleEntityChange() {
+        const entity = document.getElementById('entityType').value;
+        const dynamicFields = document.getElementById('dynamicFields');
+        const lblNombre = document.getElementById('lblNombre');
+        
+        // Grupos ocultables
+        const grpAbreviacion = document.getElementById('groupAbreviacion');
+        const grpTipoProy = document.getElementById('groupTipoProyecto');
+        const grpMoneda = document.getElementById('groupMonedaRel');
+        const grpProy = document.getElementById('groupProyectoRel');
+
+        // Reset estado 
+        grpAbreviacion.classList.add('hidden');
+        grpTipoProy.classList.add('hidden');
+        grpMoneda.classList.add('hidden');
+        grpProy.classList.add('hidden');
+        
+        // Quitar obligatoriedades previas
+        document.getElementById('monedaRelacionada').removeAttribute('required');
+        
+        dynamicFields.classList.remove('hidden');
+
+        // Configuración por entidad
+        switch(entity) {
+            case 'INGRESOS':
+            case 'COSTOS_FIJOS':
+            case 'COSTOS_VARIABLES':
+                lblNombre.textContent = "Nombre de la Cuenta";
+                grpMoneda.classList.remove('hidden');
+                document.getElementById('monedaRelacionada').setAttribute('required', 'true');
+                grpProy.classList.remove('hidden');
+                break;
+                
+            case 'MEDIOS_PAGO':
+                lblNombre.textContent = "Nombre del Medio Bancario";
+                grpMoneda.classList.remove('hidden');
+                document.getElementById('monedaRelacionada').setAttribute('required', 'true');
+                grpProy.classList.remove('hidden');
+                break;
+                
+            case 'MONEDAS':
+                lblNombre.textContent = "Nombre de Moneda";
+                grpAbreviacion.classList.remove('hidden');
+                grpProy.classList.remove('hidden');
+                break;
+                
+            case 'PROYECTOS':
+                lblNombre.textContent = "Nombre del Proyecto";
+                grpTipoProy.classList.remove('hidden');
+                break;
+        }
+    }
+
+    /**
+     * Manejador del submit (Guardado)
+     */
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        
+        const btnSubmit = document.getElementById('btnSubmit');
+        const loader = document.getElementById('loader');
+        
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = 'Guardando...';
+        loader.classList.remove('hidden');
+
+        // Compilar Payload basándose en la vista actual
+        const entityType = document.getElementById('entityType').value;
+        const payload = {
+            entityType: entityType,
+            nombre: document.getElementById('nombre').value,
+            abreviacion: document.getElementById('abreviacion').value,
+            tipoProyecto: document.getElementById('tipoProyecto').value,
+            monedaRelacionada: document.getElementById('monedaRelacionada').value,
+            proyectoRelacionado: document.getElementById('proyectoRelacionado').value
+        };
+
+        // Enviar a Google Apps Script
+        google.script.run
+            .withSuccessHandler(onSaveSuccess)
+            .withFailureHandler(onSaveError)
+            .saveAbmRecord(payload);
+    }
+
+    function onSaveSuccess(response) {
+        // Recargar campos pero no cerrar para agilizar flujos repetitivos
+        document.getElementById('abmForm').reset();
+        document.getElementById('dynamicFields').classList.add('hidden');
+        
+        const btnSubmit = document.getElementById('btnSubmit');
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Guardar Registro';
+        
+        document.getElementById('loader').classList.add('hidden');
+        
+        alert(`¡✅ Guardado Exitoso! \nSe añadió: ${response.nombre} a ${response.entityType}`);
+        
+        // Refrescamos silenciosamente los proyectos/monedas por si acaban de agregar uno
+        google.script.run.withSuccessHandler(onDataLoaded).getAbmFormData();
+    }
+
+    function onSaveError(error) {
+        alert("Ocurrió un error al intentar guardar:\n" + error.message);
+        
+        const btnSubmit = document.getElementById('btnSubmit');
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Guardar Registro';
+        document.getElementById('loader').classList.add('hidden');
+    }
+</script>
+
+</body>
+</html>

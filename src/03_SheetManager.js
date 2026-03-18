@@ -8,21 +8,24 @@
  * @lastModified 2026-01-17
  */
 
+// [AGILE-VALOR] Gestor de BD centralizado basado en ranges dinámicos desde Config. Complejidad mínima.
+
 // ============================================
 // ACCESO A HOJA
 // ============================================
 
 /**
- * Obtiene la hoja DATA-ENTRY
- * @returns {GoogleAppsScript.Spreadsheet.Sheet} Hoja DATA-ENTRY
+ * Obtiene la hoja especificada por el nombre
+ * @param {string} sheetName Nombre de la hoja de cálculo
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet}
  * @throws {Error} Si la hoja no existe
  */
-function getSheet() {
+function getSheet(sheetName) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET_NAME);
+    const sheet = ss.getSheetByName(sheetName);
 
     if (!sheet) {
-        throw new Error(ERROR_MESSAGES.SHEET_NOT_FOUND);
+        throw new Error(`Hoja ${sheetName} no encontrada`);
     }
 
     return sheet;
@@ -38,13 +41,13 @@ function getSheet() {
  * @returns {GoogleAppsScript.Spreadsheet.Range} Rango de la tabla
  */
 function getTableRange(tableName) {
-    const sheet = getSheet();
     const config = RANGES[tableName];
-
+    
     if (!config) {
         throw new Error(`Tabla no configurada: ${tableName}`);
     }
 
+    const sheet = getSheet(config.sheet);
     const lastRow = sheet.getLastRow();
     const range = `${config.start}${DATA_START_ROW}:${config.end}${lastRow}`;
 
@@ -85,8 +88,8 @@ function countTableRows(tableName) {
  * @returns {number} Índice de la fila agregada
  */
 function appendRow(tableName, rowData) {
-    const sheet = getSheet();
     const config = RANGES[tableName];
+    const sheet = getSheet(config.sheet);
 
     // CRÍTICO: Obtener la última fila con datos EN LAS COLUMNAS DE ESTA TABLA
     // NO usar sheet.getLastRow() que devuelve la última fila de TODA la hoja
@@ -125,8 +128,8 @@ function appendRow(tableName, rowData) {
  * @param {Array} rowData Nuevos datos
  */
 function updateRow(tableName, rowIndex, rowData) {
-    const sheet = getSheet();
     const config = RANGES[tableName];
+    const sheet = getSheet(config.sheet);
     const actualRow = DATA_START_ROW + rowIndex;
 
     const range = sheet.getRange(
@@ -143,7 +146,8 @@ function updateRow(tableName, rowIndex, rowData) {
  * @param {number} rowIndex Índice de fila (relativo a DATA_START_ROW)
  */
 function deleteRow(tableName, rowIndex) {
-    const sheet = getSheet();
+    const config = RANGES[tableName];
+    const sheet = getSheet(config.sheet);
     const actualRow = DATA_START_ROW + rowIndex;
 
     sheet.deleteRow(actualRow);

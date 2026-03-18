@@ -8,6 +8,8 @@
  * @lastModified 2026-01-18
  */
 
+// [AGILE-VALOR] Módulo base de Hoja de Cargas. Maneja registros simplificados con referencias al Plan de Cuentas.
+
 // ============================================
 // OPERACIONES DE LECTURA
 // ============================================
