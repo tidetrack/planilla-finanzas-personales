@@ -43,7 +43,7 @@ constructora-inventarios-data/
 ## Mandatos Obligatorios
 
 ### 1. ANTES de crear o mover cualquier archivo:
-- Lee `ESTRUCTURA.md` para confirmar la ubicación correcta
+-ESTRUCTURA GENERAL (Ver `docs/permanente/ESTRUCTURA.md` para el mapa completo)nfirmar la ubicación correcta
 - Verifica que la carpeta de destino existe en el mapa
 - NO inventes carpetas nuevas sin actualizar primero `ESTRUCTURA.md`
 

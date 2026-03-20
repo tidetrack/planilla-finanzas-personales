@@ -6,6 +6,14 @@
  * (Añadir nuevos registros arriba)
  * ---
  *
+ * [2026-03-20] v0.5.1 - Autocompletado Hoja Cargas:
+ * - Se implementó la lógica de autocompletado en `14_EventHandlers.js` para la hoja "Cargas".
+ * - El "Tipo" se deduce automáticamente al elegir la "Cuenta" cruzando datos con el Plan de Cuentas.
+ * - La "Moneda" se completa automáticamente según el "Medio" seleccionado.
+ * - La "Fecha" se autocompleta con el día en curso al ingresar un "Monto".
+ *
+ * ---
+ *
  * [2026-03-20] v0.5.0 - Refactor Arquitectura de Base de Datos Plan de Cuentas:
  * - Se simplificó la captura de datos (ADR): "Moneda" pasa a ser propiedad exclusiva de "Medios Bancarios". Se elimina del ABM para Ingresos y Egresos.
  * - Reasignación de columnas de la BDD (I:J Ingresos, L:M Costos Fijos, O:P Costos Variables, R:T Medios Bancarios, V:W Proyectos).

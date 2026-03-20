@@ -13,7 +13,7 @@ Este repositorio sirve como documentación técnica completa. Cada sección es u
 | Documento | Propósito |
 |---|---|
 | [README.md](./README.md) | Este archivo. Índice maestro del proyecto. |
-| [ESTRUCTURA.md](./ESTRUCTURA.md) | Mapa de archivos y carpetas del repo. |
+| [ESTRUCTURA.md](./docs/permanente/ESTRUCTURA.md) | Mapa de archivos y carpetas del repo. |
 | [Módulos del Sistema](./docs/permanente/GUIA_MODULOS.md) | Documentación técnica de cada archivo `.js`. |
 | [Guía de Arquitectura + ADRs](./docs/permanente/GUIA_ARQUITECTURA.md) | Decisiones técnicas formales (Architecture Decision Records). |
 | [Historial de Desarrollo](./docs/permanente/HISTORIAL_DESARROLLO.md) | Bitácora cronológica completa del proyecto. |
@@ -127,7 +127,7 @@ El proyecto se desarrolla con un equipo de agentes de IA especializados en [Anti
 
 ## Estado Actual del Proyecto
 
-**Versión**: `v0.4.9` | **Fecha**: 2026-03-20
+**Versión**: `v0.5.1` | **Fecha**: 2026-03-20
 
 | Sprint | Versión | Estado | Descripción |
 |---|---|---|---|
@@ -136,7 +136,7 @@ El proyecto se desarrolla con un equipo de agentes de IA especializados en [Anti
 | Sprint 2 | v0.3.0 | Completo | Catálogos + CRUD + 41/41 tests |
 | Sprint 3 | v0.4.0 | Completo | UI Design System neumórfico |
 | ABM Plan Cuentas | v0.4.1-v0.4.9 | Completo | ABM multi-entidad + optimización |
-| Hoja de Cargas | v0.5.0 | Próximo | Data Entry simplificado |
+| Hoja de Cargas | v0.5.1 | Completo | Data Entry interactivo autocompletado |
 | Módulos Análisis | v0.6.0+ | Roadmap | Dashboard, Presupuestación, Anual |
 
 ---
@@ -158,7 +158,7 @@ El proyecto se desarrolla con un equipo de agentes de IA especializados en [Anti
 └── README.md # Índice maestro <- estás aquí
 ```
 
-Ver [ESTRUCTURA.md](./ESTRUCTURA.md) para el mapa detallado de cada archivo.
+Ver [ESTRUCTURA.md](./docs/permanente/ESTRUCTURA.md) para el mapa detallado de cada archivo.
 
 ---
 
@@ -199,4 +199,4 @@ chore(config): agregar moneda AUD
 
 ---
 
-*Tidetrack Personal Finance Tracker - v0.4.9 - Última actualización: 2026-03-20*
+*Tidetrack Personal Finance Tracker - v0.5.1 - Última actualización: 2026-03-20*

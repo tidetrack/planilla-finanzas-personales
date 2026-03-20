@@ -5,3 +5,7 @@ node_modules/
 package-lock.json
 # Apps Script metadata if desired to ignore local ones
 # .clasp.json
+
+.DS_Store
+.vscode/
+_backup/

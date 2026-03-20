@@ -30,6 +30,7 @@ planilla-finanzas-personales/
 │ │ ├── CHANGELOG.md # Historial completo de versiones
 │ │ ├── CONTEXTO_NEGOCIO.md # Círculo de oro, modelo de negocio
 │ │ ├── DATABASE_SCHEMA.md # Esquema de tablas en Google Sheets
+│ │ ├── ESTRUCTURA.md # Este archivo. Mapa de carpetas.
 │ │ ├── GUIA_ARQUITECTURA.md # ADRs y decisiones técnicas formales
 │ │ ├── GUIA_MODULOS.md # Documentación técnica de módulos .js
 │ │ ├── HISTORIAL_DESARROLLO.md # Bitácora cronológica del proyecto
@@ -39,6 +40,7 @@ planilla-finanzas-personales/
 │ │ ├── ROADMAP_PRODUCTO.md # Etapas y prioridades del producto
 │ │ └── database_er_diagram.png # Diagrama ER de relaciones
 │ ├── sesiones/ # Notas de sesiones de trabajo específicas
+│ │ └── Notas Fran.md # Notas personales del desarrollador
 │ ├── PRODUCT_BACKLOG.md # Sprints y backlog priorizado
 │ ├── REGLAS_AGENTE.md # Convenciones de desarrollo
 │ └── README.md # Índice de documentación
@@ -68,8 +70,6 @@ planilla-finanzas-personales/
 ├── _backup/ # Archivos históricos (NO editar)
 │
 ├── README.md # Indice maestro. INICIO AQUI.
-├── ESTRUCTURA.md # Este archivo. Mapa de carpetas.
-├── Notas Fran.md # Notas personales del desarrollador
 ├── .clasp.json # Config de Clasp (deploy a Apps Script)
 ├── .claspignore # Archivos excluidos del push a GAS
 ├── .gitignore # Archivos excluidos de Git

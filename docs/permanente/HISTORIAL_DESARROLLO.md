@@ -6,6 +6,24 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-20 - Autocompletado de Hoja Cargas (v0.5.1)
+
+### Evento
+Implementación de lógica de autocompletado en la hoja "Cargas" para agilizar el Data Entry, respondiendo al diseño ágil y reduciendo fricción.
+
+### Decisiones Técnicas
+- Se extendió el sistema de `onEdit` en `14_EventHandlers.js`.
+- Se rutean los eventos detectados en la hoja "Cargas" (`NAV_CONFIG.SHEETS.CARGAS`).
+- Al seleccionar una Cuenta (Col J), busca sincrónicamente en qué categoría del Plan de Cuentas está y completa el Tipo (Col K).
+- Al elegir un Medio (Col L), busca la moneda asociada en la tabla de Medios y la completa (Col M).
+- Al cargar un Monto (Col I), completa automáticamente la Fecha (Col N) con `hoy` si la celda original estaba vacía.
+
+### Archivos Modificados
+- **`[MOD]` `src/14_EventHandlers.js`** — Controlador de eventos y autocompletado interactivo.
+- **`[MOD]` `src/ZZ_Changelog.js`** — Release v0.5.1 documentada.
+
+---
+
 ## 2026-03-20 - Creación del Agente `github-docs` y Expansión del Ecosistema Agéntico
 
 ### Evento
