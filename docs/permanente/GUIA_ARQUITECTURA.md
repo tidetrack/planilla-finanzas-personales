@@ -103,6 +103,31 @@ Implementación:
 **Negativas:**
 - ️ Agregar una nueva moneda requiere un deploy de código (no apto para usuario final sin acceso al repo).
 
+### ADR-004: Data Lake de Cotizaciones (Carga en Batch)
+
+**Fecha**: 2026-03-20
+
+#### Contexto
+Registrar matrices con todas las cotizaciones cruzadas ralentiza la planilla y agota límites de APIs. Consultar en vivo celda por celda es inviable.
+
+#### Decisión
+**Implementar un Vector Base respecto al USD y trasladar datos en lote a un Data Lake.**
+
+Implementación:
+- El usuario ingresa la data de forma asíncrona en la hoja `Cargas` temporal.
+- Mediante un disparador (o Menú), el script `procesarCargas()` (en `06_RegistrosService.js`) evalúa el lote.
+- Realiza llamadas a `argentinadatos` (ARS) y `Frankfurter` (AUD/EUR), cacheando los promedios en la hoja `Tipos de cambio`.
+- Anexa finalmente los vectores optimizados (monto, tc_ars, tc_usd, tc_eur, tc_aud) al historial maestro de `Registros`.
+
+#### Consecuencias
+**Positivas:**
+- Rendimiento ultraveloz: mínima carga de red hacia las APIs.
+- Escalable a miles de filas sin romper quotas de ejecución de Google.
+- Mantiene aislados los Registros definitivos de la interacción diaria.
+
+**Negativas:**
+- ️ Impide tener la data "viva" de las tablas convertidas instantes de la carga; requiere apretar "Cargar Lote".
+
 ---
 
 ## ️ Arquitectura del Sistema

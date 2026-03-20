@@ -6,6 +6,21 @@
  * (Añadir nuevos registros arriba)
  * ---
  *
+ * [2026-03-20] v0.6.1 - Refactor Columnas Cargas y Registros:
+ * - Se adaptó `00_Config.js` y `06_RegistrosService.js` para soportar una nueva columna "Tipo de Cuenta" en la DB de Registros.
+ * - En la hoja "Cargas", se añadió "Tipo" manualmente y "Tipo de Cuenta" se eliminó (se deduce eficientemente en backend).
+ * - Se corrigieron los índices de ordenamiento `sort()` y mapeo en `RANGES.REGISTROS` hasta la columna T. 
+ *
+ * ---
+ *
+ * [2026-03-20] v0.6.0 - Sistema de Registros Batch y Arquitectura Multi-Moneda:
+ * - Creación de la hoja "Registros" como Data Lake inmutable y "Tipos de Cambio" como caché estructurado.
+ * - `06_RegistrosService.js`: Se incorporó `procesarCargas()` para lectura en bloque de `I5:O19`, anexado a `Registros` y ordenamiento inteligente.
+ * - `15_ExchangeRateApi.js`: Se añadió fetching de APIs externas con caché temporal en memoria. (DolarApi y Frankfurter) para ARS/USD/EUR/AUD.
+ * - El menú de Tidetrack ganó el ítem `🔧 [Dev] Procesar Cargas`.
+ *
+ * ---
+ *
  * [2026-03-20] v0.5.1 - Autocompletado Hoja Cargas:
  * - Se implementó la lógica de autocompletado en `14_EventHandlers.js` para la hoja "Cargas".
  * - El "Tipo" se deduce automáticamente al elegir la "Cuenta" cruzando datos con el Plan de Cuentas.

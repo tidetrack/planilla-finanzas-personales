@@ -15,8 +15,10 @@
 // ============================================
 
 const SHEETS = {
- PLAN_CUENTAS: 'Plan de Cuentas',
- DATA_ENTRY: 'Hoja de Cargas'
+    PLAN_CUENTAS: 'Plan de Cuentas',
+    DATA_ENTRY: 'Hoja de Cargas',
+    REGISTROS: 'Registros',
+    TIPOS_CAMBIO: 'Tipos de cambio'
 };
 
 const HEADER_ROW = 3;
@@ -51,12 +53,36 @@ const RANGES = {
  end: 'T',
  columns: { nombre: 'R', moneda: 'S', proyecto: 'T' }
  },
- PROYECTOS: {
- sheet: SHEETS.PLAN_CUENTAS,
- start: 'V',
- end: 'W',
- columns: { nombre: 'V', tipo: 'W' }
- }
+    PROYECTOS: {
+        sheet: SHEETS.PLAN_CUENTAS,
+        start: 'V',
+        end: 'W',
+        columns: { nombre: 'V', tipo: 'W' }
+    },
+    REGISTROS: {
+        sheet: SHEETS.REGISTROS,
+        start: 'I',
+        end: 'T',
+        columns: { monto: 'I', tipo: 'J', cuenta: 'K', tipo_cuenta: 'L', medio: 'M', moneda: 'N', fecha: 'O', nota: 'P', tc_ars: 'Q', tc_usd: 'R', tc_aud: 'S', tc_eur: 'T' }
+    },
+    TC_ARS: {
+        sheet: SHEETS.TIPOS_CAMBIO,
+        start: 'I',
+        end: 'J',
+        columns: { fecha: 'I', cotizacion: 'J' }
+    },
+    TC_AUD: {
+        sheet: SHEETS.TIPOS_CAMBIO,
+        start: 'O',
+        end: 'P',
+        columns: { fecha: 'O', cotizacion: 'P' }
+    },
+    TC_EUR: {
+        sheet: SHEETS.TIPOS_CAMBIO,
+        start: 'R',
+        end: 'S',
+        columns: { fecha: 'R', cotizacion: 'S' }
+    }
 };
 
 // ============================================
@@ -80,12 +106,13 @@ const ERROR_MESSAGES = {
 // ============================================
 
 const MENU_CONFIG = {
- MAIN_MENU: 'Tidetrack',
- ITEMS: [
- { name: 'Gestor: Plan de Cuentas', function: 'showAbmPlanCuentas' },
- { separator: true },
- { name: '🔧 [Dev] On/Off Protección Cuentas', function: 'togglePlanCuentasProtection' }
- ]
+    MAIN_MENU: 'Tidetrack',
+    ITEMS: [
+        { name: 'Gestor: Plan de Cuentas', function: 'showAbmPlanCuentas' },
+        { separator: true },
+        { name: '🔧 [Dev] Procesar Cargas', function: 'procesarCargas' },
+        { name: '🔧 [Dev] On/Off Protección Cuentas', function: 'togglePlanCuentasProtection' }
+    ]
 };
 
 // ============================================

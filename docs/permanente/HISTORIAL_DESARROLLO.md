@@ -6,6 +6,42 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-20 - Refactorización de Columnas "Cargas" y "Registros" (v0.6.1)
+
+### Evento
+El usuario modificó la estructura de las hojas Cargas y Registros, separando el campo "Tipo" manual (Ingreso/Egreso) del "Tipo de Cuenta" (Ingreso, Costo Fijo, Costo Variable), que ahora se deduce en backend sin afectar el Data Entry frontal.
+
+### Decisiones Técnicas
+- Se desenchufó el onEdit anterior en `14_EventHandlers.js` que autocompletaba el viejo campo Tipo.
+- El `06_RegistrosService.js` ahora toma el array de 7 elementos [Monto, Tipo, Cuenta, Medio, Moneda, Fecha, Nota] y fabrica un registro de 12 elementos.
+- Se implementó la lógica `ingresosCat.includes(cuentaName)` dentro del forEach de procesamiento para deducir el "Tipo de Cuenta" haciendo cruce directo con los rangos definidos en Plan de Cuentas, y ahorrando una columna en el UI frontal del usuario.
+
+### Archivos Modificados
+- **`[MOD]` `src/14_EventHandlers.js`** — Limpieza de listener de columna.
+- **`[MOD]` `src/00_Config.js`** — Rango `REGISTROS` ahora es `I:T`.
+- **`[MOD]` `src/06_RegistrosService.js`** — Nuevos índices de array y cruce de categorías para deducción.
+
+---
+
+## 2026-03-20 - Sistema de Registros Batch y APIs Multi-Moneda (v0.6.0)
+
+### Evento
+Implementación completa del flujo de datos definitivo: traslado en lote desde la hoja "Cargas" a la base de datos "Registros", enriqueciendo cada transacción con cotizaciones históricas de diversas APIs utilizando el USD como ancla.
+
+### Decisiones Técnicas (ADR-003)
+- Se desarrolló un sistema **Batch Transfer** (`procesarCargas` en `06_RegistrosService.js`).
+- **Data Lake de Cotizaciones**: Se creó la hoja "Tipos de Cambio" como memoria caché de cotizaciones para evitar peticiones redundantes.
+- Las consultas históricas se resuelven contra *DolarApi* vía *argentinadatos* (ARS Oficial) y *Frankfurter* (EUR, AUD). 
+- El sistema rellena el vector TC (P, Q, R, S) de forma transparente.
+
+### Archivos Modificados/Creados
+- **`[NEW]` `src/06_RegistrosService.js`** — Lógica principal de batch processing y guardado en `Registros`.
+- **`[NEW]` `src/15_ExchangeRateApi.js`** — Lógicas de fetch contra APIs públicas de cotización.
+- **`[MOD]` `src/00_Config.js`** — Se mapearon las nuevas entidades (`REGISTROS`, `TC_ARS`, `TC_EUR`, `TC_AUD`).
+- **`[MOD]` `src/12_MenuService.js`** — Se añadió el procesador manual `[Dev] Procesar Cargas`.
+
+---
+
 ## 2026-03-20 - Autocompletado de Hoja Cargas (v0.5.1)
 
 ### Evento

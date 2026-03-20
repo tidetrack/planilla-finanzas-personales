@@ -129,39 +129,6 @@ function handleCargasEdit(e) {
         return;
     }
 
-    // 2. Edición en Columna "Cuenta" (J = 10) -> Autocompletar Tipo (K = 11)
-    if (col === 10) {
-        const tipoCell = sheet.getRange(row, 11);
-        if (!value) {
-            tipoCell.clearContent();
-            return;
-        }
-
-        try {
-            // Checkeo de categorías apoyado en el config y gestor
-            const ingresos = getTableData('INGRESOS');
-            if (ingresos.some(r => r[0] === value)) {
-                tipoCell.setValue('Ingreso');
-                return;
-            }
-
-            const fijos = getTableData('COSTOS_FIJOS');
-            if (fijos.some(r => r[0] === value)) {
-                tipoCell.setValue('Costo Fijo');
-                return;
-            }
-
-            const variables = getTableData('COSTOS_VARIABLES');
-            if (variables.some(r => r[0] === value)) {
-                tipoCell.setValue('Costo Variable');
-                return;
-            }
-        } catch (error) {
-            Logger.log("Error al buscar tipo de cuenta: " + error);
-        }
-
-        return;
-    }
 
     // 3. Edición en Columna "Medio" (L = 12) -> Autocompletar Moneda (M = 13)
     if (col === 12) {
