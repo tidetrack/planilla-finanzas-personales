@@ -6,6 +6,12 @@
  * (Añadir nuevos registros arriba)
  * ---
  *
+ * [2026-03-20] v0.6.2 - Carga Histórica de TC:
+ * - Se añadió la herramienta [Dev] `forzarCargaHistorica()` en `15_ExchangeRateApi.js`.
+ * - Permite generar un barrido desde el 01/01/2026 reconstruyendo el historial de las 4 divisas simultáneas con fallback a viernes para fines de semana.
+ *
+ * ---
+ *
  * [2026-03-20] v0.6.1 - Refactor Columnas Cargas y Registros:
  * - Se adaptó `00_Config.js` y `06_RegistrosService.js` para soportar una nueva columna "Tipo de Cuenta" en la DB de Registros.
  * - En la hoja "Cargas", se añadió "Tipo" manualmente y "Tipo de Cuenta" se eliminó (se deduce eficientemente en backend).

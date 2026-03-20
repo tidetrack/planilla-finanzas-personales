@@ -20,14 +20,14 @@ function createCustomMenu() {
  const menu = ui.createMenu(MENU_CONFIG.MAIN_MENU || 'Tidetrack ');
 
  // Construir menú dinámicamente desde la configuración
- if (MENU_CONFIG.ITEMS && Array.isArray(MENU_CONFIG.ITEMS)) {
- MENU_CONFIG.ITEMS.forEach(item => {
- if (item.separator) {
- menu.addSeparator();
- } else {
- menu.addItem(item.name, item.function);
- }
- });
+    if (MENU_CONFIG.ITEMS && Array.isArray(MENU_CONFIG.ITEMS)) {
+        MENU_CONFIG.ITEMS.forEach(item => {
+            if (item.separator) {
+                menu.addSeparator();
+            } else {
+                menu.addItem(item.name, item.function);
+            }
+        });
  } else {
  // Fallback si no hay config
  menu.addItem('Error de Configuración', 'onOpen');

@@ -71,6 +71,12 @@ const RANGES = {
         end: 'J',
         columns: { fecha: 'I', cotizacion: 'J' }
     },
+    TC_USD: {
+        sheet: SHEETS.TIPOS_CAMBIO,
+        start: 'L',
+        end: 'M',
+        columns: { fecha: 'L', cotizacion: 'M' }
+    },
     TC_AUD: {
         sheet: SHEETS.TIPOS_CAMBIO,
         start: 'O',
@@ -111,6 +117,7 @@ const MENU_CONFIG = {
         { name: 'Gestor: Plan de Cuentas', function: 'showAbmPlanCuentas' },
         { separator: true },
         { name: '🔧 [Dev] Procesar Cargas', function: 'procesarCargas' },
+        { name: '🔧 [Dev] Forzar Carga Histórica TC', function: 'forzarCargaHistorica' },
         { name: '🔧 [Dev] On/Off Protección Cuentas', function: 'togglePlanCuentasProtection' }
     ]
 };

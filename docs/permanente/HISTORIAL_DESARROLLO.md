@@ -6,6 +6,23 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-20 - Herramienta de Carga Histórica de Tipos de Cambio (v0.6.2)
+
+### Evento
+El usuario solicitó una función bajo demanda para popular forzosamente el historial de cotizaciones desde el 01/01/2026, llenando de manera estructurada los años anteriores de "Tipos de Cambio".
+
+### Decisiones Técnicas
+- Se extendió la UI de `12_MenuService.js` con una nueva acción: `[Dev] Forzar Carga Histórica TC`.
+- La función `forzarCargaHistorica()` anidó un fetch estructurado por lotes: extrae todo el arreglo de *argentinadatos* en una llamada y utiliza la consulta _Time Series_ de *Frankfurter API* (`start..end`) para resolver EUR y AUD rápidamente sin hacer cientos de peticiones HTTP en un loop.
+- Se implementó fallback manual al día hábil anterior si la API no reporta valor para un sábado/domingo determinado.
+
+### Archivos Modificados
+- **`[MOD]` `src/00_Config.js`** — Se añadió `TC_USD` al catálogo de rangos mapeados (I, L, O, R).
+- **`[MOD]` `src/12_MenuService.js`** — Se mapeó el trigger UI.
+- **`[MOD]` `src/15_ExchangeRateApi.js`** — Creación del algoritmo maestro de rellenado batch.
+
+---
+
 ## 2026-03-20 - Refactorización de Columnas "Cargas" y "Registros" (v0.6.1)
 
 ### Evento

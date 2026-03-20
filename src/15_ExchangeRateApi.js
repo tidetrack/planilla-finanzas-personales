@@ -69,3 +69,89 @@ function fetchInternationalRates(dateString) {
         throw new Error('No se pudo obtener cotizaciones internacionales: ' + e.toString());
     }
 }
+
+/**
+ * Herramienta [Dev] para forzar la carga del histórico desde el 01/01/2026 hasta hoy.
+ * Sobreescribe o llena los datos en la hoja Tipos de Cambio para las 4 monedas.
+ */
+function forzarCargaHistorica() {
+    const ui = SpreadsheetApp.getUi();
+    const response = ui.alert('Forzar Carga Histórica', '¿Estás seguro de que querés cargar todos los tipos de cambio desde el 01/01/2026 hasta hoy? Esto demorará unos segundos y reescribirá el caché.', ui.ButtonSet.YES_NO);
+    if (response !== ui.Button.YES) return;
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEETS.TIPOS_CAMBIO);
+
+    // Fechas de rango
+    const startDate = new Date('2026-01-01T12:00:00Z');
+    const endDate = new Date();
+    
+    // Obtener array histórico de ARS (Llamada inicial levanta y purga caché en script)
+    fetchArsRate(formatDateISO(startDate)); 
+    
+    // Configurar Batch Request a Frankfurter
+    const startStr = formatDateISO(startDate);
+    const endStr = formatDateISO(endDate);
+    const frankUrl = `https://api.frankfurter.app/${startStr}..${endStr}?from=USD&to=EUR,AUD`;
+    let frankData = {};
+    try {
+        const res = UrlFetchApp.fetch(frankUrl, { muteHttpExceptions: true });
+        if (res.getResponseCode() === 200) {
+            frankData = JSON.parse(res.getContentText()).rates;
+        } else {
+            throw new Error("Frankfurter (Historical) HTTP " + res.getResponseCode());
+        }
+    } catch (e) {
+        ui.alert('Error contactando a Frankfurter API: ' + e.message);
+        return;
+    }
+
+    // Helper para buscar Frankfurter con fallback al día anterior (fines de semana)
+    function getFrankRate(dateStr, currency) {
+        let checkDate = new Date(dateStr + "T12:00:00Z");
+        for (let i = 0; i < 7; i++) {
+            let dStr = formatDateISO(checkDate);
+            if (frankData[dStr] && frankData[dStr][currency]) {
+                return frankData[dStr][currency];
+            }
+            checkDate.setDate(checkDate.getDate() - 1);
+        }
+        return null;
+    }
+
+    let arsAppend = [];
+    let usdAppend = [];
+    let audAppend = [];
+    let eurAppend = [];
+
+    // Iterar día por día
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        let currentStr = formatDateISO(d);
+        let currDateObj = new Date(d);
+        
+        // ars busca siempre via fetchArsRate que usa la caché en memoria que ya cargamos arriba:
+        let rateArs = fetchArsRate(currentStr);
+        let rateEur = getFrankRate(currentStr, 'EUR');
+        let rateAud = getFrankRate(currentStr, 'AUD');
+        let rateUsd = 1.0;
+
+        if (rateArs) arsAppend.push([currDateObj, rateArs]);
+        if (rateEur) eurAppend.push([currDateObj, rateEur]);
+        if (rateAud) audAppend.push([currDateObj, rateAud]);
+        usdAppend.push([currDateObj, rateUsd]);
+    }
+
+    // Limpiar celdas previas (I4 a T, saltando los headers en row 3)
+    sheet.getRange('I4:J').clearContent();
+    sheet.getRange('L4:M').clearContent();
+    sheet.getRange('O4:P').clearContent();
+    sheet.getRange('R4:S').clearContent();
+
+    // Escribir los arrays masivamente
+    if (arsAppend.length > 0) appendMassive('TC_ARS', arsAppend, 4);
+    if (usdAppend.length > 0) appendMassive('TC_USD', usdAppend, 4);
+    if (audAppend.length > 0) appendMassive('TC_AUD', audAppend, 4);
+    if (eurAppend.length > 0) appendMassive('TC_EUR', eurAppend, 4);
+
+    ss.toast(`Se generaron ${arsAppend.length} registros históricos por divisa.`, '¡Carga Exitosa!', 6);
+}
