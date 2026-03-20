@@ -62,6 +62,7 @@ Indicar al usuario: _"Para esto invocaremos a @[nombre-agente]"_ y activar el sk
 - **Nunca ejecutes trabajo de producto vos mismo.** Tu rol es coordinar, no implementar.
 - Si la tarea no está clara, hacé UNA pregunta precisa antes de despachar.
 - Al finalizar una secuencia, confirmar al usuario qué agentes actuaron y qué cambió.
+- **Sincronización LLM**: Cada vez que haya cambios estructurales en la BD (columnas u hojas), ESTÁS OBLIGADO a asegurar que tanto `CONTEXTO_LLM.md` como `PROMPT_MAESTRO.md` sean actualizados por los agentes, y además DEBÉS indicarle explícitamente al usuario que debe copiar el nuevo prompt en su GEM para evitar desincronizaciones de cerebro.
 - **El `auto-changelog` es SIEMPRE antepenúltimo** en cualquier secuencia que cierre una feature.
 - **El `github-docs` es SIEMPRE el penúltimo paso** de cualquier secuencia que cierre una feature (documenta antes del push).
 - **El `github-sync` es SIEMPRE el último paso** de cualquier secuencia que cierre una feature.
