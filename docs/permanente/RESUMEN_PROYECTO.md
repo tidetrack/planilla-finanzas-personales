@@ -1,6 +1,6 @@
 # Resumen del Proyecto - Tidetrack Personal Finance
 
-## 🎯 Definición Operativa
+## Definición Operativa
 
 **Tidetrack** es una fintech educativa enfocada en finanzas personales cuyo producto central es un sistema de registro, lectura y planificación del dinero diseñado para sostener un hábito cotidiano con fricción mínima.
 
@@ -10,7 +10,7 @@
 
 La tesis de producto es directa: **cuando registrar el dinero es incómodo, la persona deja de registrar**; cuando el flujo de registro es amable y el tablero es legible, aparece control, calma y continuidad.
 
-## 📖 Origen: De una Planilla Íntima a un Producto con Identidad
+## Origen: De una Planilla Íntima a un Producto con Identidad
 
 Tidetrack arranca como un gesto íntimo: una planilla simple construida para "respirar" finanzas, tener control mes a mes, presupuestar y ver "qué pasa con la plata" sin zonas grises. El aprendizaje inicial no fue técnico; fue humano. La planilla se transformó en un espejo: **si el registro no es fácil, no existe; si existe, el dinero deja de ser un misterio**.
 
@@ -20,7 +20,7 @@ Esa intuición se validó en el círculo cercano, contagiando el método a amigo
 
 La primera "oficina" fue Google Sheets. Eso define una cultura de producto orientada a **prototipar rápido, iterar con usuarios reales, medir hábitos y mejorar por entregas**. El criterio de éxito inicial no fue "features"; fue **constancia diaria**.
 
-## 🎯 Problema que Resuelve
+## Problema que Resuelve
 
 ### Desinformación Financiera Cotidiana
 
@@ -38,7 +38,7 @@ El problema específico no es "no tener una app". Es la **incapacidad práctica 
 | Visibilidad por rubros | Capacidad de planificar |
 | Cálculo de disponibilidad | Paz financiera |
 
-## 👥 Público Objetivo
+## Público Objetivo
 
 ### Entrada Estratégica: Viajeros y Vida Móvil
 
@@ -50,7 +50,7 @@ Esta entrada cumple dos funciones:
 
 La idea no es quedarse encerrado en "viajes" como nicho. Es usarlo como **wedge**: entrar por un caso de uso diferencial y luego abrir a cualquier persona que quiera orden cotidiano.
 
-## 🔑 Diferenciadores Clave
+## Diferenciadores Clave
 
 ### 1. Hábito como Tecnología
 - Rachas, rituales y microdecisiones
@@ -72,7 +72,7 @@ La idea no es quedarse encerrado en "viajes" como nicho. Es usarlo como **wedge*
 - Lenguaje humano, no jerga contable
 - Del dato al criterio
 
-## 📊 Qué Significa "Finanzas Personales" en Tidetrack
+## Qué Significa "Finanzas Personales" en Tidetrack
 
 Tidetrack no es un Excel complejo ni una promesa de inversión milagrosa. Es un **sistema de hábitos y decisiones** apoyado en tres ideas:
 
@@ -82,5 +82,5 @@ Tidetrack no es un Excel complejo ni una promesa de inversión milagrosa. Es un 
 
 ---
 
-**Versión del Documento**: 1.0  
+**Versión del Documento**: 1.0 
 **Última actualización**: 2026-01-17

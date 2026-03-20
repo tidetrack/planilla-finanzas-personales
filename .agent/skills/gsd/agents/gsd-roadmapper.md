@@ -30,55 +30,55 @@ The roadmap must be:
 
 <process>
 1. Read planning context:
-   ```bash
-   cat .planning/PROJECT.md
-   cat .planning/REQUIREMENTS.md
-   cat .planning/research/SUMMARY.md  # if exists
-   cat .planning/config.json
-   ```
+ ```bash
+ cat .planning/PROJECT.md
+ cat .planning/REQUIREMENTS.md
+ cat .planning/research/SUMMARY.md # if exists
+ cat .planning/config.json
+ ```
 
 2. Derive phases from requirements:
-   - Group requirements into logical phases
-   - Don't impose structure - let requirements dictate phases
-   - Each phase should be independently verifiable
-   - Typical range: 3-8 phases for standard projects
+ - Group requirements into logical phases
+ - Don't impose structure - let requirements dictate phases
+ - Each phase should be independently verifiable
+ - Typical range: 3-8 phases for standard projects
 
 3. Sequence phases:
-   - Order by technical dependencies
-   - Front-load infrastructure (auth, data models)
-   - Group related features
-   - Consider research recommendations (build order from ARCHITECTURE)
+ - Order by technical dependencies
+ - Front-load infrastructure (auth, data models)
+ - Group related features
+ - Consider research recommendations (build order from ARCHITECTURE)
 
 4. Map requirements to phases:
-   - Assign every v1 requirement to exactly one phase
-   - Use REQ-IDs from REQUIREMENTS.md
-   - Validate 100% coverage (no unmapped requirements)
+ - Assign every v1 requirement to exactly one phase
+ - Use REQ-IDs from REQUIREMENTS.md
+ - Validate 100% coverage (no unmapped requirements)
 
 5. Define success criteria:
-   - 2-5 observable user behaviors per phase
-   - Not "Code X" but "User can do Y"
-   - Specific and testable
-   - Derived from phase goal + requirements
+ - 2-5 observable user behaviors per phase
+ - Not "Code X" but "User can do Y"
+ - Specific and testable
+ - Derived from phase goal + requirements
 
 6. Write files immediately:
-   - `ROADMAP.md` - Full roadmap structure
-   - `STATE.md` - Initialize project state
-   - Update `REQUIREMENTS.md` - Add traceability (REQ-ID → Phase mapping)
+ - `ROADMAP.md` - Full roadmap structure
+ - `STATE.md` - Initialize project state
+ - Update `REQUIREMENTS.md` - Add traceability (REQ-ID → Phase mapping)
 
 7. Commit all files:
-   ```bash
-   git add .planning/ROADMAP.md .planning/STATE.md .planning/REQUIREMENTS.md
-   git commit -m "docs: create roadmap ([N] phases)"
-   ```
+ ```bash
+ git add .planning/ROADMAP.md .planning/STATE.md .planning/REQUIREMENTS.md
+ git commit -m "docs: create roadmap ([N] phases)"
+ ```
 
 8. Return result:
-   ```
-   ## ROADMAP CREATED
+ ```
+ ## ROADMAP CREATED
 
-   Phases: [N]
-   Requirements mapped: [X]/[X] (100%)
-   Success criteria: [Y] total
-   ```
+ Phases: [N]
+ Requirements mapped: [X]/[X] (100%)
+ Success criteria: [Y] total
+ ```
 
 **If blocked:**
 ```

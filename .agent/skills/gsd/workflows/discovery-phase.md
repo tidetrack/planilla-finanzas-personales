@@ -3,12 +3,12 @@ name: gsd:discovery-phase
 description: Execute discovery at the appropriate depth level before planning
 argument-hint: "<depth: verify|standard|deep>"
 allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - WebSearch
-  - WebFetch
-  - AskUserQuestion
+ - Read
+ - Write
+ - Bash
+ - WebSearch
+ - WebFetch
+ - AskUserQuestion
 ---
 
 <objective>
@@ -21,11 +21,11 @@ NOTE: For comprehensive ecosystem research ("how do experts build this"), use /g
 
 **Depth Levels:**
 
-| Level | Name         | Time      | Output                                       | When                                      |
+| Level | Name | Time | Output | When |
 | ----- | ------------ | --------- | -------------------------------------------- | ----------------------------------------- |
-| 1     | Quick Verify | 2-5 min   | No file, proceed with verified knowledge     | Single library, confirming current syntax |
-| 2     | Standard     | 15-30 min | DISCOVERY.md                                 | Choosing between options, new integration |
-| 3     | Deep Dive    | 1+ hour   | Detailed DISCOVERY.md with validation gates  | Architectural decisions, novel problems   |
+| 1 | Quick Verify | 2-5 min | No file, proceed with verified knowledge | Single library, confirming current syntax |
+| 2 | Standard | 15-30 min | DISCOVERY.md | Choosing between options, new integration |
+| 3 | Deep Dive | 1+ hour | Detailed DISCOVERY.md with validation gates | Architectural decisions, novel problems |
 </objective>
 
 <execution_context>
@@ -64,23 +64,23 @@ For: Single known library, confirming syntax/version still correct.
 
 1. Resolve library in Context7:
 
-   ```
-   mcp__context7__resolve-library-id with libraryName: "[library]"
-   ```
+ ```
+ mcp__context7__resolve-library-id with libraryName: "[library]"
+ ```
 
 2. Fetch relevant docs:
 
-   ```
-   mcp__context7__get-library-docs with:
-   - context7CompatibleLibraryID: [from step 1]
-   - topic: [specific concern]
-   ```
+ ```
+ mcp__context7__get-library-docs with:
+ - context7CompatibleLibraryID: [from step 1]
+ - topic: [specific concern]
+ ```
 
 3. Verify:
 
-   - Current version matches expectations
-   - API syntax unchanged
-   - No breaking changes in recent versions
+ - Current version matches expectations
+ - API syntax unchanged
+ - No breaking changes in recent versions
 
 4. **If verified:** Return to plan-phase.md with confirmation. No DISCOVERY.md needed.
 
@@ -96,34 +96,34 @@ For: Choosing between options, new external integration.
 
 1. **Identify what to discover:**
 
-   - What options exist?
-   - What are the key comparison criteria?
-   - What's our specific use case?
+ - What options exist?
+ - What are the key comparison criteria?
+ - What's our specific use case?
 
 2. **Context7 for each option:**
 
-   ```
-   For each library/framework:
-   - mcp__context7__resolve-library-id
-   - mcp__context7__get-library-docs (mode: "code" for API, "info" for concepts)
-   ```
+ ```
+ For each library/framework:
+ - mcp__context7__resolve-library-id
+ - mcp__context7__get-library-docs (mode: "code" for API, "info" for concepts)
+ ```
 
 3. **Official docs** for anything Context7 lacks.
 
 4. **WebSearch** for comparisons:
 
-   - "[option A] vs [option B] {current_year}"
-   - "[option] known issues"
-   - "[option] with [our stack]"
+ - "[option A] vs [option B] {current_year}"
+ - "[option] known issues"
+ - "[option] with [our stack]"
 
 5. **Cross-verify:** Any WebSearch finding → confirm with Context7/official docs.
 
 6. **Create DISCOVERY.md** using template structure:
 
-   - Summary with recommendation
-   - Key findings per option
-   - Code examples from Context7
-   - Confidence level (should be MEDIUM-HIGH for Level 2)
+ - Summary with recommendation
+ - Key findings per option
+ - Code examples from Context7
+ - Confidence level (should be MEDIUM-HIGH for Level 2)
 
 7. Return to plan-phase.md.
 
@@ -137,42 +137,42 @@ For: Architectural decisions, novel problems, high-risk choices.
 
 1. **Scope the discovery** using template:
 
-   - Define clear scope
-   - Define include/exclude boundaries
-   - List specific questions to answer
+ - Define clear scope
+ - Define include/exclude boundaries
+ - List specific questions to answer
 
 2. **Exhaustive Context7 research:**
 
-   - All relevant libraries
-   - Related patterns and concepts
-   - Multiple topics per library if needed
+ - All relevant libraries
+ - Related patterns and concepts
+ - Multiple topics per library if needed
 
 3. **Official documentation deep read:**
 
-   - Architecture guides
-   - Best practices sections
-   - Migration/upgrade guides
-   - Known limitations
+ - Architecture guides
+ - Best practices sections
+ - Migration/upgrade guides
+ - Known limitations
 
 4. **WebSearch for ecosystem context:**
 
-   - How others solved similar problems
-   - Production experiences
-   - Gotchas and anti-patterns
-   - Recent changes/announcements
+ - How others solved similar problems
+ - Production experiences
+ - Gotchas and anti-patterns
+ - Recent changes/announcements
 
 5. **Cross-verify ALL findings:**
 
-   - Every WebSearch claim → verify with authoritative source
-   - Mark what's verified vs assumed
-   - Flag contradictions
+ - Every WebSearch claim → verify with authoritative source
+ - Mark what's verified vs assumed
+ - Flag contradictions
 
 6. **Create comprehensive DISCOVERY.md:**
 
-   - Full structure from template
-   - Quality report with source attribution
-   - Confidence by finding
-   - If LOW confidence on any critical finding → add validation checkpoints
+ - Full structure from template
+ - Quality report with source attribution
+ - Confidence by finding
+ - If LOW confidence on any critical finding → add validation checkpoints
 
 7. **Confidence gate:** If overall confidence is LOW, present options before proceeding.
 
@@ -228,9 +228,9 @@ Use AskUserQuestion:
 - header: "Low Confidence"
 - question: "Discovery confidence is LOW: [reason]. How would you like to proceed?"
 - options:
-  - "Dig deeper" - Do more research before planning
-  - "Proceed anyway" - Accept uncertainty, plan with caveats
-  - "Pause" - I need to think about this
+ - "Dig deeper" - Do more research before planning
+ - "Proceed anyway" - Accept uncertainty, plan with caveats
+ - "Pause" - I need to think about this
 
 If confidence is MEDIUM:
 Inline: "Discovery complete (medium confidence). [brief reason]. Proceed to planning?"

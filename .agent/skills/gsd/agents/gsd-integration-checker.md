@@ -35,8 +35,8 @@ For each phase, extract what it provides and what it should consume.
 ```bash
 # Key exports from each phase
 for summary in .planning/phases/*/*-SUMMARY.md; do
-  echo "=== $summary ==="
-  grep -A 10 "Key Files\|Exports\|Provides" "$summary" 2>/dev/null
+ echo "=== $summary ==="
+ grep -A 10 "Key Files\|Exports\|Provides" "$summary" 2>/dev/null
 done
 ```
 
@@ -46,25 +46,25 @@ For each phase's exports, verify they're imported and used.
 
 ```bash
 check_export_used() {
-  local export_name="$1"
-  local source_phase="$2"
-  local search_path="${3:-src/}"
+ local export_name="$1"
+ local source_phase="$2"
+ local search_path="${3:-src/}"
 
-  local imports=$(grep -r "import.*$export_name" "$search_path" \
-    --include="*.ts" --include="*.tsx" 2>/dev/null | \
-    grep -v "$source_phase" | wc -l)
+ local imports=$(grep -r "import.*$export_name" "$search_path" \
+ --include="*.ts" --include="*.tsx" 2>/dev/null | \
+ grep -v "$source_phase" | wc -l)
 
-  local uses=$(grep -r "$export_name" "$search_path" \
-    --include="*.ts" --include="*.tsx" 2>/dev/null | \
-    grep -v "import" | grep -v "$source_phase" | wc -l)
+ local uses=$(grep -r "$export_name" "$search_path" \
+ --include="*.ts" --include="*.tsx" 2>/dev/null | \
+ grep -v "import" | grep -v "$source_phase" | wc -l)
 
-  if [ "$imports" -gt 0 ] && [ "$uses" -gt 0 ]; then
-    echo "CONNECTED ($imports imports, $uses uses)"
-  elif [ "$imports" -gt 0 ]; then
-    echo "IMPORTED_NOT_USED ($imports imports, 0 uses)"
-  else
-    echo "ORPHANED (0 imports)"
-  fi
+ if [ "$imports" -gt 0 ] && [ "$uses" -gt 0 ]; then
+ echo "CONNECTED ($imports imports, $uses uses)"
+ elif [ "$imports" -gt 0 ]; then
+ echo "IMPORTED_NOT_USED ($imports imports, 0 uses)"
+ else
+ echo "ORPHANED (0 imports)"
+ fi
 }
 ```
 

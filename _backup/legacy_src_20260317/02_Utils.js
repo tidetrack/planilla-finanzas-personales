@@ -20,10 +20,10 @@
  * @returns {string} ID en formato YYYYMMDDHHMMSS-RAND
  */
 function generateId() {
-    const now = new Date();
-    const timestamp = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyyMMddHHmmss');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `${timestamp}-${random}`;
+ const now = new Date();
+ const timestamp = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyyMMddHHmmss');
+ const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+ return `${timestamp}-${random}`;
 }
 
 /**
@@ -34,50 +34,50 @@ function generateId() {
  * @returns {string} Próximo ID (ej: 'MON-004')
  */
 function generateNextId(tableName, prefix, padding = 3) {
-    try {
-        // Obtener datos de la tabla
-        const data = getTableData(tableName);
+ try {
+ // Obtener datos de la tabla
+ const data = getTableData(tableName);
 
-        if (data.length === 0) {
-            // Primera entrada
-            const firstNumber = '0'.repeat(padding - 1) + '1';
-            return `${prefix}-${firstNumber}`;
-        }
+ if (data.length === 0) {
+ // Primera entrada
+ const firstNumber = '0'.repeat(padding - 1) + '1';
+ return `${prefix}-${firstNumber}`;
+ }
 
-        // Obtener todos los IDs existentes
-        const colIndexes = getColumnIndexes(tableName);
-        const idColumnIndex = 0; // Primera columna siempre es el ID
+ // Obtener todos los IDs existentes
+ const colIndexes = getColumnIndexes(tableName);
+ const idColumnIndex = 0; // Primera columna siempre es el ID
 
-        let maxNumber = 0;
+ let maxNumber = 0;
 
-        data.forEach(row => {
-            const id = row[idColumnIndex];
-            if (id && id.toString().startsWith(prefix)) {
-                // Extraer número del SKU (ej: 'MON-003' -> 3)
-                const parts = id.toString().split('-');
-                if (parts.length === 2) {
-                    const number = parseInt(parts[1], 10);
-                    if (!isNaN(number) && number > maxNumber) {
-                        maxNumber = number;
-                    }
-                }
-            }
-        });
+ data.forEach(row => {
+ const id = row[idColumnIndex];
+ if (id && id.toString().startsWith(prefix)) {
+ // Extraer número del SKU (ej: 'MON-003' -> 3)
+ const parts = id.toString().split('-');
+ if (parts.length === 2) {
+ const number = parseInt(parts[1], 10);
+ if (!isNaN(number) && number > maxNumber) {
+ maxNumber = number;
+ }
+ }
+ }
+ });
 
-        // Siguiente número
-        const nextNumber = maxNumber + 1;
-        const paddedNumber = nextNumber.toString().padStart(padding, '0');
+ // Siguiente número
+ const nextNumber = maxNumber + 1;
+ const paddedNumber = nextNumber.toString().padStart(padding, '0');
 
-        return `${prefix}-${paddedNumber}`;
-    } catch (e) {
-        logError('Error en generateNextId', {
-            tableName,
-            prefix,
-            error: e.toString()
-        });
-        // Fallback: timestamp-based
-        return `${prefix}-${Date.now()}`;
-    }
+ return `${prefix}-${paddedNumber}`;
+ } catch (e) {
+ logError('Error en generateNextId', {
+ tableName,
+ prefix,
+ error: e.toString()
+ });
+ // Fallback: timestamp-based
+ return `${prefix}-${Date.now()}`;
+ }
 }
 
 /**
@@ -88,10 +88,10 @@ function generateNextId(tableName, prefix, padding = 3) {
  * @returns {string} ID formateado
  */
 function generateSimpleId(prefix, counter) {
-    if (prefix) {
-        return `${prefix}${counter.toString().padStart(3, '0')}`;
-    }
-    return counter.toString();
+ if (prefix) {
+ return `${prefix}${counter.toString().padStart(3, '0')}`;
+ }
+ return counter.toString();
 }
 
 // ============================================
@@ -103,8 +103,8 @@ function generateSimpleId(prefix, counter) {
  * @returns {string} Timestamp ISO 8601
  */
 function getCurrentTimestamp() {
-    const now = new Date();
-    return Utilities.formatDate(now, DEFAULTS.timezone, "yyyy-MM-dd'T'HH:mm:ss");
+ const now = new Date();
+ return Utilities.formatDate(now, DEFAULTS.timezone, "yyyy-MM-dd'T'HH:mm:ss");
 }
 
 /**
@@ -112,7 +112,7 @@ function getCurrentTimestamp() {
  * @returns {Date} Fecha actual
  */
 function getCurrentDate() {
-    return new Date();
+ return new Date();
 }
 
 /**
@@ -122,8 +122,8 @@ function getCurrentDate() {
  * @returns {string} Fecha formateada
  */
 function formatDate(date, format = 'dd/MM/yyyy') {
-    if (!date) return '';
-    return Utilities.formatDate(date, DEFAULTS.timezone, format);
+ if (!date) return '';
+ return Utilities.formatDate(date, DEFAULTS.timezone, format);
 }
 
 // ============================================
@@ -139,14 +139,14 @@ function formatDate(date, format = 'dd/MM/yyyy') {
  * @throws {Error} Si el valor no está en el enum
  */
 function validateEnum(value, enumArray, fieldName) {
-    if (!enumArray.includes(value)) {
-        throw new Error(
-            `${ERROR_MESSAGES.INVALID_ENUM}${fieldName}. ` +
-            `Valores permitidos: [${enumArray.join(', ')}]. ` +
-            `Valor recibido: "${value}"`
-        );
-    }
-    return true;
+ if (!enumArray.includes(value)) {
+ throw new Error(
+ `${ERROR_MESSAGES.INVALID_ENUM}${fieldName}. ` +
+ `Valores permitidos: [${enumArray.join(', ')}]. ` +
+ `Valor recibido: "${value}"`
+ );
+ }
+ return true;
 }
 
 // ============================================
@@ -159,10 +159,10 @@ function validateEnum(value, enumArray, fieldName) {
  * @param {Object} context Contexto adicional
  */
 function logError(message, context = {}) {
-    Logger.log('❌ ERROR: ' + message);
-    if (Object.keys(context).length > 0) {
-        Logger.log('Contexto: ' + JSON.stringify(context, null, 2));
-    }
+ Logger.log(' ERROR: ' + message);
+ if (Object.keys(context).length > 0) {
+ Logger.log('Contexto: ' + JSON.stringify(context, null, 2));
+ }
 }
 
 /**
@@ -170,7 +170,7 @@ function logError(message, context = {}) {
  * @param {string} message Mensaje informativo
  */
 function logInfo(message) {
-    Logger.log('ℹ️  INFO: ' + message);
+ Logger.log('️ INFO: ' + message);
 }
 
 /**
@@ -178,7 +178,7 @@ function logInfo(message) {
  * @param {string} message Mensaje de éxito
  */
 function logSuccess(message) {
-    Logger.log('✅ SUCCESS: ' + message);
+ Logger.log(' SUCCESS: ' + message);
 }
 
 /**
@@ -188,11 +188,11 @@ function logSuccess(message) {
  * @param {number} duration Duración en segundos (default: 3)
  */
 function showToast(message, title = 'Tidetrack', duration = 3) {
-    try {
-        SpreadsheetApp.getActiveSpreadsheet().toast(message, title, duration);
-    } catch (e) {
-        logError('No se pudo mostrar toast', { message, error: e.toString() });
-    }
+ try {
+ SpreadsheetApp.getActiveSpreadsheet().toast(message, title, duration);
+ } catch (e) {
+ logError('No se pudo mostrar toast', { message, error: e.toString() });
+ }
 }
 
 /**
@@ -201,11 +201,11 @@ function showToast(message, title = 'Tidetrack', duration = 3) {
  * @param {string} title Título de la alerta
  */
 function showAlert(message, title = 'Atención') {
-    try {
-        SpreadsheetApp.getUi().alert(title, message, SpreadsheetApp.getUi().ButtonSet.OK);
-    } catch (e) {
-        logError('No se pudo mostrar alerta', { message, error: e.toString() });
-    }
+ try {
+ SpreadsheetApp.getUi().alert(title, message, SpreadsheetApp.getUi().ButtonSet.OK);
+ } catch (e) {
+ logError('No se pudo mostrar alerta', { message, error: e.toString() });
+ }
 }
 
 // ============================================
@@ -218,7 +218,7 @@ function showAlert(message, title = 'Atención') {
  * @returns {boolean} true si está vacío
  */
 function isEmpty(value) {
-    return value === null || value === undefined || value === '';
+ return value === null || value === undefined || value === '';
 }
 
 /**
@@ -228,7 +228,7 @@ function isEmpty(value) {
  * @returns {Array<Array>} Array de arrays
  */
 function objectsToArrays(objects, keys) {
-    return objects.map(obj => keys.map(key => obj[key] !== undefined ? obj[key] : ''));
+ return objects.map(obj => keys.map(key => obj[key] !== undefined ? obj[key] : ''));
 }
 
 /**
@@ -238,13 +238,13 @@ function objectsToArrays(objects, keys) {
  * @returns {Array<Object>} Array de objetos
  */
 function arraysToObjects(arrays, keys) {
-    return arrays.map(row => {
-        const obj = {};
-        keys.forEach((key, index) => {
-            obj[key] = row[index];
-        });
-        return obj;
-    });
+ return arrays.map(row => {
+ const obj = {};
+ keys.forEach((key, index) => {
+ obj[key] = row[index];
+ });
+ return obj;
+ });
 }
 
 /**
@@ -255,7 +255,7 @@ function arraysToObjects(arrays, keys) {
  * @returns {number} Índice (-1 si no se encuentra)
  */
 function findIndexById(array, id, idKey = 'id') {
-    return array.findIndex(item => item[idKey] === id);
+ return array.findIndex(item => item[idKey] === id);
 }
 
 // ============================================
@@ -270,10 +270,10 @@ function findIndexById(array, id, idKey = 'id') {
  * @throws {Error} Si no es positivo
  */
 function validatePositive(value, fieldName) {
-    if (typeof value !== 'number' || value <= 0) {
-        throw new Error(`${fieldName} debe ser un número mayor a 0. Valor: ${value}`);
-    }
-    return true;
+ if (typeof value !== 'number' || value <= 0) {
+ throw new Error(`${fieldName} debe ser un número mayor a 0. Valor: ${value}`);
+ }
+ return true;
 }
 
 /**
@@ -284,8 +284,8 @@ function validatePositive(value, fieldName) {
  * @throws {Error} Si está vacío
  */
 function validateRequired(value, fieldName) {
-    if (isEmpty(value)) {
-        throw new Error(`${ERROR_MESSAGES.REQUIRED_FIELD}${fieldName}`);
-    }
-    return true;
+ if (isEmpty(value)) {
+ throw new Error(`${ERROR_MESSAGES.REQUIRED_FIELD}${fieldName}`);
+ }
+ return true;
 }

@@ -27,47 +27,47 @@ Verification must be:
 
 <process>
 1. Read phase context from orchestrator prompt:
-   - Phase number and description
-   - Phase directory path
-   - Phase goal
-   - Success criteria from roadmap
+ - Phase number and description
+ - Phase directory path
+ - Phase goal
+ - Success criteria from roadmap
 
 2. Collect must_haves from all plans:
-   ```bash
-   grep -A20 "## must_haves" .planning/phases/{phase}-{name}/*-PLAN.md
-   ```
+ ```bash
+ grep -A20 "## must_haves" .planning/phases/{phase}-{name}/*-PLAN.md
+ ```
 
 3. For each must_have, verify against actual codebase:
-   - Read relevant source files
-   - Check implementation exists
-   - Verify functionality matches requirement
-   - Run tests if available
-   - Document evidence (file paths, function names, test results)
+ - Read relevant source files
+ - Check implementation exists
+ - Verify functionality matches requirement
+ - Run tests if available
+ - Document evidence (file paths, function names, test results)
 
 4. Categorize results:
-   - **PASS** - Fully implemented and verified
-   - **PARTIAL** - Partially implemented, needs completion
-   - **FAIL** - Not implemented or broken
-   - **UNKNOWN** - Cannot verify without runtime/manual testing
+ - **PASS** - Fully implemented and verified
+ - **PARTIAL** - Partially implemented, needs completion
+ - **FAIL** - Not implemented or broken
+ - **UNKNOWN** - Cannot verify without runtime/manual testing
 
 5. Calculate score:
-   - Count PASS vs total must_haves
-   - Passing threshold: 100% PASS (strict)
-   - Partial passing: All PASS or PARTIAL, no FAIL
+ - Count PASS vs total must_haves
+ - Passing threshold: 100% PASS (strict)
+ - Partial passing: All PASS or PARTIAL, no FAIL
 
 6. Create VERIFICATION.md:
-   - Executive summary (score, status)
-   - Per-must_have verification with evidence
-   - Gaps identified (if any)
-   - Recommendations
+ - Executive summary (score, status)
+ - Per-must_have verification with evidence
+ - Gaps identified (if any)
+ - Recommendations
 
 7. Return result:
-   ```
-   ## VERIFICATION: [PASSED | HUMAN_NEEDED | GAPS_FOUND]
+ ```
+ ## VERIFICATION: [PASSED | HUMAN_NEEDED | GAPS_FOUND]
 
-   Score: {X}/{Y} must_haves verified
-   Status: [details]
-   ```
+ Score: {X}/{Y} must_haves verified
+ Status: [details]
+ ```
 
 **Status meanings:**
 - `PASSED` - All must_haves PASS, phase complete
@@ -244,7 +244,7 @@ Create VERIFICATION.md in phase directory:
 **What's missing:**
 1. Database table for reset tokens (with expiry)
 2. POST /auth/reset-password endpoint
-3. POST /auth/confirm-reset endpoint  
+3. POST /auth/confirm-reset endpoint 
 4. Email template for reset link
 5. UI components for reset flow
 
@@ -327,7 +327,7 @@ Score: 5/8 must_haves verified
 
 Gaps requiring closure:
 1. Password reset flow (FAIL - not implemented)
-2. Email verification (PARTIAL - token created but email not sent)  
+2. Email verification (PARTIAL - token created but email not sent) 
 3. Session persistence (FAIL - sessions lost on restart)
 
 File: .planning/phases/01-authentication/01-VERIFICATION.md

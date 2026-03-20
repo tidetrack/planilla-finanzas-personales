@@ -3,11 +3,11 @@ name: gsd:discuss-phase
 description: Gather phase context through adaptive questioning before planning
 argument-hint: "<phase>"
 allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Glob
-  - Grep
+ - Read
+ - Write
+ - Bash
+ - Glob
+ - Grep
 ---
 
 <objective>
@@ -43,8 +43,8 @@ Phase number: $ARGUMENTS (required)
 ```bash
 PHASE=$ARGUMENTS
 if [ -z "$PHASE" ]; then
-  echo "ERROR: Phase number required. Usage: /gsd discuss-phase 3"
-  exit 1
+ echo "ERROR: Phase number required. Usage: /gsd discuss-phase 3"
+ exit 1
 fi
 
 # Normalize phase number
@@ -193,7 +193,7 @@ Offer next steps:
 **Phase {N}: {Name}**
 Context: ${PHASE_DIR}/${PADDED_PHASE}-CONTEXT.md
 
-**▶ Next Up**
+** Next Up**
 
 `/gsd plan-phase {N}` — create execution plans
 

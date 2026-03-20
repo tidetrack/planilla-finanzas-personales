@@ -4,9 +4,9 @@ Gestión de features, mejoras y roadmap del proyecto.
 
 ---
 
-## 🚀 Sprints Completados (v0.1.0 - v0.4.0)
+## Sprints Completados (v0.1.0 - v0.4.0)
 
-### ✅ Sprint 0: Core Setup (v0.1.0) - COMPLETADO
+### Sprint 0: Core Setup (v0.1.0) - COMPLETADO
 - [x] Crear estructura de carpetas
 - [x] Implementar arquitectura agéntica
 - [x] Configurar reglas de estructura
@@ -14,13 +14,13 @@ Gestión de features, mejoras y roadmap del proyecto.
 - [x] Diseñar esquema de base de datos (6 tablas)
 - [x] Implementar módulos core (Config, Utils, SheetManager, DataValidation, MonedaService)
 
-### ✅ Sprint 1: Exchange Rates & Config (v0.2.0) - COMPLETADO
+### Sprint 1: Exchange Rates & Config (v0.2.0) - COMPLETADO
 - [x] ExchangeRateService (CRUD + API integration)
 - [x] ConfigService (gestión de configuración global)
 - [x] Integración con ExchangeRate-API
 - [x] Cálculo automático de monto_base
 
-### ✅ Sprint 2: Catálogos & Data Seeding (v0.3.0) - COMPLETADO
+### Sprint 2: Catálogos & Data Seeding (v0.3.0) - COMPLETADO
 - [x] Sistema de auto-IDs (SKU) para todas las tablas
 - [x] MedioPagoService (CRUD + 5 medios predefinidos)
 - [x] CuentaService (CRUD + 11 cuentas predefinidas)
@@ -28,7 +28,7 @@ Gestión de features, mejoras y roadmap del proyecto.
 - [x] DataSeeder (generación de datos de prueba)
 - [x] Suite de testing integral (41/41 tests pasados)
 
-### ✅ Sprint 3: UI Development (v0.4.0) - COMPLETADO
+### Sprint 3: UI Development (v0.4.0) - COMPLETADO
 - [x] Design System neumórfico completo
 - [x] Formulario de transacciones (CREATE)
 - [x] Menús personalizados de Google Sheets
@@ -39,9 +39,9 @@ Gestión de features, mejoras y roadmap del proyecto.
 
 ---
 
-### ✅ Sprint 4: ABM Catálogos (v0.5.0) - COMPLETADO
+### Sprint 4: ABM Catálogos (v0.5.0) - COMPLETADO
 
-**Epic:** Gestión completa de Cuentas y Medios de Pago  
+**Epic:** Gestión completa de Cuentas y Medios de Pago 
 **Objetivo:** Permitir a los usuarios crear, editar y eliminar sus propias categorías y medios de pago desde la interfaz gráfica.
 
 **Features Implementadas:**
@@ -55,12 +55,12 @@ Gestión de features, mejoras y roadmap del proyecto.
 - [x] **Fix crítico** - Race condition en confirmAction() corregida
 - [x] **Fix z-index** - Modal overlay visible correctamente (z-index: 20000)
 
-**Fecha de cierre:** 2026-01-23  
-**Código nuevo:** ~2,400 líneas | **Archivos creados:** 2 | **Testing:** ✅ Completo
+**Fecha de cierre:** 2026-01-23 
+**Código nuevo:** ~2,400 líneas | **Archivos creados:** 2 | **Testing:** Completo
 
 ---
 
-## 🎯 Sprint 5: CRUD Transacciones (v0.6.0) - PENDIENTE
+## Sprint 5: CRUD Transacciones (v0.6.0) - PENDIENTE
 
 ### Epic: Completar CRUD de Transacciones
 **Objetivo:** Permitir edición y eliminación de transacciones existentes para completar la gestión básica del sistema.
@@ -75,17 +75,17 @@ Gestión de features, mejoras y roadmap del proyecto.
 - [ ] **Validación de integridad** - Evitar edición/eliminación que rompa datos relacionados
 - [ ] **Feedback visual** - Toasts y modales de confirmación
 
-**Estimación:** 5 días (Days 0-4)  
+**Estimación:** 5 días (Days 0-4) 
 **Prioridad:** ALTA - Completa funcionalidad CRUD básica del sistema
 
-**Dependencias:**  
-- ✅ TransactionService con UPDATE/DELETE implementados (Sprint 2)
-- ✅ UI_TransactionForm base (Sprint 3)
-- ✅ UI_MainDashboard con lista (Sprint 3)
+**Dependencias:** 
+- TransactionService con UPDATE/DELETE implementados (Sprint 2)
+- UI_TransactionForm base (Sprint 3)
+- UI_MainDashboard con lista (Sprint 3)
 
 ---
 
-## 📋 Etapa 1: MVP Vivo (3-6 meses)
+## Etapa 1: MVP Vivo (3-6 meses)
 
 ### Alta Prioridad - Core del Producto
 
@@ -128,7 +128,7 @@ Gestión de features, mejoras y roadmap del proyecto.
 
 ---
 
-## 📋 Etapa 2: Hábito y Retención (6-12 meses)
+## Etapa 2: Hábito y Retención (6-12 meses)
 
 ### Media Prioridad
 
@@ -158,9 +158,9 @@ Gestión de features, mejoras y roadmap del proyecto.
 
 ---
 
-## 📋 Etapa 3: Social y Viral (12+ meses)
+## Etapa 3: Social y Viral (12+ meses)
 
-###  Media-Baja Prioridad
+### Media-Baja Prioridad
 
 #### Epic: Gastos Compartidos
 **User Story:** Como grupo de amigos en un viaje, queremos dividir gastos sin discusiones
@@ -181,7 +181,7 @@ Gestión de features, mejoras y roadmap del proyecto.
 
 ---
 
-## 📊 Backlog Técnico
+## Backlog Técnico
 
 ### Infraestructura
 - [ ] Definir stack tecnológico (mobile-first)
@@ -197,13 +197,13 @@ Gestión de features, mejoras y roadmap del proyecto.
 
 ---
 
-## 🐛 Bugs Conocidos
+## Bugs Conocidos
 
 (Ninguno - el proyecto aún no está implementado)
 
 ---
 
-## 💡 Ideas / Icebox
+## Ideas / Icebox
 
 - Integración con WhatsApp para notificaciones
 - Exportación a Excel/PDF de reportes
@@ -216,5 +216,5 @@ Gestión de features, mejoras y roadmap del proyecto.
 
 **El @product-manager debe mantener este documento actualizado.**
 
-**Última actualización**: 2026-01-23  
+**Última actualización**: 2026-01-23 
 **Estado:** v0.5.0 (Sprint 4 completo) → Sprint 5 pendiente

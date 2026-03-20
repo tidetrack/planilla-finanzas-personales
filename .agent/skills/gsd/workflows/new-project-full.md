@@ -2,11 +2,11 @@
 name: gsd:new-project-full
 description: Initialize a new project with deep context gathering and PROJECT.md (extended version)
 allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Task
-  - AskUserQuestion
+ - Read
+ - Write
+ - Bash
+ - Task
+ - AskUserQuestion
 ---
 
 <objective>

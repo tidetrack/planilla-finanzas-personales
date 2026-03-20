@@ -3,10 +3,10 @@ name: gsd:diagnose-issues
 description: Orchestrate parallel debug agents to investigate UAT gaps and find root causes
 argument-hint: ""
 allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Task
+ - Read
+ - Write
+ - Bash
+ - Task
 ---
 
 <objective>
@@ -46,12 +46,12 @@ Debug files use the `.planning/debug/` path (hidden directory with leading dot).
 Read the "Gaps" section (YAML format):
 ```yaml
 - truth: "Comment appears immediately after submission"
-  status: failed
-  reason: "User reported: works but doesn't show until I refresh the page"
-  severity: major
-  test: 2
-  artifacts: []
-  missing: []
+ status: failed
+ reason: "User reported: works but doesn't show until I refresh the page"
+ severity: major
+ test: 2
+ artifacts: []
+ missing: []
 ```
 
 For each gap, also read the corresponding test from "Tests" section to get full context.
@@ -59,9 +59,9 @@ For each gap, also read the corresponding test from "Tests" section to get full 
 Build gap list:
 ```
 gaps = [
-  {truth: "Comment appears immediately...", severity: "major", test_num: 2, reason: "..."},
-  {truth: "Reply button positioned correctly...", severity: "minor", test_num: 5, reason: "..."},
-  ...
+ {truth: "Comment appears immediately...", severity: "major", test_num: 2, reason: "..."},
+ {truth: "Reply button positioned correctly...", severity: "minor", test_num: 5, reason: "..."},
+ ...
 ]
 ```
 
@@ -96,9 +96,9 @@ For each gap, fill the debug-subagent-prompt template and spawn:
 
 ```
 Task(
-  prompt=filled_debug_subagent_prompt,
-  subagent_type="general-purpose",
-  description="Debug: {truth_short}"
+ prompt=filled_debug_subagent_prompt,
+ subagent_type="general-purpose",
+ description="Debug: {truth_short}"
 )
 ```
 
@@ -157,18 +157,18 @@ For each gap in the Gaps section, add artifacts and missing fields:
 
 ```yaml
 - truth: "Comment appears immediately after submission"
-  status: failed
-  reason: "User reported: works but doesn't show until I refresh the page"
-  severity: major
-  test: 2
-  root_cause: "useEffect in CommentList.tsx missing commentCount dependency"
-  artifacts:
-    - path: "src/components/CommentList.tsx"
-      issue: "useEffect missing dependency"
-  missing:
-    - "Add commentCount to useEffect dependency array"
-    - "Trigger re-render when new comment added"
-  debug_session: .planning/debug/comment-not-refreshing.md
+ status: failed
+ reason: "User reported: works but doesn't show until I refresh the page"
+ severity: major
+ test: 2
+ root_cause: "useEffect in CommentList.tsx missing commentCount dependency"
+ artifacts:
+ - path: "src/components/CommentList.tsx"
+ issue: "useEffect missing dependency"
+ missing:
+ - "Add commentCount to useEffect dependency array"
+ - "Trigger re-render when new comment added"
+ debug_session: .planning/debug/comment-not-refreshing.md
 ```
 
 Update status in frontmatter to "diagnosed".

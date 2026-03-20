@@ -3,11 +3,11 @@ name: gsd:execute-plan-checkpoints
 description: Checkpoint handling extension for execute-plan workflow
 argument-hint: ""
 allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Task
-  - AskUserQuestion
+ - Read
+ - Write
+ - Bash
+ - Task
+ - AskUserQuestion
 ---
 
 <objective>
@@ -57,13 +57,13 @@ Segment = tasks between checkpoints
 
 ```
 IF segment has no prior checkpoint:
-  → SUBAGENT (first segment, nothing to depend on)
+ → SUBAGENT (first segment, nothing to depend on)
 
 IF segment follows checkpoint:human-verify:
-  → SUBAGENT (verification is just confirmation)
+ → SUBAGENT (verification is just confirmation)
 
 IF segment follows checkpoint:decision OR checkpoint:human-action:
-  → MAIN CONTEXT (next tasks need the decision/result)
+ → MAIN CONTEXT (next tasks need the decision/result)
 ```
 
 **3. Execution patterns:**
@@ -94,7 +94,7 @@ Before spawning any subagents, set up tracking infrastructure:
 ```bash
 # Create agent history file if doesn't exist
 if [ ! -f .planning/agent-history.json ]; then
-  echo '{"version":"1.0","max_entries":50,"entries":[]}' > .planning/agent-history.json
+ echo '{"version":"1.0","max_entries":50,"entries":[]}' > .planning/agent-history.json
 fi
 
 # Clear any stale current-agent-id
@@ -105,8 +105,8 @@ rm -f .planning/current-agent-id.txt
 
 ```bash
 if [ -f .planning/current-agent-id.txt ]; then
-  INTERRUPTED_ID=$(cat .planning/current-agent-id.txt)
-  echo "Found interrupted agent: $INTERRUPTED_ID"
+ INTERRUPTED_ID=$(cat .planning/current-agent-id.txt)
+ echo "Found interrupted agent: $INTERRUPTED_ID"
 fi
 ```
 
@@ -121,7 +121,7 @@ When encountering `type="checkpoint:*"`:
 
 ```
 ╔═══════════════════════════════════════════════════════╗
-║  CHECKPOINT: [Type]                                   ║
+║ CHECKPOINT: [Type] ║
 ╚═══════════════════════════════════════════════════════╝
 
 Progress: {X}/{Y} tasks complete
@@ -140,9 +140,9 @@ Task: [task name]
 Built: [what was automated - deployed, built, configured]
 
 How to verify:
-  1. [Step 1 - exact command/URL]
-  2. [Step 2 - what to check]
-  3. [Step 3 - expected behavior]
+ 1. [Step 1 - exact command/URL]
+ 2. [Step 2 - what to check]
+ 3. [Step 3 - expected behavior]
 
 ────────────────────────────────────────────────────────
 → YOUR ACTION: Type "approved" or describe issues
@@ -158,12 +158,12 @@ Context: [why this matters]
 
 Options:
 1. [option-id]: [name]
-   Pros: [pros]
-   Cons: [cons]
+ Pros: [pros]
+ Cons: [cons]
 
 2. [option-id]: [name]
-   Pros: [pros]
-   Cons: [cons]
+ Pros: [pros]
+ Cons: [cons]
 
 [Resume signal - e.g., "Select: option-id"]
 ```
@@ -193,21 +193,21 @@ Execute segment-by-segment:
 
 ```
 For each autonomous segment:
-  Spawn subagent with prompt: "Execute tasks [X-Y] from plan. Do NOT create SUMMARY or commit."
+ Spawn subagent with prompt: "Execute tasks [X-Y] from plan. Do NOT create SUMMARY or commit."
 
-  Wait for subagent completion
-  Track agent_id in current-agent-id.txt
-  Update agent-history.json
+ Wait for subagent completion
+ Track agent_id in current-agent-id.txt
+ Update agent-history.json
 
 For each checkpoint:
-  Execute in main context
-  Wait for user interaction
-  Continue to next segment
+ Execute in main context
+ Wait for user interaction
+ Continue to next segment
 
 After all segments complete:
-  Aggregate all results
-  Create SUMMARY.md
-  Commit with all changes
+ Aggregate all results
+ Create SUMMARY.md
+ Commit with all changes
 ```
 
 ## Phase 5: Return for Orchestrator

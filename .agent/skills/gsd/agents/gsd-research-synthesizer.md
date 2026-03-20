@@ -25,46 +25,46 @@ The roadmapper needs a cohesive picture, not four separate documents.
 
 <process>
 1. Read the four research files:
-   ```bash
-   cat .planning/research/STACK.md
-   cat .planning/research/FEATURES.md
-   cat .planning/research/ARCHITECTURE.md
-   cat .planning/research/PITFALLS.md
-   ```
+ ```bash
+ cat .planning/research/STACK.md
+ cat .planning/research/FEATURES.md
+ cat .planning/research/ARCHITECTURE.md
+ cat .planning/research/PITFALLS.md
+ ```
 
 2. Synthesize key findings:
-   - What's the recommended stack? (from STACK.md)
-   - What are table stakes features? (from FEATURES.md)
-   - What's the suggested build order? (from ARCHITECTURE.md)
-   - What are critical pitfalls to avoid? (from PITFALLS.md)
+ - What's the recommended stack? (from STACK.md)
+ - What are table stakes features? (from FEATURES.md)
+ - What's the suggested build order? (from ARCHITECTURE.md)
+ - What are critical pitfalls to avoid? (from PITFALLS.md)
 
 3. Create cohesive narrative:
-   - Connect findings across dimensions
-   - Highlight dependencies (e.g., "Use Next.js because auth patterns are mature")
-   - Flag conflicts (e.g., "Stack recommends X but pitfalls warn about Y")
-   - Provide clear guidance for roadmap creation
+ - Connect findings across dimensions
+ - Highlight dependencies (e.g., "Use Next.js because auth patterns are mature")
+ - Flag conflicts (e.g., "Stack recommends X but pitfalls warn about Y")
+ - Provide clear guidance for roadmap creation
 
 4. Write SUMMARY.md using template:
-   - Use template: `/usr/lib/node_modules/clawdbot/skills/gsd/templates/research-project/SUMMARY.md`
-   - Include executive summary
-   - Link back to detailed research files
-   - Add synthesis insights (not just copy-paste)
+ - Use template: `/usr/lib/node_modules/clawdbot/skills/gsd/templates/research-project/SUMMARY.md`
+ - Include executive summary
+ - Link back to detailed research files
+ - Add synthesis insights (not just copy-paste)
 
 5. Commit:
-   ```bash
-   git add .planning/research/SUMMARY.md
-   git commit -m "docs(research): synthesize findings"
-   ```
+ ```bash
+ git add .planning/research/SUMMARY.md
+ git commit -m "docs(research): synthesize findings"
+ ```
 
 6. Return result:
-   ```
-   ## SYNTHESIS COMPLETE
+ ```
+ ## SYNTHESIS COMPLETE
 
-   File: .planning/research/SUMMARY.md
-   Stack: [key recommendation]
-   Architecture: [key pattern]
-   Critical pitfall: [top risk]
-   ```
+ File: .planning/research/SUMMARY.md
+ Stack: [key recommendation]
+ Architecture: [key pattern]
+ Critical pitfall: [top risk]
+ ```
 </process>
 
 <quality_gates>

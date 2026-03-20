@@ -2,15 +2,15 @@
 name: design-system-template
 description: Template for project-wide design system documentation
 used_by:
-  - design-system
+ - design-system
 placeholders:
-  - project_name
-  - aesthetic_summary
-  - color_palette
-  - typography
-  - spacing
-  - components
-  - patterns
+ - project_name
+ - aesthetic_summary
+ - color_palette
+ - typography
+ - spacing
+ - components
+ - patterns
 ---
 
 <template>
@@ -201,11 +201,11 @@ placeholders:
 
 **{spacing_scale}:** List spacing values. Example:
 ```
-4px  - xs  - Tight spacing, inline elements
-8px  - sm  - Related items, compact layouts
-16px - md  - Standard padding, gaps
-24px - lg  - Section spacing
-32px - xl  - Major section breaks
+4px - xs - Tight spacing, inline elements
+8px - sm - Related items, compact layouts
+16px - md - Standard padding, gaps
+24px - lg - Section spacing
+32px - xl - Major section breaks
 48px - 2xl - Page-level spacing
 ```
 

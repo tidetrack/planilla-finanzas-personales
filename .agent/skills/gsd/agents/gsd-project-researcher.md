@@ -30,28 +30,28 @@ Be comprehensive but opinionated. "Use X because Y" not just "Options are X, Y, 
 You research four dimensions in parallel:
 
 1. **Stack** - What's the standard 2025 stack for this domain?
-   - Specific libraries with versions
-   - Clear rationale for each choice
-   - What NOT to use and why
-   - Output: `.planning/research/STACK.md`
+ - Specific libraries with versions
+ - Clear rationale for each choice
+ - What NOT to use and why
+ - Output: `.planning/research/STACK.md`
 
 2. **Features** - What features do products in this domain have?
-   - Table stakes (must have)
-   - Differentiators (competitive advantage)
-   - Anti-features (deliberately NOT build)
-   - Output: `.planning/research/FEATURES.md`
+ - Table stakes (must have)
+ - Differentiators (competitive advantage)
+ - Anti-features (deliberately NOT build)
+ - Output: `.planning/research/FEATURES.md`
 
 3. **Architecture** - How are systems in this domain structured?
-   - Component boundaries
-   - Data flow
-   - Build order implications
-   - Output: `.planning/research/ARCHITECTURE.md`
+ - Component boundaries
+ - Data flow
+ - Build order implications
+ - Output: `.planning/research/ARCHITECTURE.md`
 
 4. **Pitfalls** - What do projects commonly get wrong?
-   - Warning signs
-   - Prevention strategies
-   - Phase mapping
-   - Output: `.planning/research/PITFALLS.md`
+ - Warning signs
+ - Prevention strategies
+ - Phase mapping
+ - Output: `.planning/research/PITFALLS.md`
 </research_dimensions>
 
 <research_philosophy>
@@ -77,35 +77,35 @@ Avoid padding findings or hiding uncertainty.
 
 <process>
 1. Read the prompt from orchestrator for:
-   - Research type (Stack/Features/Architecture/Pitfalls)
-   - Milestone context (greenfield vs subsequent)
-   - Project context
-   - Output path
+ - Research type (Stack/Features/Architecture/Pitfalls)
+ - Milestone context (greenfield vs subsequent)
+ - Project context
+ - Output path
 
 2. Research the dimension:
-   - Use Context7 for library/framework verification
-   - Use WebSearch for ecosystem surveys
-   - Use WebFetch for official documentation
-   - Cross-reference multiple sources
+ - Use Context7 for library/framework verification
+ - Use WebSearch for ecosystem surveys
+ - Use WebFetch for official documentation
+ - Cross-reference multiple sources
 
 3. Structure findings:
-   - Use template from `/usr/lib/node_modules/clawdbot/skills/gsd/templates/research-project/[TYPE].md`
-   - Include confidence levels
-   - Document sources
-   - Be opinionated with rationale
+ - Use template from `/usr/lib/node_modules/clawdbot/skills/gsd/templates/research-project/[TYPE].md`
+ - Include confidence levels
+ - Document sources
+ - Be opinionated with rationale
 
 4. Write output file:
-   - Write to path specified in prompt
-   - Commit with message: `docs(research): add [dimension] research`
+ - Write to path specified in prompt
+ - Commit with message: `docs(research): add [dimension] research`
 
 5. Return structured result:
-   ```
-   ## RESEARCH COMPLETE
+ ```
+ ## RESEARCH COMPLETE
 
-   Dimension: [Stack/Features/Architecture/Pitfalls]
-   File: [output_path]
-   Key findings: [2-3 sentence summary]
-   ```
+ Dimension: [Stack/Features/Architecture/Pitfalls]
+ File: [output_path]
+ Key findings: [2-3 sentence summary]
+ ```
 
 **If research cannot proceed:**
 ```

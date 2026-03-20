@@ -4,16 +4,16 @@ Testing de ConfigService y ExchangeRateService con integración de API.
 
 ---
 
-## 📋 Pre-requisitos
+## Pre-requisitos
 
-- ✅ Sprint 0 completado y testeado
-- ✅ 10_ConfigService.js copiado a Apps Script
-- ✅ 06_ExchangeRateService.js copiado a Apps Script
-- ✅ DB_MONEDAS tiene al menos ARS, USD, EUR
+- Sprint 0 completado y testeado
+- 10_ConfigService.js copiado a Apps Script
+- 06_ExchangeRateService.js copiado a Apps Script
+- DB_MONEDAS tiene al menos ARS, USD, EUR
 
 ---
 
-## 🧪 Tests de ConfigService
+## Tests de ConfigService
 
 ### Test 1: Inicializar Configuración
 
@@ -21,7 +21,7 @@ Testing de ConfigService y ExchangeRateService con integración de API.
 
 **Objetivo:** Crear configuración inicial del sistema.
 
-**⚠️ IMPORTANTE:** Si ya ejecutaste `setupCompleto()` en Sprint 0 Test 5, este test ya está completo y puedes saltearlo.
+**️ IMPORTANTE:** Si ya ejecutaste `setupCompleto()` en Sprint 0 Test 5, este test ya está completo y puedes saltearlo.
 
 **Pasos (si no ejecutaste setupCompleto antes):**
 1. Ejecuta: `initializeConfigDirect()` (desde `99_SetupDirect.js`)
@@ -34,12 +34,12 @@ Testing de ConfigService y ExchangeRateService con integración de API.
 
 **Log Esperado:**
 ```
-✅ SUCCESS: Config inicializada: base=ARS, fuente=oficial
+ SUCCESS: Config inicializada: base=ARS, fuente=oficial
 ```
 
 **Toast:** "Configuración inicializada correctamente"
 
-**✅ Criterio:** Configuración creada correctamente.
+** Criterio:** Configuración creada correctamente.
 
 ---
 
@@ -52,14 +52,14 @@ Testing de ConfigService y ExchangeRateService con integración de API.
 **Pasos:**
 ```javascript
 function testGetConfig() {
-  const config = getConfig();
-  Logger.log(`Config completa: ${JSON.stringify(config)}`);
-  
-  const base = getBaseMoneda();
-  Logger.log(`Moneda base: ${base}`);
-  
-  const fuente = getFuentePreferida();
-  Logger.log(`Fuente preferida: ${fuente}`);
+ const config = getConfig();
+ Logger.log(`Config completa: ${JSON.stringify(config)}`);
+ 
+ const base = getBaseMoneda();
+ Logger.log(`Moneda base: ${base}`);
+ 
+ const fuente = getFuentePreferida();
+ Logger.log(`Fuente preferida: ${fuente}`);
 }
 ```
 
@@ -70,7 +70,7 @@ Moneda base: ARS
 Fuente preferida: oficial
 ```
 
-**✅ Criterio:** Todos los getters retornan valores correctos.
+** Criterio:** Todos los getters retornan valores correctos.
 
 ---
 
@@ -90,7 +90,7 @@ Fuente preferida: oficial
 - Columna AP cambia de ARS a USD
 - Toast: "Moneda base actualizada a USD"
 
-**✅ Criterio:** Moneda base se actualiza y muestra advertencias.
+** Criterio:** Moneda base se actualiza y muestra advertencias.
 
 ---
 
@@ -107,7 +107,7 @@ Fuente preferida: oficial
 - Columna AQ cambia de "oficial" a "MEP"
 - Toast: "Fuente preferida: MEP"
 
-**✅ Criterio:** Fuente se actualiza correctamente.
+** Criterio:** Fuente se actualiza correctamente.
 
 ---
 
@@ -120,25 +120,25 @@ Fuente preferida: oficial
 **Pasos:**
 ```javascript
 function testInvalidMoneda() {
-  try {
-    setBaseMoneda('XXX');
-    Logger.log('❌ NO debería permitir XXX');
-  } catch (e) {
-    Logger.log(`✅ Error esperado: ${e.message}`);
-  }
+ try {
+ setBaseMoneda('XXX');
+ Logger.log(' NO debería permitir XXX');
+ } catch (e) {
+ Logger.log(` Error esperado: ${e.message}`);
+ }
 }
 ```
 
 **Resultado Esperado:**
 ```
-✅ Error esperado: DB_MONEDAS. moneda_id = "XXX" no existe
+ Error esperado: DB_MONEDAS. moneda_id = "XXX" no existe
 ```
 
-**✅ Criterio:** Rechaza moneda inexistente con FK error.
+** Criterio:** Rechaza moneda inexistente con FK error.
 
 ---
 
-## 🧪 Tests de ExchangeRateService - Manual
+## Tests de ExchangeRateService - Manual
 
 ### Test 6: Crear Tipo de Cambio Manual
 
@@ -149,17 +149,17 @@ function testInvalidMoneda() {
 **Pasos:**
 ```javascript
 function testCreateManualRate() {
-  // Volver base a ARS si cambió
-  setBaseMoneda('ARS');
-  
-  const fx = {
-    base_moneda_id: 'ARS',
-    quote_moneda_id: 'USD',
-    tc: 1050.50,
-    fuente: 'oficial'
-  };
-  
-  createExchangeRate(fx);
+ // Volver base a ARS si cambió
+ setBaseMoneda('ARS');
+ 
+ const fx = {
+ base_moneda_id: 'ARS',
+ quote_moneda_id: 'USD',
+ tc: 1050.50,
+ fuente: 'oficial'
+ };
+ 
+ createExchangeRate(fx);
 }
 ```
 
@@ -171,10 +171,10 @@ function testCreateManualRate() {
 
 **Log:**
 ```
-✅ SUCCESS: Tipo de cambio creado: ARS/USD = 1050.5 (fuente: oficial, fx_id: ...)
+ SUCCESS: Tipo de cambio creado: ARS/USD = 1050.5 (fuente: oficial, fx_id: ...)
 ```
 
-**✅ Criterio:** TC se crea correctamente.
+** Criterio:** TC se crea correctamente.
 
 ---
 
@@ -187,26 +187,26 @@ function testCreateManualRate() {
 **Pasos:**
 ```javascript
 function testInvalidTC() {
-  try {
-    createExchangeRate({
-      base_moneda_id: 'ARS',
-      quote_moneda_id: 'USD',
-      tc: -100, // Inválido
-      fuente: 'oficial'
-    });
-    Logger.log('❌ NO debería permitir tc negativo');
-  } catch (e) {
-    Logger.log(`✅ Error esperado: ${e.message}`);
-  }
+ try {
+ createExchangeRate({
+ base_moneda_id: 'ARS',
+ quote_moneda_id: 'USD',
+ tc: -100, // Inválido
+ fuente: 'oficial'
+ });
+ Logger.log(' NO debería permitir tc negativo');
+ } catch (e) {
+ Logger.log(` Error esperado: ${e.message}`);
+ }
 }
 ```
 
 **Resultado Esperado:**
 ```
-✅ Error esperado: tc debe ser un número mayor a 0
+ Error esperado: tc debe ser un número mayor a 0
 ```
 
-**✅ Criterio:** Rechaza tc <= 0.
+** Criterio:** Rechaza tc <= 0.
 
 ---
 
@@ -219,30 +219,30 @@ function testInvalidTC() {
 **Pasos:**
 ```javascript
 function testSamePair() {
-  try {
-    createExchangeRate({
-      base_moneda_id: 'ARS',
-      quote_moneda_id: 'ARS', // Mismo
-      tc: 1,
-      fuente: 'oficial'
-    });
-    Logger.log('❌ NO debería permitir mismo par');
-  } catch (e) {
-    Logger.log(`✅ Error esperado: ${e.message}`);
-  }
+ try {
+ createExchangeRate({
+ base_moneda_id: 'ARS',
+ quote_moneda_id: 'ARS', // Mismo
+ tc: 1,
+ fuente: 'oficial'
+ });
+ Logger.log(' NO debería permitir mismo par');
+ } catch (e) {
+ Logger.log(` Error esperado: ${e.message}`);
+ }
 }
 ```
 
 **Resultado Esperado:**
 ```
-✅ Error esperado: base_moneda_id no puede ser igual a quote_moneda_id
+ Error esperado: base_moneda_id no puede ser igual a quote_moneda_id
 ```
 
-**✅ Criterio:** Rechaza base = quote.
+** Criterio:** Rechaza base = quote.
 
 ---
 
-## 🌐 Tests de API Integration
+## Tests de API Integration
 
 ### Test 9: Fetch desde API (USD base)
 
@@ -268,12 +268,12 @@ function testSamePair() {
 
 **Log:**
 ```
-ℹ️  INFO: Fetching exchange rates desde API: https://...
-ℹ️  INFO: API response recibido: 150 rates
-✅ SUCCESS: Fetch completado: 3 rates guardados
+️ INFO: Fetching exchange rates desde API: https://...
+️ INFO: API response recibido: 150 rates
+ SUCCESS: Fetch completado: 3 rates guardados
 ```
 
-**✅ Criterio:** 
+** Criterio:** 
 - Al menos 3 rates guardados (ARS, EUR, USD)
 - status = 'ok'
 - provider = 'exchangerate-api.com'
@@ -290,8 +290,8 @@ function testSamePair() {
 **Pasos:**
 ```javascript
 function testGetLatestRate() {
-  const latest = getLatestRate('ARS', 'USD', 'oficial');
-  Logger.log(`Latest rate: ${JSON.stringify(latest)}`);
+ const latest = getLatestRate('ARS', 'USD', 'oficial');
+ Logger.log(`Latest rate: ${JSON.stringify(latest)}`);
 }
 ```
 
@@ -300,11 +300,11 @@ function testGetLatestRate() {
 Latest rate: {"fx_id":"20260117...","tc":1050.25,"fecha":"2026-01-17","fuente":"oficial"}
 ```
 
-**✅ Criterio:** Retorna el TC más reciente del par.
+** Criterio:** Retorna el TC más reciente del par.
 
 ---
 
-## 🔢 Tests de Cálculo
+## Tests de Cálculo
 
 ### Test 11: Calcular Monto Base - Sin Conversión
 
@@ -315,21 +315,21 @@ Latest rate: {"fx_id":"20260117...","tc":1050.25,"fecha":"2026-01-17","fuente":"
 **Pasos:**
 ```javascript
 function testCalculateNoConversion() {
-  // Asegurar que base = ARS
-  setBaseMoneda('ARS');
-  
-  const monto = calculateMontoBase(1000, 'ARS', null);
-  Logger.log(`Monto base: ${monto}`);
+ // Asegurar que base = ARS
+ setBaseMoneda('ARS');
+ 
+ const monto = calculateMontoBase(1000, 'ARS', null);
+ Logger.log(`Monto base: ${monto}`);
 }
 ```
 
 **Resultado Esperado:**
 ```
-ℹ️  INFO: Sin conversión: 1000 ARS (ya es moneda base)
+️ INFO: Sin conversión: 1000 ARS (ya es moneda base)
 Monto base: 1000
 ```
 
-**✅ Criterio:** Retorna mismo monto sin conversión.
+** Criterio:** Retorna mismo monto sin conversión.
 
 ---
 
@@ -342,26 +342,26 @@ Monto base: 1000
 **Pasos:**
 ```javascript
 function testCalculateWithConversion() {
-  // Asegurar base = ARS
-  setBaseMoneda('ARS');
-  
-  // Obtener último fx_id para ARS/USD
-  const latest = getLatestRate('ARS', 'USD', 'oficial');
-  const fx_id = latest.fx_id;
-  
-  // Convertir 100 USD
-  const monto = calculateMontoBase(100, 'USD', fx_id);
-  Logger.log(`100 USD = ${monto} ARS`);
+ // Asegurar base = ARS
+ setBaseMoneda('ARS');
+ 
+ // Obtener último fx_id para ARS/USD
+ const latest = getLatestRate('ARS', 'USD', 'oficial');
+ const fx_id = latest.fx_id;
+ 
+ // Convertir 100 USD
+ const monto = calculateMontoBase(100, 'USD', fx_id);
+ Logger.log(`100 USD = ${monto} ARS`);
 }
 ```
 
 **Resultado Esperado:**
 ```
-ℹ️  INFO: Conversión: 100 USD × 1050.25 = 105025 ARS (fx_id: ...)
+️ INFO: Conversión: 100 USD × 1050.25 = 105025 ARS (fx_id: ...)
 100 USD = 105025 ARS
 ```
 
-**✅ Criterio:** Monto se convierte correctamente (100 * TC).
+** Criterio:** Monto se convierte correctamente (100 * TC).
 
 ---
 
@@ -374,21 +374,21 @@ function testCalculateWithConversion() {
 **Pasos:**
 ```javascript
 function testErrorNoFxId() {
-  try {
-    calculateMontoBase(100, 'USD', null); // Sin fx_id
-    Logger.log('❌ Debería requerir fx_id');
-  } catch (e) {
-    Logger.log(`✅ Error esperado: ${e.message}`);
-  }
+ try {
+ calculateMontoBase(100, 'USD', null); // Sin fx_id
+ Logger.log(' Debería requerir fx_id');
+ } catch (e) {
+ Logger.log(` Error esperado: ${e.message}`);
+ }
 }
 ```
 
 **Resultado Esperado:**
 ```
-✅ Error esperado: fx_id requerido para convertir USD a moneda base ARS
+ Error esperado: fx_id requerido para convertir USD a moneda base ARS
 ```
 
-**✅ Criterio:** Error claro sobre fx_id faltante.
+** Criterio:** Error claro sobre fx_id faltante.
 
 ---
 
@@ -401,34 +401,34 @@ function testErrorNoFxId() {
 **Pasos:**
 ```javascript
 function testWrongPair() {
-  // Crear TC para EUR/USD
-  const fxEUR = createExchangeRate({
-    base_moneda_id: 'EUR',
-    quote_moneda_id: 'USD',
-    tc: 0.92,
-    fuente: 'oficial'
-  });
-  
-  try {
-    // Intentar usar ese fx para convertir ARS (incorrecto)
-    calculateMontoBase(100, 'USD', fxEUR.fx_id);
-    Logger.log('❌ NO debería permitir par incorrecto');
-  } catch (e) {
-    Logger.log(`✅ Error esperado: ${e.message}`);
-  }
+ // Crear TC para EUR/USD
+ const fxEUR = createExchangeRate({
+ base_moneda_id: 'EUR',
+ quote_moneda_id: 'USD',
+ tc: 0.92,
+ fuente: 'oficial'
+ });
+ 
+ try {
+ // Intentar usar ese fx para convertir ARS (incorrecto)
+ calculateMontoBase(100, 'USD', fxEUR.fx_id);
+ Logger.log(' NO debería permitir par incorrecto');
+ } catch (e) {
+ Logger.log(` Error esperado: ${e.message}`);
+ }
 }
 ```
 
 **Resultado Esperado:**
 ```
-✅ Error esperado: fx_id incorrecto. Esperado par: ARS/USD, Encontrado: EUR/USD
+ Error esperado: fx_id incorrecto. Esperado par: ARS/USD, Encontrado: EUR/USD
 ```
 
-**✅ Criterio:** Valida que fx_id corresponde al par correcto.
+** Criterio:** Valida que fx_id corresponde al par correcto.
 
 ---
 
-## ✅ Checklist de Validación Sprint 1
+## Checklist de Validación Sprint 1
 
 - [ ] Test 1: initializeConfig() crea config
 - [ ] Test 2: getConfig() lee correctamente
@@ -447,18 +447,18 @@ function testWrongPair() {
 
 ---
 
-## 🎯 Criterios de Aceptación Sprint 1
+## Criterios de Aceptación Sprint 1
 
-- ✅ Configuración se puede crear, leer y modificar
-- ✅ TC se pueden crear manualmente
-- ✅ TC se pueden obtener desde API
-- ✅ Validaciones funcionan (tc>0, base≠quote, FK)
-- ✅ Conversión de monto_base funciona correctamente
-- ✅ Errores son claros y informativos
+- Configuración se puede crear, leer y modificar
+- TC se pueden crear manualmente
+- TC se pueden obtener desde API
+- Validaciones funcionan (tc>0, base≠quote, FK)
+- Conversión de monto_base funciona correctamente
+- Errores son claros y informativos
 
 ---
 
-## 🚀 Próximo Paso
+## Próximo Paso
 
 Si todos los tests pasan → **Sprint 2**: Medios de Pago + Cuentas
 

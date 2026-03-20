@@ -2,9 +2,9 @@
 name: gsd:resume-work
 description: Resume work from previous session with full context restoration
 allowed-tools:
-  - Read
-  - Bash
-  - Write
+ - Read
+ - Bash
+ - Write
 ---
 
 <objective>
@@ -29,8 +29,8 @@ Handles:
 
 ```bash
 if [ ! -d .planning ]; then
-  echo "No project found. Run /gsd new-project to start."
-  exit 1
+ echo "No project found. Run /gsd new-project to start."
+ exit 1
 fi
 ```
 
@@ -38,9 +38,9 @@ fi
 
 ```bash
 if [ -f .planning/STATE.md ]; then
-  cat .planning/STATE.md
+ cat .planning/STATE.md
 else
-  echo "STATE.md missing - will reconstruct from artifacts"
+ echo "STATE.md missing - will reconstruct from artifacts"
 fi
 ```
 
@@ -52,8 +52,8 @@ If missing: Reconstruct from ROADMAP.md, SUMMARY.md files, etc.
 # Find any .continue-here.md files
 CHECKPOINTS=$(find .planning/phases -name ".continue-here.md" 2>/dev/null)
 if [ -n "$CHECKPOINTS" ]; then
-  echo "Found checkpoints:"
-  echo "$CHECKPOINTS"
+ echo "Found checkpoints:"
+ echo "$CHECKPOINTS"
 fi
 ```
 
@@ -67,10 +67,10 @@ If checkpoint found:
 ```bash
 # Find PLAN.md files without matching SUMMARY.md
 for plan in .planning/phases/*/*-PLAN.md; do
-  summary="${plan/-PLAN.md/-SUMMARY.md}"
-  if [ ! -f "$summary" ]; then
-    echo "Incomplete: $plan"
-  fi
+ summary="${plan/-PLAN.md/-SUMMARY.md}"
+ if [ ! -f "$summary" ]; then
+ echo "Incomplete: $plan"
+ fi
 done
 ```
 
@@ -104,7 +104,7 @@ done
 **If checkpoint exists:**
 
 ```
-**▶ Resume from Checkpoint**
+** Resume from Checkpoint**
 
 {Next action from .continue-here.md}
 
@@ -120,7 +120,7 @@ Ready to continue? (yes to proceed)
 **If no checkpoint but incomplete work:**
 
 ```
-**▶ Continue Work**
+** Continue Work**
 
 Incomplete plans found in Phase {N}.
 
@@ -132,7 +132,7 @@ Incomplete plans found in Phase {N}.
 **If nothing pending:**
 
 ```
-**▶ What's Next**
+** What's Next**
 
 All current work complete.
 

@@ -17,23 +17,23 @@ Template for `.planning/research/ARCHITECTURE.md` — system structure patterns 
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        [Layer Name]                          │
+│ [Layer Name] │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐        │
-│  │ [Comp]  │  │ [Comp]  │  │ [Comp]  │  │ [Comp]  │        │
-│  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘        │
-│       │            │            │            │              │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ │
+│ │ [Comp] │ │ [Comp] │ │ [Comp] │ │ [Comp] │ │
+│ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ │
+│ │ │ │ │ │
 ├───────┴────────────┴────────────┴────────────┴──────────────┤
-│                        [Layer Name]                          │
+│ [Layer Name] │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                    [Component]                       │    │
-│  └─────────────────────────────────────────────────────┘    │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ [Component] │ │
+│ └─────────────────────────────────────────────────────┘ │
 ├─────────────────────────────────────────────────────────────┤
-│                        [Layer Name]                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │
-│  │ [Store]  │  │ [Store]  │  │ [Store]  │                   │
-│  └──────────┘  └──────────┘  └──────────┘                   │
+│ [Layer Name] │
+│ ┌──────────┐ ┌──────────┐ ┌──────────┐ │
+│ │ [Store] │ │ [Store] │ │ [Store] │ │
+│ └──────────┘ └──────────┘ └──────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -49,14 +49,14 @@ Template for `.planning/research/ARCHITECTURE.md` — system structure patterns 
 
 ```
 src/
-├── [folder]/           # [purpose]
-│   ├── [subfolder]/    # [purpose]
-│   └── [file].ts       # [purpose]
-├── [folder]/           # [purpose]
-│   ├── [subfolder]/    # [purpose]
-│   └── [file].ts       # [purpose]
-├── [folder]/           # [purpose]
-└── [folder]/           # [purpose]
+├── [folder]/ # [purpose]
+│ ├── [subfolder]/ # [purpose]
+│ └── [file].ts # [purpose]
+├── [folder]/ # [purpose]
+│ ├── [subfolder]/ # [purpose]
+│ └── [file].ts # [purpose]
+├── [folder]/ # [purpose]
+└── [folder]/ # [purpose]
 ```
 
 ### Structure Rationale
@@ -100,9 +100,9 @@ src/
 
 ```
 [User Action]
-    ↓
+ ↓
 [Component] → [Handler] → [Service] → [Data Store]
-    ↓              ↓           ↓            ↓
+ ↓ ↓ ↓ ↓
 [Response] ← [Transform] ← [Query] ← [Database]
 ```
 
@@ -110,7 +110,7 @@ src/
 
 ```
 [State Store]
-    ↓ (subscribe)
+ ↓ (subscribe)
 [Components] ←→ [Actions] → [Reducers/Mutations] → [State Store]
 ```
 
@@ -159,7 +159,7 @@ src/
 
 | Boundary | Communication | Notes |
 |----------|---------------|-------|
-| [module A ↔ module B] | [API/events/direct] | [considerations] |
+| [module A module B] | [API/events/direct] | [considerations] |
 
 ## Sources
 

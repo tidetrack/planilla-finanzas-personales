@@ -6,73 +6,73 @@ Maps Next.js source code directories to their corresponding documentation files.
 
 ### Components
 
-| Source Path                                      | Documentation Path                                      |
+| Source Path | Documentation Path |
 | ------------------------------------------------ | ------------------------------------------------------- |
-| `packages/next/src/client/components/image.tsx`  | `docs/01-app/03-api-reference/02-components/image.mdx`  |
-| `packages/next/src/client/components/link.tsx`   | `docs/01-app/03-api-reference/02-components/link.mdx`   |
+| `packages/next/src/client/components/image.tsx` | `docs/01-app/03-api-reference/02-components/image.mdx` |
+| `packages/next/src/client/components/link.tsx` | `docs/01-app/03-api-reference/02-components/link.mdx` |
 | `packages/next/src/client/components/script.tsx` | `docs/01-app/03-api-reference/02-components/script.mdx` |
-| `packages/next/src/client/components/form.tsx`   | `docs/01-app/03-api-reference/02-components/form.mdx`   |
+| `packages/next/src/client/components/form.tsx` | `docs/01-app/03-api-reference/02-components/form.mdx` |
 
 ### Functions
 
-| Source Path                                          | Documentation Path                                                |
+| Source Path | Documentation Path |
 | ---------------------------------------------------- | ----------------------------------------------------------------- |
-| `packages/next/src/server/request/`                  | `docs/01-app/03-api-reference/04-functions/`                      |
-| `packages/next/src/server/lib/metadata/`             | `docs/01-app/03-api-reference/04-functions/generate-metadata.mdx` |
-| `packages/next/src/client/components/navigation.tsx` | `docs/01-app/03-api-reference/04-functions/use-router.mdx`        |
-| `packages/next/src/client/components/navigation.tsx` | `docs/01-app/03-api-reference/04-functions/use-pathname.mdx`      |
+| `packages/next/src/server/request/` | `docs/01-app/03-api-reference/04-functions/` |
+| `packages/next/src/server/lib/metadata/` | `docs/01-app/03-api-reference/04-functions/generate-metadata.mdx` |
+| `packages/next/src/client/components/navigation.tsx` | `docs/01-app/03-api-reference/04-functions/use-router.mdx` |
+| `packages/next/src/client/components/navigation.tsx` | `docs/01-app/03-api-reference/04-functions/use-pathname.mdx` |
 | `packages/next/src/client/components/navigation.tsx` | `docs/01-app/03-api-reference/04-functions/use-search-params.mdx` |
 
 ### File Conventions
 
-| Source Path                                | Documentation Path                                            |
+| Source Path | Documentation Path |
 | ------------------------------------------ | ------------------------------------------------------------- |
-| `packages/next/src/build/webpack/loaders/` | `docs/01-app/03-api-reference/03-file-conventions/`           |
-| `packages/next/src/server/app-render/`     | `docs/01-app/03-api-reference/03-file-conventions/layout.mdx` |
-| `packages/next/src/server/app-render/`     | `docs/01-app/03-api-reference/03-file-conventions/page.mdx`   |
+| `packages/next/src/build/webpack/loaders/` | `docs/01-app/03-api-reference/03-file-conventions/` |
+| `packages/next/src/server/app-render/` | `docs/01-app/03-api-reference/03-file-conventions/layout.mdx` |
+| `packages/next/src/server/app-render/` | `docs/01-app/03-api-reference/03-file-conventions/page.mdx` |
 
 ### Configuration
 
-| Source Path                                 | Documentation Path                                          |
+| Source Path | Documentation Path |
 | ------------------------------------------- | ----------------------------------------------------------- |
 | `packages/next/src/server/config-shared.ts` | `docs/01-app/03-api-reference/05-config/01-next-config-js/` |
-| `packages/next/src/server/config.ts`        | `docs/01-app/03-api-reference/05-config/01-next-config-js/` |
+| `packages/next/src/server/config.ts` | `docs/01-app/03-api-reference/05-config/01-next-config-js/` |
 | `packages/next/src/build/webpack-config.ts` | `docs/01-app/03-api-reference/05-config/01-next-config-js/` |
 
 ### Directives
 
-| Source Path                              | Documentation Path                                          |
+| Source Path | Documentation Path |
 | ---------------------------------------- | ----------------------------------------------------------- |
-| `packages/next/src/server/use-cache/`    | `docs/01-app/03-api-reference/01-directives/use-cache.mdx`  |
+| `packages/next/src/server/use-cache/` | `docs/01-app/03-api-reference/01-directives/use-cache.mdx` |
 | `packages/next/src/client/use-client.ts` | `docs/01-app/03-api-reference/01-directives/use-client.mdx` |
 | `packages/next/src/server/use-server.ts` | `docs/01-app/03-api-reference/01-directives/use-server.mdx` |
 
 ### Metadata File Conventions
 
-| Source Path                       | Documentation Path                                                                 |
+| Source Path | Documentation Path |
 | --------------------------------- | ---------------------------------------------------------------------------------- |
-| `packages/next/src/lib/metadata/` | `docs/01-app/03-api-reference/03-file-conventions/01-metadata/`                    |
-| Metadata icons handling           | `docs/01-app/03-api-reference/03-file-conventions/01-metadata/app-icons.mdx`       |
-| Open Graph images                 | `docs/01-app/03-api-reference/03-file-conventions/01-metadata/opengraph-image.mdx` |
-| Sitemap generation                | `docs/01-app/03-api-reference/03-file-conventions/01-metadata/sitemap.mdx`         |
+| `packages/next/src/lib/metadata/` | `docs/01-app/03-api-reference/03-file-conventions/01-metadata/` |
+| Metadata icons handling | `docs/01-app/03-api-reference/03-file-conventions/01-metadata/app-icons.mdx` |
+| Open Graph images | `docs/01-app/03-api-reference/03-file-conventions/01-metadata/opengraph-image.mdx` |
+| Sitemap generation | `docs/01-app/03-api-reference/03-file-conventions/01-metadata/sitemap.mdx` |
 
 ## Directory Pattern Mappings
 
 ### By Feature Area
 
-| Source Directory                       | Documentation Area                            | Notes                  |
+| Source Directory | Documentation Area | Notes |
 | -------------------------------------- | --------------------------------------------- | ---------------------- |
-| `packages/next/src/client/`            | `docs/01-app/03-api-reference/02-components/` | Client-side components |
-| `packages/next/src/server/`            | `docs/01-app/03-api-reference/04-functions/`  | Server functions       |
-| `packages/next/src/build/`             | `docs/01-app/03-api-reference/05-config/`     | Build configuration    |
-| `packages/next/src/shared/lib/router/` | `docs/01-app/02-guides/`                      | Routing guides         |
-| `packages/next/src/lib/metadata/`      | `docs/01-app/02-guides/metadata/`             | Metadata guides        |
+| `packages/next/src/client/` | `docs/01-app/03-api-reference/02-components/` | Client-side components |
+| `packages/next/src/server/` | `docs/01-app/03-api-reference/04-functions/` | Server functions |
+| `packages/next/src/build/` | `docs/01-app/03-api-reference/05-config/` | Build configuration |
+| `packages/next/src/shared/lib/router/` | `docs/01-app/02-guides/` | Routing guides |
+| `packages/next/src/lib/metadata/` | `docs/01-app/02-guides/metadata/` | Metadata guides |
 
 ### CLI Commands
 
-| Source Path                           | Documentation Path                                   |
+| Source Path | Documentation Path |
 | ------------------------------------- | ---------------------------------------------------- |
-| `packages/next/src/cli/next-dev.ts`   | `docs/01-app/03-api-reference/06-cli/next-dev.mdx`   |
+| `packages/next/src/cli/next-dev.ts` | `docs/01-app/03-api-reference/06-cli/next-dev.mdx` |
 | `packages/next/src/cli/next-build.ts` | `docs/01-app/03-api-reference/06-cli/next-build.mdx` |
 | `packages/next/src/cli/next-start.ts` | `docs/01-app/03-api-reference/06-cli/next-start.mdx` |
 

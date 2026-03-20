@@ -31,9 +31,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Nothing (first phase)
 **Requirements**: [REQ-01, REQ-02, REQ-03]
 **Success Criteria** (what must be TRUE):
-  1. [Observable behavior from user perspective]
-  2. [Observable behavior from user perspective]
-  3. [Observable behavior from user perspective]
+ 1. [Observable behavior from user perspective]
+ 2. [Observable behavior from user perspective]
+ 3. [Observable behavior from user perspective]
 **Plans**: [Number of plans, e.g., "3 plans" or "TBD"]
 
 Plans:
@@ -46,8 +46,8 @@ Plans:
 **Depends on**: Phase 1
 **Requirements**: [REQ-04, REQ-05]
 **Success Criteria** (what must be TRUE):
-  1. [Observable behavior from user perspective]
-  2. [Observable behavior from user perspective]
+ 1. [Observable behavior from user perspective]
+ 2. [Observable behavior from user perspective]
 **Plans**: [Number of plans]
 
 Plans:
@@ -58,7 +58,7 @@ Plans:
 **Goal**: [Urgent work inserted between phases]
 **Depends on**: Phase 2
 **Success Criteria** (what must be TRUE):
-  1. [What the fix achieves]
+ 1. [What the fix achieves]
 **Plans**: 1 plan
 
 Plans:
@@ -69,9 +69,9 @@ Plans:
 **Depends on**: Phase 2
 **Requirements**: [REQ-06, REQ-07, REQ-08]
 **Success Criteria** (what must be TRUE):
-  1. [Observable behavior from user perspective]
-  2. [Observable behavior from user perspective]
-  3. [Observable behavior from user perspective]
+ 1. [Observable behavior from user perspective]
+ 2. [Observable behavior from user perspective]
+ 3. [Observable behavior from user perspective]
 **Plans**: [Number of plans]
 
 Plans:
@@ -83,8 +83,8 @@ Plans:
 **Depends on**: Phase 3
 **Requirements**: [REQ-09, REQ-10]
 **Success Criteria** (what must be TRUE):
-  1. [Observable behavior from user perspective]
-  2. [Observable behavior from user perspective]
+ 1. [Observable behavior from user perspective]
+ 2. [Observable behavior from user perspective]
 **Plans**: [Number of plans]
 
 Plans:
@@ -142,14 +142,14 @@ After completing first milestone, reorganize with milestone groupings:
 
 ## Milestones
 
-- ✅ **v1.0 MVP** - Phases 1-4 (shipped YYYY-MM-DD)
-- 🚧 **v1.1 [Name]** - Phases 5-6 (in progress)
-- 📋 **v2.0 [Name]** - Phases 7-10 (planned)
+- **v1.0 MVP** - Phases 1-4 (shipped YYYY-MM-DD)
+- **v1.1 [Name]** - Phases 5-6 (in progress)
+- **v2.0 [Name]** - Phases 7-10 (planned)
 
 ## Phases
 
 <details>
-<summary>✅ v1.0 MVP (Phases 1-4) - SHIPPED YYYY-MM-DD</summary>
+<summary> v1.0 MVP (Phases 1-4) - SHIPPED YYYY-MM-DD</summary>
 
 ### Phase 1: [Name]
 **Goal**: [What this phase delivers]
@@ -164,7 +164,7 @@ Plans:
 
 </details>
 
-### 🚧 v1.1 [Name] (In Progress)
+### v1.1 [Name] (In Progress)
 
 **Milestone Goal:** [What v1.1 delivers]
 
@@ -179,7 +179,7 @@ Plans:
 
 [... remaining v1.1 phases ...]
 
-### 📋 v2.0 [Name] (Planned)
+### v2.0 [Name] (Planned)
 
 **Milestone Goal:** [What v2.0 delivers]
 
@@ -195,7 +195,7 @@ Plans:
 ```
 
 **Notes:**
-- Milestone emoji: ✅ shipped, 🚧 in progress, 📋 planned
+- Milestone emoji: shipped, in progress, planned
 - Completed milestones collapsed in `<details>` for readability
 - Current/future milestones expanded
 - Continuous phase numbering (01-99)

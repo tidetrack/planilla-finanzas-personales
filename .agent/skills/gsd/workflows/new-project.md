@@ -2,11 +2,11 @@
 name: gsd:new-project
 description: Initialize a new project with deep context gathering and PROJECT.md
 allowed-tools:
-  - Read
-  - Bash
-  - Write
-  - Task
-  - AskUserQuestion
+ - Read
+ - Bash
+ - Write
+ - Task
+ - AskUserQuestion
 ---
 
 <objective>
@@ -43,28 +43,28 @@ This is the most leveraged moment in any project. Deep questioning here means be
 **MANDATORY FIRST STEP — Execute these checks before ANY user interaction:**
 
 1. **Abort if project exists:**
-   ```bash
-   [ -f .planning/PROJECT.md ] && echo "ERROR: Project already initialized. Use /gsd:progress" && exit 1
-   ```
+ ```bash
+ [ -f .planning/PROJECT.md ] && echo "ERROR: Project already initialized. Use /gsd:progress" && exit 1
+ ```
 
 2. **Initialize git repo in THIS directory** (required even if inside a parent repo):
-   ```bash
-   if [ -d .git ] || [ -f .git ]; then
-       echo "Git repo exists in current directory"
-   else
-       git init
-       echo "Initialized new git repo"
-   fi
-   ```
+ ```bash
+ if [ -d .git ] || [ -f .git ]; then
+ echo "Git repo exists in current directory"
+ else
+ git init
+ echo "Initialized new git repo"
+ fi
+ ```
 
 3. **Detect existing code (brownfield detection):**
-   ```bash
-   CODE_FILES=$(find . -name "*.ts" -o -name "*.js" -o -name "*.py" -o -name "*.go" -o -name "*.rs" -o -name "*.swift" -o -name "*.java" 2>/dev/null | grep -v node_modules | grep -v .git | head -20)
-   HAS_PACKAGE=$([ -f package.json ] || [ -f requirements.txt ] || [ -f Cargo.toml ] || [ -f go.mod ] || [ -f Package.swift ] && echo "yes")
-   HAS_CODEBASE_MAP=$([ -d .planning/codebase ] && echo "yes")
-   ```
+ ```bash
+ CODE_FILES=$(find . -name "*.ts" -o -name "*.js" -o -name "*.py" -o -name "*.go" -o -name "*.rs" -o -name "*.swift" -o -name "*.java" 2>/dev/null | grep -v node_modules | grep -v .git | head -20)
+ HAS_PACKAGE=$([ -f package.json ] || [ -f requirements.txt ] || [ -f Cargo.toml ] || [ -f go.mod ] || [ -f Package.swift ] && echo "yes")
+ HAS_CODEBASE_MAP=$([ -d .planning/codebase ] && echo "yes")
+ ```
 
-   **You MUST run all bash commands above using the Bash tool before proceeding.**
+ **You MUST run all bash commands above using the Bash tool before proceeding.**
 
 ## Phase 2: Brownfield Offer
 
@@ -78,8 +78,8 @@ Use AskUserQuestion:
 - header: "Existing Code"
 - question: "I detected existing code in this directory. Would you like to map the codebase first?"
 - options:
-  - "Map codebase first" — Run /gsd:map-codebase to understand existing architecture (Recommended)
-  - "Skip mapping" — Proceed with project initialization
+ - "Map codebase first" — Run /gsd:map-codebase to understand existing architecture (Recommended)
+ - "Skip mapping" — Proceed with project initialization
 
 **If "Map codebase first":**
 ```
@@ -95,7 +95,7 @@ Exit command.
 
 **Display stage banner:**
 
-🚀 **GSD → Questioning**
+ **GSD → Questioning**
 
 **Open the conversation:**
 
@@ -134,8 +134,8 @@ When you could write a clear PROJECT.md, use AskUserQuestion:
 - header: "Ready?"
 - question: "I think I understand what you're after. Ready to create PROJECT.md?"
 - options:
-  - "Create PROJECT.md" — Let's move forward
-  - "Keep exploring" — I want to share more / ask me more
+ - "Create PROJECT.md" — Let's move forward
+ - "Keep exploring" — I want to share more / ask me more
 
 If "Keep exploring" — ask what they want to add, or identify gaps and probe naturally.
 
@@ -237,43 +237,43 @@ EOF
 
 ```
 questions: [
-  {
-    header: "Mode",
-    question: "How do you want to work?",
-    multiSelect: false,
-    options: [
-      { label: "YOLO (Recommended)", description: "Auto-approve, just execute" },
-      { label: "Interactive", description: "Confirm at each step" }
-    ]
-  },
-  {
-    header: "Depth",
-    question: "How thorough should planning be?",
-    multiSelect: false,
-    options: [
-      { label: "Quick", description: "Ship fast (3-5 phases, 1-3 plans each)" },
-      { label: "Standard", description: "Balanced scope and speed (5-8 phases, 3-5 plans each)" },
-      { label: "Comprehensive", description: "Thorough coverage (8-12 phases, 5-10 plans each)" }
-    ]
-  },
-  {
-    header: "Execution",
-    question: "Run plans in parallel?",
-    multiSelect: false,
-    options: [
-      { label: "Parallel (Recommended)", description: "Independent plans run simultaneously" },
-      { label: "Sequential", description: "One plan at a time" }
-    ]
-  },
-  {
-    header: "Git Tracking",
-    question: "Commit planning docs to git?",
-    multiSelect: false,
-    options: [
-      { label: "Yes (Recommended)", description: "Planning docs tracked in version control" },
-      { label: "No", description: "Keep .planning/ local-only (add to .gitignore)" }
-    ]
-  }
+ {
+ header: "Mode",
+ question: "How do you want to work?",
+ multiSelect: false,
+ options: [
+ { label: "YOLO (Recommended)", description: "Auto-approve, just execute" },
+ { label: "Interactive", description: "Confirm at each step" }
+ ]
+ },
+ {
+ header: "Depth",
+ question: "How thorough should planning be?",
+ multiSelect: false,
+ options: [
+ { label: "Quick", description: "Ship fast (3-5 phases, 1-3 plans each)" },
+ { label: "Standard", description: "Balanced scope and speed (5-8 phases, 3-5 plans each)" },
+ { label: "Comprehensive", description: "Thorough coverage (8-12 phases, 5-10 plans each)" }
+ ]
+ },
+ {
+ header: "Execution",
+ question: "Run plans in parallel?",
+ multiSelect: false,
+ options: [
+ { label: "Parallel (Recommended)", description: "Independent plans run simultaneously" },
+ { label: "Sequential", description: "One plan at a time" }
+ ]
+ },
+ {
+ header: "Git Tracking",
+ question: "Commit planning docs to git?",
+ multiSelect: false,
+ options: [
+ { label: "Yes (Recommended)", description: "Planning docs tracked in version control" },
+ { label: "No", description: "Keep .planning/ local-only (add to .gitignore)" }
+ ]
+ }
 ]
 ```
 
@@ -291,43 +291,43 @@ All recommended for important projects. Skip for quick experiments.
 
 ```
 questions: [
-  {
-    header: "Research",
-    question: "Research before planning each phase? (adds tokens/time)",
-    multiSelect: false,
-    options: [
-      { label: "Yes (Recommended)", description: "Investigate domain, find patterns, surface gotchas" },
-      { label: "No", description: "Plan directly from requirements" }
-    ]
-  },
-  {
-    header: "Plan Check",
-    question: "Verify plans will achieve their goals? (adds tokens/time)",
-    multiSelect: false,
-    options: [
-      { label: "Yes (Recommended)", description: "Catch gaps before execution starts" },
-      { label: "No", description: "Execute plans without verification" }
-    ]
-  },
-  {
-    header: "Verifier",
-    question: "Verify work satisfies requirements after each phase? (adds tokens/time)",
-    multiSelect: false,
-    options: [
-      { label: "Yes (Recommended)", description: "Confirm deliverables match phase goals" },
-      { label: "No", description: "Trust execution, skip verification" }
-    ]
-  },
-  {
-    header: "Planning Quality",
-    question: "How thorough should planning agents be?",
-    multiSelect: false,
-    options: [
-      { label: "Balanced (Recommended)", description: "Good quality/cost for planning agents" },
-      { label: "Quality", description: "Deeper analysis, higher cost" },
-      { label: "Budget", description: "Faster, lower cost" }
-    ]
-  }
+ {
+ header: "Research",
+ question: "Research before planning each phase? (adds tokens/time)",
+ multiSelect: false,
+ options: [
+ { label: "Yes (Recommended)", description: "Investigate domain, find patterns, surface gotchas" },
+ { label: "No", description: "Plan directly from requirements" }
+ ]
+ },
+ {
+ header: "Plan Check",
+ question: "Verify plans will achieve their goals? (adds tokens/time)",
+ multiSelect: false,
+ options: [
+ { label: "Yes (Recommended)", description: "Catch gaps before execution starts" },
+ { label: "No", description: "Execute plans without verification" }
+ ]
+ },
+ {
+ header: "Verifier",
+ question: "Verify work satisfies requirements after each phase? (adds tokens/time)",
+ multiSelect: false,
+ options: [
+ { label: "Yes (Recommended)", description: "Confirm deliverables match phase goals" },
+ { label: "No", description: "Trust execution, skip verification" }
+ ]
+ },
+ {
+ header: "Planning Quality",
+ question: "How thorough should planning agents be?",
+ multiSelect: false,
+ options: [
+ { label: "Balanced (Recommended)", description: "Good quality/cost for planning agents" },
+ { label: "Quality", description: "Deeper analysis, higher cost" },
+ { label: "Budget", description: "Faster, lower cost" }
+ ]
+ }
 ]
 ```
 
@@ -335,30 +335,30 @@ Create `.planning/config.json` with all settings:
 
 ```json
 {
-  "mode": "yolo|interactive",
-  "depth": "quick|standard|comprehensive",
-  "parallelization": true|false,
-  "commit_docs": true|false,
-  "model_profile": "balanced|quality|budget",
-  "workflow": {
-    "research": true|false,
-    "plan_check": true|false,
-    "verifier": true|false
-  },
-  "autopilot": {
-    "checkpoint_mode": "queue|skip",
-    "max_retries": 3,
-    "budget_limit_usd": 0,
-    "notify_webhook": "",
-    "model": "default"
-  }
+ "mode": "yolo|interactive",
+ "depth": "quick|standard|comprehensive",
+ "parallelization": true|false,
+ "commit_docs": true|false,
+ "model_profile": "balanced|quality|budget",
+ "workflow": {
+ "research": true|false,
+ "plan_check": true|false,
+ "verifier": true|false
+ },
+ "autopilot": {
+ "checkpoint_mode": "queue|skip",
+ "max_retries": 3,
+ "budget_limit_usd": 0,
+ "notify_webhook": "",
+ "model": "default"
+ }
 }
 ```
 
 **Autopilot settings (defaults shown):**
 - `checkpoint_mode`: How to handle plans needing human input
-  - `queue`: Write to `.planning/checkpoints/pending/`, continue with other work
-  - `skip`: Skip non-autonomous plans entirely
+ - `queue`: Write to `.planning/checkpoints/pending/`, continue with other work
+ - `skip`: Skip non-autonomous plans entirely
 - `max_retries`: Retry count before marking phase as failed (default: 3)
 - `budget_limit_usd`: Stop if estimated cost exceeds this (0 = unlimited)
 - `notify_webhook`: URL to POST notifications (empty = disabled)
@@ -369,13 +369,13 @@ Create `.planning/config.json` with all settings:
 
 **If commit_docs = Yes:**
 - Add autopilot transient files to `.gitignore`:
-  ```
-  # GSD autopilot (transient files)
-  .planning/autopilot.sh
-  .planning/autopilot.lock
-  .planning/logs/
-  .planning/checkpoints/
-  ```
+ ```
+ # GSD autopilot (transient files)
+ .planning/autopilot.sh
+ .planning/autopilot.lock
+ .planning/logs/
+ .planning/checkpoints/
+ ```
 
 **Commit config.json:**
 
@@ -420,13 +420,13 @@ Use AskUserQuestion:
 - header: "Research"
 - question: "Research the domain ecosystem before defining requirements?"
 - options:
-  - "Research first (Recommended)" — Discover standard stacks, expected features, architecture patterns
-  - "Skip research" — I know this domain well, go straight to requirements
+ - "Research first (Recommended)" — Discover standard stacks, expected features, architecture patterns
+ - "Skip research" — I know this domain well, go straight to requirements
 
 **If "Research first":**
 
 Display stage banner:
-🚀 **GSD → Researching**
+ **GSD → Researching**
 
 Researching [domain] ecosystem...
 
@@ -444,17 +444,17 @@ Check if this is greenfield or subsequent milestone:
 Display spawning indicator:
 ```
 ◆ Spawning 4 researchers in parallel...
-  → Stack research
-  → Features research
-  → Architecture research
-  → Pitfalls research
+ → Stack research
+ → Features research
+ → Architecture research
+ → Pitfalls research
 ```
 
 Spawn 4 parallel gsd-project-researcher agents with rich context:
 
 ```
 sessions_spawn(
-    task="""First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-project-researcher.md for your role and instructions.
+ task="""First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-project-researcher.md for your role and instructions.
 
 <research_type>
 Project Research — Stack dimension for [domain].
@@ -493,11 +493,11 @@ Write to: .planning/research/STACK.md
 Use template: /usr/lib/node_modules/clawdbot/skills/gsd/templates/research-project/STACK.md
 </output>
 ",
-    label="Stack research",
-    cleanup="keep")
+ label="Stack research",
+ cleanup="keep")
 
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-project-researcher.md for your role and instructions.
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-project-researcher.md for your role and instructions.
 
 <research_type>
 Project Research — Features dimension for [domain].
@@ -536,11 +536,11 @@ Write to: .planning/research/FEATURES.md
 Use template: /usr/lib/node_modules/clawdbot/skills/gsd/templates/research-project/FEATURES.md
 </output>
 ",
-    label="Features research",
-    cleanup="keep")
+ label="Features research",
+ cleanup="keep")
 
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-project-researcher.md for your role and instructions.
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-project-researcher.md for your role and instructions.
 
 <research_type>
 Project Research — Architecture dimension for [domain].
@@ -579,11 +579,11 @@ Write to: .planning/research/ARCHITECTURE.md
 Use template: /usr/lib/node_modules/clawdbot/skills/gsd/templates/research-project/ARCHITECTURE.md
 </output>
 ",
-    label="Architecture research",
-    cleanup="keep")
+ label="Architecture research",
+ cleanup="keep")
 
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-project-researcher.md for your role and instructions.
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-project-researcher.md for your role and instructions.
 
 <research_type>
 Project Research — Pitfalls dimension for [domain].
@@ -622,15 +622,15 @@ Write to: .planning/research/PITFALLS.md
 Use template: /usr/lib/node_modules/clawdbot/skills/gsd/templates/research-project/PITFALLS.md
 </output>
 ",
-    label="Pitfalls research",
-    cleanup="keep")
+ label="Pitfalls research",
+ cleanup="keep")
 ```
 
 After all 4 agents complete, spawn synthesizer to create SUMMARY.md:
 
 ```
 sessions_spawn(
-    task="
+ task="
 <task>
 Synthesize research outputs into SUMMARY.md.
 </task>
@@ -649,12 +649,12 @@ Use template: /usr/lib/node_modules/clawdbot/skills/gsd/templates/research-proje
 Commit after writing.
 </output>
 ",
-    label="Synthesize research",
-    cleanup="keep")
+ label="Synthesize research",
+ cleanup="keep")
 ```
 
 Display research complete banner and key findings:
-🚀 **GSD → Research Complete** ✓
+ **GSD → Research Complete** ✓
 
 **Key Findings:**
 
@@ -669,7 +669,7 @@ Files: `.planning/research/`
 ## Phase 7: Define Requirements
 
 Display stage banner:
-🚀 **GSD → Defining Requirements**
+ **GSD → Defining Requirements**
 
 **Load context:**
 
@@ -722,10 +722,10 @@ For each category, use AskUserQuestion:
 - question: "Which [category] features are in v1?"
 - multiSelect: true
 - options:
-  - "[Feature 1]" — [brief description]
-  - "[Feature 2]" — [brief description]
-  - "[Feature 3]" — [brief description]
-  - "None for v1" — Defer entire category
+ - "[Feature 1]" — [brief description]
+ - "[Feature 2]" — [brief description]
+ - "[Feature 3]" — [brief description]
+ - "None for v1" — Defer entire category
 
 Track responses:
 - Selected features → v1 requirements
@@ -738,8 +738,8 @@ Use AskUserQuestion:
 - header: "Additions"
 - question: "Any requirements research missed? (Features specific to your vision)"
 - options:
-  - "No, research covered it" — Proceed
-  - "Yes, let me add some" — Capture additions
+ - "No, research covered it" — Proceed
+ - "Yes, let me add some" — Capture additions
 
 **Validate core value:**
 
@@ -808,7 +808,7 @@ EOF
 ## Phase 8: Create Roadmap
 
 Display stage banner:
-🚀 **GSD → Creating Roadmap**
+ **GSD → Creating Roadmap**
 
 ◆ Spawning roadmapper...
 
@@ -816,7 +816,7 @@ Spawn gsd-roadmapper agent with context:
 
 ```
 sessions_spawn(
-    task="
+ task="
 <planning_context>
 
 **Project:**
@@ -845,8 +845,8 @@ Create roadmap:
 Write files first, then return. This ensures artifacts persist even if context is lost.
 </instructions>
 ",
-    label="Create roadmap",
-    cleanup="keep")
+ label="Create roadmap",
+ cleanup="keep")
 ```
 
 **Handle roadmapper return:**
@@ -902,32 +902,32 @@ Use AskUserQuestion:
 - header: "Roadmap"
 - question: "Does this roadmap structure work for you?"
 - options:
-  - "Approve" — Commit and continue
-  - "Adjust phases" — Tell me what to change
-  - "Review full file" — Show raw ROADMAP.md
+ - "Approve" — Commit and continue
+ - "Adjust phases" — Tell me what to change
+ - "Review full file" — Show raw ROADMAP.md
 
 **If "Approve":** Continue to commit.
 
 **If "Adjust phases":**
 - Get user's adjustment notes
 - Re-spawn roadmapper with revision context:
-  ```
-  sessions_spawn(
-    task="
-  <revision>
-  User feedback on roadmap:
-  [user's notes]
+ ```
+ sessions_spawn(
+ task="
+ <revision>
+ User feedback on roadmap:
+ [user's notes]
 
-  Current ROADMAP.md: @.planning/ROADMAP.md
+ Current ROADMAP.md: @.planning/ROADMAP.md
 
-  Update the roadmap based on feedback. Edit files in place.
-  Return ROADMAP REVISED with changes made.
-  </revision>
-  """,
-    label="Revise roadmap",
-    cleanup="keep"
+ Update the roadmap based on feedback. Edit files in place.
+ Return ROADMAP REVISED with changes made.
+ </revision>
+ """,
+ label="Revise roadmap",
+ cleanup="keep"
 )
-  ```
+ ```
 - Present revised roadmap
 - Loop until user approves
 
@@ -954,17 +954,17 @@ EOF
 
 Present completion with next steps:
 
-🚀 **GSD → Project Initialized** ✓
+ **GSD → Project Initialized** ✓
 
 **[Project Name]**
 
-| Artifact       | Location                    |
+| Artifact | Location |
 |----------------|-----------------------------|
-| Project        | `.planning/PROJECT.md`      |
-| Config         | `.planning/config.json`     |
-| Research       | `.planning/research/`       |
-| Requirements   | `.planning/REQUIREMENTS.md` |
-| Roadmap        | `.planning/ROADMAP.md`      |
+| Project | `.planning/PROJECT.md` |
+| Config | `.planning/config.json` |
+| Research | `.planning/research/` |
+| Requirements | `.planning/REQUIREMENTS.md` |
+| Roadmap | `.planning/ROADMAP.md` |
 
 **[N] phases** | **[X] requirements** | Ready to build ✓
 
@@ -977,10 +977,10 @@ Use AskUserQuestion to offer next steps:
 - header: "Next"
 - question: "How would you like to proceed?"
 - options:
-  - "Run autopilot" — Execute entire milestone autonomously (Recommended)
-  - "Plan phase 1" — Start with manual phase-by-phase execution
-  - "Discuss phase 1" — Gather context before planning
-  - "Create design system" — Establish visual foundations first (UI projects)
+ - "Run autopilot" — Execute entire milestone autonomously (Recommended)
+ - "Plan phase 1" — Start with manual phase-by-phase execution
+ - "Discuss phase 1" — Gather context before planning
+ - "Create design system" — Establish visual foundations first (UI projects)
 
 **If "Run autopilot":**
 ```
@@ -992,7 +992,7 @@ Route to autopilot command.
 ```
 ───────────────────────────────────────────────────────────────
 
-## ▶ Next Up
+## Next Up
 
 **Phase 1: [Phase Name]** — [Goal from ROADMAP.md]
 
@@ -1007,7 +1007,7 @@ Route to autopilot command.
 ```
 ───────────────────────────────────────────────────────────────
 
-## ▶ Next Up
+## Next Up
 
 **Phase 1: [Phase Name]** — [Goal from ROADMAP.md]
 
@@ -1028,7 +1028,7 @@ Route to autopilot command.
 ```
 ───────────────────────────────────────────────────────────────
 
-## ▶ Design System
+## Design System
 
 Establish visual foundations before building UI phases.
 
@@ -1052,11 +1052,11 @@ After design system is created, continue with:
 - `.planning/PROJECT.md`
 - `.planning/config.json`
 - `.planning/research/` (if research selected)
-  - `STACK.md`
-  - `FEATURES.md`
-  - `ARCHITECTURE.md`
-  - `PITFALLS.md`
-  - `SUMMARY.md`
+ - `STACK.md`
+ - `FEATURES.md`
+ - `ARCHITECTURE.md`
+ - `PITFALLS.md`
+ - `SUMMARY.md`
 - `.planning/REQUIREMENTS.md`
 - `.planning/ROADMAP.md`
 - `.planning/STATE.md`

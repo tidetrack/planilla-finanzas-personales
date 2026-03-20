@@ -3,9 +3,9 @@ name: gsd:add-phase
 description: Add phase to end of current milestone in roadmap
 argument-hint: "<description>"
 allowed-tools:
-  - Read
-  - Write
-  - Bash
+ - Read
+ - Write
+ - Bash
 ---
 
 <objective>
@@ -19,9 +19,9 @@ Automatically calculates next phase number based on existing phases.
 
 ```bash
 if [ -z "$ARGUMENTS" ]; then
-  echo "ERROR: Phase description required"
-  echo "Usage: /gsd add-phase <description>"
-  exit 1
+ echo "ERROR: Phase description required"
+ echo "Usage: /gsd add-phase <description>"
+ exit 1
 fi
 DESCRIPTION="$ARGUMENTS"
 ```
@@ -30,8 +30,8 @@ DESCRIPTION="$ARGUMENTS"
 
 ```bash
 if [ ! -f .planning/ROADMAP.md ]; then
-  echo "ERROR: No roadmap found. Run /gsd new-project first."
-  exit 1
+ echo "ERROR: No roadmap found. Run /gsd new-project first."
+ exit 1
 fi
 ```
 
@@ -89,7 +89,7 @@ Add to "Roadmap Evolution" section:
 **{description}**
 Directory: .planning/phases/{PADDED}-{slug}/
 
-**▶ Next:** `/gsd plan-phase {N}`
+** Next:** `/gsd plan-phase {N}`
 
 ---
 ```

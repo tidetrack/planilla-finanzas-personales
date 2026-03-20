@@ -3,11 +3,11 @@ name: gsd:map-codebase
 description: Analyze codebase with parallel mapper agents to produce .planning/codebase/ documents
 argument-hint: "[optional: specific area to map, e.g., 'api' or 'auth']"
 allowed-tools:
-  - Read
-  - Bash
-  - Glob
-  - Grep
-  - Write
+ - Read
+ - Bash
+ - Glob
+ - Grep
+ - Write
 ---
 
 <objective>
@@ -49,10 +49,10 @@ Focus area: $ARGUMENTS (optional - if provided, tells agents to focus on specifi
 
 ```bash
 if [ -d .planning/codebase ]; then
-  echo "Codebase map already exists:"
-  ls -la .planning/codebase/
-  echo ""
-  echo "Options: refresh (overwrite), skip, or view"
+ echo "Codebase map already exists:"
+ ls -la .planning/codebase/
+ echo ""
+ echo "Options: refresh (overwrite), skip, or view"
 fi
 ```
 
@@ -81,17 +81,17 @@ MODEL_PROFILE=$(cat .planning/config.json 2>/dev/null | grep -o '"model_profile"
 Display:
 ```
 Mapping codebase with 4 parallel agents...
-  → tech (STACK.md, INTEGRATIONS.md)
-  → arch (ARCHITECTURE.md, STRUCTURE.md)
-  → quality (CONVENTIONS.md, TESTING.md)
-  → concerns (CONCERNS.md)
+ → tech (STACK.md, INTEGRATIONS.md)
+ → arch (ARCHITECTURE.md, STRUCTURE.md)
+ → quality (CONVENTIONS.md, TESTING.md)
+ → concerns (CONCERNS.md)
 ```
 
 Spawn all 4 in parallel:
 
 ```
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-codebase-mapper.md for your role and instructions.
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-codebase-mapper.md for your role and instructions.
 
 <focus>tech</focus>
 
@@ -102,13 +102,13 @@ Write directly to:
 
 Return confirmation only (not document contents).
 ",
-    label="Map codebase: tech",
-    model="{mapper_model}",
-    cleanup="keep"
+ label="Map codebase: tech",
+ model="{mapper_model}",
+ cleanup="keep"
 )
 
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-codebase-mapper.md for your role and instructions.
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-codebase-mapper.md for your role and instructions.
 
 <focus>arch</focus>
 
@@ -119,13 +119,13 @@ Write directly to:
 
 Return confirmation only (not document contents).
 ",
-    label="Map codebase: arch",
-    model="{mapper_model}",
-    cleanup="keep"
+ label="Map codebase: arch",
+ model="{mapper_model}",
+ cleanup="keep"
 )
 
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-codebase-mapper.md for your role and instructions.
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-codebase-mapper.md for your role and instructions.
 
 <focus>quality</focus>
 
@@ -136,13 +136,13 @@ Write directly to:
 
 Return confirmation only (not document contents).
 ",
-    label="Map codebase: quality",
-    model="{mapper_model}",
-    cleanup="keep"
+ label="Map codebase: quality",
+ model="{mapper_model}",
+ cleanup="keep"
 )
 
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-codebase-mapper.md for your role and instructions.
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-codebase-mapper.md for your role and instructions.
 
 <focus>concerns</focus>
 
@@ -152,9 +152,9 @@ Write directly to:
 
 Return confirmation only (not document contents).
 ",
-    label="Map codebase: concerns",
-    model="{mapper_model}",
-    cleanup="keep"
+ label="Map codebase: concerns",
+ model="{mapper_model}",
+ cleanup="keep"
 )
 ```
 
@@ -165,12 +165,12 @@ After agents complete:
 ```bash
 echo "Verifying codebase documents..."
 for doc in STACK INTEGRATIONS ARCHITECTURE STRUCTURE CONVENTIONS TESTING CONCERNS; do
-  if [ -f ".planning/codebase/${doc}.md" ]; then
-    lines=$(wc -l < ".planning/codebase/${doc}.md")
-    echo "✓ ${doc}.md (${lines} lines)"
-  else
-    echo "✗ ${doc}.md MISSING"
-  fi
+ if [ -f ".planning/codebase/${doc}.md" ]; then
+ lines=$(wc -l < ".planning/codebase/${doc}.md")
+ echo "✓ ${doc}.md (${lines} lines)"
+ else
+ echo "✗ ${doc}.md MISSING"
+ fi
 done
 ```
 
@@ -208,7 +208,7 @@ Created 7 codebase documents:
 | TESTING.md | {N} | Test setup, patterns |
 | CONCERNS.md | {N} | Tech debt, issues |
 
-**▶ Next Up**
+** Next Up**
 
 `/gsd new-project` — initialize project with codebase context
 

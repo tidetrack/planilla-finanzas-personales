@@ -19,16 +19,16 @@
  * @returns {Array<Object>} Array de medios de pago
  */
 function getAllMediosPago() {
-    const data = getTableData('MEDIOS_PAGO');
-    const colIndexes = getColumnIndexes('MEDIOS_PAGO');
+ const data = getTableData('MEDIOS_PAGO');
+ const colIndexes = getColumnIndexes('MEDIOS_PAGO');
 
-    return data.map(row => ({
-        medio_id: row[colIndexes.medio_id],
-        nombre_medio: row[colIndexes.nombre_medio],
-        tipo: row[colIndexes.tipo],
-        moneda_id: row[colIndexes.moneda_id] || '',
-        uso_principal: row[colIndexes.uso_principal] || ''
-    }));
+ return data.map(row => ({
+ medio_id: row[colIndexes.medio_id],
+ nombre_medio: row[colIndexes.nombre_medio],
+ tipo: row[colIndexes.tipo],
+ moneda_id: row[colIndexes.moneda_id] || '',
+ uso_principal: row[colIndexes.uso_principal] || ''
+ }));
 }
 
 /**
@@ -37,22 +37,22 @@ function getAllMediosPago() {
  * @returns {Object|null} Objeto medio o null
  */
 function getMedioPagoById(medio_id) {
-    const result = findById('MEDIOS_PAGO', medio_id, 0);
+ const result = findById('MEDIOS_PAGO', medio_id, 0);
 
-    if (!result) {
-        return null;
-    }
+ if (!result) {
+ return null;
+ }
 
-    const colIndexes = getColumnIndexes('MEDIOS_PAGO');
-    const row = result.rowData;
+ const colIndexes = getColumnIndexes('MEDIOS_PAGO');
+ const row = result.rowData;
 
-    return {
-        medio_id: row[colIndexes.medio_id],
-        nombre_medio: row[colIndexes.nombre_medio],
-        tipo: row[colIndexes.tipo],
-        moneda_id: row[colIndexes.moneda_id] || '',
-        uso_principal: row[colIndexes.uso_principal] || ''
-    };
+ return {
+ medio_id: row[colIndexes.medio_id],
+ nombre_medio: row[colIndexes.nombre_medio],
+ tipo: row[colIndexes.tipo],
+ moneda_id: row[colIndexes.moneda_id] || '',
+ uso_principal: row[colIndexes.uso_principal] || ''
+ };
 }
 
 /**
@@ -61,11 +61,11 @@ function getMedioPagoById(medio_id) {
  * @returns {Array<Object>} Medios filtrados
  */
 function getMediosByTipo(tipo) {
-    // Validar enum
-    validateEnum(tipo, ENUM_TIPO_MEDIO, 'tipo');
+ // Validar enum
+ validateEnum(tipo, ENUM_TIPO_MEDIO, 'tipo');
 
-    const all = getAllMediosPago();
-    return all.filter(m => m.tipo === tipo);
+ const all = getAllMediosPago();
+ return all.filter(m => m.tipo === tipo);
 }
 
 /**
@@ -74,7 +74,7 @@ function getMediosByTipo(tipo) {
  * @returns {boolean} true si existe
  */
 function medioPagoExists(medio_id) {
-    return existsById('MEDIOS_PAGO', medio_id, 0);
+ return existsById('MEDIOS_PAGO', medio_id, 0);
 }
 
 // ============================================
@@ -90,42 +90,42 @@ function medioPagoExists(medio_id) {
  * @returns {Object} Medio creado
  */
 function createMedioPago(nombre_medio, tipo, moneda_id = null, uso_principal = null) {
-    // Si no se provee moneda_id, usar la primera disponible
-    if (!moneda_id) {
-        const monedas = getAllMonedas();
-        if (monedas.length === 0) {
-            throw new Error('No hay monedas disponibles. Ejecutar setupCompleto() primero.');
-        }
-        moneda_id = monedas[0].moneda_id;
-    }
+ // Si no se provee moneda_id, usar la primera disponible
+ if (!moneda_id) {
+ const monedas = getAllMonedas();
+ if (monedas.length === 0) {
+ throw new Error('No hay monedas disponibles. Ejecutar setupCompleto() primero.');
+ }
+ moneda_id = monedas[0].moneda_id;
+ }
 
-    const medio = {
-        medio_id: generateNextId('MEDIOS_PAGO', 'MED', 3),
-        nombre_medio,
-        tipo,
-        moneda_id,
-        uso_principal: uso_principal || ''
-    };
+ const medio = {
+ medio_id: generateNextId('MEDIOS_PAGO', 'MED', 3),
+ nombre_medio,
+ tipo,
+ moneda_id,
+ uso_principal: uso_principal || ''
+ };
 
-    // Validar
-    validateMedioPago(medio);
+ // Validar
+ validateMedioPago(medio);
 
-    // Convertir a array (5 columnas)
-    const rowData = [
-        medio.medio_id,
-        medio.nombre_medio,
-        medio.tipo,
-        medio.moneda_id,
-        medio.uso_principal
-    ];
+ // Convertir a array (5 columnas)
+ const rowData = [
+ medio.medio_id,
+ medio.nombre_medio,
+ medio.tipo,
+ medio.moneda_id,
+ medio.uso_principal
+ ];
 
-    // Insertar
-    appendRow('MEDIOS_PAGO', rowData);
+ // Insertar
+ appendRow('MEDIOS_PAGO', rowData);
 
-    logSuccess(`Medio de pago creado: ${medio.medio_id} - ${medio.nombre_medio} (${medio.tipo})`);
-    showToast(`Medio "${medio.nombre_medio}" creado correctamente`);
+ logSuccess(`Medio de pago creado: ${medio.medio_id} - ${medio.nombre_medio} (${medio.tipo})`);
+ showToast(`Medio "${medio.nombre_medio}" creado correctamente`);
 
-    return medio;
+ return medio;
 }
 
 /**
@@ -138,43 +138,43 @@ function createMedioPago(nombre_medio, tipo, moneda_id = null, uso_principal = n
  * @returns {Object} Medio actualizado
  */
 function updateMedioPago(medio_id, nombre_medio, tipo, moneda_id = null, uso_principal = null) {
-    const result = findById('MEDIOS_PAGO', medio_id, 0);
+ const result = findById('MEDIOS_PAGO', medio_id, 0);
 
-    if (!result) {
-        throw new Error(`Medio de pago no encontrado: ${medio_id}`);
-    }
+ if (!result) {
+ throw new Error(`Medio de pago no encontrado: ${medio_id}`);
+ }
 
-    // Si no se provee moneda_id, mantener el actual
-    if (!moneda_id) {
-        const colIndexes = getColumnIndexes('MEDIOS_PAGO');
-        moneda_id = result.rowData[colIndexes.moneda_id];
-    }
+ // Si no se provee moneda_id, mantener el actual
+ if (!moneda_id) {
+ const colIndexes = getColumnIndexes('MEDIOS_PAGO');
+ moneda_id = result.rowData[colIndexes.moneda_id];
+ }
 
-    const medio = {
-        medio_id,
-        nombre_medio,
-        tipo,
-        moneda_id,
-        uso_principal: uso_principal || ''
-    };
+ const medio = {
+ medio_id,
+ nombre_medio,
+ tipo,
+ moneda_id,
+ uso_principal: uso_principal || ''
+ };
 
-    // Validar (indicar que es UPDATE para no verificar duplicados)
-    validateMedioPago(medio, true);
+ // Validar (indicar que es UPDATE para no verificar duplicados)
+ validateMedioPago(medio, true);
 
-    const rowData = [
-        medio_id,
-        nombre_medio,
-        tipo,
-        moneda_id,
-        uso_principal || ''
-    ];
+ const rowData = [
+ medio_id,
+ nombre_medio,
+ tipo,
+ moneda_id,
+ uso_principal || ''
+ ];
 
-    updateRow('MEDIOS_PAGO', result.rowIndex, rowData);
+ updateRow('MEDIOS_PAGO', result.rowIndex, rowData);
 
-    logSuccess(`Medio de pago actualizado: ${medio_id}`);
-    showToast(`Medio "${nombre_medio}" actualizado correctamente`);
+ logSuccess(`Medio de pago actualizado: ${medio_id}`);
+ showToast(`Medio "${nombre_medio}" actualizado correctamente`);
 
-    return medio;
+ return medio;
 }
 
 /**
@@ -182,28 +182,28 @@ function updateMedioPago(medio_id, nombre_medio, tipo, moneda_id = null, uso_pri
  * @param {string} medio_id ID del medio
  */
 function deleteMedioPago(medio_id) {
-    const result = findById('MEDIOS_PAGO', medio_id, 0);
+ const result = findById('MEDIOS_PAGO', medio_id, 0);
 
-    if (!result) {
-        throw new Error(`Medio de pago no encontrado: ${medio_id}`);
-    }
+ if (!result) {
+ throw new Error(`Medio de pago no encontrado: ${medio_id}`);
+ }
 
-    // Verificar que no tenga transacciones asociadas (FK constraint)
-    const transacciones = getAllTransacciones();
-    const hasTransactions = transacciones.some(t => t.medio_id === medio_id);
+ // Verificar que no tenga transacciones asociadas (FK constraint)
+ const transacciones = getAllTransacciones();
+ const hasTransactions = transacciones.some(t => t.medio_id === medio_id);
 
-    if (hasTransactions) {
-        const medio = getMedioPagoById(medio_id);
-        throw new Error(
-            `No se puede eliminar el medio "${medio.nombre_medio}" (${medio_id}) porque tiene transacciones asociadas. ` +
-            `Primero elimina o reasigna las transacciones.`
-        );
-    }
+ if (hasTransactions) {
+ const medio = getMedioPagoById(medio_id);
+ throw new Error(
+ `No se puede eliminar el medio "${medio.nombre_medio}" (${medio_id}) porque tiene transacciones asociadas. ` +
+ `Primero elimina o reasigna las transacciones.`
+ );
+ }
 
-    deleteRow('MEDIOS_PAGO', result.rowIndex);
+ deleteRow('MEDIOS_PAGO', result.rowIndex);
 
-    logSuccess(`Medio de pago eliminado: ${medio_id}`);
-    showToast(`Medio "${medio_id}" eliminado`);
+ logSuccess(`Medio de pago eliminado: ${medio_id}`);
+ showToast(`Medio "${medio_id}" eliminado`);
 }
 
 // ============================================
@@ -215,8 +215,8 @@ function deleteMedioPago(medio_id) {
  * @returns {Array<string>} Array de IDs
  */
 function getMedioCodesForDropdown() {
-    const medios = getAllMediosPago();
-    return medios.map(m => m.medio_id);
+ const medios = getAllMediosPago();
+ return medios.map(m => m.medio_id);
 }
 
 /**
@@ -225,11 +225,11 @@ function getMedioCodesForDropdown() {
  * @returns {Array<Object>} Array con {id, nombre}
  */
 function getMediosForDropdown(tipo = null) {
-    const medios = tipo ? getMediosByTipo(tipo) : getAllMediosPago();
-    return medios.map(m => ({
-        id: m.medio_id,
-        nombre: m.nombre_medio
-    }));
+ const medios = tipo ? getMediosByTipo(tipo) : getAllMediosPago();
+ return medios.map(m => ({
+ id: m.medio_id,
+ nombre: m.nombre_medio
+ }));
 }
 
 /**
@@ -237,29 +237,29 @@ function getMediosForDropdown(tipo = null) {
  * Solo agrega los que faltan
  */
 function initializeMediosPagoBasicos() {
-    const mediosBasicos = [
-        { nombre: 'Efectivo', tipo: 'efectivo' },
-        { nombre: 'Tarjeta Visa débito', tipo: 'débito' },
-        { nombre: 'Tarjeta Amex crédito', tipo: 'crédito' },
-        { nombre: 'Transferencia bancaria', tipo: 'banco' },
-        { nombre: 'Mercado Pago', tipo: 'billetera' }
-    ];
+ const mediosBasicos = [
+ { nombre: 'Efectivo', tipo: 'efectivo' },
+ { nombre: 'Tarjeta Visa débito', tipo: 'débito' },
+ { nombre: 'Tarjeta Amex crédito', tipo: 'crédito' },
+ { nombre: 'Transferencia bancaria', tipo: 'banco' },
+ { nombre: 'Mercado Pago', tipo: 'billetera' }
+ ];
 
-    let agregados = 0;
+ let agregados = 0;
 
-    mediosBasicos.forEach(m => {
-        try {
-            createMedioPago(m.nombre, m.tipo);
-            agregados++;
-        } catch (e) {
-            logError(`Error creando medio ${m.nombre}`, { error: e.toString() });
-        }
-    });
+ mediosBasicos.forEach(m => {
+ try {
+ createMedioPago(m.nombre, m.tipo);
+ agregados++;
+ } catch (e) {
+ logError(`Error creando medio ${m.nombre}`, { error: e.toString() });
+ }
+ });
 
-    if (agregados > 0) {
-        logSuccess(`Medios de pago inicializados: ${agregados} agregados`);
-        showToast(`${agregados} medio(s) de pago creado(s)`, 'Setup Completo', 5);
-    } else {
-        logInfo('No se agregaron medios (puede que ya existan o hubo errores)');
-    }
+ if (agregados > 0) {
+ logSuccess(`Medios de pago inicializados: ${agregados} agregados`);
+ showToast(`${agregados} medio(s) de pago creado(s)`, 'Setup Completo', 5);
+ } else {
+ logInfo('No se agregaron medios (puede que ya existan o hubo errores)');
+ }
 }

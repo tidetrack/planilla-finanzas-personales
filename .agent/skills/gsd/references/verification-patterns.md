@@ -33,7 +33,7 @@ grep -E "// \.\.\.|/\* \.\.\. \*/|# \.\.\." "$file"
 # UI placeholder patterns
 grep -E "placeholder|lorem ipsum|coming soon|under construction" "$file" -i
 grep -E "sample|example|test data|dummy" "$file" -i
-grep -E "\[.*\]|<.*>|\{.*\}" "$file"  # Template brackets left in
+grep -E "\[.*\]|<.*>|\{.*\}" "$file" # Template brackets left in
 ```
 
 **Empty or trivial implementations:**
@@ -41,15 +41,15 @@ grep -E "\[.*\]|<.*>|\{.*\}" "$file"  # Template brackets left in
 # Functions that do nothing
 grep -E "return null|return undefined|return \{\}|return \[\]" "$file"
 grep -E "pass$|\.\.\.|\bnothing\b" "$file"
-grep -E "console\.(log|warn|error).*only" "$file"  # Log-only functions
+grep -E "console\.(log|warn|error).*only" "$file" # Log-only functions
 ```
 
 **Hardcoded values where dynamic expected:**
 ```bash
 # Hardcoded IDs, counts, or content
-grep -E "id.*=.*['\"].*['\"]" "$file"  # Hardcoded string IDs
-grep -E "count.*=.*\d+|length.*=.*\d+" "$file"  # Hardcoded counts
-grep -E "\\\$\d+\.\d{2}|\d+ items" "$file"  # Hardcoded display values
+grep -E "id.*=.*['\"].*['\"]" "$file" # Hardcoded string IDs
+grep -E "count.*=.*\d+|length.*=.*\d+" "$file" # Hardcoded counts
+grep -E "\\\$\d+\.\d{2}|\d+ items" "$file" # Hardcoded display values
 ```
 
 </stub_detection>
@@ -89,7 +89,7 @@ return <></>
 // Also stubs - empty handlers:
 onClick={() => {}}
 onChange={() => console.log('clicked')}
-onSubmit={(e) => e.preventDefault()}  // Only prevents default, does nothing
+onSubmit={(e) => e.preventDefault()} // Only prevents default, does nothing
 ```
 
 **Wiring check:**
@@ -132,7 +132,7 @@ grep -E "\.(get|post|put|patch|delete)\(" "$route_path"
 **Substantive check:**
 ```bash
 # Has actual logic, not just return statement
-wc -l "$route_path"  # More than 10-15 lines suggests real implementation
+wc -l "$route_path" # More than 10-15 lines suggests real implementation
 
 # Interacts with data source
 grep -E "prisma\.|db\.|mongoose\.|sql|query|find|create|update|delete" "$route_path" -i
@@ -148,21 +148,21 @@ grep -E "Response\.json|res\.json|res\.send|return.*\{" "$route_path" | grep -v 
 ```typescript
 // RED FLAGS - These are stubs:
 export async function POST() {
-  return Response.json({ message: "Not implemented" })
+ return Response.json({ message: "Not implemented" })
 }
 
 export async function GET() {
-  return Response.json([])  // Empty array with no DB query
+ return Response.json([]) // Empty array with no DB query
 }
 
 export async function PUT() {
-  return new Response()  // Empty response
+ return new Response() // Empty response
 }
 
 // Console log only:
 export async function POST(req) {
-  console.log(await req.json())
-  return Response.json({ ok: true })
+ console.log(await req.json())
+ return Response.json({ ok: true })
 }
 ```
 
@@ -215,26 +215,26 @@ grep -A 20 "model $model_name" "$schema_path" | grep -E "Int|DateTime|Boolean|Fl
 ```prisma
 // RED FLAGS - These are stubs:
 model User {
-  id String @id
-  // TODO: add fields
+ id String @id
+ // TODO: add fields
 }
 
 model Message {
-  id        String @id
-  content   String  // Only one real field
+ id String @id
+ content String // Only one real field
 }
 
 // Missing critical fields:
 model Order {
-  id     String @id
-  // No: userId, items, total, status, createdAt
+ id String @id
+ // No: userId, items, total, status, createdAt
 }
 ```
 
 **Wiring check:**
 ```bash
 # Migrations exist and are applied
-ls prisma/migrations/ 2>/dev/null | wc -l  # Should be > 0
+ls prisma/migrations/ 2>/dev/null | wc -l # Should be > 0
 npx prisma migrate status 2>/dev/null | grep -v "pending"
 
 # Client is generated
@@ -275,17 +275,17 @@ grep -E "return \{|return \[" "$hook_path"
 ```typescript
 // RED FLAGS - These are stubs:
 export function useAuth() {
-  return { user: null, login: () => {}, logout: () => {} }
+ return { user: null, login: () => {}, logout: () => {} }
 }
 
 export function useCart() {
-  const [items, setItems] = useState([])
-  return { items, addItem: () => console.log('add'), removeItem: () => {} }
+ const [items, setItems] = useState([])
+ return { items, addItem: () => console.log('add'), removeItem: () => {} }
 }
 
 // Hardcoded return:
 export function useUser() {
-  return { name: "Test User", email: "test@example.com" }
+ return { name: "Test User", email: "test@example.com" }
 }
 ```
 
@@ -330,7 +330,7 @@ grep -E "^$VAR_NAME=.+" .env .env.local 2>/dev/null | grep -v "your-.*-here|xxx|
 DATABASE_URL=your-database-url-here
 STRIPE_SECRET_KEY=sk_test_xxx
 API_KEY=placeholder
-NEXT_PUBLIC_API_URL=http://localhost:3000  # Still pointing to localhost in prod
+NEXT_PUBLIC_API_URL=http://localhost:3000 # Still pointing to localhost in prod
 ```
 
 **Wiring check:**
@@ -368,13 +368,13 @@ grep -E "await.*fetch|\.then\(|setData|setState" "$component_path"
 **Red flags:**
 ```typescript
 // Fetch exists but response ignored:
-fetch('/api/messages')  // No await, no .then, no assignment
+fetch('/api/messages') // No await, no .then, no assignment
 
 // Fetch in comment:
 // fetch('/api/messages').then(r => r.json()).then(setMessages)
 
 // Fetch to wrong endpoint:
-fetch('/api/message')  // Typo - should be /api/messages
+fetch('/api/message') // Typo - should be /api/messages
 ```
 
 ### Pattern: API → Database
@@ -396,11 +396,11 @@ grep -E "return.*json.*data|res\.json.*result" "$route_path"
 ```typescript
 // Query exists but result not returned:
 await prisma.message.findMany()
-return Response.json({ ok: true })  // Returns static, not query result
+return Response.json({ ok: true }) // Returns static, not query result
 
 // Query not awaited:
-const messages = prisma.message.findMany()  // Missing await
-return Response.json(messages)  // Returns Promise, not data
+const messages = prisma.message.findMany() // Missing await
+return Response.json(messages) // Returns Promise, not data
 ```
 
 ### Pattern: Form → Handler
@@ -425,7 +425,7 @@ onSubmit={(e) => e.preventDefault()}
 
 // Handler only logs:
 const handleSubmit = (data) => {
-  console.log(data)
+ console.log(data)
 }
 
 // Handler is empty:
@@ -444,24 +444,24 @@ grep -E "\{.*messages.*\}|\{.*data.*\}|\{.*items.*\}" "$component_path"
 grep -E "\.map\(|\.filter\(|\.reduce\(" "$component_path"
 
 # Verify dynamic content
-grep -E "\{[a-zA-Z_]+\." "$component_path"  # Variable interpolation
+grep -E "\{[a-zA-Z_]+\." "$component_path" # Variable interpolation
 ```
 
 **Red flags:**
 ```tsx
 // Hardcoded instead of state:
 return <div>
-  <p>Message 1</p>
-  <p>Message 2</p>
+ <p>Message 1</p>
+ <p>Message 2</p>
 </div>
 
 // State exists but not rendered:
 const [messages, setMessages] = useState([])
-return <div>No messages</div>  // Always shows "no messages"
+return <div>No messages</div> // Always shows "no messages"
 
 // Wrong state rendered:
 const [messages, setMessages] = useState([])
-return <div>{otherData.map(...)}</div>  // Uses different data
+return <div>{otherData.map(...)}</div> // Uses different data
 ```
 
 </wiring_verification>
@@ -524,31 +524,31 @@ For the verification subagent, use this pattern:
 ```bash
 # 1. Check existence
 check_exists() {
-  [ -f "$1" ] && echo "EXISTS: $1" || echo "MISSING: $1"
+ [ -f "$1" ] && echo "EXISTS: $1" || echo "MISSING: $1"
 }
 
 # 2. Check for stub patterns
 check_stubs() {
-  local file="$1"
-  local stubs=$(grep -c -E "TODO|FIXME|placeholder|not implemented" "$file" 2>/dev/null || echo 0)
-  [ "$stubs" -gt 0 ] && echo "STUB_PATTERNS: $stubs in $file"
+ local file="$1"
+ local stubs=$(grep -c -E "TODO|FIXME|placeholder|not implemented" "$file" 2>/dev/null || echo 0)
+ [ "$stubs" -gt 0 ] && echo "STUB_PATTERNS: $stubs in $file"
 }
 
 # 3. Check wiring (component calls API)
 check_wiring() {
-  local component="$1"
-  local api_path="$2"
-  grep -q "$api_path" "$component" && echo "WIRED: $component → $api_path" || echo "NOT_WIRED: $component → $api_path"
+ local component="$1"
+ local api_path="$2"
+ grep -q "$api_path" "$component" && echo "WIRED: $component → $api_path" || echo "NOT_WIRED: $component → $api_path"
 }
 
 # 4. Check substantive (more than N lines, has expected patterns)
 check_substantive() {
-  local file="$1"
-  local min_lines="$2"
-  local pattern="$3"
-  local lines=$(wc -l < "$file" 2>/dev/null || echo 0)
-  local has_pattern=$(grep -c -E "$pattern" "$file" 2>/dev/null || echo 0)
-  [ "$lines" -ge "$min_lines" ] && [ "$has_pattern" -gt 0 ] && echo "SUBSTANTIVE: $file" || echo "THIN: $file ($lines lines, $has_pattern matches)"
+ local file="$1"
+ local min_lines="$2"
+ local pattern="$3"
+ local lines=$(wc -l < "$file" 2>/dev/null || echo 0)
+ local has_pattern=$(grep -c -E "$pattern" "$file" 2>/dev/null || echo 0)
+ [ "$lines" -ge "$min_lines" ] && [ "$has_pattern" -gt 0 ] && echo "SUBSTANTIVE: $file" || echo "THIN: $file ($lines lines, $has_pattern matches)"
 }
 ```
 

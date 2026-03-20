@@ -1,6 +1,6 @@
 # Contexto de Negocio - Tidetrack Personal Finance
 
-## 🎯 Círculo de Oro (Golden Circle)
+## Círculo de Oro (Golden Circle)
 
 ### Why - Propósito que Gobierna las Decisiones
 
@@ -55,7 +55,7 @@ Entender qué pasa con tu plata y poder proyectar hacia el futuro.
 
 ---
 
-## 🎨 Visión de Largo Plazo
+## Visión de Largo Plazo
 
 ### Capa Productiva
 Tidetrack quiere ser la **primera herramienta financiera elegida por la gente** para entender y controlar su dinero.
@@ -69,7 +69,7 @@ El lifestyle sirve para **resignificar el acto de registrar**: no como "tarea ad
 
 ---
 
-## 💼 Modelo de Negocio B2C
+## Modelo de Negocio B2C
 
 ### Propuesta de Valor Como Promesa Verificable
 
@@ -114,7 +114,7 @@ Cantidad de días con al menos un registro por usuario activo
 
 ---
 
-## 🎯 Estrategia Competitiva
+## Estrategia Competitiva
 
 ### Posicionamiento Diferencial
 
@@ -133,7 +133,7 @@ Cantidad de días con al menos un registro por usuario activo
 
 ---
 
-## 💎 Valores y Personalidad
+## Valores y Personalidad
 
 ### Valores como Comportamientos de Producto
 
@@ -157,5 +157,5 @@ Cantidad de días con al menos un registro por usuario activo
 
 ---
 
-**Versión del Documento**: 1.0  
+**Versión del Documento**: 1.0 
 **Última actualización**: 2026-01-17

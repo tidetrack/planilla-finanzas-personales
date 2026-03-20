@@ -2,12 +2,12 @@
 name: ui-principles
 description: Professional UI/UX design principles for high-quality interfaces
 load_when:
-  - design
-  - ui
-  - frontend
-  - component
-  - layout
-  - mockup
+ - design
+ - ui
+ - frontend
+ - component
+ - layout
+ - mockup
 auto_load_for: []
 ---
 
@@ -94,7 +94,7 @@ Body text: 60-75 characters. Longer lines reduce readability.
 **Neutral scale:**
 Build 9-11 shades from near-white to near-black:
 ```
-50  - Backgrounds, subtle borders
+50 - Backgrounds, subtle borders
 100 - Hover states, dividers
 200 - Disabled states
 300 - Borders
@@ -125,11 +125,11 @@ Use a consistent grid:
 ### Responsive Breakpoints
 
 ```
-sm:  640px   - Mobile landscape
-md:  768px   - Tablets
-lg:  1024px  - Small desktops
-xl:  1280px  - Standard desktops
-2xl: 1536px  - Large displays
+sm: 640px - Mobile landscape
+md: 768px - Tablets
+lg: 1024px - Small desktops
+xl: 1280px - Standard desktops
+2xl: 1536px - Large displays
 ```
 
 ### Content Width

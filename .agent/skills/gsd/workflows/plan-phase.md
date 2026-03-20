@@ -4,14 +4,14 @@ description: Create detailed execution plan for a phase (PLAN.md) with verificat
 argument-hint: "[phase] [--research] [--skip-research] [--gaps] [--skip-verify]"
 agent: gsd-planner
 allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Glob
-  - Grep
-  - Task
-  - WebFetch
-  - mcp__context7__*
+ - Read
+ - Write
+ - Bash
+ - Glob
+ - Grep
+ - Task
+ - WebFetch
+ - mcp__context7__*
 ---
 
 <execution_context>
@@ -85,9 +85,9 @@ Extract from $ARGUMENTS:
 ```bash
 # Normalize phase number (8 → 08, but preserve decimals like 2.1 → 02.1)
 if [[ "$PHASE" =~ ^[0-9]+$ ]]; then
-  PHASE=$(printf "%02d" "$PHASE")
+ PHASE=$(printf "%02d" "$PHASE")
 elif [[ "$PHASE" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
-  PHASE=$(printf "%02d.%s" "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}")
+ PHASE=$(printf "%02d.%s" "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}")
 fi
 ```
 
@@ -112,10 +112,10 @@ grep -A5 "Phase ${PHASE}:" .planning/ROADMAP.md 2>/dev/null
 # PHASE is already normalized (08, 02.1, etc.) from step 2
 PHASE_DIR=$(ls -d .planning/phases/${PHASE}-* 2>/dev/null | head -1)
 if [ -z "$PHASE_DIR" ]; then
-  # Create phase directory from roadmap name
-  PHASE_NAME=$(grep "Phase ${PHASE}:" .planning/ROADMAP.md | sed 's/.*Phase [0-9]*: //' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-  mkdir -p ".planning/phases/${PHASE}-${PHASE_NAME}"
-  PHASE_DIR=".planning/phases/${PHASE}-${PHASE_NAME}"
+ # Create phase directory from roadmap name
+ PHASE_NAME=$(grep "Phase ${PHASE}:" .planning/ROADMAP.md | sed 's/.*Phase [0-9]*: //' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+ mkdir -p ".planning/phases/${PHASE}-${PHASE_NAME}"
+ PHASE_DIR=".planning/phases/${PHASE}-${PHASE_NAME}"
 fi
 ```
 
@@ -148,7 +148,7 @@ ls "${PHASE_DIR}"/*-RESEARCH.md 2>/dev/null
 **If RESEARCH.md missing OR `--research` flag set:**
 
 Display stage banner:
-🚀 **GSD → Researching Phase {X}**
+ **GSD → Researching Phase {X}**
 
 ◆ Spawning researcher...
 
@@ -202,9 +202,9 @@ Write research findings to: {phase_dir}/{phase}-RESEARCH.md
 
 ```
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-phase-researcher.md for your role and instructions.\n\n" + research_prompt,
-    label="Research Phase {phase}",
-    cleanup="keep"
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-phase-researcher.md for your role and instructions.\n\n" + research_prompt,
+ label="Research Phase {phase}",
+ cleanup="keep"
 )
 ```
 
@@ -255,7 +255,7 @@ UAT_CONTENT=$(cat "${PHASE_DIR}"/*-UAT.md 2>/dev/null)
 ## 8. Spawn gsd-planner Agent
 
 Display stage banner:
-🚀 **GSD → Planning Phase {X}**
+ **GSD → Planning Phase {X}**
 
 ◆ Spawning planner...
 
@@ -318,9 +318,9 @@ Before returning PLANNING COMPLETE:
 
 ```
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-planner.md for your role and instructions.\n\n",
-    label="Plan Phase {phase}",
-    cleanup="keep"
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-planner.md for your role and instructions.\n\n",
+ label="Plan Phase {phase}",
+ cleanup="keep"
 )
 ```
 
@@ -346,7 +346,7 @@ Parse planner output:
 ## 10. Spawn gsd-plan-checker Agent
 
 Display:
-🚀 **GSD → Verifying Plans**
+ **GSD → Verifying Plans**
 
 ◆ Spawning plan checker...
 
@@ -385,9 +385,9 @@ Return one of:
 
 ```
 sessions_spawn(
-  task=checker_prompt,
-  label="Verify Phase {phase} plans",
-  cleanup="keep"
+ task=checker_prompt,
+ label="Verify Phase {phase} plans",
+ cleanup="keep"
 )
 ```
 
@@ -442,9 +442,9 @@ Return what changed.
 
 ```
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-planner.md for your role and instructions.\n\n",
-    label="Revise Phase {phase} plans",
-    cleanup="keep"
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-planner.md for your role and instructions.\n\n",
+ label="Revise Phase {phase} plans",
+ cleanup="keep"
 )
 ```
 
@@ -490,19 +490,19 @@ Then stop. Do NOT output the "Next Up" section or any guidance.
 
 Output this markdown directly (not as a code block):
 
-🚀 **GSD → Phase {X} Planned** ✓
+ **GSD → Phase {X} Planned** ✓
 
 **Phase {X}: {Name}** — {N} plan(s) in {M} wave(s)
 
 | Wave | Plans | What it builds |
 |------|-------|----------------|
-| 1    | 01, 02 | [objectives] |
-| 2    | 03     | [objective]  |
+| 1 | 01, 02 | [objectives] |
+| 2 | 03 | [objective] |
 
 Research: {Completed | Used existing | Skipped}
 Verification: {Passed | Passed with override | Skipped}
 
-**▶ Next Up**
+** Next Up**
 
 **Execute Phase {X}** — run all {N} plans
 

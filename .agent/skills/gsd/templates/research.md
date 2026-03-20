@@ -62,9 +62,9 @@ yarn add [packages]
 ### Recommended Project Structure
 ```
 src/
-├── [folder]/        # [purpose]
-├── [folder]/        # [purpose]
-└── [folder]/        # [purpose]
+├── [folder]/ # [purpose]
+├── [folder]/ # [purpose]
+└── [folder]/ # [purpose]
 ```
 
 ### Pattern 1: [Pattern Name]
@@ -171,14 +171,14 @@ What's changed recently:
 Things that couldn't be fully resolved:
 
 1. **[Question]**
-   - What we know: [partial info]
-   - What's unclear: [the gap]
-   - Recommendation: [how to handle during planning/execution]
+ - What we know: [partial info]
+ - What's unclear: [the gap]
+ - Recommendation: [how to handle during planning/execution]
 
 2. **[Question]**
-   - What we know: [partial info]
-   - What's unclear: [the gap]
-   - Recommendation: [how to handle]
+ - What we know: [partial info]
+ - What's unclear: [the gap]
+ - Recommendation: [how to handle]
 </open_questions>
 
 <sources>
@@ -281,17 +281,17 @@ npm install three @react-three/fiber @react-three/drei @react-three/rapier zusta
 ```
 src/
 ├── components/
-│   ├── Vehicle/          # Player car with physics
-│   ├── City/             # City generation and buildings
-│   ├── Road/             # Road network
-│   └── Environment/      # Sky, lighting, fog
+│ ├── Vehicle/ # Player car with physics
+│ ├── City/ # City generation and buildings
+│ ├── Road/ # Road network
+│ └── Environment/ # Sky, lighting, fog
 ├── hooks/
-│   ├── useVehicleControls.ts
-│   └── useGameState.ts
+│ ├── useVehicleControls.ts
+│ └── useGameState.ts
 ├── stores/
-│   └── gameStore.ts      # Zustand state
+│ └── gameStore.ts # Zustand state
 └── utils/
-    └── cityGenerator.ts  # Procedural generation helpers
+ └── cityGenerator.ts # Procedural generation helpers
 ```
 
 ### Pattern 1: Vehicle with Rapier Physics
@@ -303,23 +303,23 @@ src/
 import { RigidBody, useRapier } from '@react-three/rapier'
 
 function Vehicle() {
-  const rigidBody = useRef()
+ const rigidBody = useRef()
 
-  return (
-    <RigidBody
-      ref={rigidBody}
-      type="dynamic"
-      colliders="hull"
-      mass={1500}
-      linearDamping={0.5}
-      angularDamping={0.5}
-    >
-      <mesh>
-        <boxGeometry args={[2, 1, 4]} />
-        <meshStandardMaterial />
-      </mesh>
-    </RigidBody>
-  )
+ return (
+ <RigidBody
+ ref={rigidBody}
+ type="dynamic"
+ colliders="hull"
+ mass={1500}
+ linearDamping={0.5}
+ angularDamping={0.5}
+ >
+ <mesh>
+ <boxGeometry args={[2, 1, 4]} />
+ <meshStandardMaterial />
+ </mesh>
+ </RigidBody>
+ )
 }
 ```
 
@@ -332,15 +332,15 @@ function Vehicle() {
 import { Instances, Instance } from '@react-three/drei'
 
 function Buildings({ positions }) {
-  return (
-    <Instances limit={1000}>
-      <boxGeometry />
-      <meshStandardMaterial />
-      {positions.map((pos, i) => (
-        <Instance key={i} position={pos} scale={[1, Math.random() * 5 + 1, 1]} />
-      ))}
-    </Instances>
-  )
+ return (
+ <Instances limit={1000}>
+ <boxGeometry />
+ <meshStandardMaterial />
+ {positions.map((pos, i) => (
+ <Instance key={i} position={pos} scale={[1, Math.random() * 5 + 1, 1]} />
+ ))}
+ </Instances>
+ )
 }
 ```
 
@@ -396,15 +396,15 @@ import { Canvas } from '@react-three/fiber'
 import { Physics } from '@react-three/rapier'
 
 function Game() {
-  return (
-    <Canvas>
-      <Physics gravity={[0, -9.81, 0]}>
-        <Vehicle />
-        <City />
-        <Ground />
-      </Physics>
-    </Canvas>
-  )
+ return (
+ <Canvas>
+ <Physics gravity={[0, -9.81, 0]}>
+ <Vehicle />
+ <City />
+ <Ground />
+ </Physics>
+ </Canvas>
+ )
 }
 ```
 
@@ -415,22 +415,22 @@ import { useFrame } from '@react-three/fiber'
 import { useKeyboardControls } from '@react-three/drei'
 
 function useVehicleControls(rigidBodyRef) {
-  const [, getKeys] = useKeyboardControls()
+ const [, getKeys] = useKeyboardControls()
 
-  useFrame(() => {
-    const { forward, back, left, right } = getKeys()
-    const body = rigidBodyRef.current
-    if (!body) return
+ useFrame(() => {
+ const { forward, back, left, right } = getKeys()
+ const body = rigidBodyRef.current
+ if (!body) return
 
-    const impulse = { x: 0, y: 0, z: 0 }
-    if (forward) impulse.z -= 10
-    if (back) impulse.z += 5
+ const impulse = { x: 0, y: 0, z: 0 }
+ if (forward) impulse.z -= 10
+ if (back) impulse.z += 5
 
-    body.applyImpulse(impulse, true)
+ body.applyImpulse(impulse, true)
 
-    if (left) body.applyTorqueImpulse({ x: 0, y: 2, z: 0 }, true)
-    if (right) body.applyTorqueImpulse({ x: 0, y: -2, z: 0 }, true)
-  })
+ if (left) body.applyTorqueImpulse({ x: 0, y: 2, z: 0 }, true)
+ if (right) body.applyTorqueImpulse({ x: 0, y: -2, z: 0 }, true)
+ })
 }
 ```
 </code_examples>

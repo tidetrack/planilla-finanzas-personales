@@ -24,56 +24,56 @@ The summary must honestly report what was done, not what the plan claimed.
 
 <process>
 1. Read the plan from orchestrator prompt:
-   - Plan path
-   - Plan content (inlined)
-   - Project state
+ - Plan path
+ - Plan content (inlined)
+ - Project state
 
 2. Execute tasks sequentially:
-   - Read task XML block
-   - Execute the task (write code, create files, etc)
-   - Verify against `<verify>` criteria
-   - Handle dependencies (wait if depends_on not satisfied)
-   - Handle checkpoints if plan is non-autonomous
+ - Read task XML block
+ - Execute the task (write code, create files, etc)
+ - Verify against `<verify>` criteria
+ - Handle dependencies (wait if depends_on not satisfied)
+ - Handle checkpoints if plan is non-autonomous
 
 3. Commit after each task:
-   ```bash
-   git add [files modified by this task]
-   git commit -m "{type}({phase}-{plan}): {task-name}"
-   ```
-   - Types: feat, fix, test, refactor, perf, chore
-   - Stage only files modified by this task
-   - Record commit hash for summary
+ ```bash
+ git add [files modified by this task]
+ git commit -m "{type}({phase}-{plan}): {task-name}"
+ ```
+ - Types: feat, fix, test, refactor, perf, chore
+ - Stage only files modified by this task
+ - Record commit hash for summary
 
 4. Handle deviations:
-   - Auto-fix bugs discovered during execution
-   - Auto-add critical security/correctness gaps
-   - Auto-fix blockers that prevent progress
-   - Ask user for architectural changes
+ - Auto-fix bugs discovered during execution
+ - Auto-add critical security/correctness gaps
+ - Auto-fix blockers that prevent progress
+ - Ask user for architectural changes
 
 5. Create SUMMARY.md:
-   - What was built
-   - Commit hashes per task
-   - Deviations from plan (if any)
-   - Decisions made
-   - must_haves status (pass/fail/partial)
+ - What was built
+ - Commit hashes per task
+ - Deviations from plan (if any)
+ - Decisions made
+ - must_haves status (pass/fail/partial)
 
 6. Commit plan metadata:
-   ```bash
-   git add .planning/phases/{phase}-{name}/{phase}-{plan}-*-PLAN.md
-   git add .planning/phases/{phase}-{name}/{phase}-{plan}-*-SUMMARY.md
-   git commit -m "docs({phase}-{plan}): complete [plan-name] plan"
-   ```
+ ```bash
+ git add .planning/phases/{phase}-{name}/{phase}-{plan}-*-PLAN.md
+ git add .planning/phases/{phase}-{name}/{phase}-{plan}-*-SUMMARY.md
+ git commit -m "docs({phase}-{plan}): complete [plan-name] plan"
+ ```
 
 7. Return result:
-   ```
-   ## EXECUTION COMPLETE
+ ```
+ ## EXECUTION COMPLETE
 
-   Plan: {plan-number}-{plan-name}
-   Tasks: {N} completed
-   Commits: {N} task commits + 1 metadata commit
-   must_haves: {X}/{Y} delivered
-   Deviations: [none | list]
-   ```
+ Plan: {plan-number}-{plan-name}
+ Tasks: {N} completed
+ Commits: {N} task commits + 1 metadata commit
+ must_haves: {X}/{Y} delivered
+ Deviations: [none | list]
+ ```
 
 **If checkpoint reached:**
 ```
@@ -139,24 +139,24 @@ git commit -m "docs(01-01): complete user signup plan"
 During execution, handle discoveries automatically:
 
 1. **Auto-fix bugs** - Fix immediately, document in Summary
-   - Syntax errors
-   - Logic bugs discovered during verification
-   - Broken imports/references
+ - Syntax errors
+ - Logic bugs discovered during verification
+ - Broken imports/references
 
 2. **Auto-add critical** - Security/correctness gaps, add and document
-   - Input validation missing
-   - Error handling missing
-   - Security best practices (e.g., SQL injection prevention)
+ - Input validation missing
+ - Error handling missing
+ - Security best practices (e.g., SQL injection prevention)
 
 3. **Auto-fix blockers** - Can't proceed without fix, do it and document
-   - Missing dependencies
-   - Configuration errors
-   - Environment setup issues
+ - Missing dependencies
+ - Configuration errors
+ - Environment setup issues
 
 4. **Ask about architectural** - Major structural changes, stop and ask user
-   - Changing API design
-   - Restructuring components
-   - Altering database schema from plan
+ - Changing API design
+ - Restructuring components
+ - Altering database schema from plan
 
 **Only rule 4 requires user intervention.**
 
@@ -195,9 +195,9 @@ Type: information_needed
 Question: Should password reset use email or SMS?
 Context: AUTH-04 requires password reset. Email is simpler but SMS is more secure.
 State:
-  - Tasks 1-3 completed (signup, login, session management)
-  - Task 4 blocked on password reset implementation choice
-  - Commits: 3 task commits completed
+ - Tasks 1-3 completed (signup, login, session management)
+ - Task 4 blocked on password reset implementation choice
+ - Commits: 3 task commits completed
 Progress: 75% (3/4 tasks)
 ```
 

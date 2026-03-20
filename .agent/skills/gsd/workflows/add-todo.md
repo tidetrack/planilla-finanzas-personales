@@ -3,10 +3,10 @@ name: gsd:add-todo
 description: Capture idea or task as todo from current conversation context
 argument-hint: "[optional description]"
 allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Glob
+ - Read
+ - Write
+ - Bash
+ - Glob
 ---
 
 <objective>
@@ -89,7 +89,7 @@ created: {timestamp}
 title: {title}
 area: {area}
 files:
-  - {file:lines}
+ - {file:lines}
 ---
 
 ## Problem
@@ -117,9 +117,9 @@ Update "### Pending Todos" section with new count.
 COMMIT_PLANNING_DOCS=$(cat .planning/config.json 2>/dev/null | grep -o '"commit_docs"[[:space:]]*:[[:space:]]*[^,}]*' | grep -o 'true\|false' || echo "true")
 
 if [ "$COMMIT_PLANNING_DOCS" = "true" ]; then
-  git add ".planning/todos/pending/${date_prefix}-${slug}.md"
-  [ -f .planning/STATE.md ] && git add .planning/STATE.md
-  git commit -m "docs: capture todo - ${TITLE}
+ git add ".planning/todos/pending/${date_prefix}-${slug}.md"
+ [ -f .planning/STATE.md ] && git add .planning/STATE.md
+ git commit -m "docs: capture todo - ${TITLE}
 
 Area: ${AREA}"
 fi

@@ -117,8 +117,8 @@ Claude's training data is 6-18 months stale. Treat pre-existing knowledge as hyp
 ### Recommended Project Structure
 ```
 src/
-├── [folder]/        # [purpose]
-└── [folder]/        # [purpose]
+├── [folder]/ # [purpose]
+└── [folder]/ # [purpose]
 ```
 
 ### Pattern 1: [Pattern Name]

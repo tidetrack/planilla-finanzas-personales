@@ -2,115 +2,183 @@
 <html>
 <head>
     <base target="_top">
-    <!-- Incluir Tipografía Institucional -> Ver CSS_DesignSystem.html -->
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Inyectar Shared Styles -->
     <?!= include('UI_SharedStyles'); ?>
 
     <style>
-        /* Estilos Específicos para este Pop-up */
-        .header {
-            text-align: center;
-            margin-bottom: 24px;
+        /* ── Base: height real al modal ── */
+        html, body {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #FFFFFF !important;
         }
 
-        .header h1 {
+        /* ── Wrapper: flex vertical 100% ── */
+        .popup-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 24px 20px 20px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* ── Header: siempre arriba ── */
+        .intro-header {
+            text-align: center;
+            margin-bottom: 24px;
+            flex-shrink: 0;
+        }
+
+        .intro-header h1 {
             color: var(--primary-dark);
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 700;
-            margin: 0 0 8px 0;
+            margin: 0 0 4px;
             letter-spacing: -0.5px;
         }
 
-        .header p {
+        .intro-header p {
             color: var(--text-secondary);
-            font-size: 14px;
+            font-size: 13px;
             margin: 0;
         }
 
-        /* Selector Router */
-        .entity-selector-wrapper {
-            background-color: var(--bg-secondary);
-            padding: 16px;
-            border-radius: var(--border-radius-md);
-            margin-bottom: 24px;
-            border: 1px solid var(--border-color);
-        }
-
-        .dynamic-fields {
-            opacity: 1;
-            transition: opacity 0.3s ease;
-        }
-
-        .hidden {
-            display: none !important;
-            opacity: 0;
-        }
-
-        /* Loading Overlay Mínimo */
-        .loading-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(255,255,255,0.8);
+        /* ── Zona Central: Centrado vertical real del resto ── */
+        .content-zone {
+            flex: 1;
             display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: stretch;
+            transition: justify-content 0.4s ease;
+        }
+
+        /* Cuando hay contenido (modo activo), movemos el foco arriba */
+        .content-zone.top-mode {
+            justify-content: flex-start;
+        }
+
+        /* ── Paneles y Cajas (Color invertido: fondo #eff2f9) ── */
+        .panel {
+            background-color: #eff2f9 !important;
+            border: 1px solid #d4dbe8;
+            border-radius: var(--border-radius-md);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .btn-secondary {
+            background-color: #eff2f9 !important;
+            color: var(--primary-color) !important;
+            border: 1px solid #d4dbe8 !important;
+        }
+
+        .panel .form-input, .panel .form-select,
+        #dynamicFields .form-input, #dynamicFields .form-select,
+        #accountSelectorWrapper .form-input {
+            background-color: #FFFFFF !important;
+        }
+
+        /* ── Animaciones ── */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .anim-up { animation: fadeSlideUp 0.35s ease both; }
+        .anim-in { animation: fadeIn 0.4s ease both; }
+
+        .hidden { display: none !important; }
+
+        /* ── Success State: centrado absoluto ── */
+        .success-overlay {
+            position: fixed;
+            inset: 0;
+            background: #FFFFFF;
+            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 100;
-            border-radius: var(--border-radius-lg);
-            backdrop-filter: blur(2px);
+            text-align: center;
+            padding: 40px;
+            z-index: 1000;
+            animation: fadeIn 0.5s ease both;
+        }
+
+        .success-icon {
+            background-color: var(--success-bg);
+            color: var(--success);
+            width: 72px; height: 72px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        /* ── Loader ── */
+        .loading-overlay {
+            position: fixed; inset: 0;
+            background: rgba(255,255,255,0.85);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2000; backdrop-filter: blur(2px);
         }
 
         .spinner {
-            width: 30px;
-            height: 30px;
-            border: 3px solid var(--border-color);
-            border-top-color: var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+            width: 32px; height: 32px;
+            border: 3px solid #e2e8f0; border-top-color: #34475d;
+            border-radius: 50%; animation: spin 1s linear infinite;
         }
-
         @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .form-label-sm {
+            display: block; font-size: 12px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text-secondary); margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
 
-<div class="container container-xs">
-    
-    <!-- Loader Global -->
-    <div id="loader" class="loading-overlay">
-        <div class="spinner"></div>
-    </div>
+<div id="loader" class="loading-overlay">
+    <div class="spinner"></div>
+</div>
 
-    <div class="header" id="headerSection">
+<div id="successState" class="success-overlay hidden">
+    <div class="success-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+    </div>
+    <h2 id="successTitle" style="color:var(--primary-color); margin-bottom:8px;">¡Registro Creado!</h2>
+    <p id="successMessage" style="color:var(--text-secondary); margin-bottom:32px;"></p>
+    <div style="display:flex; gap:12px;">
+        <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cerrar</button>
+        <button type="button" class="btn btn-primary" onclick="resetFormForNew()">Gestionar otro</button>
+    </div>
+</div>
+
+<div class="popup-wrapper">
+    <!-- El Header siempre arriba, no lo tocamos en JS -->
+    <div class="intro-header">
         <h1>Plan de Cuentas</h1>
         <p>Alta, Baja y Modificación de Catálogos</p>
     </div>
 
-    <!-- UI: Estado de Éxito (Oculto por defecto) -->
-    <div id="successState" class="hidden" style="text-align: center; padding: 32px 16px;">
-        <div style="background-color: var(--success-bg); color: var(--success); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px auto;">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-        </div>
-        <h2 style="color: var(--primary-color); margin-bottom: 8px;">¡Registro Creado!</h2>
-        <p id="successMessage" style="color: var(--text-secondary); margin-bottom: 32px; font-size: 15px;"></p>
+    <!-- Zona flexible que se encarga del centrado -->
+    <div class="content-zone" id="contentZone">
         
-        <div style="display: flex; gap: 12px; justify-content: center;">
-            <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cerrar Ventana</button>
-            <button type="button" class="btn btn-primary" onclick="resetFormForNew()">Agregar Otro</button>
-        </div>
-    </div>
-
-    <form id="abmForm" onsubmit="handleFormSubmit(event)">
-        
-        <!-- Dropdown Router Maestro -->
-        <div class="entity-selector-wrapper">
-            <div class="form-group">
-                <label for="entityType" class="form-label">¿Qué elemento querés gestionar?</label>
+        <form id="abmForm" onsubmit="handleFormSubmit(event)">
+            
+            <!-- Panel Selector de Categoría (Centrado verticalmente mientras no hay selección) -->
+            <div class="panel" id="categoryPanel">
+                <label for="entityType" class="form-label-sm">Categoría</label>
                 <select id="entityType" name="entityType" class="form-select" required onchange="handleEntityChange()">
-                    <option value="" disabled selected>Seleccioná una entidad...</option>
+                    <option value="" disabled selected>¿Qué categoría querés gestionar?</option>
                     <option value="INGRESOS">Ingresos</option>
                     <option value="COSTOS_FIJOS">Costos Fijos</option>
                     <option value="COSTOS_VARIABLES">Costos Variables</option>
@@ -118,240 +186,240 @@
                     <option value="PROYECTOS">Proyectos</option>
                 </select>
             </div>
-        </div>
 
-        <hr class="divider">
-
-        <!-- Mensaje de Error (Oculto por defecto) -->
-        <div id="errorAlert" class="hidden" style="background-color: var(--danger-bg); color: #DC2626; padding: 12px 16px; border-radius: var(--border-radius-md); margin-bottom: 24px; font-size: 14px; border: 1px solid #F87171; display: flex; align-items: flex-start; gap: 8px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            <div id="errorMessageText" style="flex-grow: 1;"></div>
-        </div>
-
-        <!-- Contenedor Dinámico para cada caso -->
-        <div id="dynamicFields" class="dynamic-fields hidden">
-
-            <!-- Columna Universal: Nombre / Identificador -->
-            <div class="form-group">
-                <label id="lblNombre" for="nombre" class="form-label">Nombre</label>
-                <input type="text" id="nombre" name="nombre" class="form-input" placeholder="Ej. Sueldo, Viaje al Sur, Dólar MEP..." required>
+            <!-- Selector de Modo (Aparece tras elegir categoría) -->
+            <div id="modeSelectorWrapper" class="hidden anim-up" style="display:flex; gap:12px; margin-bottom:16px;">
+                <button type="button" id="btnModeCreate" class="btn btn-secondary" style="flex:1;" onclick="setMode('CREATE')">Nueva Cuenta</button>
+                <button type="button" id="btnModeUpdate" class="btn btn-secondary" style="flex:1;" onclick="setMode('UPDATE')">Modificar / Eliminar</button>
             </div>
 
-            <!-- Campo Específico para Proyectos -->
-            <div id="groupTipoProyecto" class="form-group hidden">
-                <label for="tipoProyecto" class="form-label">Tipo de Proyecto</label>
-                <input type="text" id="tipoProyecto" name="tipoProyecto" class="form-input" placeholder="Ej. Financiación, Ahorro, Vacaciones">
+            <!-- Alertas -->
+            <div id="errorAlert" class="panel hidden" style="background:#FEE2E2; color:#DC2626; border-color:#F87171;">
+                <span id="errorMessageText"></span>
+            </div>
+            <div id="updateAlert" class="panel hidden" style="background:#FEF3C7; color:#B45309; border-color:#FCD34D;">
+                <strong>Modificación:</strong> Los cambios afectarán al historial de esta cuenta.
+            </div>
+            <div id="deleteAlert" class="panel hidden" style="background:#FEE2E2; color:#DC2626; border-color:#F87171;">
+                <strong>Baja definitiva:</strong> ¿Estás seguro? Esta acción no puede deshacerse.
             </div>
 
-            <!-- Selectores Relacionales (Cargados por la IA al abrir el popup) -->
-            <div id="groupMonedaRel" class="form-group hidden">
-                <label for="monedaRelacionada" class="form-label">Moneda</label>
-                <select id="monedaRelacionada" name="monedaRelacionada" class="form-select">
-                    <!-- Opciones inyectadas por JS -->
-                </select>
+            <!-- Buscador (Modo UPDATE) -->
+            <div id="accountSelectorWrapper" class="hidden panel anim-up">
+                <label for="existingAccountInput" class="form-label-sm">Buscá la cuenta</label>
+                <input type="text" id="existingAccountInput" class="form-input" list="accountDataList" placeholder="Tipeá para filtrar..." oninput="handleAccountSelection()" disabled>
+                <datalist id="accountDataList"></datalist>
             </div>
 
-            <div id="groupProyectoRel" class="form-group hidden">
-                <label for="proyectoRelacionado" class="form-label">Asignar a un Proyecto <span style="font-weight: 300; font-size: 12px; color: var(--text-secondary)">(Opcional)</span></label>
-                <select id="proyectoRelacionado" name="proyectoRelacionado" class="form-select">
-                    <!-- Opciones inyectadas por JS -->
-                </select>
+            <!-- Campos del Formulario -->
+            <div id="dynamicFields" class="hidden anim-up">
+                <div class="form-group">
+                    <label id="lblNombre" for="nombre" class="form-label">Nombre</label>
+                    <input type="text" id="nombre" name="nombre" class="form-input" placeholder="Ej. Sueldo, Viajes...">
+                </div>
+
+                <div id="groupTipoProyecto" class="form-group hidden">
+                    <label for="tipoProyecto" class="form-label">Tipo de Proyecto</label>
+                    <input type="text" id="tipoProyecto" name="tipoProyecto" class="form-input" placeholder="Ej. Ahorro">
+                </div>
+
+                <div id="groupMonedaRel" class="form-group hidden">
+                    <label for="monedaRelacionada" class="form-label">Moneda</label>
+                    <select id="monedaRelacionada" name="monedaRelacionada" class="form-select"></select>
+                </div>
+
+                <div id="groupProyectoRel" class="form-group hidden">
+                    <label for="proyectoRelacionado" class="form-label">Proyecto <span style="font-weight:300; font-size:12px; color:var(--text-secondary)">(Opcional)</span></label>
+                    <select id="proyectoRelacionado" name="proyectoRelacionado" class="form-select"></select>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px;">
+                    <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cancelar</button>
+                    <button type="button" class="btn btn-danger hidden" id="btnDelete" onclick="handleDeleteClick()">Eliminar</button>
+                    <button type="submit" class="btn btn-primary" id="btnSubmit">Guardar</button>
+                </div>
             </div>
 
-            <div class="form-actions" style="margin-top: 32px;">
-                <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cancelar</button>
-                <button type="submit" class="btn btn-primary" id="btnSubmit">Guardar Registro</button>
-            </div>
-        </div>
-
-    </form>
-
+        </form>
+    </div>
 </div>
 
 <script>
-    // Variables globales
-    let systemData = {
-        monedas: [],
-        proyectos: []
-    };
+    let systemData = { monedas: [], proyectos: [] };
+    let currentMode = null;
+    let currentEntityData = [];
+    let selectedAccount = null;
 
-    /**
-     * Inicialización del Pop-up
-     */
     document.addEventListener('DOMContentLoaded', () => {
-        // Traer datos de proyectos y monedas en background para llenar los selects cuando se necesiten
         google.script.run
-            .withSuccessHandler(onDataLoaded)
-            .withFailureHandler(onError)
+            .withSuccessHandler(data => {
+                systemData = data;
+                const m = document.getElementById('monedaRelacionada');
+                m.innerHTML = '<option value="" disabled selected>Moneda...</option>';
+                data.monedas.forEach(x => m.innerHTML += `<option value="${x}">${x}</option>`);
+
+                const p = document.getElementById('proyectoRelacionado');
+                p.innerHTML = '<option value="">Ninguno (General)</option>';
+                data.proyectos.forEach(x => p.innerHTML += `<option value="${x}">${x}</option>`);
+                document.getElementById('loader').classList.add('hidden');
+            })
+            .withFailureHandler(err => {
+                document.getElementById('loader').classList.add('hidden');
+                console.error(err);
+            })
             .getAbmFormData();
     });
 
-    /**
-     * Handler cuando la data basal llega desde Google Apps Script
-     */
-    function onDataLoaded(data) {
-        systemData = data;
-        
-        // Cargar Select de Monedas
-        const selectMoneda = document.getElementById('monedaRelacionada');
-        selectMoneda.innerHTML = '<option value="" disabled selected>Seleccionar moneda...</option>';
-        systemData.monedas.forEach(m => {
-            selectMoneda.innerHTML += `<option value="${m}">${m}</option>`;
-        });
-
-        // Cargar Select de Proyectos
-        const selectProyecto = document.getElementById('proyectoRelacionado');
-        selectProyecto.innerHTML = '<option value="">Ninguno (Flujo General)</option>';
-        systemData.proyectos.forEach(p => {
-            selectProyecto.innerHTML += `<option value="${p}">${p}</option>`;
-        });
-
-        // Ocultar Loader
-        document.getElementById('loader').classList.add('hidden');
-    }
-
-    /**
-     * Manejador de Error general
-     */
-    function onError(error) {
-        alert("Ocurrió un error al cargar el popup: " + error.message);
-        document.getElementById('loader').classList.add('hidden');
-    }
-
-    /**
-     * Manejador visual cuando el usuario elige qué va a gestionar
-     */
     function handleEntityChange() {
-        document.getElementById('errorAlert').classList.add('hidden');
-        
         const entity = document.getElementById('entityType').value;
-        const dynamicFields = document.getElementById('dynamicFields');
-        const lblNombre = document.getElementById('lblNombre');
+        const zone = document.getElementById('contentZone');
         
-        // Grupos ocultables
-        const grpAbreviacion = document.getElementById('groupAbreviacion');
-        const grpTipoProy = document.getElementById('groupTipoProyecto');
-        const grpMoneda = document.getElementById('groupMonedaRel');
-        const grpProy = document.getElementById('groupProyectoRel');
+        hideAllAlerts();
+        selectedAccount = null;
+        currentMode = null;
+        
+        document.getElementById('btnModeCreate').className = 'btn btn-secondary';
+        document.getElementById('btnModeUpdate').className = 'btn btn-secondary';
 
-        // Reset estado 
-        grpAbreviacion.classList.add('hidden');
-        grpTipoProy.classList.add('hidden');
-        grpMoneda.classList.add('hidden');
-        grpProy.classList.add('hidden');
-        
-        // Quitar obligatoriedades previas
-        document.getElementById('monedaRelacionada').removeAttribute('required');
-        
-        dynamicFields.classList.remove('hidden');
+        if (!entity) {
+            zone.classList.remove('top-mode');
+            document.getElementById('modeSelectorWrapper').classList.add('hidden');
+            document.getElementById('dynamicFields').classList.add('hidden');
+            return;
+        }
 
-        // Configuración por entidad
-        switch(entity) {
-            case 'INGRESOS':
-            case 'COSTOS_FIJOS':
-            case 'COSTOS_VARIABLES':
-                lblNombre.textContent = "Nombre de la Cuenta";
-                grpMoneda.classList.remove('hidden');
-                grpProy.classList.remove('hidden');
-                break;
-                
-            case 'MEDIOS_PAGO':
-                lblNombre.textContent = "Nombre del Medio Bancario";
-                grpMoneda.classList.remove('hidden');
-                grpProy.classList.remove('hidden');
-                break;
-                
-            case 'PROYECTOS':
-                lblNombre.textContent = "Nombre del Proyecto";
-                grpTipoProy.classList.remove('hidden');
-                break;
+        // Transición: mover lo centrado hacia arriba
+        zone.classList.add('top-mode');
+        const ms = document.getElementById('modeSelectorWrapper');
+        ms.classList.remove('hidden');
+        ms.style.display = 'flex';
+        
+        document.getElementById('dynamicFields').classList.add('hidden');
+        document.getElementById('accountSelectorWrapper').classList.add('hidden');
+
+        // Configuración de campos
+        const lbl = document.getElementById('lblNombre');
+        const gT = document.getElementById('groupTipoProyecto');
+        const gM = document.getElementById('groupMonedaRel');
+        const gP = document.getElementById('groupProyectoRel');
+        [gT, gM, gP].forEach(x => x.classList.add('hidden'));
+
+        if(entity === 'PROYECTOS') gT.classList.remove('hidden');
+        else if(entity === 'MEDIOS_PAGO') { lbl.textContent = 'Medio Bancario'; gM.classList.remove('hidden'); gP.classList.remove('hidden'); }
+        else { lbl.textContent = 'Nombre de Cuenta'; gM.classList.remove('hidden'); gP.classList.remove('hidden'); }
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        const btnC = document.getElementById('btnModeCreate');
+        const btnU = document.getElementById('btnModeUpdate');
+        hideAllAlerts();
+
+        if(mode === 'CREATE') {
+            btnC.className = 'btn btn-primary';
+            btnU.className = 'btn btn-secondary';
+            document.getElementById('abmForm').reset();
+            document.getElementById('entityType').value = systemData.lastEntity || ''; // Hack to keep entity
+            document.getElementById('accountSelectorWrapper').classList.add('hidden');
+            document.getElementById('dynamicFields').classList.remove('hidden');
+            document.getElementById('btnSubmit').textContent = 'Guardar';
+            document.getElementById('btnDelete').classList.add('hidden');
+        } else {
+            btnU.className = 'btn btn-primary';
+            btnC.className = 'btn btn-secondary';
+            document.getElementById('dynamicFields').classList.add('hidden');
+            const as = document.getElementById('accountSelectorWrapper');
+            as.classList.remove('hidden');
+            const inp = document.getElementById('existingAccountInput');
+            inp.value = ''; inp.placeholder = 'Buscando...'; inp.disabled = true;
+            
+            google.script.run
+                .withSuccessHandler(data => {
+                    currentEntityData = data;
+                    const dl = document.getElementById('accountDataList');
+                    dl.innerHTML = '';
+                    data.forEach(x => dl.innerHTML += `<option value="${x.nombre}"></option>`);
+                    inp.placeholder = 'Tipéá para filtrar...'; inp.disabled = false; inp.focus();
+                })
+                .getCategoryAccounts(document.getElementById('entityType').value);
         }
     }
 
-    /**
-     * Manejador del submit (Guardado)
-     */
-    function handleFormSubmit(e) {
-        e.preventDefault();
+    function handleAccountSelection() {
+        const val = document.getElementById('existingAccountInput').value;
+        const acc = currentEntityData.find(x => x.nombre.toLowerCase() === val.toLowerCase());
+        if(!acc) return;
+        selectedAccount = acc;
+        document.getElementById('nombre').value = acc.nombre;
+        document.getElementById('monedaRelacionada').value = acc.moneda;
+        document.getElementById('proyectoRelacionado').value = acc.proyecto;
+        document.getElementById('tipoProyecto').value = acc.tipo;
         
-        const btnSubmit = document.getElementById('btnSubmit');
-        const loader = document.getElementById('loader');
-        
-        document.getElementById('errorAlert').classList.add('hidden');
-        
-        btnSubmit.disabled = true;
-        btnSubmit.textContent = 'Guardando...';
-        loader.classList.remove('hidden');
-
-        // Compilar Payload basándose en la vista actual
-        const entityType = document.getElementById('entityType').value;
-        const payload = {
-            entityType: entityType,
-            nombre: document.getElementById('nombre').value,
-            abreviacion: document.getElementById('abreviacion').value,
-            tipoProyecto: document.getElementById('tipoProyecto').value,
-            monedaRelacionada: document.getElementById('monedaRelacionada').value,
-            proyectoRelacionado: document.getElementById('proyectoRelacionado').value
-        };
-
-        // Enviar a Google Apps Script
-        google.script.run
-            .withSuccessHandler(onSaveSuccess)
-            .withFailureHandler(onSaveError)
-            .saveAbmRecord(payload);
+        document.getElementById('accountSelectorWrapper').classList.add('hidden');
+        document.getElementById('dynamicFields').classList.remove('hidden');
+        document.getElementById('updateAlert').classList.remove('hidden');
+        document.getElementById('btnSubmit').textContent = 'Guardar Cambios';
+        document.getElementById('btnDelete').classList.remove('hidden');
     }
 
-    function onSaveSuccess(response) {
-        // Ocultar Formulario y Header, Mostrar Éxito
-        document.getElementById('headerSection').classList.add('hidden');
-        document.getElementById('abmForm').classList.add('hidden');
-        
-        // Cargar Mensaje
-        const entityNames = {
-            'INGRESOS': 'Ingreso', 'COSTOS_FIJOS': 'Costo Fijo', 'COSTOS_VARIABLES': 'Costo Variable',
-            'MEDIOS_PAGO': 'Medio de Pago', 'PROYECTOS': 'Proyecto', 'MONEDAS': 'Moneda'
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        document.getElementById('loader').classList.remove('hidden');
+        const payload = {
+            mode: currentMode,
+            entityType: document.getElementById('entityType').value,
+            nombre: document.getElementById('nombre').value,
+            tipoProyecto: document.getElementById('tipoProyecto').value,
+            monedaRelacionada: document.getElementById('monedaRelacionada').value,
+            proyectoRelacionado: document.getElementById('proyectoRelacionado').value,
+            rowIndex: selectedAccount ? selectedAccount.rowIndex : null
         };
-        const prettyEntity = entityNames[response.entityType] || response.entityType;
-        document.getElementById('successMessage').innerHTML = `El registro <b>${response.nombre}</b> fue añadido correctamente al módulo de ${prettyEntity}s.`;
-        
-        document.getElementById('successState').classList.remove('hidden');
-        document.getElementById('loader').classList.add('hidden');
-        
-        // Refrescamos silenciosamente los proyectos/monedas por si acaban de agregar uno
-        google.script.run.withSuccessHandler(onDataLoaded).getAbmFormData();
+        const func = currentMode === 'CREATE' ? 'saveAbmRecord' : 'updateAbmRecord';
+        google.script.run
+            .withSuccessHandler(res => {
+                const title = currentMode === 'CREATE' ? '¡Registro Creado!' : '¡Registro Modificado!';
+                document.getElementById('successTitle').textContent = title;
+                document.getElementById('successMessage').innerHTML = `El registro <b>${res.nombre}</b> fue procesado correctamente.`;
+                document.getElementById('successState').classList.remove('hidden');
+                document.getElementById('loader').classList.add('hidden');
+            })
+            .withFailureHandler(err => {
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('errorMessageText').textContent = err.message;
+                document.getElementById('errorAlert').classList.remove('hidden');
+            })[func](payload);
+    }
+
+    function handleDeleteClick() {
+        document.getElementById('updateAlert').classList.add('hidden');
+        document.getElementById('deleteAlert').classList.remove('hidden');
+        document.getElementById('btnSubmit').classList.add('hidden');
+        const bd = document.getElementById('btnDelete');
+        bd.textContent = 'Confirmar';
+        bd.onclick = () => {
+            document.getElementById('loader').classList.remove('hidden');
+            google.script.run.withSuccessHandler(() => {
+                document.getElementById('successTitle').textContent = '¡Registro Eliminado!';
+                document.getElementById('successMessage').innerHTML = 'El registro fue borrado permanentemente.';
+                document.getElementById('successState').classList.remove('hidden');
+                document.getElementById('loader').classList.add('hidden');
+            }).deleteAbmRecord({ entityType: document.getElementById('entityType').value, rowIndex: selectedAccount.rowIndex });
+        };
     }
 
     function resetFormForNew() {
-        // Volver atrás para agregar otro
+        const ent = document.getElementById('entityType').value;
+        const zone = document.getElementById('contentZone');
         document.getElementById('abmForm').reset();
-        document.getElementById('dynamicFields').classList.add('hidden');
-        
-        const btnSubmit = document.getElementById('btnSubmit');
-        btnSubmit.disabled = false;
-        btnSubmit.textContent = 'Guardar Registro';
-
+        document.getElementById('entityType').value = ent; // Preserve entity
+        hideAllAlerts();
         document.getElementById('successState').classList.add('hidden');
-        document.getElementById('headerSection').classList.remove('hidden');
-        document.getElementById('abmForm').classList.remove('hidden');
+        handleEntityChange(); // Re-center and show modes
     }
 
-    function onSaveError(error) {
-        let msg = error.message;
-        if (msg.startsWith("Error: ")) msg = msg.substring(7);
-        
-        document.getElementById('errorMessageText').textContent = msg;
-        document.getElementById('errorAlert').classList.remove('hidden');
-        
-        const btnSubmit = document.getElementById('btnSubmit');
-        btnSubmit.disabled = false;
-        btnSubmit.textContent = 'Guardar Registro';
-        document.getElementById('loader').classList.add('hidden');
+    function hideAllAlerts() {
+        ['errorAlert', 'updateAlert', 'deleteAlert'].forEach(x => document.getElementById(x).classList.add('hidden'));
     }
 </script>
-
 </body>
 </html>

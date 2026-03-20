@@ -3,11 +3,11 @@ name: gsd:audit-milestone
 description: Audit milestone completion against original intent
 argument-hint: "[version]"
 allowed-tools:
-  - Read
-  - Glob
-  - Grep
-  - Bash
-  - Write
+ - Read
+ - Glob
+ - Grep
+ - Bash
+ - Write
 ---
 
 <objective>
@@ -51,7 +51,7 @@ Flag unverified phases as blockers.
 
 ```
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-integration-checker.md
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-integration-checker.md
 
 Check cross-phase integration and E2E flows for milestone.
 
@@ -59,8 +59,8 @@ Phases: {phase_dirs}
 Phase exports: {from SUMMARYs}
 
 Verify wiring and flows.",
-    label="Integration check",
-    cleanup="keep"
+ label="Integration check",
+ cleanup="keep"
 )
 ```
 
@@ -81,16 +81,16 @@ milestone: {version}
 audited: {timestamp}
 status: passed | gaps_found | tech_debt
 scores:
-  requirements: N/M
-  phases: N/M
-  integration: N/M
-  flows: N/M
+ requirements: N/M
+ phases: N/M
+ integration: N/M
+ flows: N/M
 gaps:
-  requirements: [...]
-  integration: [...]
+ requirements: [...]
+ integration: [...]
 tech_debt:
-  - phase: XX-name
-    items: [...]
+ - phase: XX-name
+ items: [...]
 ---
 ```
 
@@ -102,25 +102,25 @@ tech_debt:
 
 All requirements met, integration verified.
 
-**▶ Next:** `/gsd complete-milestone {version}`
+** Next:** `/gsd complete-milestone {version}`
 ```
 
 **If gaps_found:**
 ```
-## ⚠ Gaps Found
+## Gaps Found
 
 {N} critical issues need resolution.
 
-**▶ Next:** `/gsd plan-phase --gaps` for affected phases
+** Next:** `/gsd plan-phase --gaps` for affected phases
 ```
 
 **If tech_debt:**
 ```
-## ⚡ Tech Debt Found
+## Tech Debt Found
 
 No blockers, but {N} items deferred.
 
-**▶ Options:**
+** Options:**
 - `/gsd complete-milestone` — accept debt
 - Address debt first
 ```

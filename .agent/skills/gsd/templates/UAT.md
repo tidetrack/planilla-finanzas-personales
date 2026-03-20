@@ -21,7 +21,7 @@ updated: [ISO timestamp]
 number: [N]
 name: [test name]
 expected: |
-  [what user should observe]
+ [what user should observe]
 awaiting: user response
 
 ## Tests
@@ -59,14 +59,14 @@ skipped: [N]
 
 <!-- YAML format for plan-phase --gaps consumption -->
 - truth: "[expected behavior from test]"
-  status: failed
-  reason: "User reported: [verbatim response]"
-  severity: blocker | major | minor | cosmetic
-  test: [N]
-  root_cause: ""     # Filled by diagnosis
-  artifacts: []      # Filled by diagnosis
-  missing: []        # Filled by diagnosis
-  debug_session: ""  # Filled by diagnosis
+ status: failed
+ reason: "User reported: [verbatim response]"
+ severity: blocker | major | minor | cosmetic
+ test: [N]
+ root_cause: "" # Filled by diagnosis
+ artifacts: [] # Filled by diagnosis
+ missing: [] # Filled by diagnosis
+ debug_session: "" # Filled by diagnosis
 ```
 
 ---
@@ -110,7 +110,7 @@ skipped: [N]
 2. diagnose-issues workflow spawns parallel debug agents
 3. Each agent investigates one gap, returns root cause
 4. UAT.md Gaps section updated with diagnosis:
-   - Each gap gets `root_cause`, `artifacts`, `missing`, `debug_session` filled
+ - Each gap gets `root_cause`, `artifacts`, `missing`, `debug_session` filled
 5. status → "diagnosed"
 6. Ready for /gsd:plan-phase --gaps with root causes
 
@@ -119,17 +119,17 @@ skipped: [N]
 ## Gaps
 
 - truth: "Comment appears immediately after submission"
-  status: failed
-  reason: "User reported: works but doesn't show until I refresh the page"
-  severity: major
-  test: 2
-  root_cause: "useEffect in CommentList.tsx missing commentCount dependency"
-  artifacts:
-    - path: "src/components/CommentList.tsx"
-      issue: "useEffect missing dependency"
-  missing:
-    - "Add commentCount to useEffect dependency array"
-  debug_session: ".planning/debug/comment-not-refreshing.md"
+ status: failed
+ reason: "User reported: works but doesn't show until I refresh the page"
+ severity: major
+ test: 2
+ root_cause: "useEffect in CommentList.tsx missing commentCount dependency"
+ artifacts:
+ - path: "src/components/CommentList.tsx"
+ issue: "useEffect missing dependency"
+ missing:
+ - "Add commentCount to useEffect dependency array"
+ debug_session: ".planning/debug/comment-not-refreshing.md"
 ```
 
 </diagnosis_lifecycle>
@@ -232,16 +232,16 @@ skipped: 0
 ## Gaps
 
 - truth: "Comment appears immediately after submission in list"
-  status: failed
-  reason: "User reported: works but doesn't show until I refresh the page"
-  severity: major
-  test: 2
-  root_cause: "useEffect in CommentList.tsx missing commentCount dependency"
-  artifacts:
-    - path: "src/components/CommentList.tsx"
-      issue: "useEffect missing dependency"
-  missing:
-    - "Add commentCount to useEffect dependency array"
-  debug_session: ".planning/debug/comment-not-refreshing.md"
+ status: failed
+ reason: "User reported: works but doesn't show until I refresh the page"
+ severity: major
+ test: 2
+ root_cause: "useEffect in CommentList.tsx missing commentCount dependency"
+ artifacts:
+ - path: "src/components/CommentList.tsx"
+ issue: "useEffect missing dependency"
+ missing:
+ - "Add commentCount to useEffect dependency array"
+ debug_session: ".planning/debug/comment-not-refreshing.md"
 ```
 </good_example>

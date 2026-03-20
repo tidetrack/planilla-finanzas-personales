@@ -164,16 +164,16 @@ started: [when broke / always broken]
 <!-- APPEND only - prevents re-investigating -->
 
 - hypothesis: [theory that was wrong]
-  evidence: [what disproved it]
-  timestamp: [when eliminated]
+ evidence: [what disproved it]
+ timestamp: [when eliminated]
 
 ## Evidence
 <!-- APPEND only - facts discovered -->
 
 - timestamp: [when found]
-  checked: [what examined]
-  found: [what observed]
-  implication: [what this means]
+ checked: [what examined]
+ found: [what observed]
+ implication: [what this means]
 
 ## Resolution
 <!-- OVERWRITE as understanding evolves -->

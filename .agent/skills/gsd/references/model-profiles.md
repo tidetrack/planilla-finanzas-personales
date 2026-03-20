@@ -54,7 +54,7 @@ Runtime: `/gsd:set-profile <profile>`
 Per-project default: Set in `.planning/config.json`:
 ```json
 {
-  "model_profile": "balanced"
+ "model_profile": "balanced"
 }
 ```
 

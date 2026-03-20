@@ -29,7 +29,7 @@ When Claude encounters `type="checkpoint:*"`:
 **For checkpoint:human-verify:**
 ```
 ╔═══════════════════════════════════════════════════════╗
-║  CHECKPOINT: Verification Required                    ║
+║ CHECKPOINT: Verification Required ║
 ╚═══════════════════════════════════════════════════════╝
 
 Progress: 5/8 tasks complete
@@ -38,11 +38,11 @@ Task: Responsive dashboard layout
 Built: Responsive dashboard at /dashboard
 
 How to verify:
-  1. Run: npm run dev
-  2. Visit: http://localhost:3000/dashboard
-  3. Desktop (>1024px): Sidebar visible, content fills remaining space
-  4. Tablet (768px): Sidebar collapses to icons
-  5. Mobile (375px): Sidebar hidden, hamburger menu appears
+ 1. Run: npm run dev
+ 2. Visit: http://localhost:3000/dashboard
+ 3. Desktop (>1024px): Sidebar visible, content fills remaining space
+ 4. Tablet (768px): Sidebar collapses to icons
+ 5. Mobile (375px): Sidebar hidden, hamburger menu appears
 
 ────────────────────────────────────────────────────────
 → YOUR ACTION: Type "approved" or describe issues
@@ -52,7 +52,7 @@ How to verify:
 **For checkpoint:decision:**
 ```
 ╔═══════════════════════════════════════════════════════╗
-║  CHECKPOINT: Decision Required                        ║
+║ CHECKPOINT: Decision Required ║
 ╚═══════════════════════════════════════════════════════╝
 
 Progress: 2/6 tasks complete
@@ -63,17 +63,17 @@ Decision: Which auth provider should we use?
 Context: Need user authentication. Three options with different tradeoffs.
 
 Options:
-  1. supabase - Built-in with our DB, free tier
-     Pros: Row-level security integration, generous free tier
-     Cons: Less customizable UI, ecosystem lock-in
+ 1. supabase - Built-in with our DB, free tier
+ Pros: Row-level security integration, generous free tier
+ Cons: Less customizable UI, ecosystem lock-in
 
-  2. clerk - Best DX, paid after 10k users
-     Pros: Beautiful pre-built UI, excellent documentation
-     Cons: Vendor lock-in, pricing at scale
+ 2. clerk - Best DX, paid after 10k users
+ Pros: Beautiful pre-built UI, excellent documentation
+ Cons: Vendor lock-in, pricing at scale
 
-  3. nextauth - Self-hosted, maximum control
-     Pros: Free, no vendor lock-in, widely adopted
-     Cons: More setup work, DIY security updates
+ 3. nextauth - Self-hosted, maximum control
+ Pros: Free, no vendor lock-in, widely adopted
+ Cons: More setup work, DIY security updates
 
 ────────────────────────────────────────────────────────
 → YOUR ACTION: Select supabase, clerk, or nextauth
@@ -83,7 +83,7 @@ Options:
 **For checkpoint:human-action:**
 ```
 ╔═══════════════════════════════════════════════════════╗
-║  CHECKPOINT: Action Required                          ║
+║ CHECKPOINT: Action Required ║
 ╚═══════════════════════════════════════════════════════╝
 
 Progress: 3/8 tasks complete
@@ -93,9 +93,9 @@ Attempted: vercel --yes
 Error: Not authenticated. Please run 'vercel login'
 
 What you need to do:
-  1. Run: vercel login
-  2. Complete browser authentication when it opens
-  3. Return here when done
+ 1. Run: vercel login
+ 2. Complete browser authentication when it opens
+ 3. Return here when done
 
 I'll verify: vercel whoami returns your account
 
@@ -129,7 +129,7 @@ Claude: Running `vercel --yes` to deploy...
 Error: Not authenticated. Please run 'vercel login'
 
 ╔═══════════════════════════════════════════════════════╗
-║  CHECKPOINT: Action Required                          ║
+║ CHECKPOINT: Action Required ║
 ╚═══════════════════════════════════════════════════════╝
 
 Progress: 2/8 tasks complete
@@ -139,8 +139,8 @@ Attempted: vercel --yes
 Error: Not authenticated
 
 What you need to do:
-  1. Run: vercel login
-  2. Complete browser authentication
+ 1. Run: vercel login
+ 2. Complete browser authentication
 
 I'll verify: vercel whoami returns your account
 
@@ -205,26 +205,26 @@ Task 3 complete. Continuing to task 4...
 ```xml
 <!-- WRONG: Asking user to add env vars in dashboard -->
 <task type="checkpoint:human-action">
-  <action>Add OPENAI_API_KEY to Convex dashboard</action>
-  <instructions>Go to dashboard.convex.dev → Settings → Environment Variables → Add</instructions>
+ <action>Add OPENAI_API_KEY to Convex dashboard</action>
+ <instructions>Go to dashboard.convex.dev → Settings → Environment Variables → Add</instructions>
 </task>
 
 <!-- RIGHT: Claude asks for value, then adds via CLI -->
 <task type="checkpoint:human-action">
-  <action>Provide your OpenAI API key</action>
-  <instructions>
-    I need your OpenAI API key to configure the Convex backend.
-    Get it from: https://platform.openai.com/api-keys
-    Paste the key (starts with sk-)
-  </instructions>
-  <verification>I'll add it via `npx convex env set` and verify it's configured</verification>
-  <resume-signal>Paste your API key</resume-signal>
+ <action>Provide your OpenAI API key</action>
+ <instructions>
+ I need your OpenAI API key to configure the Convex backend.
+ Get it from: https://platform.openai.com/api-keys
+ Paste the key (starts with sk-)
+ </instructions>
+ <verification>I'll add it via `npx convex env set` and verify it's configured</verification>
+ <resume-signal>Paste your API key</resume-signal>
 </task>
 
 <task type="auto">
-  <name>Configure OpenAI key in Convex</name>
-  <action>Run `npx convex env set OPENAI_API_KEY {user-provided-key}`</action>
-  <verify>`npx convex env get OPENAI_API_KEY` returns the key (masked)</verify>
+ <name>Configure OpenAI key in Convex</name>
+ <action>Run `npx convex env set OPENAI_API_KEY {user-provided-key}`</action>
+ <verify>`npx convex env get OPENAI_API_KEY` returns the key (masked)</verify>
 </task>
 ```
 
@@ -266,20 +266,20 @@ If default port is in use, check what's running and either:
 ```xml
 <!-- Claude starts server before checkpoint -->
 <task type="auto">
-  <name>Start dev server</name>
-  <action>Run `npm run dev` in background, wait for ready signal</action>
-  <verify>curl http://localhost:3000 returns 200</verify>
-  <done>Dev server running</done>
+ <name>Start dev server</name>
+ <action>Run `npm run dev` in background, wait for ready signal</action>
+ <verify>curl http://localhost:3000 returns 200</verify>
+ <done>Dev server running</done>
 </task>
 
 <!-- User only visits URL -->
 <task type="checkpoint:human-verify">
-  <what-built>Feature X - dev server running at http://localhost:3000</what-built>
-  <how-to-verify>
-    Visit http://localhost:3000/feature and verify:
-    1. [Visual check 1]
-    2. [Visual check 2]
-  </how-to-verify>
+ <what-built>Feature X - dev server running at http://localhost:3000</what-built>
+ <how-to-verify>
+ Visit http://localhost:3000/feature and verify:
+ 1. [Visual check 1]
+ 2. [Visual check 2]
+ </how-to-verify>
 </task>
 ```
 
@@ -307,10 +307,10 @@ If default port is in use, check what's running and either:
 ```xml
 <!-- Example: vercel not found -->
 <task type="auto">
-  <name>Install Vercel CLI</name>
-  <action>Run `npm i -g vercel`</action>
-  <verify>`vercel --version` succeeds</verify>
-  <done>Vercel CLI installed</done>
+ <name>Install Vercel CLI</name>
+ <action>Run `npm i -g vercel`</action>
+ <verify>`vercel --version` succeeds</verify>
+ <done>Vercel CLI installed</done>
 </task>
 ```
 
@@ -332,21 +332,21 @@ If default port is in use, check what's running and either:
 ```xml
 <!-- WRONG: Checkpoint with broken environment -->
 <task type="checkpoint:human-verify">
-  <what-built>Dashboard (server failed to start)</what-built>
-  <how-to-verify>Visit http://localhost:3000...</how-to-verify>
+ <what-built>Dashboard (server failed to start)</what-built>
+ <how-to-verify>Visit http://localhost:3000...</how-to-verify>
 </task>
 
 <!-- RIGHT: Fix first, then checkpoint -->
 <task type="auto">
-  <name>Fix server startup issue</name>
-  <action>Investigate error, fix root cause, restart server</action>
-  <verify>curl http://localhost:3000 returns 200</verify>
-  <done>Server running correctly</done>
+ <name>Fix server startup issue</name>
+ <action>Investigate error, fix root cause, restart server</action>
+ <verify>curl http://localhost:3000 returns 200</verify>
+ <done>Server running correctly</done>
 </task>
 
 <task type="checkpoint:human-verify">
-  <what-built>Dashboard - server running at http://localhost:3000</what-built>
-  <how-to-verify>Visit http://localhost:3000/dashboard...</how-to-verify>
+ <what-built>Dashboard - server running at http://localhost:3000</what-built>
+ <how-to-verify>Visit http://localhost:3000/dashboard...</how-to-verify>
 </task>
 ```
 

@@ -3,10 +3,10 @@ name: gsd:verify-phase
 description: Verify phase goal achievement through goal-backward analysis
 argument-hint: "<phase-number>"
 allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Task
+ - Read
+ - Write
+ - Bash
+ - Task
 ---
 
 <objective>
@@ -77,16 +77,16 @@ grep -l "must_haves:" "$PHASE_DIR"/*-PLAN.md 2>/dev/null
 If found, extract and use:
 ```yaml
 must_haves:
-  truths:
-    - "User can see existing messages"
-    - "User can send a message"
-  artifacts:
-    - path: "src/components/Chat.tsx"
-      provides: "Message list rendering"
-  key_links:
-    - from: "Chat.tsx"
-      to: "api/chat"
-      via: "fetch in useEffect"
+ truths:
+ - "User can see existing messages"
+ - "User can send a message"
+ artifacts:
+ - path: "src/components/Chat.tsx"
+ provides: "Message list rendering"
+ key_links:
+ - from: "Chat.tsx"
+ to: "api/chat"
+ via: "fetch in useEffect"
 ```
 
 **Option B: Derive from phase goal**
@@ -156,7 +156,7 @@ grep -r "$artifact_name" src/ --include="*.ts" --include="*.tsx" | grep -v "impo
 | Exists | Substantive | Wired | Status |
 |--------|-------------|-------|--------|
 | ✓ | ✓ | ✓ | ✓ VERIFIED |
-| ✓ | ✓ | ✗ | ⚠️ ORPHANED |
+| ✓ | ✓ | ✗ | ️ ORPHANED |
 | ✓ | ✗ | - | ✗ STUB |
 | ✗ | - | - | ✗ MISSING |
 
@@ -205,9 +205,9 @@ Run anti-pattern detection:
 - Console.log only implementations
 
 Categorize findings:
-- 🛑 Blocker: Prevents goal achievement
-- ⚠️ Warning: Indicates incomplete
-- ℹ️ Info: Notable but not problematic
+- Blocker: Prevents goal achievement
+- ️ Warning: Indicates incomplete
+- ️ Info: Notable but not problematic
 
 ## Phase 8: Identify Human Verification
 
@@ -249,8 +249,8 @@ score = (verified_truths / total_truths)
 **If gaps_found, recommend fix plans.**
 
 1. **Identify gap clusters:**
-   - API stub + component not wired → "Wire frontend to backend"
-   - Multiple artifacts missing → "Complete core implementation"
+ - API stub + component not wired → "Wire frontend to backend"
+ - Multiple artifacts missing → "Complete core implementation"
 
 2. **Generate plan recommendations:**
 ```markdown

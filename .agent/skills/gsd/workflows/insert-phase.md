@@ -3,9 +3,9 @@ name: gsd:insert-phase
 description: Insert urgent work as decimal phase (e.g., 7.1) between existing phases
 argument-hint: "<after> <description>"
 allowed-tools:
-  - Read
-  - Write
-  - Bash
+ - Read
+ - Write
+ - Bash
 ---
 
 <objective>
@@ -19,10 +19,10 @@ Uses decimal numbering (7.1, 7.2) to preserve logical sequence.
 
 ```bash
 if [ $# -lt 2 ]; then
-  echo "ERROR: Both phase number and description required"
-  echo "Usage: /gsd insert-phase <after> <description>"
-  echo "Example: /gsd insert-phase 7 Fix critical auth bug"
-  exit 1
+ echo "ERROR: Both phase number and description required"
+ echo "Usage: /gsd insert-phase <after> <description>"
+ echo "Example: /gsd insert-phase 7 Fix critical auth bug"
+ exit 1
 fi
 
 AFTER_PHASE=$1
@@ -34,8 +34,8 @@ DESCRIPTION="$*"
 
 ```bash
 grep -q "Phase ${AFTER_PHASE}:" .planning/ROADMAP.md || {
-  echo "ERROR: Phase ${AFTER_PHASE} not found"
-  exit 1
+ echo "ERROR: Phase ${AFTER_PHASE} not found"
+ exit 1
 }
 ```
 
@@ -45,9 +45,9 @@ grep -q "Phase ${AFTER_PHASE}:" .planning/ROADMAP.md || {
 # Find existing decimals (7.1, 7.2, etc.)
 EXISTING=$(grep -oE "Phase ${AFTER_PHASE}\.[0-9]+" .planning/ROADMAP.md | grep -oE "\.[0-9]+" | sort -n | tail -1)
 if [ -z "$EXISTING" ]; then
-  NEXT_DECIMAL=1
+ NEXT_DECIMAL=1
 else
-  NEXT_DECIMAL=$((${EXISTING#.} + 1))
+ NEXT_DECIMAL=$((${EXISTING#.} + 1))
 fi
 DECIMAL_PHASE="${AFTER_PHASE}.${NEXT_DECIMAL}"
 PADDED=$(printf "%02d.%d" $AFTER_PHASE $NEXT_DECIMAL)
@@ -96,7 +96,7 @@ Plans:
 After: Phase {N}
 Directory: .planning/phases/{PADDED}-{slug}/
 
-**▶ Next:** `/gsd plan-phase {N.M}`
+** Next:** `/gsd plan-phase {N.M}`
 
 ---
 ```

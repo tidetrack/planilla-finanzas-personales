@@ -8,19 +8,19 @@ All MDX files must start with YAML frontmatter enclosed in `---` delimiters.
 
 ### Required Fields
 
-| Field         | Description                                 | Example                                          |
+| Field | Description | Example |
 | ------------- | ------------------------------------------- | ------------------------------------------------ |
-| `title`       | Page title for SEO and headings (2-3 words) | `title: Image Component`                         |
-| `description` | Brief description (1-2 sentences)           | `description: Optimize images using next/image.` |
+| `title` | Page title for SEO and headings (2-3 words) | `title: Image Component` |
+| `description` | Brief description (1-2 sentences) | `description: Optimize images using next/image.` |
 
 ### Optional Fields
 
-| Field       | Description                                        | Example                                      |
+| Field | Description | Example |
 | ----------- | -------------------------------------------------- | -------------------------------------------- |
-| `nav_title` | Shorter title for navigation sidebar               | `nav_title: Image`                           |
-| `source`    | Pull content from another page (avoid duplication) | `source: app/api-reference/components/image` |
-| `related`   | Next steps section with related links              | See below                                    |
-| `version`   | Development stage indicator                        | `version: experimental`                      |
+| `nav_title` | Shorter title for navigation sidebar | `nav_title: Image` |
+| `source` | Pull content from another page (avoid duplication) | `source: app/api-reference/components/image` |
+| `related` | Next steps section with related links | See below |
+| `version` | Development stage indicator | `version: experimental` |
 
 ### Related Links Format
 
@@ -29,11 +29,11 @@ All MDX files must start with YAML frontmatter enclosed in `---` delimiters.
 title: My Feature
 description: Description here.
 related:
-  title: Next Steps
-  description: Learn more about related features.
-  links:
-    - app/api-reference/components/image
-    - app/guides/optimizing/images
+ title: Next Steps
+ description: Learn more about related features.
+ links:
+ - app/api-reference/components/image
+ - app/guides/optimizing/images
 ---
 ```
 
@@ -56,11 +56,11 @@ code here
 
 ### Required Attributes
 
-| Attribute   | When to Use                       | Example                   |
+| Attribute | When to Use | Example |
 | ----------- | --------------------------------- | ------------------------- |
-| `filename`  | Always for code examples          | `filename="app/page.tsx"` |
-| `switcher`  | When providing TS and JS variants | `switcher`                |
-| `highlight` | To highlight specific lines       | `highlight={1,3-5}`       |
+| `filename` | Always for code examples | `filename="app/page.tsx"` |
+| `switcher` | When providing TS and JS variants | `switcher` |
+| `highlight` | To highlight specific lines | `highlight={1,3-5}` |
 
 ### TypeScript/JavaScript Switcher Pattern
 
@@ -71,13 +71,13 @@ Always provide TypeScript first, then JavaScript:
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'My Page',
+ title: 'My Page',
 }
 ```
 
 ```jsx filename="app/page.js" switcher
 export const metadata = {
-  title: 'My Page',
+ title: 'My Page',
 }
 ```
 ````
@@ -95,10 +95,10 @@ npm install next
 ### Highlighting Lines
 
 ```
-highlight={1}        # Single line
-highlight={1,3}      # Multiple lines
-highlight={1-5}      # Range
-highlight={1,3-5,8}  # Combined
+highlight={1} # Single line
+highlight={1,3} # Multiple lines
+highlight={1-5} # Range
+highlight={1,3-5,8} # Combined
 ```
 
 ## MDX Components
@@ -129,11 +129,11 @@ For themed images with light/dark variants:
 
 ```mdx
 <Image
-  alt="Description of the image"
-  srcLight="/docs/light/image-name.png"
-  srcDark="/docs/dark/image-name.png"
-  width={1600}
-  height={800}
+ alt="Description of the image"
+ srcLight="/docs/light/image-name.png"
+ srcDark="/docs/dark/image-name.png"
+ width={1600}
+ height={800}
 />
 ```
 
@@ -162,11 +162,11 @@ Use HTML table wrapper for horizontal scroll on mobile:
 ```mdx
 <div style={{ overflowX: 'auto', width: '100%' }}>
 
-| Prop              | Example             | Type    | Status   |
+| Prop | Example | Type | Status |
 | ----------------- | ------------------- | ------- | -------- |
-| [`src`](#src)     | `src="/image.png"`  | String  | Required |
-| [`alt`](#alt)     | `alt="Description"` | String  | Required |
-| [`width`](#width) | `width={500}`       | Integer | -        |
+| [`src`](#src) | `src="/image.png"` | String | Required |
+| [`alt`](#alt) | `alt="Description"` | String | Required |
+| [`width`](#width) | `width={500}` | Integer | - |
 
 </div>
 ```
@@ -230,7 +230,7 @@ Typical page structure:
 ## Validation Commands
 
 ```bash
-pnpm lint              # Full lint check
-pnpm prettier-fix      # Fix formatting
-pnpm types             # TypeScript check
+pnpm lint # Full lint check
+pnpm prettier-fix # Fix formatting
+pnpm types # TypeScript check
 ```

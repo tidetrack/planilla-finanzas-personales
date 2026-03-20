@@ -3,9 +3,9 @@ name: gsd:complete-milestone
 description: Archive completed milestone and prepare for next version
 argument-hint: "<version>"
 allowed-tools:
-  - Read
-  - Write
-  - Bash
+ - Read
+ - Write
+ - Bash
 ---
 
 <objective>
@@ -20,7 +20,7 @@ Creates historical record in .planning/milestones/.
 ```bash
 # Check for audit
 if [ ! -f ".planning/v${VERSION}-MILESTONE-AUDIT.md" ]; then
-  echo "⚠ No audit found. Run /gsd audit-milestone first."
+ echo " No audit found. Run /gsd audit-milestone first."
 fi
 ```
 
@@ -29,9 +29,9 @@ fi
 ```bash
 # Check all phases have SUMMARY.md
 for dir in .planning/phases/*/; do
-  if ! ls "$dir"*-SUMMARY.md 2>/dev/null | grep -q .; then
-    echo "Phase $(basename $dir) incomplete"
-  fi
+ if ! ls "$dir"*-SUMMARY.md 2>/dev/null | grep -q .; then
+ echo "Phase $(basename $dir) incomplete"
+ fi
 done
 ```
 
@@ -85,12 +85,12 @@ git tag -a "v{version}" -m "{milestone summary}"
 ```
 ---
 
-## 🎉 Milestone v{version} Complete
+## Milestone v{version} Complete
 
 Archived to: .planning/milestones/
 Git tag: v{version}
 
-**▶ Next:** `/gsd new-milestone` — start next version
+** Next:** `/gsd new-milestone` — start next version
 
 ---
 ```

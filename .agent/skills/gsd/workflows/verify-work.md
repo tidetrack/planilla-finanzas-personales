@@ -3,12 +3,12 @@ name: gsd:verify-work
 description: Validate built features through conversational UAT
 argument-hint: "[phase number, e.g., '4']"
 allowed-tools:
-  - Read
-  - Bash
-  - Glob
-  - Grep
-  - Edit
-  - Write
+ - Read
+ - Bash
+ - Glob
+ - Grep
+ - Edit
+ - Write
 ---
 
 <objective>
@@ -41,12 +41,12 @@ Phase: $ARGUMENTS (optional)
 PHASE=$ARGUMENTS
 
 if [ -z "$PHASE" ]; then
-  # Check for active UAT sessions
-  ACTIVE_UAT=$(find .planning/phases -name "*-UAT.md" -newer .planning/STATE.md 2>/dev/null | head -1)
-  if [ -n "$ACTIVE_UAT" ]; then
-    echo "Found active UAT: $ACTIVE_UAT"
-    # Extract phase from path
-  fi
+ # Check for active UAT sessions
+ ACTIVE_UAT=$(find .planning/phases -name "*-UAT.md" -newer .planning/STATE.md 2>/dev/null | head -1)
+ if [ -n "$ACTIVE_UAT" ]; then
+ echo "Found active UAT: $ACTIVE_UAT"
+ # Extract phase from path
+ fi
 fi
 
 # Normalize and find phase directory
@@ -61,9 +61,9 @@ If no phase determined: Ask user which phase to verify.
 ```bash
 SUMMARIES=$(ls "${PHASE_DIR}"/*-SUMMARY.md 2>/dev/null)
 if [ -z "$SUMMARIES" ]; then
-  echo "No SUMMARY.md files found. Phase may not be executed yet."
-  echo "Run /gsd execute-phase ${PHASE} first."
-  exit 1
+ echo "No SUMMARY.md files found. Phase may not be executed yet."
+ echo "Run /gsd execute-phase ${PHASE} first."
+ exit 1
 fi
 ```
 
@@ -162,7 +162,7 @@ git commit -m "docs(${PHASE}): complete UAT
 
 UAT complete ✓
 
-**▶ Next Up**
+** Next Up**
 
 `/gsd plan-phase {N+1}` — plan next phase
 
@@ -174,7 +174,7 @@ UAT complete ✓
 ```
 ---
 
-## ⚠ Phase {N} Issues Found
+## Phase {N} Issues Found
 
 **{passed}/{total} tests passed**
 **{issues} issues found**
@@ -183,7 +183,7 @@ UAT complete ✓
 
 {List from UAT.md}
 
-**▶ Next Up**
+** Next Up**
 
 `/gsd plan-phase {N} --gaps` — create fix plans
 

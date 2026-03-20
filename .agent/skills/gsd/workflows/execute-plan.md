@@ -3,12 +3,12 @@ name: gsd:execute-plan
 description: Execute a phase plan (PLAN.md) and create the outcome summary (SUMMARY.md)
 argument-hint: ""
 allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - Task
-  - AskUserQuestion
+ - Read
+ - Write
+ - Edit
+ - Bash
+ - Task
+ - AskUserQuestion
 ---
 
 <objective>
@@ -153,9 +153,9 @@ Use AskUserQuestion:
 - header: "Previous Issues"
 - question: "Previous phase had unresolved items: [summary]. How to proceed?"
 - options:
-  - "Proceed anyway" - Issues won't block this phase
-  - "Address first" - Let's resolve before continuing
-  - "Review previous" - Show me the full summary
+ - "Proceed anyway" - Issues won't block this phase
+ - "Address first" - Let's resolve before continuing
+ - "Review previous" - Show me the full summary
 
 ## Phase 7: Execute
 
@@ -165,23 +165,23 @@ Execute each task in the prompt. **Deviations are normal** - handle them using d
 
 2. For each task:
 
-   **If `type="auto"`:**
+ **If `type="auto"`:**
 
-   - Work toward task completion
-   - **If CLI/API returns authentication error:** Load execute-plan-auth.md
-   - **When you discover additional work not in plan:** Apply deviation rules automatically
-   - Run the verification
-   - Confirm done criteria met
-   - **Commit the task** (one commit per task)
-   - Track task completion and commit hash for Summary documentation
-   - Continue to next task
+ - Work toward task completion
+ - **If CLI/API returns authentication error:** Load execute-plan-auth.md
+ - **When you discover additional work not in plan:** Apply deviation rules automatically
+ - Run the verification
+ - Confirm done criteria met
+ - **Commit the task** (one commit per task)
+ - Track task completion and commit hash for Summary documentation
+ - Continue to next task
 
-   **If `type="checkpoint:*"`:**
+ **If `type="checkpoint:*"`:**
 
-   - STOP immediately (do not continue to next task)
-   - Execute checkpoint_protocol (see execute-plan-checkpoints.md)
-   - Wait for user response
-   - Only after user confirmation: continue to next task
+ - STOP immediately (do not continue to next task)
+ - Execute checkpoint_protocol (see execute-plan-checkpoints.md)
+ - Wait for user response
+ - Only after user confirmation: continue to next task
 
 3. Run overall verification checks from `<verification>` section
 4. Confirm all success criteria from `<success_criteria>` section met
@@ -311,7 +311,7 @@ Summary: .planning/phases/{phase-dir}/{phase}-{plan}-SUMMARY.md
 
 ---
 
-## ▶ Next Up
+## Next Up
 
 **{phase}-{next-plan}: [Plan Name]** — [objective]
 
@@ -333,7 +333,7 @@ All {Y} plans finished.
 
 ---
 
-## ▶ Next Up
+## Next Up
 
 **Phase {Z+1}: {Next Phase Name}** — {Goal}
 
@@ -347,13 +347,13 @@ All {Y} plans finished.
 **Route C: Milestone complete**
 
 ```
-🎉 MILESTONE COMPLETE!
+ MILESTONE COMPLETE!
 
 All {N} phases complete! Milestone is 100% done.
 
 ---
 
-## ▶ Next Up
+## Next Up
 
 **Complete Milestone** — archive and prepare for next
 

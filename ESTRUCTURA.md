@@ -1,135 +1,130 @@
-# Estructura del Proyecto - Tidetrack Personal Finance
+# Mapa de Archivos - Tidetrack Personal Finance
 
-Este documento describe la organización de carpetas del proyecto.
+> Propósito: Fuente de verdad sobre la organización del repositorio. Toda nueva carpeta o archivo debe registrarse aquí antes de crearse. Los agentes de IA usan este documento como referencia canónica.
+
+Versión: v0.4.9 | Última actualización: 2026-03-20
 
 ---
 
-## 📁 Estructura de Carpetas
+## Arbol de Carpetas
 
 ```
-planilla-finanzas-personales/  # Tid etrack Personal Finance Tracker
-├── 📁 scripts/                  # Scripts locales auxiliares (.js)
+planilla-finanzas-personales/
 │
-├── 📁 src/                     # Código fuente
-│   ├── Bloques .js (00-12, 98-99) # 16 módulos backend (v0.4.0)
-│   ├── Archivos HTML UI           # 7 vistas y componentes (v0.4.0)
-│   └── appsscript.json            # Manifest OAuth
+├── src/ # Código fuente (Apps Script)
+│ ├── 00_Config.js # Constantes, rangos, enums, monedas
+│ ├── 01_Version.js # Control de versión semántica
+│ ├── 02_Utils.js # Utilidades generales y logging
+│ ├── 03_SheetManager.js # Layer de acceso a datos (CRUD sobre Sheets)
+│ ├── 11_UIService.js # Servicios de UI y endpoints GAS
+│ ├── 12_MenuService.js # Menú personalizado "Tidetrack"
+│ ├── 13_NavigationService.js # Navegación entre hojas
+│ ├── UI_SharedStyles.html # Design System CSS compartido
+│ ├── UI_AbmPlanCuentas.html # ABM multi-entidad Plan de Cuentas
+│ ├── ZZ_Changelog.js # Historial de versiones in-code
+│ └── appsscript.json # Manifest OAuth de Apps Script
 │
-├── 📁 docs/                    # Documentación
-│   ├── 📁 permanente/          # Docs permanentes
-│   │   ├── ARQUITECTURA_AGENTICA.md  # Sistema multi-agente de desarrollo
-│   │   ├── CHANGELOG.md              # Historial completo de versiones (v0.1-v0.4)
-│   │   ├── DATABASE_SCHEMA.md        # Esquema BD completo (6 tablas)
-│   │   ├── GUIA_ARQUITECTURA.md      # ADRs y arquitectura técnica
-│   │   ├── GUIA_MODULOS.md           # Documentación de módulos .js
-│   │   ├── HISTORIAL_DESARROLLO.md   # Evolución cronológica completa
-│   │   ├── planilla-reinversión.md   # Documento base de reinversión del alcance
-│   │   ├── RESUMEN_PROYECTO.md       # Visión general de Tidetrack
-│   │   ├── CONTEXTO_NEGOCIO.md       # Círculo de Oro, modelo de negocio
-│   │   ├── ROADMAP_PRODUCTO.md       # Etapas y prioridades
-│   │   ├── PRINCIPIOS_DISEÑO.md      # UX, hábitos, lenguaje humano
-│   │   └── database_er_diagram.png   # Diagrama ER de base de datos
-│   ├── 📁 sesiones/            # Docs de sesiones de trabajo
-│   ├── PRODUCT_BACKLOG.md      # Backlog y roadmap
-│   ├── REGLAS_AGENTE.md        # Reglas de desarrollo
-│   └── README.md               # Índice de documentación
+├── docs/ # Documentación del proyecto
+│ ├── permanente/ # Documentos vivos (actualización continua)
+│ │ ├── ARQUITECTURA_AGENTICA.md # Sistema multi-agente de desarrollo
+│ │ ├── CHANGELOG.md # Historial completo de versiones
+│ │ ├── CONTEXTO_NEGOCIO.md # Círculo de oro, modelo de negocio
+│ │ ├── DATABASE_SCHEMA.md # Esquema de tablas en Google Sheets
+│ │ ├── GUIA_ARQUITECTURA.md # ADRs y decisiones técnicas formales
+│ │ ├── GUIA_MODULOS.md # Documentación técnica de módulos .js
+│ │ ├── HISTORIAL_DESARROLLO.md # Bitácora cronológica del proyecto
+│ │ ├── planilla-reinversión.md # Documento fundacional del pivote
+│ │ ├── PRINCIPIOS_DISEÑO.md # Reglas de UX y experiencia de usuario
+│ │ ├── RESUMEN_PROYECTO.md # Visión general de Tidetrack
+│ │ ├── ROADMAP_PRODUCTO.md # Etapas y prioridades del producto
+│ │ └── database_er_diagram.png # Diagrama ER de relaciones
+│ ├── sesiones/ # Notas de sesiones de trabajo específicas
+│ ├── PRODUCT_BACKLOG.md # Sprints y backlog priorizado
+│ ├── REGLAS_AGENTE.md # Convenciones de desarrollo
+│ └── README.md # Índice de documentación
 │
-├── 📁 _backup/                 # Archivos históricos (no usar)
+├── .agent/ # Configuración del ecosistema agéntico
+│ ├── skills/ # Un directorio por agente
+│ │ ├── tidetrack-pm/ # Dispatcher y orquestador central
+│ │ ├── agente-contextual/ # Bibliotecario: historial + ADRs
+│ │ ├── appscript-backend/ # Experto en lógica Apps Script
+│ │ ├── frontend-ui-ux/ # Especialista en HtmlService y UI
+│ │ ├── auto-changelog/ # Versionado automático
+│ │ ├── github-docs/ # Documentación técnica pública GitHub
+│ │ ├── github-sync/ # Commits y push a repositorio
+│ │ ├── lean-code-expert/ # Limpieza y refactorización
+│ │ ├── creador-de-skills/ # Generador de nuevos skills
+│ │ ├── gsd/ # Get Shit Done: planificación y ejecución
+│ │ └── update-docs/ # Actualización de documentación
+│ ├── rules/ # Reglas de cumplimiento obligatorio
+│ │ ├── dispatcher.md # Lógica de enrutamiento de agentes
+│ │ ├── no-emojis.md # Regla estricta de tono profesional
+│ │ └── estructura-obligatoria.md # Reglas de estructura de carpetas
+│ └── workflows/ # Flujos de trabajo reutilizables
 │
-├── 📁 .agent/                  # Configuración de agentes IA
-│   ├── rules/                  # Reglas generales
-│   │   ├── dispatcher.md       # Enrutamiento de agentes
-│   │   └── estructura-obligatoria.md  # Cumplimiento de estructura
-│   └── workflows/              # Agentes especializados
-│       ├── product-manager.md
-│       ├── ui-ux-designer.md
-│       ├── agente-contexctual.md
-│       ├── qa-tester.md
-│       ├── security-auditor.md
-│       └── backend-architect.md
+├── scripts/ # Herramientas de automatización local
+│ └── auto-sync.js # Watcher: commit + push automático
 │
-├── 📄 README.md                # ← INICIO AQUÍ
-├── 📄 ESTRUCTURA.md            # Este archivo
-└── 📄 Notas Fran.md            # Notas personales
+├── _backup/ # Archivos históricos (NO editar)
+│
+├── README.md # Indice maestro. INICIO AQUI.
+├── ESTRUCTURA.md # Este archivo. Mapa de carpetas.
+├── Notas Fran.md # Notas personales del desarrollador
+├── .clasp.json # Config de Clasp (deploy a Apps Script)
+├── .claspignore # Archivos excluidos del push a GAS
+├── .gitignore # Archivos excluidos de Git
+├── package.json # Dependencias Node.js
+└── iniciar_autosync.command # Acceso directo al watcher (macOS)
 ```
 
 ---
 
-## 🎯 Propósito de Cada Carpeta
+## Reglas de Estructura (Obligatorias)
 
-### `/src` - Código Fuente
+Estas reglas son aplicadas por el agente `agente-contextual` y definidas en `.agent/rules/estructura-obligatoria.md`:
 
-Sistema completo de Apps Script para gestión de finanzas personales.
-
-**Backend (16 módulos .js):**
-- `00_Config.js` hasta `12_MenuService.js` - Core del sistema
-- `98_DataSeeder.js`, `99_SetupDirect.js`, `99_ForceReload.js` - Utilidades
-- `appsscript.json` - Manifest OAuth
-
-**Frontend (7 archivos HTML):**
-- Design System: `CSS_DesignSystem.html`, `CSS_Components.html`
-- Vistas: `UI_TransactionForm.html`, `UI_MainDashboard.html`
-- Componentes: `JS_FormValidation.html`, `JS_ApiClient.html`
-- Testing: `UI_DesignSystemTest.html`
-
-### `/docs` - Documentación
-
-Toda la documentación del proyecto:
-
-#### `/permanente` - Documentación Permanente
-
-Documentos que se mantienen actualizados:
-
-| Archivo | Propósito |
-|-|--|
-| `ARQUITECTURA_AGENTICA.md` | Sistema multi-agente para desarrollo |
-| `CHANGELOG.md` | Historial completo de versiones v0.1-v0.4 |
-| `DATABASE_SCHEMA.md` | Esquema completo de BD (6 tablas relacionales) |
-| `GUIA_ARQUITECTURA.md` | ADRs y decisiones de arquitectura técnica |
-| `GUIA_MODULOS.md` | Documentación técnica de módulos .js |
-| `HISTORIAL_DESARROLLO.md` | Evolución cronológica del proyecto |
-| `planilla-reinversión.md` | Hito de reinversión: Principios de simplificación y modularidad |
-| `RESUMEN_PROYECTO.md` | Visión, propuesta de valor, diferenciadores |
-| `CONTEXTO_NEGOCIO.md` | Círculo de oro, modelo de negocio, estrategia |
-| `ROADMAP_PRODUCTO.md` | Etapas de desarrollo y prioridades |
-| `PRINCIPIOS_DISEÑO.md` | Reglas de UX, hábitos, multi-moneda |
-| `database_er_diagram.png` | Diagrama ER de relaciones entre tablas |
-
-#### `/sesiones` - Histórico de Sesiones
-
-Documentación de sesiones de trabajo específicas.
-
-### `/_backup` - Archivos Históricos
-
-Archivos legacy que se mantienen por referencia. **NO editar ni usar**.
-
-### `/.agent` - Sistema de Agentes IA
-
-Configuración del sistema multi-agente para desarrollo colaborativo con IA.
+| Regla | Detalle |
+|---|---|
+| [PROHIBIDO] No crear carpetas en raíz | Solo las carpetas existentes. Actualizar este archivo primero. |
+| [PROHIBIDO] No guardar código fuera de `/src/` | Todo `.js` de Apps Script va en `src/`. |
+| [PROHIBIDO] No tocar `/_backup/` | Solo lectura. Archivos históricos. |
+| [PROHIBIDO] No crear docs fuera de `/docs/` | Toda documentación técnica va en `docs/permanente/`. |
+| [REQUERIDO] Actualizar `ESTRUCTURA.md` antes de crear | Este archivo se actualiza PRIMERO. |
+| [REQUERIDO] Reportar archivos fuera de lugar | El agente los mueve o informa al usuario. |
 
 ---
 
-## 🔄 Workflow de Desarrollo
+## Workflow de Cierre de Feature
 
-1. **Planificar**: Sprint planning y definición de alcance ✅
-2. **Diseñar**: Modelo de datos y arquitectura ✅
-3. **Implementar**: Código backend y frontend ✅ (Sprints 0-3)
-4. **Testing**: Validación manual y automatizada ✅
-5. **Documentar**: Actualizar CHANGELOG, HISTORIAL, GUIA_MODULOS ✅
-6. **Release**: Marcar versión y registrar en CHANGELOG ✅
+El pipeline estándar para cerrar cualquier feature:
 
-**Estado Actual:** v0.4.0 - Sprint 3 completado al 100%
-
----
-
-## 📝 Archivos Importantes en Raíz
-
-- **README.md**: Punto de entrada del proyecto
-- **ESTRUCTURA.md**: Este archivo - mapa de carpetas
-- **Notas Fran.md**: Notas personales
+```
+1. appscript-backend → implementa lógica GAS
+2. appscript-ui → implementa popup/interfaz HTML
+3. lean-code-expert → limpieza final (si aplica)
+4. auto-changelog → actualiza ZZ_Changelog.js
+5. github-docs → actualiza README + docs públicos ← este archivo
+6. github-sync → commit semántico + push
+```
 
 ---
 
-**Proyecto**: Tidetrack Personal Finance Tracker  
-**Última actualización**: 2026-01-23  
-**Versión actual**: v0.4.0 (Sprint 3 completo)
+## Estado de Modulos en `/src/`
+
+| Archivo | Estado | Versión intro |
+|---|---|---|
+| `00_Config.js` | Activo | v0.1.0 |
+| `01_Version.js` | Activo | v0.1.0 |
+| `02_Utils.js` | Activo | v0.1.0 |
+| `03_SheetManager.js` | Activo - optimizado en v0.4.9 | v0.1.0 |
+| `11_UIService.js` | Activo - endpoints ABM en v0.4.7 | v0.4.0 |
+| `12_MenuService.js` | Activo | v0.4.0 |
+| `13_NavigationService.js` | Activo | v0.4.0 |
+| `UI_SharedStyles.html` | Activo - Design System institucional | v0.4.3 |
+| `UI_AbmPlanCuentas.html` | Activo - ABM en refinamiento | v0.4.1 |
+| `ZZ_Changelog.js` | Activo | v0.4.0 |
+| `appsscript.json` | Activo | v0.1.0 |
+
+---
+
+*Tidetrack - ESTRUCTURA.md - v0.4.9 - 2026-03-20*

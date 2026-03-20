@@ -5,8 +5,8 @@ Configuration options for `.planning/` directory behavior.
 <config_schema>
 ```json
 "planning": {
-  "commit_docs": true,
-  "search_gitignored": false
+ "commit_docs": true,
+ "search_gitignored": false
 }
 ```
 
@@ -44,8 +44,8 @@ git check-ignore -q .planning 2>/dev/null && COMMIT_DOCS=false
 
 ```bash
 if [ "$COMMIT_DOCS" = "true" ]; then
-  git add .planning/STATE.md
-  git commit -m "docs: update state"
+ git add .planning/STATE.md
+ git commit -m "docs: update state"
 fi
 ```
 
@@ -71,23 +71,23 @@ fi
 To use uncommitted mode:
 
 1. **Set config:**
-   ```json
-   "planning": {
-     "commit_docs": false,
-     "search_gitignored": true
-   }
-   ```
+ ```json
+ "planning": {
+ "commit_docs": false,
+ "search_gitignored": true
+ }
+ ```
 
 2. **Add to .gitignore:**
-   ```
-   .planning/
-   ```
+ ```
+ .planning/
+ ```
 
 3. **Existing tracked files:** If `.planning/` was previously tracked:
-   ```bash
-   git rm -r --cached .planning/
-   git commit -m "chore: stop tracking planning docs"
-   ```
+ ```bash
+ git rm -r --cached .planning/
+ git commit -m "chore: stop tracking planning docs"
+ ```
 
 </setup_uncommitted_mode>
 

@@ -4,7 +4,7 @@ Reglas específicas de desarrollo para este proyecto.
 
 ---
 
-## 🎯 Principios de Desarrollo
+## Principios de Desarrollo
 
 ### 1. Fricción Mínima es la Regla #1
 
@@ -30,18 +30,18 @@ Reglas específicas de desarrollo para este proyecto.
 
 ---
 
-## 📁 Estructura de Archivos
+## Estructura de Archivos
 
 **REGLA CRÍTICA:** Ver `.agent/rules/estructura-obligatoria.md`
 
-- ✅ Código fuente SIEMPRE en `/src/`
-- ✅ Documentación SIEMPRE en `/docs/`
-- ✅ Archivos legacy en `/_backup/`
-- ❌ NUNCA crear carpetas temporales en la raíz
+- Código fuente SIEMPRE en `/src/`
+- Documentación SIEMPRE en `/docs/`
+- Archivos legacy en `/_backup/`
+- NUNCA crear carpetas temporales en la raíz
 
 ---
 
-## 🔢 Convenciones de Naming
+## Convenciones de Naming
 
 ### Backend (Base de Datos y API)
 
@@ -73,17 +73,17 @@ const DEFAULT_CURRENCY = 'ARS';
 
 ---
 
-## 🗄️ Reglas de Base de Datos
+## ️ Reglas de Base de Datos
 
 ### 1. Registro en Moneda de Origen
 
 ```sql
 -- Cada transacción almacena:
-amount_origin DECIMAL(15, 2)  -- Monto en moneda original
-currency_origin VARCHAR(3)     -- Moneda en que se pagó
-amount_base DECIMAL(15, 2)     -- Monto convertido a moneda base
-currency_base VARCHAR(3)       -- Moneda de referencia del usuario
-fx_id INT                      -- ID del tipo de cambio usado
+amount_origin DECIMAL(15, 2) -- Monto en moneda original
+currency_origin VARCHAR(3) -- Moneda en que se pagó
+amount_base DECIMAL(15, 2) -- Monto convertido a moneda base
+currency_base VARCHAR(3) -- Moneda de referencia del usuario
+fx_id INT -- ID del tipo de cambio usado
 ```
 
 ### 2. Auditabilidad de Conversiones
@@ -91,12 +91,12 @@ fx_id INT                      -- ID del tipo de cambio usado
 ```sql
 -- Tabla de tipos de cambio con timestamp
 CREATE TABLE exchange_rates (
-  id SERIAL PRIMARY KEY,
-  from_currency VARCHAR(3),
-  to_currency VARCHAR(3),
-  rate DECIMAL(10, 6),
-  source VARCHAR(50),  -- Ej: 'exchangerate-api'
-  fetched_at TIMESTAMP
+ id SERIAL PRIMARY KEY,
+ from_currency VARCHAR(3),
+ to_currency VARCHAR(3),
+ rate DECIMAL(10, 6),
+ source VARCHAR(50), -- Ej: 'exchangerate-api'
+ fetched_at TIMESTAMP
 );
 ```
 
@@ -107,7 +107,7 @@ CREATE TABLE exchange_rates (
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ### Prioridades de Testing
 
@@ -120,19 +120,19 @@ CREATE TABLE exchange_rates (
 
 ```javascript
 describe('Multi-Currency Conversion', () => {
-  it('should freeze exchange rate with transaction', () => {
-    // Test que fx_id no cambia en histórico
-  });
-  
-  it('should convert to base currency correctly', () => {
-    // Test de conversión USD -> ARS
-  });
+ it('should freeze exchange rate with transaction', () => {
+ // Test que fx_id no cambia en histórico
+ });
+ 
+ it('should convert to base currency correctly', () => {
+ // Test de conversión USD -> ARS
+ });
 });
 ```
 
 ---
 
-## 📝 Documentación
+## Documentación
 
 ### Cuándo Documentar
 
@@ -162,18 +162,18 @@ Almacenar fx_id con cada transacción...
 
 ---
 
-## 🚫 Prohibiciones
+## Prohibiciones
 
-- ❌ NO hardcodear credenciales (usar variables de entorno)
-- ❌ NO modificar archivos en `/_backup/`
-- ❌ NO hacer cambios sin actualizar documentación
-- ❌ NO agregar features que aumenten fricción de registro
-- ❌ NO moralizar sobre gastos del usuario
-- ❌ NO infantilizar con gamificación excesiva
+- NO hardcodear credenciales (usar variables de entorno)
+- NO modificar archivos en `/_backup/`
+- NO hacer cambios sin actualizar documentación
+- NO agregar features que aumenten fricción de registro
+- NO moralizar sobre gastos del usuario
+- NO infantilizar con gamificación excesiva
 
 ---
 
-## ⚙️ Stack Tecnológico (Pendiente Definir)
+## ️ Stack Tecnológico (Pendiente Definir)
 
 ### Preferencias Iniciales
 
@@ -191,7 +191,7 @@ Almacenar fx_id con cada transacción...
 
 ---
 
-## 🗄️ Reglas Específicas del Schema (Google Sheets)
+## ️ Reglas Específicas del Schema (Google Sheets)
 
 ### Reglas de Integridad Críticas
 
@@ -202,30 +202,30 @@ Almacenar fx_id con cada transacción...
 **Regla:**
 ```
 SI DB_TRANSACCIONES.moneda_id = DB_CONFIG.base_moneda_id:
-   → fx_id puede ser nulo
-   → monto_base = monto
+ → fx_id puede ser nulo
+ → monto_base = monto
 
 SI DB_TRANSACCIONES.moneda_id ≠ DB_CONFIG.base_moneda_id:
-   → fx_id es OBLIGATORIO
-   → fx_id debe existir en DB_TIPOS_CAMBIO
-   → monto_base = monto × tc (del registro fx_id)
+ → fx_id es OBLIGATORIO
+ → fx_id debe existir en DB_TIPOS_CAMBIO
+ → monto_base = monto × tc (del registro fx_id)
 ```
 
 **Implementación en Scripts:**
 ```javascript
 function validateTransaction(trx) {
-  const baseMoneda = getConfig().base_moneda_id;
-  
-  if (trx.moneda_id !== baseMoneda && !trx.fx_id) {
-    throw new Error("fx_id obligatorio para moneda extranjera");
-  }
-  
-  if (trx.fx_id) {
-    const fx = getExchangeRate(trx.fx_id);
-    if (!fx || fx.status !== 'ok') {
-      throw new Error("fx_id inválido o con status≠ok");
-    }
-  }
+ const baseMoneda = getConfig().base_moneda_id;
+ 
+ if (trx.moneda_id !== baseMoneda && !trx.fx_id) {
+ throw new Error("fx_id obligatorio para moneda extranjera");
+ }
+ 
+ if (trx.fx_id) {
+ const fx = getExchangeRate(trx.fx_id);
+ if (!fx || fx.status !== 'ok') {
+ throw new Error("fx_id inválido o con status≠ok");
+ }
+ }
 }
 ```
 
@@ -238,10 +238,10 @@ function validateTransaction(trx) {
 **Validación:**
 ```javascript
 if (trx.monto <= 0) {
-  throw new Error("monto debe ser > 0");
+ throw new Error("monto debe ser > 0");
 }
 if (!['Ingreso', 'Egreso'].includes(trx.sentido)) {
-  throw new Error("sentido debe ser 'Ingreso' o 'Egreso'");
+ throw new Error("sentido debe ser 'Ingreso' o 'Egreso'");
 }
 ```
 
@@ -251,17 +251,17 @@ if (!['Ingreso', 'Egreso'].includes(trx.sentido)) {
 ```javascript
 // tc debe ser > 0
 if (fx.tc <= 0) {
-  throw new Error("tc debe ser > 0");
+ throw new Error("tc debe ser > 0");
 }
 
 // base ≠ quote
 if (fx.base_moneda_id === fx.quote_moneda_id) {
-  throw new Error("base_moneda_id no puede ser igual a quote_moneda_id");
+ throw new Error("base_moneda_id no puede ser igual a quote_moneda_id");
 }
 
 // Ambas monedas deben existir
 if (!monedaExists(fx.base_moneda_id) || !monedaExists(fx.quote_moneda_id)) {
-  throw new Error("base o quote no existen en DB_MONEDAS");
+ throw new Error("base o quote no existen en DB_MONEDAS");
 }
 ```
 

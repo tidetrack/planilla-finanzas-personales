@@ -116,8 +116,8 @@ When you could write a clear PROJECT.md, offer to proceed:
 - header: "Ready?"
 - question: "I think I understand what you're after. Ready to create PROJECT.md?"
 - options:
-  - "Create PROJECT.md" — Let's move forward
-  - "Keep exploring" — I want to share more / ask me more
+ - "Create PROJECT.md" — Let's move forward
+ - "Keep exploring" — I want to share more / ask me more
 
 If "Keep exploring" — ask what they want to add or identify gaps and probe naturally.
 

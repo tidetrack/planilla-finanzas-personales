@@ -4,7 +4,7 @@ Etapas y prioridades para evolución del producto.
 
 ---
 
-## 🎯 Roadmap: Del MVP Vivo a una Plataforma de Hábitos
+## Roadmap: Del MVP Vivo a una Plataforma de Hábitos
 
 El roadmap se piensa en **etapas que priorizan valor antes que complejidad**.
 
@@ -78,51 +78,51 @@ Partnerships que mantengan coherencia de experiencia
 
 ---
 
-## 🗺️ Backlog Visualizado
+## ️ Backlog Visualizado
 
 ```
 ┌─────────────────────────────────────────────┐
-│ AHORA (3-6 meses)                           │
+│ AHORA (3-6 meses) │
 ├─────────────────────────────────────────────┤
-│ • Registro ultrarrápido                     │
-│ • Presupuesto automático                    │
-│ • Tablero esencial                          │
-│ • Multi-moneda básico                       │
-│ • Rachas de hábito                          │
+│ • Registro ultrarrápido │
+│ • Presupuesto automático │
+│ • Tablero esencial │
+│ • Multi-moneda básico │
+│ • Rachas de hábito │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
-│ PRONTO (6-12 meses)                         │
+│ PRONTO (6-12 meses) │
 ├─────────────────────────────────────────────┤
-│ • Gastos compartidos                        │
-│ • Cierres automáticos                       │
-│ • Referral program                          │
-│ • Educación contextual                      │
+│ • Gastos compartidos │
+│ • Cierres automáticos │
+│ • Referral program │
+│ • Educación contextual │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
-│ DESPUÉS (12+ meses)                         │
+│ DESPUÉS (12+ meses) │
 ├─────────────────────────────────────────────┤
-│ • Alianzas con bancos                       │
-│ • Reportes avanzados                        │
-│ • IA proactiva                              │
-│ • API ecosystem                             │
+│ • Alianzas con bancos │
+│ • Reportes avanzados │
+│ • IA proactiva │
+│ • API ecosystem │
 └─────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🚫 NO-Roadmap (Qué NO Vamos a Hacer)
+## NO-Roadmap (Qué NO Vamos a Hacer)
 
 Para mantener foco, es crítico definir qué **NO** entra:
 
-- ❌ **Inversiones y trading:** No somos un bróker
-- ❌ **Contabilidad empresarial:** Somos finanzas personales
-- ❌ **Préstamos o créditos:** No ofrecemos productos financieros
-- ❌ **Gamificación infantil:** No somos un juego
-- ❌ **Red social de finanzas:** No competimos con Instagram
+- **Inversiones y trading:** No somos un bróker
+- **Contabilidad empresarial:** Somos finanzas personales
+- **Préstamos o créditos:** No ofrecemos productos financieros
+- **Gamificación infantil:** No somos un juego
+- **Red social de finanzas:** No competimos con Instagram
 
 ---
 
-**Versión del Documento**: 1.0  
+**Versión del Documento**: 1.0 
 **Última actualización**: 2026-01-17

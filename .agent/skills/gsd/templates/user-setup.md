@@ -29,17 +29,17 @@ Complete these items for the integration to function. Claude automated everythin
 [Only if new account creation is required]
 
 - [ ] **Create [Service] account**
-  - URL: [signup URL]
-  - Skip if: Already have account
+ - URL: [signup URL]
+ - Skip if: Already have account
 
 ## Dashboard Configuration
 
 [Only if dashboard configuration is required]
 
 - [ ] **[Configuration task]**
-  - Location: [Service Dashboard → Path → To → Setting]
-  - Set to: [Required value or configuration]
-  - Notes: [Any important details]
+ - Location: [Service Dashboard → Path → To → Setting]
+ - Set to: [Required value or configuration]
+ - Notes: [Any important details]
 
 ## Verification
 
@@ -77,20 +77,20 @@ In PLAN.md, `user_setup` declares human-required configuration:
 
 ```yaml
 user_setup:
-  - service: stripe
-    why: "Payment processing requires API keys"
-    env_vars:
-      - name: STRIPE_SECRET_KEY
-        source: "Stripe Dashboard → Developers → API keys → Secret key"
-      - name: STRIPE_WEBHOOK_SECRET
-        source: "Stripe Dashboard → Developers → Webhooks → Signing secret"
-    dashboard_config:
-      - task: "Create webhook endpoint"
-        location: "Stripe Dashboard → Developers → Webhooks → Add endpoint"
-        details: "URL: https://[your-domain]/api/webhooks/stripe, Events: checkout.session.completed, customer.subscription.*"
-    local_dev:
-      - "Run: stripe listen --forward-to localhost:3000/api/webhooks/stripe"
-      - "Use the webhook secret from CLI output for local testing"
+ - service: stripe
+ why: "Payment processing requires API keys"
+ env_vars:
+ - name: STRIPE_SECRET_KEY
+ source: "Stripe Dashboard → Developers → API keys → Secret key"
+ - name: STRIPE_WEBHOOK_SECRET
+ source: "Stripe Dashboard → Developers → Webhooks → Signing secret"
+ dashboard_config:
+ - task: "Create webhook endpoint"
+ location: "Stripe Dashboard → Developers → Webhooks → Add endpoint"
+ details: "URL: https://[your-domain]/api/webhooks/stripe, Events: checkout.session.completed, customer.subscription.*"
+ local_dev:
+ - "Run: stripe listen --forward-to localhost:3000/api/webhooks/stripe"
+ - "Use the webhook secret from CLI output for local testing"
 ```
 
 ---
@@ -137,26 +137,26 @@ Complete these items for Stripe integration to function.
 ## Account Setup
 
 - [ ] **Create Stripe account** (if needed)
-  - URL: https://dashboard.stripe.com/register
-  - Skip if: Already have Stripe account
+ - URL: https://dashboard.stripe.com/register
+ - Skip if: Already have Stripe account
 
 ## Dashboard Configuration
 
 - [ ] **Create webhook endpoint**
-  - Location: Stripe Dashboard → Developers → Webhooks → Add endpoint
-  - Endpoint URL: `https://[your-domain]/api/webhooks/stripe`
-  - Events to send:
-    - `checkout.session.completed`
-    - `customer.subscription.created`
-    - `customer.subscription.updated`
-    - `customer.subscription.deleted`
+ - Location: Stripe Dashboard → Developers → Webhooks → Add endpoint
+ - Endpoint URL: `https://[your-domain]/api/webhooks/stripe`
+ - Events to send:
+ - `checkout.session.completed`
+ - `customer.subscription.created`
+ - `customer.subscription.updated`
+ - `customer.subscription.deleted`
 
 - [ ] **Create products and prices** (if using subscription tiers)
-  - Location: Stripe Dashboard → Products → Add product
-  - Create each subscription tier
-  - Copy Price IDs to:
-    - `STRIPE_STARTER_PRICE_ID`
-    - `STRIPE_PRO_PRICE_ID`
+ - Location: Stripe Dashboard → Products → Add product
+ - Create each subscription tier
+ - Copy Price IDs to:
+ - `STRIPE_STARTER_PRICE_ID`
+ - `STRIPE_PRO_PRICE_ID`
 
 ## Local Development
 
@@ -179,8 +179,8 @@ npm run build
 
 # Test webhook endpoint (should return 400 bad signature, not 500 crash)
 curl -X POST http://localhost:3000/api/webhooks/stripe \
-  -H "Content-Type: application/json" \
-  -d '{}'
+ -H "Content-Type: application/json" \
+ -d '{}'
 ```
 
 Expected: Build passes, webhook returns 400 (signature validation working).
@@ -212,20 +212,20 @@ Complete these items for Supabase Auth to function.
 ## Account Setup
 
 - [ ] **Create Supabase project**
-  - URL: https://supabase.com/dashboard/new
-  - Skip if: Already have project for this app
+ - URL: https://supabase.com/dashboard/new
+ - Skip if: Already have project for this app
 
 ## Dashboard Configuration
 
 - [ ] **Enable Email Auth**
-  - Location: Supabase Dashboard → Authentication → Providers
-  - Enable: Email provider
-  - Configure: Confirm email (on/off based on preference)
+ - Location: Supabase Dashboard → Authentication → Providers
+ - Enable: Email provider
+ - Configure: Confirm email (on/off based on preference)
 
 - [ ] **Configure OAuth providers** (if using social login)
-  - Location: Supabase Dashboard → Authentication → Providers
-  - For Google: Add Client ID and Secret from Google Cloud Console
-  - For GitHub: Add Client ID and Secret from GitHub OAuth Apps
+ - Location: Supabase Dashboard → Authentication → Providers
+ - For Google: Add Client ID and Secret from Google Cloud Console
+ - For GitHub: Add Client ID and Secret from GitHub OAuth Apps
 
 ## Verification
 
@@ -265,20 +265,20 @@ Complete these items for SendGrid email to function.
 ## Account Setup
 
 - [ ] **Create SendGrid account**
-  - URL: https://signup.sendgrid.com/
-  - Skip if: Already have account
+ - URL: https://signup.sendgrid.com/
+ - Skip if: Already have account
 
 ## Dashboard Configuration
 
 - [ ] **Verify sender identity**
-  - Location: SendGrid Dashboard → Settings → Sender Authentication
-  - Option 1: Single Sender Verification (quick, for dev)
-  - Option 2: Domain Authentication (production)
+ - Location: SendGrid Dashboard → Settings → Sender Authentication
+ - Option 1: Single Sender Verification (quick, for dev)
+ - Option 2: Domain Authentication (production)
 
 - [ ] **Create API Key**
-  - Location: SendGrid Dashboard → Settings → API Keys → Create API Key
-  - Permission: Restricted Access → Mail Send (Full Access)
-  - Copy key immediately (shown only once)
+ - Location: SendGrid Dashboard → Settings → API Keys → Create API Key
+ - Permission: Restricted Access → Mail Send (Full Access)
+ - Copy key immediately (shown only once)
 
 ## Verification
 
@@ -290,8 +290,8 @@ grep SENDGRID .env.local
 
 # Test email sending (replace with your test email)
 curl -X POST http://localhost:3000/api/test-email \
-  -H "Content-Type: application/json" \
-  -d '{"to": "your@email.com"}'
+ -H "Content-Type: application/json" \
+ -d '{"to": "your@email.com"}'
 ```
 
 ---

@@ -4,17 +4,17 @@ Esquema de base de datos implementado en **Google Sheets** con disciplina relaci
 
 ---
 
-## 🏗️ Arquitectura General
+## ️ Arquitectura General
 
 ### Backend: Google Sheets como Base de Datos
 
 **Decisión de diseño:** Usar la hoja **DATA-ENTRY** de Google Sheets como backend con estructura relacional estricta.
 
 **Ventajas:**
-- ✅ Facilidad operativa (no requiere servidor)
-- ✅ Accesibilidad inmediata
-- ✅ Prototipado rápido
-- ✅ Auditable visualmente
+- Facilidad operativa (no requiere servidor)
+- Accesibilidad inmediata
+- Prototipado rápido
+- Auditable visualmente
 
 **Disciplina impuesta:**
 - Tablas con encabezados fijos (fila 3)
@@ -40,13 +40,13 @@ Esquema de base de datos implementado en **Google Sheets** con disciplina relaci
 
 ---
 
-## 📊 Diagrama Entidad-Relación
+## Diagrama Entidad-Relación
 
 ![Database ER Diagram](database_er_diagram.png)
 
 ---
 
-## 📋 Tablas del Sistema
+## Tablas del Sistema
 
 ### 1. DB_MONEDAS (B3:D3)
 
@@ -189,12 +189,12 @@ Significa: 1 USD = 1050 ARS
 #### Regla de fx_id (Congelamiento de Tipo de Cambio)
 ```
 SI moneda_id = base_moneda_id (de DB_CONFIG):
-   fx_id puede ser nulo
-   monto_base = monto
+ fx_id puede ser nulo
+ monto_base = monto
 
 SI moneda_id ≠ base_moneda_id:
-   fx_id es OBLIGATORIO
-   monto_base = monto * tc (según fx_id)
+ fx_id es OBLIGATORIO
+ monto_base = monto * tc (según fx_id)
 ```
 
 **Otras Reglas:**
@@ -226,23 +226,23 @@ SI moneda_id ≠ base_moneda_id:
 
 ---
 
-## 🔗 Relaciones y Flujo de Datos
+## Relaciones y Flujo de Datos
 
 ### Modelo "Estrella"
 
 ```
-           DB_MONEDAS (centro)
-                  ↓
-        ┌─────────┼─────────┐
-        ↓         ↓         ↓
-  DB_TIPOS    DB_MEDIOS  DB_CONFIG
-  _CAMBIO     _PAGO
-        ↓         ↓         ↓
-        └─────────┼─────────┘
-                  ↓
-          DB_TRANSACCIONES (hechos)
-                  ↑
-            DB_CUENTAS
+ DB_MONEDAS (centro)
+ ↓
+ ┌─────────┼─────────┐
+ ↓ ↓ ↓
+ DB_TIPOS DB_MEDIOS DB_CONFIG
+ _CAMBIO _PAGO
+ ↓ ↓ ↓
+ └─────────┼─────────┘
+ ↓
+ DB_TRANSACCIONES (hechos)
+ ↑
+ DB_CUENTAS
 ```
 
 ### Claves Foráneas (FKs)
@@ -260,45 +260,45 @@ SI moneda_id ≠ base_moneda_id:
 
 ---
 
-## ✅ Reglas de Integridad
+## Reglas de Integridad
 
 ### Reglas de IDs
-- ❗ Todo `_id` de catálogo debe ser único y no nulo
-- ❗ No editar IDs una vez en producción
+- Todo `_id` de catálogo debe ser único y no nulo
+- No editar IDs una vez en producción
 
 ### Reglas de Montos
-- ❗ `monto` siempre > 0
-- ❗ `sentido` define dirección (no usar montos negativos)
+- `monto` siempre > 0
+- `sentido` define dirección (no usar montos negativos)
 
 ### Reglas de Moneda Base y fx_id
 
 **Condición 1:**
 ```
 SI DB_TRANSACCIONES.moneda_id = DB_CONFIG.base_moneda_id:
-   → fx_id puede ser vacío
-   → monto_base = monto
+ → fx_id puede ser vacío
+ → monto_base = monto
 ```
 
 **Condición 2:**
 ```
 SI DB_TRANSACCIONES.moneda_id ≠ DB_CONFIG.base_moneda_id:
-   → fx_id DEBE existir y ser válido
-   → monto_base = monto × tc (del fx_id)
+ → fx_id DEBE existir y ser válido
+ → monto_base = monto × tc (del fx_id)
 ```
 
 ### Reglas de Tipo de Cambio
-- ❗ `tc` > 0
-- ❗ `base_moneda_id` ≠ `quote_moneda_id`
-- ❗ Para misma fecha/par, diferentes filas por `fuente`
+- `tc` > 0
+- `base_moneda_id` ≠ `quote_moneda_id`
+- Para misma fecha/par, diferentes filas por `fuente`
 
 ### Reglas de Trazabilidad API
-- ❗ `fetched_at` obligatorio cuando `status=ok`
-- ❗ `raw_payload` recomendable para debugging
-- ❗ Solo `status=ok` se usa para conversiones
+- `fetched_at` obligatorio cuando `status=ok`
+- `raw_payload` recomendable para debugging
+- Solo `status=ok` se usa para conversiones
 
 ---
 
-## 📐 Enums (Valores Cerrados)
+## Enums (Valores Cerrados)
 
 Para mantener consistencia, estos campos deben tener valores controlados:
 
@@ -315,7 +315,7 @@ Para mantener consistencia, estos campos deben tener valores controlados:
 
 ---
 
-## 🎯 Casos de Uso Críticos
+## Casos de Uso Críticos
 
 ### Caso 1: Registro de Gasto en Moneda Extranjera
 
@@ -325,25 +325,25 @@ Para mantener consistencia, estos campos deben tener valores controlados:
 
 **Flujo:**
 1. Usuario registra transacción:
-   ```
-   monto: 50
-   moneda_id: USD
-   cuenta_id: "Comidas"
-   medio_id: "Visa"
-   ```
+ ```
+ monto: 50
+ moneda_id: USD
+ cuenta_id: "Comidas"
+ medio_id: "Visa"
+ ```
 
 2. Sistema busca último `fx_id` donde:
-   ```
-   base_moneda_id = ARS
-   quote_moneda_id = USD
-   status = ok
-   fuente = fuente_tc_preferida (de CONFIG)
-   ```
+ ```
+ base_moneda_id = ARS
+ quote_moneda_id = USD
+ status = ok
+ fuente = fuente_tc_preferida (de CONFIG)
+ ```
 
 3. Sistema calcula:
-   ```
-   monto_base = 50 × 1050 = 52,500 ARS
-   ```
+ ```
+ monto_base = 50 × 1050 = 52,500 ARS
+ ```
 
 4. Sistema guarda transacción con `fx_id` congelado
 
@@ -358,7 +358,7 @@ Para mantener consistencia, estos campos deben tener valores controlados:
 
 ---
 
-## 🔄 Próximos Pasos
+## Próximos Pasos
 
 ### Fase 1: Implementación en Sheets
 - [ ] Crear hoja DATA-ENTRY
@@ -377,6 +377,6 @@ Para mantener consistencia, estos campos deben tener valores controlados:
 
 ---
 
-**Versión del Schema**: 1.0  
-**Backend**: Google Sheets (DATA-ENTRY)  
+**Versión del Schema**: 1.0 
+**Backend**: Google Sheets (DATA-ENTRY) 
 **Última actualización**: 2026-01-17

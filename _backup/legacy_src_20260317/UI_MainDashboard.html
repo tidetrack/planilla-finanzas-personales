@@ -2,651 +2,651 @@
 <html lang="es">
 
 <head>
-    <base target="_top">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Tidetrack</title>
+ <base target="_top">
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Dashboard - Tidetrack</title>
 
-    <!-- GOOGLE FONTS -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+ <!-- GOOGLE FONTS -->
+ <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- MATERIAL SYMBOLS -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-        rel="stylesheet">
+ <!-- MATERIAL SYMBOLS -->
+ <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+ rel="stylesheet">
 
-    <!-- EMBEDDED CSS - Ocean Theme -->
-    <style>
-        /* ===== CSS VARIABLES ===== */
-        :root {
-            --ocean-bg: #eff2f9;
-            --ocean-card: #f4f7fc;
-            --ocean-primary: #39444d;
-            --ocean-secondary: #6e7f8d;
-            --ocean-border: #ffffff;
+ <!-- EMBEDDED CSS - Ocean Theme -->
+ <style>
+ /* ===== CSS VARIABLES ===== */
+ :root {
+ --ocean-bg: #eff2f9;
+ --ocean-card: #f4f7fc;
+ --ocean-primary: #39444d;
+ --ocean-secondary: #6e7f8d;
+ --ocean-border: #ffffff;
 
-            --accent-success: #27ae60;
-            --accent-error: #e74c3c;
-        }
+ --accent-success: #27ae60;
+ --accent-error: #e74c3c;
+ }
 
-        /* ===== RESET ===== */
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+ /* ===== RESET ===== */
+ *,
+ *::before,
+ *::after {
+ box-sizing: border-box;
+ margin: 0;
+ padding: 0;
+ }
 
-        html {
-            font-size: 16px;
-        }
+ html {
+ font-size: 16px;
+ }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #ffffff;
-            color: var(--ocean-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 1rem;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
+ body {
+ font-family: 'Inter', sans-serif;
+ background-color: #ffffff;
+ color: var(--ocean-primary);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ min-height: 100vh;
+ padding: 1rem;
+ -webkit-font-smoothing: antialiased;
+ -moz-osx-font-smoothing: grayscale;
+ }
 
-        button {
-            cursor: pointer;
-            border: none;
-            background: none;
-            font-family: inherit;
-        }
+ button {
+ cursor: pointer;
+ border: none;
+ background: none;
+ font-family: inherit;
+ }
 
-        /* ===== MAIN CONTAINER ===== */
-        .dashboard-container {
-            width: 1000px;
-            height: 800px;
-            background-color: var(--ocean-bg);
-            border-radius: 40px;
-            box-shadow: 0 40px 100px rgba(255, 255, 255, 0.15);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
-        }
+ /* ===== MAIN CONTAINER ===== */
+ .dashboard-container {
+ width: 1000px;
+ height: 800px;
+ background-color: var(--ocean-bg);
+ border-radius: 40px;
+ box-shadow: 0 40px 100px rgba(255, 255, 255, 0.15);
+ display: flex;
+ flex-direction: column;
+ position: relative;
+ overflow: hidden;
+ }
 
-        /* ===== HEADER ===== */
-        .dashboard-header {
-            padding: 3rem 3.5rem 2.5rem 3.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
+ /* ===== HEADER ===== */
+ .dashboard-header {
+ padding: 3rem 3.5rem 2.5rem 3.5rem;
+ display: flex;
+ justify-content: space-between;
+ align-items: flex-start;
+ }
 
-        .header-brand {
-            display: flex;
-            align-items: center;
-            gap: 1.25rem;
-        }
+ .header-brand {
+ display: flex;
+ align-items: center;
+ gap: 1.25rem;
+ }
 
-        .brand-icon {
-            width: 3.5rem;
-            height: 3.5rem;
-            border-radius: 24px;
-            background-color: var(--ocean-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 8px 20px rgba(57, 68, 77, 0.25);
-        }
+ .brand-icon {
+ width: 3.5rem;
+ height: 3.5rem;
+ border-radius: 24px;
+ background-color: var(--ocean-primary);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ box-shadow: 0 8px 20px rgba(57, 68, 77, 0.25);
+ }
 
-        .brand-icon .material-symbols-outlined {
-            color: var(--ocean-bg);
-            font-size: 2.25rem;
-        }
+ .brand-icon .material-symbols-outlined {
+ color: var(--ocean-bg);
+ font-size: 2.25rem;
+ }
 
-        .brand-text h1 {
-            font-size: 2.25rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            color: var(--ocean-primary);
-            line-height: 1.2;
-        }
+ .brand-text h1 {
+ font-size: 2.25rem;
+ font-weight: 700;
+ letter-spacing: -0.02em;
+ color: var(--ocean-primary);
+ line-height: 1.2;
+ }
 
-        .brand-text p {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--ocean-secondary);
-            letter-spacing: 0.02em;
-        }
+ .brand-text p {
+ font-size: 0.875rem;
+ font-weight: 500;
+ color: var(--ocean-secondary);
+ letter-spacing: 0.02em;
+ }
 
-        .header-controls {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding-top: 0.25rem;
-        }
+ .header-controls {
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+ padding-top: 0.25rem;
+ }
 
-        .custom-select-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
+ .custom-select-wrapper {
+ position: relative;
+ display: flex;
+ align-items: center;
+ }
 
-        .custom-select {
-            appearance: none;
-            background-color: var(--ocean-bg);
-            border: none;
-            box-shadow: 0 4px 12px rgba(158, 175, 195, 0.2);
-            border-radius: 9999px;
-            padding: 0.5rem 2.5rem 0.5rem 1.25rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--ocean-primary);
-            cursor: pointer;
-            font-family: 'Inter', sans-serif;
-            transition: all 0.2s ease;
-        }
+ .custom-select {
+ appearance: none;
+ background-color: var(--ocean-bg);
+ border: none;
+ box-shadow: 0 4px 12px rgba(158, 175, 195, 0.2);
+ border-radius: 9999px;
+ padding: 0.5rem 2.5rem 0.5rem 1.25rem;
+ font-size: 0.875rem;
+ font-weight: 600;
+ color: var(--ocean-primary);
+ cursor: pointer;
+ font-family: 'Inter', sans-serif;
+ transition: all 0.2s ease;
+ }
 
-        .custom-select:focus {
-            outline: none;
-            box-shadow: 0 4px 16px rgba(158, 175, 195, 0.35);
-        }
+ .custom-select:focus {
+ outline: none;
+ box-shadow: 0 4px 16px rgba(158, 175, 195, 0.35);
+ }
 
-        .custom-select:hover {
-            box-shadow: 0 6px 16px rgba(158, 175, 195, 0.3);
-        }
+ .custom-select:hover {
+ box-shadow: 0 6px 16px rgba(158, 175, 195, 0.3);
+ }
 
-        .custom-select-wrapper .material-symbols-outlined {
-            position: absolute;
-            right: 0.75rem;
-            color: var(--ocean-secondary);
-            pointer-events: none;
-            font-size: 1.25rem;
-        }
+ .custom-select-wrapper .material-symbols-outlined {
+ position: absolute;
+ right: 0.75rem;
+ color: var(--ocean-secondary);
+ pointer-events: none;
+ font-size: 1.25rem;
+ }
 
-        /* ===== CLOSE BUTTON ===== */
-        .close-btn {
-            position: absolute;
-            top: 2.5rem;
-            right: 2.5rem;
-            width: 2.5rem;
-            height: 2.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--ocean-secondary);
-            transition: color 0.2s ease;
-        }
+ /* ===== CLOSE BUTTON ===== */
+ .close-btn {
+ position: absolute;
+ top: 2.5rem;
+ right: 2.5rem;
+ width: 2.5rem;
+ height: 2.5rem;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ color: var(--ocean-secondary);
+ transition: color 0.2s ease;
+ }
 
-        .close-btn:hover {
-            color: var(--ocean-primary);
-        }
+ .close-btn:hover {
+ color: var(--ocean-primary);
+ }
 
-        .close-btn .material-symbols-outlined {
-            font-size: 1.5rem;
-        }
+ .close-btn .material-symbols-outlined {
+ font-size: 1.5rem;
+ }
 
-        /* ===== MAIN CONTENT ===== */
-        .dashboard-main {
-            flex: 1;
-            padding: 0 3.5rem 3.5rem 3.5rem;
-            display: flex;
-            flex-direction: column;
-        }
+ /* ===== MAIN CONTENT ===== */
+ .dashboard-main {
+ flex: 1;
+ padding: 0 3.5rem 3.5rem 3.5rem;
+ display: flex;
+ flex-direction: column;
+ }
 
-        /* ===== STATS SECTION ===== */
-        .stats-section {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
+ /* ===== STATS SECTION ===== */
+ .stats-section {
+ display: grid;
+ grid-template-columns: repeat(3, 1fr);
+ gap: 2rem;
+ margin-bottom: 3rem;
+ }
 
-        .stat-card {
-            background-color: var(--ocean-card);
-            padding: 2rem;
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(57, 68, 77, 0.08),
-                0 5px 15px rgba(57, 68, 77, 0.03),
-                inset 2px 2px 5px rgba(255, 255, 255, 0.8),
-                inset -2px -2px 5px rgba(158, 175, 195, 0.1);
-            border: none;
-        }
+ .stat-card {
+ background-color: var(--ocean-card);
+ padding: 2rem;
+ border-radius: 24px;
+ box-shadow: 0 20px 50px rgba(57, 68, 77, 0.08),
+ 0 5px 15px rgba(57, 68, 77, 0.03),
+ inset 2px 2px 5px rgba(255, 255, 255, 0.8),
+ inset -2px -2px 5px rgba(158, 175, 195, 0.1);
+ border: none;
+ }
 
-        .stat-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-        }
+ .stat-header {
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+ margin-bottom: 1.5rem;
+ }
 
-        .stat-header .material-symbols-outlined {
-            color: var(--ocean-secondary);
-            font-size: 1.25rem;
-        }
+ .stat-header .material-symbols-outlined {
+ color: var(--ocean-secondary);
+ font-size: 1.25rem;
+ }
 
-        .stat-label {
-            font-size: 0.6875rem;
-            font-weight: 700;
-            color: var(--ocean-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
+ .stat-label {
+ font-size: 0.6875rem;
+ font-weight: 700;
+ color: var(--ocean-secondary);
+ text-transform: uppercase;
+ letter-spacing: 0.1em;
+ }
 
-        .stat-value {
-            font-size: 2.25rem;
-            font-weight: 700;
-            color: var(--ocean-primary);
-            letter-spacing: -0.02em;
-            margin-bottom: 0.25rem;
-        }
+ .stat-value {
+ font-size: 2.25rem;
+ font-weight: 700;
+ color: var(--ocean-primary);
+ letter-spacing: -0.02em;
+ margin-bottom: 0.25rem;
+ }
 
-        .stat-trend {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--ocean-secondary);
-            opacity: 0.8;
-        }
+ .stat-trend {
+ font-size: 0.875rem;
+ font-weight: 500;
+ color: var(--ocean-secondary);
+ opacity: 0.8;
+ }
 
-        /* ===== ACTIONS SECTION ===== */
-        .actions-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
+ /* ===== ACTIONS SECTION ===== */
+ .actions-section {
+ flex: 1;
+ display: flex;
+ flex-direction: column;
+ }
 
-        .actions-title {
-            font-size: 0.875rem;
-            font-weight: 700;
-            color: var(--ocean-primary);
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            margin-bottom: 1.5rem;
-            opacity: 0.6;
-        }
+ .actions-title {
+ font-size: 0.875rem;
+ font-weight: 700;
+ color: var(--ocean-primary);
+ text-transform: uppercase;
+ letter-spacing: 0.15em;
+ margin-bottom: 1.5rem;
+ opacity: 0.6;
+ }
 
-        .actions-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 2rem;
-            flex: 1;
-        }
+ .actions-grid {
+ display: grid;
+ grid-template-columns: repeat(2, 1fr);
+ gap: 2rem;
+ flex: 1;
+ }
 
-        .action-tile {
-            background-color: var(--ocean-card);
-            padding: 2rem;
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(57, 68, 77, 0.08),
-                0 5px 15px rgba(57, 68, 77, 0.03),
-                inset 2px 2px 5px rgba(255, 255, 255, 0.8),
-                inset -2px -2px 5px rgba(158, 175, 195, 0.1);
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-            text-align: left;
-            transition: all 0.3s ease;
-            border: none;
-            width: 100%;
-        }
+ .action-tile {
+ background-color: var(--ocean-card);
+ padding: 2rem;
+ border-radius: 24px;
+ box-shadow: 0 20px 50px rgba(57, 68, 77, 0.08),
+ 0 5px 15px rgba(57, 68, 77, 0.03),
+ inset 2px 2px 5px rgba(255, 255, 255, 0.8),
+ inset -2px -2px 5px rgba(158, 175, 195, 0.1);
+ display: flex;
+ align-items: center;
+ gap: 2rem;
+ text-align: left;
+ transition: all 0.3s ease;
+ border: none;
+ width: 100%;
+ }
 
-        .action-tile:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 25px 60px rgba(57, 68, 77, 0.12),
-                0 8px 20px rgba(57, 68, 77, 0.05);
-        }
+ .action-tile:hover {
+ transform: translateY(-2px);
+ box-shadow: 0 25px 60px rgba(57, 68, 77, 0.12),
+ 0 8px 20px rgba(57, 68, 77, 0.05);
+ }
 
-        .action-tile:active {
-            transform: scale(0.98);
-        }
+ .action-tile:active {
+ transform: scale(0.98);
+ }
 
-        .action-icon-wrapper {
-            width: 4rem;
-            height: 4rem;
-            border-radius: 18px;
-            background-color: var(--ocean-bg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: inset 2px 2px 4px rgba(158, 175, 195, 0.2);
-            flex-shrink: 0;
-        }
+ .action-icon-wrapper {
+ width: 4rem;
+ height: 4rem;
+ border-radius: 18px;
+ background-color: var(--ocean-bg);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ box-shadow: inset 2px 2px 4px rgba(158, 175, 195, 0.2);
+ flex-shrink: 0;
+ }
 
-        .action-icon-wrapper .material-symbols-outlined {
-            color: var(--ocean-primary);
-            font-size: 1.875rem;
-        }
+ .action-icon-wrapper .material-symbols-outlined {
+ color: var(--ocean-primary);
+ font-size: 1.875rem;
+ }
 
-        .action-content h4 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--ocean-primary);
-            margin-bottom: 0.25rem;
-        }
+ .action-content h4 {
+ font-size: 1.25rem;
+ font-weight: 700;
+ color: var(--ocean-primary);
+ margin-bottom: 0.25rem;
+ }
 
-        .action-content p {
-            font-size: 0.875rem;
-            color: var(--ocean-secondary);
-            font-weight: 500;
-            line-height: 1.5;
-        }
+ .action-content p {
+ font-size: 0.875rem;
+ color: var(--ocean-secondary);
+ font-weight: 500;
+ line-height: 1.5;
+ }
 
-        /* ===== FOOTER ===== */
-        .dashboard-footer {
-            margin-top: 2.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.625rem;
-            font-weight: 700;
-            color: rgba(110, 127, 141, 0.6);
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-        }
+ /* ===== FOOTER ===== */
+ .dashboard-footer {
+ margin-top: 2.5rem;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ font-size: 0.625rem;
+ font-weight: 700;
+ color: rgba(110, 127, 141, 0.6);
+ letter-spacing: 0.2em;
+ text-transform: uppercase;
+ }
 
-        .footer-version {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+ .footer-version {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ }
 
-        .footer-dot {
-            width: 0.375rem;
-            height: 0.375rem;
-            border-radius: 50%;
-            background-color: var(--ocean-primary);
-        }
+ .footer-dot {
+ width: 0.375rem;
+ height: 0.375rem;
+ border-radius: 50%;
+ background-color: var(--ocean-primary);
+ }
 
-        .footer-security {
-            display: flex;
-            align-items: center;
-            gap: 0.375rem;
-        }
+ .footer-security {
+ display: flex;
+ align-items: center;
+ gap: 0.375rem;
+ }
 
-        .footer-security .material-symbols-outlined {
-            font-size: 0.875rem;
-        }
-    </style>
+ .footer-security .material-symbols-outlined {
+ font-size: 0.875rem;
+ }
+ </style>
 </head>
 
 <body>
-    <!-- MAIN DASHBOARD CONTAINER -->
-    <div class="dashboard-container">
-        <!-- HEADER -->
-        <header class="dashboard-header">
-            <div class="brand-text">
-                <h1>Tidetrack</h1>
-                <p>Tu control financiero personal</p>
-            </div>
+ <!-- MAIN DASHBOARD CONTAINER -->
+ <div class="dashboard-container">
+ <!-- HEADER -->
+ <header class="dashboard-header">
+ <div class="brand-text">
+ <h1>Tidetrack</h1>
+ <p>Tu control financiero personal</p>
+ </div>
 
-            <div class="header-controls">
-                <div class="custom-select-wrapper">
-                    <select id="currency-select" class="custom-select" onchange="loadDashboardData()">
-                        <!-- Populated by JS -->
-                    </select>
-                    <span class="material-symbols-outlined">expand_more</span>
-                </div>
+ <div class="header-controls">
+ <div class="custom-select-wrapper">
+ <select id="currency-select" class="custom-select" onchange="loadDashboardData()">
+ <!-- Populated by JS -->
+ </select>
+ <span class="material-symbols-outlined">expand_more</span>
+ </div>
 
-                <div class="custom-select-wrapper">
-                    <select id="month-select" class="custom-select" onchange="loadDashboardData()">
-                        <option value="0">Enero</option>
-                        <option value="1">Febrero</option>
-                        <option value="2">Marzo</option>
-                        <option value="3">Abril</option>
-                        <option value="4">Mayo</option>
-                        <option value="5">Junio</option>
-                        <option value="6">Julio</option>
-                        <option value="7">Agosto</option>
-                        <option value="8">Septiembre</option>
-                        <option value="9">Octubre</option>
-                        <option value="10">Noviembre</option>
-                        <option value="11">Diciembre</option>
-                    </select>
-                    <span class="material-symbols-outlined">expand_more</span>
-                </div>
+ <div class="custom-select-wrapper">
+ <select id="month-select" class="custom-select" onchange="loadDashboardData()">
+ <option value="0">Enero</option>
+ <option value="1">Febrero</option>
+ <option value="2">Marzo</option>
+ <option value="3">Abril</option>
+ <option value="4">Mayo</option>
+ <option value="5">Junio</option>
+ <option value="6">Julio</option>
+ <option value="7">Agosto</option>
+ <option value="8">Septiembre</option>
+ <option value="9">Octubre</option>
+ <option value="10">Noviembre</option>
+ <option value="11">Diciembre</option>
+ </select>
+ <span class="material-symbols-outlined">expand_more</span>
+ </div>
 
-                <div class="custom-select-wrapper">
-                    <select id="year-select" class="custom-select" onchange="loadDashboardData()">
-                        <!-- Options populated by JS -->
-                    </select>
-                    <span class="material-symbols-outlined">expand_more</span>
-                </div>
-            </div>
-        </header>
+ <div class="custom-select-wrapper">
+ <select id="year-select" class="custom-select" onchange="loadDashboardData()">
+ <!-- Options populated by JS -->
+ </select>
+ <span class="material-symbols-outlined">expand_more</span>
+ </div>
+ </div>
+ </header>
 
-        <!-- MAIN CONTENT -->
-        <main class="dashboard-main">
-            <!-- STATS SECTION -->
-            <section class="stats-section">
-                <!-- Saldo del Mes -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="material-symbols-outlined">account_balance_wallet</span>
-                        <p class="stat-label">Saldo del Mes</p>
-                    </div>
-                    <div>
-                        <div class="stat-value" id="stats-balance">---</div>
-                        <div class="stat-trend">Disponible para gastar</div>
-                    </div>
-                </div>
+ <!-- MAIN CONTENT -->
+ <main class="dashboard-main">
+ <!-- STATS SECTION -->
+ <section class="stats-section">
+ <!-- Saldo del Mes -->
+ <div class="stat-card">
+ <div class="stat-header">
+ <span class="material-symbols-outlined">account_balance_wallet</span>
+ <p class="stat-label">Saldo del Mes</p>
+ </div>
+ <div>
+ <div class="stat-value" id="stats-balance">---</div>
+ <div class="stat-trend">Disponible para gastar</div>
+ </div>
+ </div>
 
-                <!-- Ingresos del Mes -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="material-symbols-outlined">north_east</span>
-                        <p class="stat-label">Ingresos del Mes</p>
-                    </div>
-                    <div>
-                        <div class="stat-value" id="stats-income">---</div>
-                        <div class="stat-trend" id="stats-income-trend">---</div>
-                    </div>
-                </div>
+ <!-- Ingresos del Mes -->
+ <div class="stat-card">
+ <div class="stat-header">
+ <span class="material-symbols-outlined">north_east</span>
+ <p class="stat-label">Ingresos del Mes</p>
+ </div>
+ <div>
+ <div class="stat-value" id="stats-income">---</div>
+ <div class="stat-trend" id="stats-income-trend">---</div>
+ </div>
+ </div>
 
-                <!-- Gastos del Mes -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="material-symbols-outlined">south_east</span>
-                        <p class="stat-label">Gastos del Mes</p>
-                    </div>
-                    <div>
-                        <div class="stat-value" id="stats-expense">---</div>
-                        <div class="stat-trend" id="stats-expense-trend">---</div>
-                    </div>
-                </div>
-            </section>
+ <!-- Gastos del Mes -->
+ <div class="stat-card">
+ <div class="stat-header">
+ <span class="material-symbols-outlined">south_east</span>
+ <p class="stat-label">Gastos del Mes</p>
+ </div>
+ <div>
+ <div class="stat-value" id="stats-expense">---</div>
+ <div class="stat-trend" id="stats-expense-trend">---</div>
+ </div>
+ </div>
+ </section>
 
-            <!-- ACTIONS SECTION -->
-            <section class="actions-section">
-                <h2 class="actions-title">Acciones Rápidas</h2>
-                <div class="actions-grid">
-                    <!-- Nueva Transacción -->
-                    <button class="action-tile" onclick="openTransactionForm()">
-                        <div class="action-icon-wrapper">
-                            <span class="material-symbols-outlined">add_circle</span>
-                        </div>
-                        <div class="action-content">
-                            <h4>Nueva Transacción</h4>
-                            <p>Registra ingresos o egresos rápidamente.</p>
-                        </div>
-                    </button>
+ <!-- ACTIONS SECTION -->
+ <section class="actions-section">
+ <h2 class="actions-title">Acciones Rápidas</h2>
+ <div class="actions-grid">
+ <!-- Nueva Transacción -->
+ <button class="action-tile" onclick="openTransactionForm()">
+ <div class="action-icon-wrapper">
+ <span class="material-symbols-outlined">add_circle</span>
+ </div>
+ <div class="action-content">
+ <h4>Nueva Transacción</h4>
+ <p>Registra ingresos o egresos rápidamente.</p>
+ </div>
+ </button>
 
-                    <!-- Gestionar Cuentas -->
-                    <button class="action-tile" onclick="openCuentasManager()">
-                        <div class="action-icon-wrapper">
-                            <span class="material-symbols-outlined">category</span>
-                        </div>
-                        <div class="action-content">
-                            <h4>Gestionar Cuentas</h4>
-                            <p>Administra categorías y presupuestos.</p>
-                        </div>
-                    </button>
+ <!-- Gestionar Cuentas -->
+ <button class="action-tile" onclick="openCuentasManager()">
+ <div class="action-icon-wrapper">
+ <span class="material-symbols-outlined">category</span>
+ </div>
+ <div class="action-content">
+ <h4>Gestionar Cuentas</h4>
+ <p>Administra categorías y presupuestos.</p>
+ </div>
+ </button>
 
-                    <!-- Gestionar Medios de Pago -->
-                    <button class="action-tile" onclick="openMediosManager()">
-                        <div class="action-icon-wrapper">
-                            <span class="material-symbols-outlined">credit_card</span>
-                        </div>
-                        <div class="action-content">
-                            <h4>Gestionar Medios</h4>
-                            <p>Configura tarjetas, efectivo y cuentas.</p>
-                        </div>
-                    </button>
+ <!-- Gestionar Medios de Pago -->
+ <button class="action-tile" onclick="openMediosManager()">
+ <div class="action-icon-wrapper">
+ <span class="material-symbols-outlined">credit_card</span>
+ </div>
+ <div class="action-content">
+ <h4>Gestionar Medios</h4>
+ <p>Configura tarjetas, efectivo y cuentas.</p>
+ </div>
+ </button>
 
-                    <!-- Configuración -->
-                    <button class="action-tile" onclick="openConfig()">
-                        <div class="action-icon-wrapper">
-                            <span class="material-symbols-outlined">settings_suggest</span>
-                        </div>
-                        <div class="action-content">
-                            <h4>Configuración</h4>
-                            <p>Gestiona monedas y cotizaciones.</p>
-                        </div>
-                    </button>
-                </div>
-            </section>
+ <!-- Configuración -->
+ <button class="action-tile" onclick="openConfig()">
+ <div class="action-icon-wrapper">
+ <span class="material-symbols-outlined">settings_suggest</span>
+ </div>
+ <div class="action-content">
+ <h4>Configuración</h4>
+ <p>Gestiona monedas y cotizaciones.</p>
+ </div>
+ </button>
+ </div>
+ </section>
 
-            <!-- FOOTER -->
-            <footer class="dashboard-footer">
-            </footer>
-        </main>
-    </div>
+ <!-- FOOTER -->
+ <footer class="dashboard-footer">
+ </footer>
+ </main>
+ </div>
 
-    <!-- EMBEDDED JAVASCRIPT -->
-    <script>
-        // ===== INITIALIZATION =====
-        window.onload = function () {
-            // Populate year selector with current year and 2 years back
-            const currentYear = new Date().getFullYear();
-            const currentMonth = new Date().getMonth();
-            const yearSelect = document.getElementById('year-select');
+ <!-- EMBEDDED JAVASCRIPT -->
+ <script>
+ // ===== INITIALIZATION =====
+ window.onload = function () {
+ // Populate year selector with current year and 2 years back
+ const currentYear = new Date().getFullYear();
+ const currentMonth = new Date().getMonth();
+ const yearSelect = document.getElementById('year-select');
 
-            for (let i = 0; i <= 2; i++) {
-                const year = currentYear - i;
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                if (i === 0) option.selected = true;
-                yearSelect.appendChild(option);
-            }
+ for (let i = 0; i <= 2; i++) {
+ const year = currentYear - i;
+ const option = document.createElement('option');
+ option.value = year;
+ option.textContent = year;
+ if (i === 0) option.selected = true;
+ yearSelect.appendChild(option);
+ }
 
-            // Set current month as selected
-            document.getElementById('month-select').value = currentMonth;
+ // Set current month as selected
+ document.getElementById('month-select').value = currentMonth;
 
-            // Load dashboard data
-            loadDashboardData();
-        };
+ // Load dashboard data
+ loadDashboardData();
+ };
 
-        // ===== NAVIGATION =====
-        function openTransactionForm() {
-            google.script.run.showTransactionForm();
-        }
+ // ===== NAVIGATION =====
+ function openTransactionForm() {
+ google.script.run.showTransactionForm();
+ }
 
-        function openCuentasManager() {
-            google.script.run.showCuentasManager();
-        }
+ function openCuentasManager() {
+ google.script.run.showCuentasManager();
+ }
 
-        function openMediosManager() {
-            google.script.run.showMediosManager();
-        }
+ function openMediosManager() {
+ google.script.run.showMediosManager();
+ }
 
-        function openConfig() {
-            google.script.run.showConfig();
-        }
+ function openConfig() {
+ google.script.run.showConfig();
+ }
 
-        // ===== DATA LOADING =====
-        function loadDashboardData() {
-            // Get selected filters
-            const selectedMonth = parseInt(document.getElementById('month-select').value);
-            const selectedYear = parseInt(document.getElementById('year-select').value);
-            const selectedCurrency = document.getElementById('currency-select').value;
-            
-            // Show loading state
-            document.getElementById('stats-balance').textContent = '...';
+ // ===== DATA LOADING =====
+ function loadDashboardData() {
+ // Get selected filters
+ const selectedMonth = parseInt(document.getElementById('month-select').value);
+ const selectedYear = parseInt(document.getElementById('year-select').value);
+ const selectedCurrency = document.getElementById('currency-select').value;
+ 
+ // Show loading state
+ document.getElementById('stats-balance').textContent = '...';
 
-            google.script.run
-                .withSuccessHandler(onDataLoaded)
-                .withFailureHandler(onError)
-                .getDashboardStats(selectedYear, selectedMonth, selectedCurrency);
-        }
+ google.script.run
+ .withSuccessHandler(onDataLoaded)
+ .withFailureHandler(onError)
+ .getDashboardStats(selectedYear, selectedMonth, selectedCurrency);
+ }
 
-        function onDataLoaded(data) {
-            console.log('Dashboard data loaded:', data);
+ function onDataLoaded(data) {
+ console.log('Dashboard data loaded:', data);
 
-            // Populate Currency Select if empty (first load)
-            const currSelect = document.getElementById('currency-select');
-            if (currSelect.options.length === 0) {
-                // Add base currency
-                const baseOpt = document.createElement('option');
-                baseOpt.value = data.baseCurrency;
-                baseOpt.textContent = data.baseCurrency;
-                currSelect.appendChild(baseOpt);
+ // Populate Currency Select if empty (first load)
+ const currSelect = document.getElementById('currency-select');
+ if (currSelect.options.length === 0) {
+ // Add base currency
+ const baseOpt = document.createElement('option');
+ baseOpt.value = data.baseCurrency;
+ baseOpt.textContent = data.baseCurrency;
+ currSelect.appendChild(baseOpt);
 
-                // Add available currencies
-                data.availableCurrencies.forEach(c => {
-                    if (c !== data.baseCurrency) {
-                        const opt = document.createElement('option');
-                        opt.value = c;
-                        opt.textContent = c;
-                        currSelect.appendChild(opt);
-                    }
-                });
-                
-                // Set selected currency (if returned in data payload)
-                if (data.displayCurrency) {
-                    currSelect.value = data.displayCurrency;
-                }
-            }
+ // Add available currencies
+ data.availableCurrencies.forEach(c => {
+ if (c !== data.baseCurrency) {
+ const opt = document.createElement('option');
+ opt.value = c;
+ opt.textContent = c;
+ currSelect.appendChild(opt);
+ }
+ });
+ 
+ // Set selected currency (if returned in data payload)
+ if (data.displayCurrency) {
+ currSelect.value = data.displayCurrency;
+ }
+ }
 
-            // Update stats
-            document.getElementById('stats-balance').textContent = formatMoney(data.balance, data.displayCurrency);
+ // Update stats
+ document.getElementById('stats-balance').textContent = formatMoney(data.balance, data.displayCurrency);
 
-            document.getElementById('stats-income').textContent = formatMoney(data.incomeMonth, data.displayCurrency);
-            document.getElementById('stats-income-trend').textContent = data.incomeCount + ' mov' + (data.incomeCount !== 1 ? 's' : '');
+ document.getElementById('stats-income').textContent = formatMoney(data.incomeMonth, data.displayCurrency);
+ document.getElementById('stats-income-trend').textContent = data.incomeCount + ' mov' + (data.incomeCount !== 1 ? 's' : '');
 
-            document.getElementById('stats-expense').textContent = formatMoney(data.expenseMonth, data.displayCurrency);
-            document.getElementById('stats-expense-trend').textContent = data.expenseCount + ' mov' + (data.expenseCount !== 1 ? 's' : '');
-            
-            // Adjust header font size if currency symbol is long
-            const balanceEl = document.getElementById('stats-balance');
-            balanceEl.style.fontSize = data.displayCurrency.length > 3 ? '1.75rem' : '2.25rem';
-        }
+ document.getElementById('stats-expense').textContent = formatMoney(data.expenseMonth, data.displayCurrency);
+ document.getElementById('stats-expense-trend').textContent = data.expenseCount + ' mov' + (data.expenseCount !== 1 ? 's' : '');
+ 
+ // Adjust header font size if currency symbol is long
+ const balanceEl = document.getElementById('stats-balance');
+ balanceEl.style.fontSize = data.displayCurrency.length > 3 ? '1.75rem' : '2.25rem';
+ }
 
-        function onError(error) {
-            console.error('Dashboard error:', error);
+ function onError(error) {
+ console.error('Dashboard error:', error);
 
-            // Update stats with error state
-            const statIds = ['stats-balance', 'stats-income', 'stats-expense'];
-            statIds.forEach(id => {
-                document.getElementById(id).textContent = 'Error';
-            });
-            alert('Error cargando dashboard: ' + error.message);
-        }
+ // Update stats with error state
+ const statIds = ['stats-balance', 'stats-income', 'stats-expense'];
+ statIds.forEach(id => {
+ document.getElementById(id).textContent = 'Error';
+ });
+ alert('Error cargando dashboard: ' + error.message);
+ }
 
 
-        // ===== NAVIGATION =====
-        function openTransactionModal() {
-            google.script.run.showTransactionForm();
-        }
+ // ===== NAVIGATION =====
+ function openTransactionModal() {
+ google.script.run.showTransactionForm();
+ }
 
-        function openCuentasManager() {
-            google.script.run.showCuentasManager();
-        }
+ function openCuentasManager() {
+ google.script.run.showCuentasManager();
+ }
 
-        function openMediosManager() {
-            google.script.run.showMediosManager();
-        }
+ function openMediosManager() {
+ google.script.run.showMediosManager();
+ }
 
-        function openConfig() {
-            google.script.run.showConfig();
-        }
+ function openConfig() {
+ google.script.run.showConfig();
+ }
 
-        // ===== HELPERS =====
-        function formatMoney(amount, currency = 'ARS') {
-            return new Intl.NumberFormat('es-AR', {
-                style: 'currency',
-                currency: currency
-            }).format(amount);
-        }
-    </script>
+ // ===== HELPERS =====
+ function formatMoney(amount, currency = 'ARS') {
+ return new Intl.NumberFormat('es-AR', {
+ style: 'currency',
+ currency: currency
+ }).format(amount);
+ }
+ </script>
 </body>
 
 </html>

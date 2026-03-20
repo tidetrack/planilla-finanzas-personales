@@ -31,13 +31,13 @@ git diff canary...HEAD -- packages/next/src/
 
 Look for changes in these areas:
 
-| Source Path                            | Likely Doc Impact           |
+| Source Path | Likely Doc Impact |
 | -------------------------------------- | --------------------------- |
-| `packages/next/src/client/components/` | Component API reference     |
-| `packages/next/src/server/`            | Function API reference      |
-| `packages/next/src/shared/lib/`        | Varies by export            |
-| `packages/next/src/build/`             | Configuration or build docs |
-| `packages/next/src/lib/`               | Various features            |
+| `packages/next/src/client/components/` | Component API reference |
+| `packages/next/src/server/` | Function API reference |
+| `packages/next/src/shared/lib/` | Varies by export |
+| `packages/next/src/build/` | Configuration or build docs |
+| `packages/next/src/lib/` | Various features |
 
 ### Step 3: Map to documentation files
 
@@ -92,8 +92,8 @@ Edit the App Router source, not the Pages Router file.
 ### Step 5: Validate changes
 
 ```bash
-pnpm lint          # Check formatting
-pnpm prettier-fix  # Auto-fix formatting issues
+pnpm lint # Check formatting
+pnpm prettier-fix # Auto-fix formatting issues
 ```
 
 ## Workflow: Scaffold New Feature Documentation
@@ -102,13 +102,13 @@ Use this when adding documentation for entirely new features.
 
 ### Step 1: Determine the doc type
 
-| Feature Type        | Doc Location                                        | Template         |
+| Feature Type | Doc Location | Template |
 | ------------------- | --------------------------------------------------- | ---------------- |
-| New component       | `docs/01-app/03-api-reference/02-components/`       | API Reference    |
-| New function        | `docs/01-app/03-api-reference/04-functions/`        | API Reference    |
-| New config option   | `docs/01-app/03-api-reference/05-config/`           | Config Reference |
-| New concept/guide   | `docs/01-app/02-guides/`                            | Guide            |
-| New file convention | `docs/01-app/03-api-reference/03-file-conventions/` | File Convention  |
+| New component | `docs/01-app/03-api-reference/02-components/` | API Reference |
+| New function | `docs/01-app/03-api-reference/04-functions/` | API Reference |
+| New config option | `docs/01-app/03-api-reference/05-config/` | Config Reference |
+| New concept/guide | `docs/01-app/02-guides/` | Guide |
+| New file convention | `docs/01-app/03-api-reference/03-file-conventions/` | File Convention |
 
 ### Step 2: Create the file with proper naming
 
@@ -136,7 +136,7 @@ Brief introduction to the feature.
 
 <div style={{ overflowX: 'auto', width: '100%' }}>
 
-| Prop                    | Example            | Type   | Status   |
+| Prop | Example | Type | Status |
 | ----------------------- | ------------------ | ------ | -------- |
 | [`propName`](#propname) | `propName="value"` | String | Required |
 
@@ -193,11 +193,11 @@ Update frontmatter with related documentation:
 
 ```yaml
 related:
-  title: Next Steps
-  description: Learn more about related features.
-  links:
-    - app/api-reference/functions/related-function
-    - app/guides/related-guide
+ title: Next Steps
+ description: Learn more about related features.
+ links:
+ - app/api-reference/functions/related-function
+ - app/guides/related-guide
 ```
 
 ## Documentation Conventions

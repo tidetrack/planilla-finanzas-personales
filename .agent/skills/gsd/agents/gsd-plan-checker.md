@@ -27,42 +27,42 @@ Early verification prevents:
 
 <process>
 1. Read checker context from orchestrator prompt:
-   - Phase number and goal
-   - Plans to verify (inlined content)
-   - Requirements (if exists)
+ - Phase number and goal
+ - Plans to verify (inlined content)
+ - Requirements (if exists)
 
 2. Verify completeness:
-   - Do plans cover all phase requirements?
-   - Are success criteria addressable?
-   - Are dependencies correctly identified?
-   - Do waves make sense?
+ - Do plans cover all phase requirements?
+ - Are success criteria addressable?
+ - Are dependencies correctly identified?
+ - Do waves make sense?
 
 3. Verify quality:
-   - Are tasks specific enough?
-   - Are verification steps adequate?
-   - Are must_haves testable?
-   - Will execution know when done?
+ - Are tasks specific enough?
+ - Are verification steps adequate?
+ - Are must_haves testable?
+ - Will execution know when done?
 
 4. Verify executability:
-   - Can tasks be executed independently?
-   - Are dependencies achievable?
-   - Are instructions clear?
-   - Are edge cases handled?
+ - Can tasks be executed independently?
+ - Are dependencies achievable?
+ - Are instructions clear?
+ - Are edge cases handled?
 
 5. Return result:
-   ```
-   ## VERIFICATION PASSED
+ ```
+ ## VERIFICATION PASSED
 
-   All checks pass. Plans are ready for execution.
-   ```
+ All checks pass. Plans are ready for execution.
+ ```
 
-   OR
+ OR
 
-   ```
-   ## ISSUES FOUND
+ ```
+ ## ISSUES FOUND
 
-   [Structured list of issues]
-   ```
+ [Structured list of issues]
+ ```
 </process>
 
 <quality_gates>
@@ -219,18 +219,18 @@ Found 4 issues requiring revision:
 
 ### Coverage Issues (1)
 - Requirement AUTH-03 (password reset) not covered by any plan
-  Fix: Add plan or task for password reset
+ Fix: Add plan or task for password reset
 
 ### Dependency Issues (1)
 - Plan 03 (Wave 1) depends on Plan 02 (Wave 2)
-  Fix: Move Plan 03 to Wave 2 or remove dependency
+ Fix: Move Plan 03 to Wave 2 or remove dependency
 
 ### Task Quality Issues (2)
 - Plan 02, Task 1: "Implement authentication" too vague
-  Fix: Specify endpoint, validation, storage details
-  
+ Fix: Specify endpoint, validation, storage details
+ 
 - Plan 04: must_have "System is secure" not testable
-  Fix: Make specific - "Passwords bcrypt hashed", "SQL injection prevented"
+ Fix: Make specific - "Passwords bcrypt hashed", "SQL injection prevented"
 
 Send back to planner for revision.
 ```
@@ -241,10 +241,10 @@ This agent is spawned after planner creates plans:
 
 ```
 Task(
-  prompt=checker_prompt,
-  subagent_type="gsd-plan-checker",
-  model="{checker_model}",
-  description="Verify Phase {phase} plans"
+ prompt=checker_prompt,
+ subagent_type="gsd-plan-checker",
+ model="{checker_model}",
+ description="Verify Phase {phase} plans"
 )
 ```
 

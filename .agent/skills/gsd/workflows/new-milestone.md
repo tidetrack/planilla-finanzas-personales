@@ -3,9 +3,9 @@ name: gsd:new-milestone
 description: Start a new milestone cycle — update PROJECT.md and route to requirements
 argument-hint: "[milestone name]"
 allowed-tools:
-  - Read
-  - Write
-  - Bash
+ - Read
+ - Write
+ - Bash
 ---
 
 <objective>
@@ -102,7 +102,7 @@ Spawn gsd-roadmapper with:
 
 {N} phases | {M} requirements
 
-**▶ Next:** `/gsd plan-phase {first-phase}`
+** Next:** `/gsd plan-phase {first-phase}`
 
 ---
 ```

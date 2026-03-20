@@ -3,10 +3,10 @@ name: gsd:remove-phase
 description: Remove a future phase from roadmap and renumber subsequent phases
 argument-hint: "<phase-number>"
 allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Glob
+ - Read
+ - Write
+ - Bash
+ - Glob
 ---
 
 <objective>
@@ -20,9 +20,9 @@ Git commit serves as historical record.
 
 ```bash
 if [ -z "$ARGUMENTS" ]; then
-  echo "ERROR: Phase number required"
-  echo "Usage: /gsd remove-phase <phase-number>"
-  exit 1
+ echo "ERROR: Phase number required"
+ echo "Usage: /gsd remove-phase <phase-number>"
+ exit 1
 fi
 TARGET=$ARGUMENTS
 ```
@@ -31,8 +31,8 @@ TARGET=$ARGUMENTS
 
 ```bash
 grep -q "Phase ${TARGET}:" .planning/ROADMAP.md || {
-  echo "ERROR: Phase ${TARGET} not found"
-  exit 1
+ echo "ERROR: Phase ${TARGET} not found"
+ exit 1
 }
 ```
 
@@ -42,8 +42,8 @@ grep -q "Phase ${TARGET}:" .planning/ROADMAP.md || {
 # Get current phase from STATE.md
 CURRENT=$(grep "Phase:" .planning/STATE.md | grep -oE "[0-9]+" | head -1)
 if [ "$TARGET" -le "$CURRENT" ]; then
-  echo "ERROR: Can only remove future phases (current: $CURRENT)"
-  exit 1
+ echo "ERROR: Can only remove future phases (current: $CURRENT)"
+ exit 1
 fi
 ```
 
@@ -51,8 +51,8 @@ fi
 
 ```bash
 if ls .planning/phases/${TARGET}-*/*-SUMMARY.md 2>/dev/null | grep -q .; then
-  echo "ERROR: Phase has completed work (SUMMARY.md exists)"
-  exit 1
+ echo "ERROR: Phase has completed work (SUMMARY.md exists)"
+ exit 1
 fi
 ```
 
@@ -82,7 +82,7 @@ For each phase > TARGET (in reverse order):
 ```bash
 # Rename directories: 18 → 17, 19 → 18, etc.
 for dir in $(ls -d .planning/phases/*/ | sort -rV); do
-  # Extract phase number, rename if > TARGET
+ # Extract phase number, rename if > TARGET
 done
 ```
 
@@ -114,7 +114,7 @@ git commit -m "chore: remove phase ${TARGET} (${PHASE_NAME})"
 
 Commit: chore: remove phase {TARGET}
 
-**▶ Next:** `/gsd progress`
+** Next:** `/gsd progress`
 
 ---
 ```

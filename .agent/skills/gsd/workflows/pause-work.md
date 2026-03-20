@@ -2,9 +2,9 @@
 name: gsd:pause-work
 description: Create context handoff when pausing work mid-phase
 allowed-tools:
-  - Read
-  - Write
-  - Bash
+ - Read
+ - Write
+ - Bash
 ---
 
 <objective>
@@ -100,8 +100,8 @@ Be specific enough for a fresh Claude to understand immediately.
 COMMIT_PLANNING_DOCS=$(cat .planning/config.json 2>/dev/null | grep -o '"commit_docs"[[:space:]]*:[[:space:]]*[^,}]*' | grep -o 'true\|false' || echo "true")
 
 if [ "$COMMIT_PLANNING_DOCS" = "true" ]; then
-  git add ".planning/phases/${PHASE_NAME}/.continue-here.md"
-  git commit -m "wip: ${PHASE_NAME} paused at task ${TASK}/${TOTAL}"
+ git add ".planning/phases/${PHASE_NAME}/.continue-here.md"
+ git commit -m "wip: ${PHASE_NAME} paused at task ${TASK}/${TOTAL}"
 fi
 ```
 

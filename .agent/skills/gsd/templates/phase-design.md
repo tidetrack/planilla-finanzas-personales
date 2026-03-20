@@ -2,14 +2,14 @@
 name: phase-design-template
 description: Template for phase-specific UI design documentation
 used_by:
-  - discuss-design
+ - discuss-design
 placeholders:
-  - phase_number
-  - phase_name
-  - components
-  - layouts
-  - interactions
-  - mockup_files
+ - phase_number
+ - phase_name
+ - components
+ - layouts
+ - interactions
+ - mockup_files
 ---
 
 <template>

@@ -4,15 +4,15 @@ Instrucciones paso a paso para testear el sistema modular antes de avanzar al Sp
 
 ---
 
-## 📋 Pre-requisitos
+## Pre-requisitos
 
-- ✅ Google Sheet creado con hoja llamada **DATA-ENTRY**
-- ✅ Encabezados en fila 3 de cada tabla (ver DATABASE_SCHEMA.md)
-- ✅ Apps Script project vinculado al Sheet
+- Google Sheet creado con hoja llamada **DATA-ENTRY**
+- Encabezados en fila 3 de cada tabla (ver DATABASE_SCHEMA.md)
+- Apps Script project vinculado al Sheet
 
 ---
 
-## 🚀 Paso 1: Deploy de Código a Apps Script
+## Paso 1: Deploy de Código a Apps Script
 
 ### 1.1 Abrir Apps Script Editor
 
@@ -26,43 +26,43 @@ Instrucciones paso a paso para testear el sistema modular antes de avanzar al Sp
 
 #### A) Manifest (appsscript.json)
 
-1. En Apps Script, click en **⚙️ Project Settings** (lado izquierdo)
+1. En Apps Script, click en **️ Project Settings** (lado izquierdo)
 2. Marca checkbox: **"Show appsscript.json manifest file"**
 3. Vuelve a **Editor** (icono < >)
 4. Click en `appsscript.json`
 5. **Reemplaza** todo el contenido con:
-   ```
-   Copiar contenido de: src/appsscript.json
-   ```
+ ```
+ Copiar contenido de: src/appsscript.json
+ ```
 
 #### B) Archivos de Código (.js)
 
 Para cada archivo, crear nuevo y copiar contenido:
 
 1. **00_Config.js**
-   - Click en **+** junto a "Files"
-   - Nombre: `00_Config`
-   - Copiar contenido de `src/00_Config.js`
-   
+ - Click en **+** junto a "Files"
+ - Nombre: `00_Config`
+ - Copiar contenido de `src/00_Config.js`
+ 
 2. **01_Version.js**
-   - Nuevo archivo: `01_Version`
-   - Copiar contenido de `src/01_Version.js`
-   
+ - Nuevo archivo: `01_Version`
+ - Copiar contenido de `src/01_Version.js`
+ 
 3. **02_Utils.js**
-   - Nuevo archivo: `02_Utils`
-   - Copiar contenido de `src/02_Utils.js`
-   
+ - Nuevo archivo: `02_Utils`
+ - Copiar contenido de `src/02_Utils.js`
+ 
 4. **03_SheetManager.js**
-   - Nuevo archivo: `03_SheetManager`
-   - Copiar contenido de `src/03_SheetManager.js`
-   
+ - Nuevo archivo: `03_SheetManager`
+ - Copiar contenido de `src/03_SheetManager.js`
+ 
 5. **04_DataValidation.js**
-   - Nuevo archivo: `04_DataValidation`
-   - Copiar contenido de `src/04_DataValidation.js`
-   
+ - Nuevo archivo: `04_DataValidation`
+ - Copiar contenido de `src/04_DataValidation.js`
+ 
 6. **05_MonedaService.js**
-   - Nuevo archivo: `05_MonedaService`
-   - Copiar contenido de `src/05_MonedaService.js`
+ - Nuevo archivo: `05_MonedaService`
+ - Copiar contenido de `src/05_MonedaService.js`
 
 #### C) Eliminar Code.gs (opcional)
 
@@ -71,12 +71,12 @@ Para cada archivo, crear nuevo y copiar contenido:
 
 ### 1.3 Guardar Proyecto
 
-1. Click en **💾 Save project**
+1. Click en ** Save project**
 2. Nombre del proyecto: `Tidetrack v0.1.0`
 
 ---
 
-## 🧪 Paso 2: Tests Unitarios
+## Paso 2: Tests Unitarios
 
 ### Test 1: Verificar Versión
 
@@ -84,7 +84,7 @@ Para cada archivo, crear nuevo y copiar contenido:
 
 **Pasos:**
 1. En Apps Script Editor, selecciona función: `logVersionInfo`
-2. Click en **▶️ Run**
+2. Click en **️ Run**
 3. Autoriza permisos si es la primera vez
 
 **Resultado Esperado:**
@@ -97,7 +97,7 @@ Fecha: 2026-01-17
 ==================================================
 ```
 
-**✅ Criterio de Éxito:** Se muestra la información de versión sin errores.
+** Criterio de Éxito:** Se muestra la información de versión sin errores.
 
 ---
 
@@ -107,13 +107,13 @@ Fecha: 2026-01-17
 
 **Pasos:**
 1. Crea una función temporal en cualquier archivo:
-   ```javascript
-   function testSheetAccess() {
-     const sheet = getSheet();
-     Logger.log(`Hoja encontrada: ${sheet.getName()}`);
-     Logger.log(`Total filas: ${sheet.getLastRow()}`);
-   }
-   ```
+ ```javascript
+ function testSheetAccess() {
+ const sheet = getSheet();
+ Logger.log(`Hoja encontrada: ${sheet.getName()}`);
+ Logger.log(`Total filas: ${sheet.getLastRow()}`);
+ }
+ ```
 2. Ejecuta `testSheetAccess`
 
 **Resultado Esperado:**
@@ -122,9 +122,9 @@ Hoja encontrada: DATA-ENTRY
 Total filas: 3 (o más si ya tiene datos)
 ```
 
-**✅ Criterio de Éxito:** No hay error "Hoja DATA-ENTRY no encontrada".
+** Criterio de Éxito:** No hay error "Hoja DATA-ENTRY no encontrada".
 
-**❌ Si falla:** Verifica que tu hoja se llama exactamente `DATA-ENTRY` (case-sensitive).
+** Si falla:** Verifica que tu hoja se llama exactamente `DATA-ENTRY` (case-sensitive).
 
 ---
 
@@ -134,15 +134,15 @@ Total filas: 3 (o más si ya tiene datos)
 
 **Pasos:**
 1. Función temporal:
-   ```javascript
-   function testGenerateId() {
-     const id1 = generateId();
-     const id2 = generateId();
-     Logger.log(`ID 1: ${id1}`);
-     Logger.log(`ID 2: ${id2}`);
-     Logger.log(`¿Son diferentes?: ${id1 !== id2}`);
-   }
-   ```
+ ```javascript
+ function testGenerateId() {
+ const id1 = generateId();
+ const id2 = generateId();
+ Logger.log(`ID 1: ${id1}`);
+ Logger.log(`ID 2: ${id2}`);
+ Logger.log(`¿Son diferentes?: ${id1 !== id2}`);
+ }
+ ```
 2. Ejecuta `testGenerateId`
 
 **Resultado Esperado:**
@@ -152,7 +152,7 @@ ID 2: 20260117230500-5678
 ¿Son diferentes?: true
 ```
 
-**✅ Criterio de Éxito:** IDs son únicos y tienen formato correcto.
+** Criterio de Éxito:** IDs son únicos y tienen formato correcto.
 
 ---
 
@@ -162,34 +162,34 @@ ID 2: 20260117230500-5678
 
 **Pasos:**
 1. Función temporal:
-   ```javascript
-   function testEnumValidation() {
-     try {
-       // Válido
-       validateEnum('Ingreso', ENUM_SENTIDO, 'sentido');
-       Logger.log('✅ Ingreso es válido');
-       
-       // Inválido
-       validateEnum('Salida', ENUM_SENTIDO, 'sentido');
-       Logger.log('❌ Salida NO debería ser válido');
-     } catch (e) {
-       Logger.log(`✅ Error esperado: ${e.message}`);
-     }
-   }
-   ```
+ ```javascript
+ function testEnumValidation() {
+ try {
+ // Válido
+ validateEnum('Ingreso', ENUM_SENTIDO, 'sentido');
+ Logger.log(' Ingreso es válido');
+ 
+ // Inválido
+ validateEnum('Salida', ENUM_SENTIDO, 'sentido');
+ Logger.log(' Salida NO debería ser válido');
+ } catch (e) {
+ Logger.log(` Error esperado: ${e.message}`);
+ }
+ }
+ ```
 2. Ejecuta `testEnumValidation`
 
 **Resultado Esperado:**
 ```
-✅ Ingreso es válido
-✅ Error esperado: Valor no permitido. Valores válidos: sentido...
+ Ingreso es válido
+ Error esperado: Valor no permitido. Valores válidos: sentido...
 ```
 
-**✅ Criterio de Éxito:** El valor válido pasa, el inválido lanza error.
+** Criterio de Éxito:** El valor válido pasa, el inválido lanza error.
 
 ---
 
-## 📊 Paso 3: Test de Integración - Monedas
+## Paso 3: Test de Integración - Monedas
 
 ### Test 5: Inicializar Monedas Básicas
 
@@ -217,21 +217,21 @@ ID 2: 20260117230500-5678
 Iniciando setup completo del sistema
 ==================================================
 Paso 1/2: Inicializando monedas...
-✅ SUCCESS: Monedas básicas inicializadas: ARS, USD, EUR
+ SUCCESS: Monedas básicas inicializadas: ARS, USD, EUR
 Paso 2/2: Inicializando configuración...
-✅ SUCCESS: Config inicializada: base=ARS, fuente=oficial
+ SUCCESS: Config inicializada: base=ARS, fuente=oficial
 ==================================================
-✅ Setup completo finalizado exitosamente
+ Setup completo finalizado exitosamente
 ==================================================
 ```
 
-**✅ Criterio de Éxito:** 
+** Criterio de Éxito:** 
 - Las 3 monedas aparecen en filas 4, 5, 6 (columnas B:D)
 - Config aparece en fila 4 (columnas AO:AQ)
 - Toast se muestra en Sheet
 - No hay errores en log
 
-**⚠️ NOTA:** `setupCompleto()` inicializa TANTO monedas como configuración en un solo paso.
+**️ NOTA:** `setupCompleto()` inicializa TANTO monedas como configuración en un solo paso.
 
 ---
 
@@ -241,11 +241,11 @@ Paso 2/2: Inicializando configuración...
 
 **Pasos:**
 1. Función temporal:
-   ```javascript
-   function testCreateMoneda() {
-     createMoneda('BRL', 'Real brasileño', 'R$');
-   }
-   ```
+ ```javascript
+ function testCreateMoneda() {
+ createMoneda('BRL', 'Real brasileño', 'R$');
+ }
+ ```
 2. Ejecuta `testCreateMoneda`
 
 **Resultado Esperado en Sheet:**
@@ -259,10 +259,10 @@ Paso 2/2: Inicializando configuración...
 
 **Resultado Esperado en Log:**
 ```
-✅ SUCCESS: Moneda creada: BRL - Real brasileño
+ SUCCESS: Moneda creada: BRL - Real brasileño
 ```
 
-**✅ Criterio de Éxito:** BRL aparece en fila 7 (después de EUR).
+** Criterio de Éxito:** BRL aparece en fila 7 (después de EUR).
 
 ---
 
@@ -272,24 +272,24 @@ Paso 2/2: Inicializando configuración...
 
 **Pasos:**
 1. Función temporal:
-   ```javascript
-   function testDuplicateValidation() {
-     try {
-       createMoneda('ARS', 'Peso', '$'); // ARS ya existe
-       Logger.log('❌ NO debería permitir duplicado');
-     } catch (e) {
-       Logger.log(`✅ Error esperado: ${e.message}`);
-     }
-   }
-   ```
+ ```javascript
+ function testDuplicateValidation() {
+ try {
+ createMoneda('ARS', 'Peso', '$'); // ARS ya existe
+ Logger.log(' NO debería permitir duplicado');
+ } catch (e) {
+ Logger.log(` Error esperado: ${e.message}`);
+ }
+ }
+ ```
 2. Ejecuta `testDuplicateValidation`
 
 **Resultado Esperado:**
 ```
-✅ Error esperado: ID duplicado: moneda_id = "ARS"
+ Error esperado: ID duplicado: moneda_id = "ARS"
 ```
 
-**✅ Criterio de Éxito:** El sistema rechaza el duplicado con error claro.
+** Criterio de Éxito:** El sistema rechaza el duplicado con error claro.
 
 ---
 
@@ -299,15 +299,15 @@ Paso 2/2: Inicializando configuración...
 
 **Pasos:**
 1. Función temporal:
-   ```javascript
-   function testGetAllMonedas() {
-     const monedas = getAllMonedas();
-     Logger.log(`Total monedas: ${monedas.length}`);
-     monedas.forEach(m => {
-       Logger.log(`- ${m.moneda_id}: ${m.nombre_moneda} (${m.simbolo})`);
-     });
-   }
-   ```
+ ```javascript
+ function testGetAllMonedas() {
+ const monedas = getAllMonedas();
+ Logger.log(`Total monedas: ${monedas.length}`);
+ monedas.forEach(m => {
+ Logger.log(`- ${m.moneda_id}: ${m.nombre_moneda} (${m.simbolo})`);
+ });
+ }
+ ```
 2. Ejecuta `testGetAllMonedas`
 
 **Resultado Esperado:**
@@ -319,7 +319,7 @@ Total monedas: 4
 - BRL: Real brasileño (R$)
 ```
 
-**✅ Criterio de Éxito:** Retorna las 4 monedas con datos correctos.
+** Criterio de Éxito:** Retorna las 4 monedas con datos correctos.
 
 ---
 
@@ -329,15 +329,15 @@ Total monedas: 4
 
 **Pasos:**
 1. Función temporal:
-   ```javascript
-   function testGetMonedaById() {
-     const usd = getMonedaById('USD');
-     Logger.log(`Moneda encontrada: ${JSON.stringify(usd)}`);
-     
-     const xxx = getMonedaById('XXX');
-     Logger.log(`Moneda inexistente: ${xxx}`);
-   }
-   ```
+ ```javascript
+ function testGetMonedaById() {
+ const usd = getMonedaById('USD');
+ Logger.log(`Moneda encontrada: ${JSON.stringify(usd)}`);
+ 
+ const xxx = getMonedaById('XXX');
+ Logger.log(`Moneda inexistente: ${xxx}`);
+ }
+ ```
 2. Ejecuta `testGetMonedaById`
 
 **Resultado Esperado:**
@@ -346,7 +346,7 @@ Moneda encontrada: {"moneda_id":"USD","nombre_moneda":"Dólar estadounidense","s
 Moneda inexistente: null
 ```
 
-**✅ Criterio de Éxito:** 
+** Criterio de Éxito:** 
 - USD se encuentra correctamente
 - XXX retorna null (no error)
 
@@ -358,20 +358,20 @@ Moneda inexistente: null
 
 **Pasos:**
 1. Función temporal:
-   ```javascript
-   function testUpdateMoneda() {
-     updateMoneda('BRL', 'Real de Brasil', 'R$');
-   }
-   ```
+ ```javascript
+ function testUpdateMoneda() {
+ updateMoneda('BRL', 'Real de Brasil', 'R$');
+ }
+ ```
 2. Ejecuta `testUpdateMoneda`
 3. Verifica en Sheet que BRL cambió de "Real brasileño" a "Real de Brasil"
 
 **Resultado Esperado en Log:**
 ```
-✅ SUCCESS: Moneda actualizada: BRL
+ SUCCESS: Moneda actualizada: BRL
 ```
 
-**✅ Criterio de Éxito:** El nombre se actualizó en la fila 7, columna C.
+** Criterio de Éxito:** El nombre se actualizó en la fila 7, columna C.
 
 ---
 
@@ -381,27 +381,27 @@ Moneda inexistente: null
 
 **Pasos:**
 1. Función temporal:
-   ```javascript
-   function testDeleteMoneda() {
-     deleteMoneda('BRL');
-   }
-   ```
+ ```javascript
+ function testDeleteMoneda() {
+ deleteMoneda('BRL');
+ }
+ ```
 2. Ejecuta `testDeleteMoneda`
 3. Verifica en Sheet que BRL desapareció
 
 **Resultado Esperado en Log:**
 ```
-ℹ️  INFO: ADVERTENCIA: Verificar manualmente que BRL no tenga referencias
-✅ SUCCESS: Moneda eliminada: BRL
+️ INFO: ADVERTENCIA: Verificar manualmente que BRL no tenga referencias
+ SUCCESS: Moneda eliminada: BRL
 ```
 
-**✅ Criterio de Éxito:** 
+** Criterio de Éxito:** 
 - BRL ya no está en la tabla
 - Solo quedan ARS, USD, EUR
 
 ---
 
-## 🎯 Paso 4: Verificación Final
+## Paso 4: Verificación Final
 
 ### Checklist de Validación
 
@@ -421,25 +421,25 @@ Marca cada item cuando esté confirmado:
 
 ---
 
-## ✅ Criterios de Aceptación del Sprint 0
+## Criterios de Aceptación del Sprint 0
 
 Para considerar el Sprint 0 completo y listo para Sprint 1:
 
 ### Funcional
-- ✅ Todas las funciones de MonedaService ejecutan sin errores
-- ✅ Datos se persisten correctamente en DATA-ENTRY
-- ✅ Validaciones funcionan (duplicados, enums, campos requeridos)
-- ✅ Toasts confirman operaciones exitosas
+- Todas las funciones de MonedaService ejecutan sin errores
+- Datos se persisten correctamente en DATA-ENTRY
+- Validaciones funcionan (duplicados, enums, campos requeridos)
+- Toasts confirman operaciones exitosas
 
 ### Técnico
-- ✅ No hay errores de sintaxis
-- ✅ No hay warnings en Apps Script Editor
-- ✅ Logging funciona correctamente
-- ✅ Arquitectura por capas respetada (Services usan SheetManager, no acceso directo)
+- No hay errores de sintaxis
+- No hay warnings en Apps Script Editor
+- Logging funciona correctamente
+- Arquitectura por capas respetada (Services usan SheetManager, no acceso directo)
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Error: "Hoja DATA-ENTRY no encontrada"
 
@@ -485,7 +485,7 @@ Para considerar el Sprint 0 completo y listo para Sprint 1:
 
 ---
 
-## 📝 Reporte de Testing
+## Reporte de Testing
 
 Después de completar los tests, documenta resultados:
 
@@ -499,19 +499,19 @@ Después de completar los tests, documenta resultados:
 
 | Test # | Nombre | Status | Notas |
 |--------|--------|--------|-------|
-| 1 | Verificar Versión | ⬜ Pass / ⬜ Fail | |
-| 2 | Acceso a Hoja | ⬜ Pass / ⬜ Fail | |
-| 3 | Generar ID | ⬜ Pass / ⬜ Fail | |
-| 4 | Validación Enums | ⬜ Pass / ⬜ Fail | |
-| 5 | Inicializar Monedas | ⬜ Pass / ⬜ Fail | |
-| 6 | Crear Moneda | ⬜ Pass / ⬜ Fail | |
-| 7 | Validar Duplicados | ⬜ Pass / ⬜ Fail | |
-| 8 | Get All Monedas | ⬜ Pass / ⬜ Fail | |
-| 9 | Get By ID | ⬜ Pass / ⬜ Fail | |
-| 10 | Update Moneda | ⬜ Pass / ⬜ Fail | |
-| 11 | Delete Moneda | ⬜ Pass / ⬜ Fail | |
+| 1 | Verificar Versión | Pass / Fail | |
+| 2 | Acceso a Hoja | Pass / Fail | |
+| 3 | Generar ID | Pass / Fail | |
+| 4 | Validación Enums | Pass / Fail | |
+| 5 | Inicializar Monedas | Pass / Fail | |
+| 6 | Crear Moneda | Pass / Fail | |
+| 7 | Validar Duplicados | Pass / Fail | |
+| 8 | Get All Monedas | Pass / Fail | |
+| 9 | Get By ID | Pass / Fail | |
+| 10 | Update Moneda | Pass / Fail | |
+| 11 | Delete Moneda | Pass / Fail | |
 
-**¿Listo para Sprint 1?** ⬜ SÍ / ⬜ NO
+**¿Listo para Sprint 1?** SÍ / NO
 
 **Issues Encontrados:**
 - _____________________

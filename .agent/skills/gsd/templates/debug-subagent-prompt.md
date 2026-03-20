@@ -54,9 +54,9 @@ Create: .planning/debug/{slug}.md
 **From /gsd:debug:**
 ```python
 Task(
-  prompt=filled_template,
-  subagent_type="gsd-debugger",
-  description="Debug {slug}"
+ prompt=filled_template,
+ subagent_type="gsd-debugger",
+ description="Debug {slug}"
 )
 ```
 

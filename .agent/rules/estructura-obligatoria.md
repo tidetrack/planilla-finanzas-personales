@@ -17,27 +17,27 @@ Según `ESTRUCTURA.md`, el proyecto se organiza así:
 ```
 constructora-inventarios-data/
 │
-├── 📁 src/                           # Código fuente (12 bloques .js)
-│   └── (archivos numerados 01_Bloque1_*.js hasta 12_Bloque12_*.js)
+├── src/ # Código fuente (12 bloques .js)
+│ └── (archivos numerados 01_Bloque1_*.js hasta 12_Bloque12_*.js)
 │
-├── 📁 docs/                          # Documentación
-│   ├── 📁 permanente/                # Docs permanentes
-│   │   ├── CHANGELOG.md
-│   │   ├── DATABASE_SCHEMA.md
-│   │   ├── GUIA_ARQUITECTURA.md
-│   │   ├── HISTORIAL_DESARROLLO.md
-│   │   ├── RESUMEN_PROYECTO.md
-│   │   └── CONTEXTO_NEGOCIO.md
-│   ├── 📁 sesiones/                  # Historial de sesiones
-│   ├── PRODUCT_BACKLOG.md
-│   ├── REGLAS_AGENTE.md
-│   └── README.md
+├── docs/ # Documentación
+│ ├── permanente/ # Docs permanentes
+│ │ ├── CHANGELOG.md
+│ │ ├── DATABASE_SCHEMA.md
+│ │ ├── GUIA_ARQUITECTURA.md
+│ │ ├── HISTORIAL_DESARROLLO.md
+│ │ ├── RESUMEN_PROYECTO.md
+│ │ └── CONTEXTO_NEGOCIO.md
+│ ├── sesiones/ # Historial de sesiones
+│ ├── PRODUCT_BACKLOG.md
+│ ├── REGLAS_AGENTE.md
+│ └── README.md
 │
-├── 📁 _backup/                       # Archivos históricos (NO USAR)
+├── _backup/ # Archivos históricos (NO USAR)
 │
-├── 📄 README.md                      # Punto de entrada
-├── 📄 ESTRUCTURA.md                  # Este mapa (FUENTE DE VERDAD)
-└── 📄 Notas Fran.md                  # Notas del usuario
+├── README.md # Punto de entrada
+├── ESTRUCTURA.md # Este mapa (FUENTE DE VERDAD)
+└── Notas Fran.md # Notas del usuario
 ```
 
 ## Mandatos Obligatorios
@@ -62,10 +62,10 @@ constructora-inventarios-data/
 Los archivos en `/src/` DEBEN seguir el orden numérico (01, 02, 03...). Este orden es crítico para Google Apps Script.
 
 ### 4. Prohibiciones:
-- ❌ NO crear carpetas temporales en la raíz
-- ❌ NO guardar código fuera de `/src/`
-- ❌ NO modificar archivos en `/_backup/`
-- ❌ NO crear documentación fuera de `/docs/`
+- NO crear carpetas temporales en la raíz
+- NO guardar código fuera de `/src/`
+- NO modificar archivos en `/_backup/`
+- NO crear documentación fuera de `/docs/`
 
 ## Protocolo de Cumplimiento
 

@@ -33,57 +33,57 @@ Plans must be:
 
 <process>
 1. Read planning context from orchestrator prompt:
-   - Phase number and description
-   - Project state (STATE.md)
-   - Roadmap (ROADMAP.md)
-   - Requirements (REQUIREMENTS.md if exists)
-   - Research (RESEARCH.md if exists)
-   - Design (DESIGN.md, DESIGN-SYSTEM.md if exist)
-   - Gap closure context (VERIFICATION.md if --gaps mode)
+ - Phase number and description
+ - Project state (STATE.md)
+ - Roadmap (ROADMAP.md)
+ - Requirements (REQUIREMENTS.md if exists)
+ - Research (RESEARCH.md if exists)
+ - Design (DESIGN.md, DESIGN-SYSTEM.md if exist)
+ - Gap closure context (VERIFICATION.md if --gaps mode)
 
 2. Determine how many plans needed:
-   - Read config.json for depth setting (quick/standard/comprehensive)
-   - quick: 1-3 plans
-   - standard: 3-5 plans
-   - comprehensive: 5-10 plans
-   - Consider phase complexity and requirements
+ - Read config.json for depth setting (quick/standard/comprehensive)
+ - quick: 1-3 plans
+ - standard: 3-5 plans
+ - comprehensive: 5-10 plans
+ - Consider phase complexity and requirements
 
 3. Create plans:
-   - Each plan focuses on related capabilities
-   - Break down by component/feature/layer as appropriate
-   - Assign wave numbers (1 = can run immediately, 2+ = depends on prior waves)
-   - Mark dependencies between plans
-   - Designate autonomous vs checkpoint-requiring plans
+ - Each plan focuses on related capabilities
+ - Break down by component/feature/layer as appropriate
+ - Assign wave numbers (1 = can run immediately, 2+ = depends on prior waves)
+ - Mark dependencies between plans
+ - Designate autonomous vs checkpoint-requiring plans
 
 4. For each plan, write PLAN.md:
-   ```yaml
-   ---
-   wave: 1
-   depends_on: []
-   files_modified: []
-   autonomous: true
-   ---
-   ```
-   - Tasks in `<task>` XML blocks with verification
-   - must_haves derived from phase goal
-   - Path: `.planning/phases/{phase}-{name}/{phase}-{plan-number}-{name}-PLAN.md`
+ ```yaml
+ ---
+ wave: 1
+ depends_on: []
+ files_modified: []
+ autonomous: true
+ ---
+ ```
+ - Tasks in `<task>` XML blocks with verification
+ - must_haves derived from phase goal
+ - Path: `.planning/phases/{phase}-{name}/{phase}-{plan-number}-{name}-PLAN.md`
 
 5. Validate coverage:
-   - All phase requirements addressed across all plans
-   - Dependencies make sense
-   - Waves allow maximum parallelization
-   - Plans are independently executable
+ - All phase requirements addressed across all plans
+ - Dependencies make sense
+ - Waves allow maximum parallelization
+ - Plans are independently executable
 
 6. Return result:
-   ```
-   ## PLANNING COMPLETE
+ ```
+ ## PLANNING COMPLETE
 
-   Plans created: [N]
-   Waves: [M]
-   Wave 1: Plans [list]
-   Wave 2: Plans [list]
-   Files written to: .planning/phases/{phase}-{name}/
-   ```
+ Plans created: [N]
+ Waves: [M]
+ Wave 1: Plans [list]
+ Wave 2: Plans [list]
+ Files written to: .planning/phases/{phase}-{name}/
+ ```
 
 **If checkpoint reached:**
 ```
@@ -243,26 +243,26 @@ Wave 3 (after Wave 2):
 When spawned for revision (after plan checker finds issues):
 
 1. Read existing plans:
-   ```bash
-   cat .planning/phases/{phase}-{name}/*-PLAN.md
-   ```
+ ```bash
+ cat .planning/phases/{phase}-{name}/*-PLAN.md
+ ```
 
 2. Read checker issues from prompt
 
 3. Make targeted updates:
-   - Fix specific issues raised
-   - Don't replan from scratch unless issues are fundamental
-   - Update only what needs changing
+ - Fix specific issues raised
+ - Don't replan from scratch unless issues are fundamental
+ - Update only what needs changing
 
 4. Return what changed:
-   ```
-   ## PLANNING REVISED
+ ```
+ ## PLANNING REVISED
 
-   Changes made:
-   - Plan 02: Added verification step for error handling
-   - Plan 03: Clarified task dependencies
-   - Plan 04: Added must_have for edge case testing
-   ```
+ Changes made:
+ - Plan 02: Added verification step for error handling
+ - Plan 03: Clarified task dependencies
+ - Plan 04: Added must_have for edge case testing
+ ```
 </revision_mode>
 
 <return_format>

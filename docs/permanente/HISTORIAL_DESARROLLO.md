@@ -6,6 +6,104 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-20 - Creación del Agente `github-docs` y Expansión del Ecosistema Agéntico
+
+### Evento
+Se incorporó al equipo un nuevo agente especializado: `github-docs`. Este agente es responsable exclusivo de mantener la documentación técnica pública del repositorio en GitHub, cubriendo el `README.md`, el `HISTORIAL_DESARROLLO.md` y la `GUIA_ARQUITECTURA.md` desde la perspectiva de una audiencia externa (desarrolladores, colaboradores, LLMs que consuman el repo).
+
+### Contexto
+El agente `agente-contextual` cumplía un rol mixto: mantenía la memoria interna del proyecto y actuaba intermitentemente como redactor de documentación pública. Se identificó la necesidad de separar ambas responsabilidades para mayor claridad del pipeline.
+
+### Decisiones Técnicas (ADR)
+- **Separación de responsabilidades de documentación**: `agente-contextual` = memoria interna + ADRs de código. `github-docs` = documentación pública GitHub-facing.
+- **Pipeline actualizado**: la secuencia estándar de cierre de feature ahora incluye un paso explícito de `github-docs` entre `auto-changelog` y `github-sync`.
+- **Jerarquía en el organigrama**: `github-docs` ocupa el mismo nivel que `lean-code-expert` y `auto-changelog` (capa de cierre post-implementación), reportando al `tidetrack-pm`.
+
+### Archivos Creados/Modificados
+- **`[NEW]` `.agent/skills/github-docs/SKILL.md`** — Skill completo con workflow de 5 fases
+- **`[MOD]` `.agent/skills/tidetrack-pm/SKILL.md`** — Organigrama actualizado, pipeline ampliado
+- **`[MOD]` `README.md`** — Diagrama y tabla de agentes actualizados
+
+### Resultado
+- Nuevo agente `github-docs` operativo con SKILL.md completo
+- Organigrama de 8 agentes actualizado en `tidetrack-pm` y `README.md`
+- Pipeline de cierre de feature: `...auto-changelog → github-docs → github-sync`
+
+---
+
+## 2026-03-18 - Diseño y Consolidación del Ecosistema Agéntico v2.0
+
+### Evento
+Auditoría completa del equipo de agentes existente y rediseño de la arquitectura agéntica. Se consolidaron agentes redundantes, se crearon nuevos skills especializados y se estableció el `tidetrack-pm` como dispatcher central oficial.
+
+### Contexto
+El ecosistema de agentes creció orgánicamente y necesitaba un rediseño para evitar solapamiento de responsabilidades. Se evaluó cada agente contra el criterio "una responsabilidad única, no se pisa con otro".
+
+### Decisiones Técnicas
+- **`tidetrack-pm` como entry point único**: Todo pedido del usuario pasa por el dispatcher antes de ir a un agente especializado.
+- **`auto-changelog` siempre antepenúltimo**: El versionado en código ocurre ANTES de documentar y ANTES del push.
+- **`github-sync` siempre último**: Nada sube a GitHub hasta que todo lo anterior esté cerrado.
+- **Skills auditados/reescritos**: `appscript-backend`, `appscript-ui`, `auto-changelog`, `agente-contextual`.
+- **Skills nuevos**: `tidetrack-pm` como skill formal (antes era implícito).
+
+### Resultado
+- Ecosistema de 8 agentes con responsabilidades no superpuestas
+- Pipeline estándar de Feature Completa documentado formalmente
+- README actualizado con diagrama de arquitectura agéntica
+
+---
+
+## 2026-03-17 a 2026-03-20 - Sprint ABM Plan de Cuentas (v0.4.1 → v0.4.9)
+
+### Evento
+Desarrollo completo del ABM (Alta/Baja/Modificación) del Plan de Cuentas: el sistema multi-entidad que permite al usuario gestionar sus propias categorías de Ingresos, Costos Fijos, Costos Variables, Medios de Pago, Monedas y Proyectos desde un popup interactivo en Google Sheets.
+
+### Contexto
+El proyecto pivotó de una arquitectura relacional compleja a un sistema de Hojas Modulares. El primer ABM operativo es el Plan de Cuentas, que actúa como catálogo central de todas las categorías del sistema.
+
+### Decisiones Técnicas (ADRs)
+- **ADR-001: Arquitectura de Hojas Modulares** — Cada entidad (Ingresos, Gastos, Monedas, etc.) tiene su propia hoja independiente con rangos fijos. No hay una mega-tabla relacional.
+- **ADR-002: Moneda por Defecto** — El campo Moneda no es obligatorio en el ABM. Si no se especifica, el sistema usa ARS como moneda base por defecto. Evita fricción innecesaria en el registro diario.
+- **Separación UX de éxito vs. alerta**: Reemplazo de `alert()` nativos por estados visuales integrados al Design System (Success State, Error inline con SVG).
+- **Validación de duplicados en backend**: `saveAbmRecord()` en `11_UIService.js` verifica unicidad por nombre+módulo antes de persistir.
+- **Optimización de SheetManager**: `appendRow()` y `getTableData()` refactorizados con búsqueda inversa (bottom-up) para eliminar cuelgues en hojas con muchas filas.
+
+### Entregables Principales
+| Versión | Fecha | Feature |
+|---------|-------|---------|
+| v0.4.1 | 2026-03-17 | Refactorización backend multi-tabla + `UI_AbmPlanCuentas.html` |
+| v0.4.2 | 2026-03-17 | Fix de CSS en popups (templates con `createTemplateFromFile`) |
+| v0.4.3 | 2026-03-17 | Creación de `UI_SharedStyles.html` (Design System compartido) |
+| v0.4.4 | 2026-03-17 | Success State visual integrado (reemplazo de `alert()`) |
+| v0.4.5 | 2026-03-17 | Paleta institucional + botón `.btn-selected` + halos de foco |
+| v0.4.6 | 2026-03-17 | Validación de duplicados (UI inline, sin `alert()` nativo) |
+| v0.4.7 | 2026-03-17 | ADR-002 documentado + validación de duplicados en backend |
+| v0.4.8 | 2026-03-17 | Moneda opcional en formulario ABM |
+| v0.4.9 | 2026-03-20 | Optimización crítica de rendimiento + fix JS + restricción monedas |
+
+### Archivos Involucrados
+- **`src/00_Config.js`** — Nuevas tablas modulares, monedas restringidas a ARS/USD/AUD/EUR
+- **`src/03_SheetManager.js`** — Optimización bottom-up de lectura/escritura
+- **`src/11_UIService.js`** — Endpoints ABM + validación de duplicados
+- **`src/12_MenuService.js`** — Acceso al ABM desde el menú de Sheets
+- **`src/UI_AbmPlanCuentas.html`** — UI Router multi-entidad con states dinámicos
+- **`src/UI_SharedStyles.html`** — Design System CSS compartido
+- **`src/ZZ_Changelog.js`** — Versiones v0.4.1 → v0.4.9 registradas
+
+### Bugs Críticos Resueltos
+1. **Cuelgue al guardar registros** — `appendRow()` buscaba la última fila desde arriba en tablas con muchos datos. Resuelto con búsqueda inversa.
+2. **CSS no aplicado en popups** — `createHtmlOutputFromFile()` no interpreta `<?!= include() ?>`. Resuelto con `createTemplateFromFile().evaluate()`.
+3. **Error JS en `UI_AbmPlanCuentas`** — Referencia a elemento `groupAbreviacion` eliminado del DOM. Resuelto eliminando la referencia.
+4. **Moneda obligatoria causaba fricción** — Campo redefinido como opcional con fallback a ARS.
+
+### Resultado
+- ABM Plan de Cuentas funcional con 6 entidades gestionables
+- Design System institucional aplicado consistentemente
+- Validación de duplicados con feedback visual integrado
+- Rendimiento de SheetManager optimizado para operaciones a largo plazo
+
+---
+
 ## 2026-03-17 - Organización de Estructura Canónica (Agente Contextual)
 
 ### Evento
@@ -37,7 +135,7 @@ El esquema de base de datos relacional y la fuerte carga de UI (web app) complej
 
 ---
 
-## 2026-02-13 - Simplificación de Arquitectura de Monedas (v0.6.0) ✅
+## 2026-02-13 - Simplificación de Arquitectura de Monedas (v0.6.0) 
 
 ### Evento
 
@@ -63,21 +161,21 @@ El sistema tenía gestión dinámica de monedas (tabla MONEDAS, MonedaService, C
 #### Archivos Agregados/Modificados (6):
 
 1. **`00_Config.js`**:
-   - Agregado `CURRENCIES` constant (5 monedas)
-   - Agregado `BASE_CURRENCY = 'ARS'`
-   - Agregado `AVAILABLE_CURRENCY_IDS`
-   - Eliminado `MONEDAS` y `CONFIG` de `RANGES`
-   - Agregadas 4 funciones stub para compatibilidad
+ - Agregado `CURRENCIES` constant (5 monedas)
+ - Agregado `BASE_CURRENCY = 'ARS'`
+ - Agregado `AVAILABLE_CURRENCY_IDS`
+ - Eliminado `MONEDAS` y `CONFIG` de `RANGES`
+ - Agregadas 4 funciones stub para compatibilidad
 
 2. **`04_DataValidation.js`**:
-   - `checkMonedaExists()` reescrito para validar contra `CURRENCIES`
+ - `checkMonedaExists()` reescrito para validar contra `CURRENCIES`
 
 3. **`06_ExchangeRateService.js`**:
-   - Todas las referencias a `getMonedaByISO()` y `getAllMonedas()` reemplazadas
-   - Fixed: `.moneda_id` → `.id` (5 ubicaciones)
+ - Todas las referencias a `getMonedaByISO()` y `getAllMonedas()` reemplazadas
+ - Fixed: `.moneda_id` → `.id` (5 ubicaciones)
 
 4. **`11_UIService.js`**, **`98_DataSeeder.js`**, **`99_SetupDirect.js`**:
-   - Actualizados para usar `CURRENCIES` directamente
+ - Actualizados para usar `CURRENCIES` directamente
 
 #### Archivos Eliminados (4, ~1,270 líneas):
 
@@ -89,24 +187,24 @@ El sistema tenía gestión dinámica de monedas (tabla MONEDAS, MonedaService, C
 ### Bugs Críticos Resueltos
 
 1. **"Tabla no configurada: CONFIG"**
-   - Causa: Archivos eliminados localmente pero presentes en Apps Script
-   - Solución: Eliminación manual en Apps Script web editor
+ - Causa: Archivos eliminados localmente pero presentes en Apps Script
+ - Solución: Eliminación manual en Apps Script web editor
 
 2. **Property mismatch `.moneda_id` vs `.id`**
-   - Causa: Estructura CURRENCIES usa `.id` but código usaba `.moneda_id`
-   - Solución: 5 referencias corregidas en ExchangeRateService
+ - Causa: Estructura CURRENCIES usa `.id` but código usaba `.moneda_id`
+ - Solución: 5 referencias corregidas en ExchangeRateService
 
 3. **"Tabla no configurada: MONEDAS"**
-   - Causa: Validaciones referenciaban tabla eliminada
-   - Solución: `checkMonedaExists()` reescrito
+ - Causa: Validaciones referenciaban tabla eliminada
+ - Solución: `checkMonedaExists()` reescrito
 
 ### Resultado
 
-- ✅ Código reducido en ~1,190 líneas (-23% del módulo)
-- ✅ 4 archivos menos en el proyecto
-- ✅ Exchange rates actualizándose correctamente
-- ✅ AUX_COTIZACIONES poblado con 4 monedas (USD, EUR, AUD, CNY)
-- ✅ Sistema más simple y mantenible
+- Código reducido en ~1,190 líneas (-23% del módulo)
+- 4 archivos menos en el proyecto
+- Exchange rates actualizándose correctamente
+- AUX_COTIZACIONES poblado con 4 monedas (USD, EUR, AUD, CNY)
+- Sistema más simple y mantenible
 
 ### Lecciones Aprendidas
 
@@ -129,7 +227,7 @@ El sistema tenía gestión dinámica de monedas (tabla MONEDAS, MonedaService, C
 
 ---
 
-## 2026-01-23 - Sincronización Completa de Documentación Post-Sprint 3 ✅
+## 2026-01-23 - Sincronización Completa de Documentación Post-Sprint 3 
 
 ### Evento
 
@@ -144,25 +242,25 @@ Con 4 sprints completados (v0.1.0 → v0.4.0), el proyecto acumuló documentos q
 #### 1. Actualización de Documentos de Raíz
 
 - **ESTRUCTURA.md**:
-  - Actualizado estado de `/src/` (de "pendiente" a "16 módulos + 7 HTML")
-  - Agregado `GUIA_MODULOS.md` y `database_er_diagram.png` a tabla de permanentes
-  - Reflejado workflow completo de desarrollo con checkmarks
-  - Fecha actualizada a 2026-01-23, versión v0.4.0
+ - Actualizado estado de `/src/` (de "pendiente" a "16 módulos + 7 HTML")
+ - Agregado `GUIA_MODULOS.md` y `database_er_diagram.png` a tabla de permanentes
+ - Reflejado workflow completo de desarrollo con checkmarks
+ - Fecha actualizada a 2026-01-23, versión v0.4.0
 
 - **README.md**:
-  - Sección "Estado del Proyecto" completamente reescrita
-  - Sprints 0-3 marcados como completados con detalles de cada day
-  - Estadísticas actualizadas: 20 archivos, ~6,200 líneas de código
-  - Agregado Sprint 4 como "Próximo Sprint"
+ - Sección "Estado del Proyecto" completamente reescrita
+ - Sprints 0-3 marcados como completados con detalles de cada day
+ - Estadísticas actualizadas: 20 archivos, ~6,200 líneas de código
+ - Agregado Sprint 4 como "Próximo Sprint"
 
 #### 2. Actualización del Product Backlog
 
 - **PRODUCT_BACKLOG.md**:
-  - Reorganizada sección inicial con Sprints Completados (v0.1.0-v0.4.0)
-  - Cada sprint documentado con features implementadas
-  - Agregada nueva sección "Sprint 4: CRUD Completo (v0.5.0) - EN PLANIFICACIÓN"
-  - Features de Sprint 4 listadas con dependencias cumplidas
-  - Fecha actualizada a 2026-01-23
+ - Reorganizada sección inicial con Sprints Completados (v0.1.0-v0.4.0)
+ - Cada sprint documentado con features implementadas
+ - Agregada nueva sección "Sprint 4: CRUD Completo (v0.5.0) - EN PLANIFICACIÓN"
+ - Features de Sprint 4 listadas con dependencias cumplidas
+ - Fecha actualizada a 2026-01-23
 
 #### 3. Limpieza de Notas Pendientes
 
@@ -170,12 +268,12 @@ Con 4 sprints completados (v0.1.0 → v0.4.0), el proyecto acumuló documentos q
 
 ### Resultado
 
-- ✅ Todos los documentos reflejan estado real del código (v0.4.0)
-- ✅ Sprint 3 documentado como 100% completado
-- ✅ Sprint 4 planificado con alcance claro (UPDATE/DELETE)
-- ✅ Estadísticas del proyecto actualizadas (6,200 LOC, 20 archivos)
-- ✅ Estructura de carpetas sincronizada con contenido real
-- ✅ Roadmap claro para próximo sprint
+- Todos los documentos reflejan estado real del código (v0.4.0)
+- Sprint 3 documentado como 100% completado
+- Sprint 4 planificado con alcance claro (UPDATE/DELETE)
+- Estadísticas del proyecto actualizadas (6,200 LOC, 20 archivos)
+- Estructura de carpetas sincronizada con contenido real
+- Roadmap claro para próximo sprint
 
 ### Impacto
 
@@ -196,7 +294,7 @@ Proyecto listo para planificar e iniciar **Sprint 4: CRUD Completo (v0.5.0)**
 
 ---
 
-## 2026-01-18 - Sprint 3: UI Development (Days 0-5) ✅ COMPLETO
+## 2026-01-18 - Sprint 3: UI Development (Days 0-5) COMPLETO
 
 ### Evento
 
@@ -204,7 +302,7 @@ Implementación completa de interfaces de usuario con diseño neumórfico modern
 
 ### Estado Final
 
-**Days completados:** 0, 1, 2, 3, 4, 5 (100% completado)  
+**Days completados:** 0, 1, 2, 3, 4, 5 (100% completado) 
 **Fecha de cierre:** 2026-01-18
 
 ### Resumen Ejecutivo
@@ -213,11 +311,11 @@ Implementación completa de interfaces de usuario con diseño neumórfico modern
 - **Código nuevo:** ~3,100 líneas (HTML/CSS/JS)
 - **Archivos creados:** 9 (7 UI + 2 servicios)
 - **Archivos actualizados:** 3 servicios de backend
-- **Progress:** 100% del sprint completado ✅
+- **Progress:** 100% del sprint completado 
 
 ### Entregables Principales
 
-**Day 0: Design System ✅**
+**Day 0: Design System **
 
 - `CSS_DesignSystem.html` (500+ líneas) - Variables, reset, utilities, componentes base
 - `CSS_Components.html` (400+ líneas) - StatCard, Badge, Alert, Table, Modal, etc.
@@ -225,7 +323,7 @@ Implementación completa de interfaces de usuario con diseño neumórfico modern
 - Estética: Neumorfismo con League Spartan font
 - Paleta: Grises/azules (#e8ecf1 base) con acentos verde/rojo
 
-**Day 1: Transaction Form ✅**
+**Day 1: Transaction Form **
 
 - `UI_TransactionForm.html` (740 líneas) - Formulario completo auto-contenido
 - `JS_FormValidation.html` - Validaciones client-side
@@ -233,15 +331,15 @@ Implementación completa de interfaces de usuario con diseño neumórfico modern
 - Features: Smart defaults, validación dual (client/server), dropdowns dinámicos, campo fx_id condicional
 - Modal de éxito con `resetForm()` function
 
-**Day 2: Custom Menus & Quick Actions ✅**
+**Day 2: Custom Menus & Quick Actions **
 
 - `12_MenuService.js` - Servicio de menús personalizados (trigger onOpen)
-- Menú "Tidetrack 💰" con 5 opciones (Nueva Transacción, Dashboard, Ver Movimientos, Seed, Clear)
+- Menú "Tidetrack " con 5 opciones (Nueva Transacción, Dashboard, Ver Movimientos, Seed, Clear)
 - Actualización de `00_Config.js` con MENU_CONFIG
 - Actualización de `11_UIService.js` con funciones UI completas
 - Wrapper `runDataSeedWithConfirmation()` en DataSeeder
 
-**Day 3: Main Dashboard ✅**
+**Day 3: Main Dashboard **
 
 - `UI_MainDashboard.html` (600 líneas) - Dashboard principal
 - Grid de métricas (Saldo, Ingresos, Gastos del mes)
@@ -249,7 +347,7 @@ Implementación completa de interfaces de usuario con diseño neumórfico modern
 - Lista de últimos 5 movimientos
 - `getDashboardStats()` en UIService - Cálculo de totales del mes
 
-**Day 4: Transaction List View ✅**
+**Day 4: Transaction List View **
 
 - `UI_TransactionList.html` (800 líneas) - Lista completa de transacciones
 - Filtros por sentido y cuenta
@@ -257,7 +355,7 @@ Implementación completa de interfaces de usuario con diseño neumórfico modern
 - Paginación (50 transacciones)
 - `getTransactionsList()` en UIService - Filtrado y enriquecimiento de datos
 
-**Day 5: Testing & Documentation ✅**
+**Day 5: Testing & Documentation **
 
 - Testing end-to-end manual completo
 - Validación de flujos completos (crear → ver → filtrar)
@@ -295,38 +393,38 @@ Implementación completa de interfaces de usuario con diseño neumórfico modern
 
 **Day 0:**
 
-- ✅ Todos los componentes renderizan correctamente
-- ✅ Fuente Google Fonts carga OK
-- ✅ Neumorphism visual verificado
+- Todos los componentes renderizan correctamente
+- Fuente Google Fonts carga OK
+- Neumorphism visual verificado
 
 **Day 1:**
 
-- ✅ Formulario abre desde menú
-- ✅ Dropdowns cargan dinámicamente
-- ✅ Validaciones funcionan (required, positive, date)
-- ✅ Filtro de cuentas por sentido OK
-- ✅ Campo fx_id condicional OK
-- ✅ Guardado exitoso de transacciones
+- Formulario abre desde menú
+- Dropdowns cargan dinámicamente
+- Validaciones funcionan (required, positive, date)
+- Filtro de cuentas por sentido OK
+- Campo fx_id condicional OK
+- Guardado exitoso de transacciones
 
 **Day 2:**
 
-- ✅ Menú aparece en Google Sheets
-- ✅ Todas las opciones funcionales
-- ✅ Seed con confirmación OK
+- Menú aparece en Google Sheets
+- Todas las opciones funcionales
+- Seed con confirmación OK
 
 **Day 3:**
 
-- ✅ Dashboard carga métricas reales
-- ✅ Saldo/Ingresos/Gastos del mes calculan correctamente
-- ✅ Últimos movimientos se muestran ordenados
-- ✅ Navegación entre Dashboard y Form OK
+- Dashboard carga métricas reales
+- Saldo/Ingresos/Gastos del mes calculan correctamente
+- Últimos movimientos se muestran ordenados
+- Navegación entre Dashboard y Form OK
 
 ### Bugs Resueltos
 
 1. **11_UIService.js - Función huérfana**
-   - Problema: Bloque try-catch fuera de función createTransaccionFromUI
-   - Impacto: CRÍTICO - Error de sintaxis impedía cargar el servicio
-   - Solución: Reencapsulado correctamente en la función
+ - Problema: Bloque try-catch fuera de función createTransaccionFromUI
+ - Impacto: CRÍTICO - Error de sintaxis impedía cargar el servicio
+ - Solución: Reencapsulado correctamente en la función
 
 ### Métricas del Sprint (Completado)
 
@@ -335,19 +433,19 @@ Implementación completa de interfaces de usuario con diseño neumórfico modern
 - **Líneas de código:** ~3,100 (HTML/CSS: ~2,600, JS: ~500)
 - **Componentes UI:** 15+ (Design System + Forms + Dashboards + Lists)
 - **Funciones nuevas:** 20+ (Services + Validations + Helpers + UI)
-- **Progress:** 100% completado ✅
+- **Progress:** 100% completado 
 
 ### Resultado Final
 
 Sprint completado exitosamente al 100%. Sistema UI completo y funcional con:
 
-- ✅ Diseño neumórfico moderno
-- ✅ Registro de transacciones (CREATE)
-- ✅ Dashboard con estadísticas en tiempo real
-- ✅ Lista de transacciones con filtros
-- ✅ Menús personalizados de Google Sheets
-- ✅ Validación dual (cliente + servidor)
-- ✅ Modal de éxito con flujo de continuidad
+- Diseño neumórfico moderno
+- Registro de transacciones (CREATE)
+- Dashboard con estadísticas en tiempo real
+- Lista de transacciones con filtros
+- Menús personalizados de Google Sheets
+- Validación dual (cliente + servidor)
+- Modal de éxito con flujo de continuidad
 
 ### Documentación Final
 
@@ -363,7 +461,7 @@ Ver documento completo: `docs/sesiones/SPRINT_3_COMPLETO_2026-01-18.md`
 
 ---
 
-## 2026-01-18 (Madrugada) - Sprint 2 COMPLETO ✅
+## 2026-01-18 (Madrugada) - Sprint 2 COMPLETO 
 
 ### Evento
 
@@ -376,7 +474,7 @@ Sprint 2 finalizado exitosamente con implementación completa de catálogos, mig
 - **Módulos creados:** 4 (MedioPago, Cuenta, Transaction, DataSeeder)
 - **Módulos actualizados:** 5 (Utils, SheetManager, Validaciones, servicios)
 - **Bugs críticos resueltos:** 2
-- **Tests ejecutados:** 41/41 ✅
+- **Tests ejecutados:** 41/41 
 
 ### Entregables Principales
 
@@ -404,14 +502,14 @@ Sprint 2 finalizado exitosamente con implementación completa de catálogos, mig
 ### Bugs Críticos Resueltos
 
 1. **SheetManager.appendRow() - Detección de última fila**
-   - Problema: Usaba última fila global de hoja, no de tabla específica
-   - Impacto: CRÍTICO - Todas las inserciones fallaban
-   - Solución: Detección independiente por tabla
+ - Problema: Usaba última fila global de hoja, no de tabla específica
+ - Impacto: CRÍTICO - Todas las inserciones fallaban
+ - Solución: Detección independiente por tabla
 
 2. **validateTransaction() - Error en UPDATE**
-   - Problema: Verificaba duplicados en CREATE y UPDATE
-   - Impacto: MEDIO - Imposible actualizar transacciones
-   - Solución: Parámetro `isUpdate` para distinguir operaciones
+ - Problema: Verificaba duplicados en CREATE y UPDATE
+ - Impacto: MEDIO - Imposible actualizar transacciones
+ - Solución: Parámetro `isUpdate` para distinguir operaciones
 
 ### ADRs (Decisiones Técnicas)
 
@@ -443,12 +541,12 @@ Inicio oficial del proyecto Tidetrack como sistema de finanzas personales. Se es
 #### 1. Configuración de Sistema Agéntico
 
 - Implementación de arquitectura multi-agente con 6 especialistas:
-  - Product Manager (estrategia y backlog)
-  - UI/UX Designer (sistemas de diseño)
-  - Context Historian (documentación y memoria)
-  - QA Tester (automatización de pruebas)
-  - Security Auditor (auditoría OWASP)
-  - Backend Architect (BD y APIs)
+ - Product Manager (estrategia y backlog)
+ - UI/UX Designer (sistemas de diseño)
+ - Context Historian (documentación y memoria)
+ - QA Tester (automatización de pruebas)
+ - Security Auditor (auditoría OWASP)
+ - Backend Architect (BD y APIs)
 - Configuración de dispatcher para enrutamiento de agentes
 - Implementación de regla de estructura obligatoria
 
@@ -482,31 +580,31 @@ Permite desarrollo paralelo donde cada agente (PM, UX, QA, Security, Backend) ti
 
 ### Resultado
 
-- ✅ Contexto de negocio completamente documentado
-- ✅ Principios de diseño y UX definidos
-- ✅ Roadmap de MVP a plataforma establecido
-- ✅ Sistema de agentes configurado
-- ✅ Estructura de carpetas organizada y validada
+- Contexto de negocio completamente documentado
+- Principios de diseño y UX definidos
+- Roadmap de MVP a plataforma establecido
+- Sistema de agentes configurado
+- Estructura de carpetas organizada y validada
 
 ### Próximos Pasos
 
 1. **Diseño de Base de Datos** (Tarea inmediata)
-   - Modelar entidades: Transactions, Currencies, ExchangeRates, PaymentMethods, Accounts, Budgets, Events, Users
-   - Definir relaciones y constraints
-   - Documentar en `DATABASE_SCHEMA.md`
+ - Modelar entidades: Transactions, Currencies, ExchangeRates, PaymentMethods, Accounts, Budgets, Events, Users
+ - Definir relaciones y constraints
+ - Documentar en `DATABASE_SCHEMA.md`
 
 2. **Definición de Stack Tecnológico**
-   - Mobile-first (React Native vs. Flutter)
-   - Backend (Node.js vs. Python FastAPI)
-   - Base de datos (PostgreSQL)
+ - Mobile-first (React Native vs. Flutter)
+ - Backend (Node.js vs. Python FastAPI)
+ - Base de datos (PostgreSQL)
 
 - Autenticación (OAuth 2.0)
 
 3. **Implementación del MVP**
-   - Registro ultrarrápido
-   - Presupuesto basado en histórico
-   - Tablero esencial
-   - Multi-moneda básico
+ - Registro ultrarrápido
+ - Presupuesto basado en histórico
+ - Tablero esencial
+ - Multi-moneda básico
 
 ---
 
@@ -528,14 +626,14 @@ Diseño e implementación del schema completo de base de datos usando Google She
 
 Creación de 6 tablas con ubicaciones fijas en DATA-ENTRY:
 
-| Tabla            | Rango | Propósito                           |
+| Tabla | Rango | Propósito |
 | ---------------- | ----- | ----------------------------------- |
-| DB_MONEDAS       | B:D   | Catálogo de monedas                 |
-| DB_TIPOS_CAMBIO  | F:Q   | Cotizaciones con auditoría completa |
-| DB_MEDIOS_PAGO   | S:W   | Catálogo de medios de pago          |
-| DB_CUENTAS       | Y:AB  | Categorías/cuentas                  |
-| DB_TRANSACCIONES | AD:AM | Tabla central de movimientos        |
-| DB_CONFIG        | AO:AQ | Parámetros globales                 |
+| DB_MONEDAS | B:D | Catálogo de monedas |
+| DB_TIPOS_CAMBIO | F:Q | Cotizaciones con auditoría completa |
+| DB_MEDIOS_PAGO | S:W | Catálogo de medios de pago |
+| DB_CUENTAS | Y:AB | Categorías/cuentas |
+| DB_TRANSACCIONES | AD:AM | Tabla central de movimientos |
+| DB_CONFIG | AO:AQ | Parámetros globales |
 
 #### 3. Innovación Técnica Clave
 
@@ -569,30 +667,30 @@ DB_TRANSACCIONES es el centro, rodeado de catálogos (Monedas, Medios, Cuentas) 
 
 ### Resultado
 
-- ✅ Schema relacional completo y normalizado
-- ✅ 6 tablas con PKs, FKs, y reglas de integridad documentadas
-- ✅ Enums definidos para consistencia de datos
-- ✅ ADR-001 documentado (Google Sheets → PostgreSQL)
-- ✅ Estrategia de migración clara (umbral: 60% capacidad)
-- ✅ Casos de uso críticos resueltos (gasto en USD con TC congelado)
+- Schema relacional completo y normalizado
+- 6 tablas con PKs, FKs, y reglas de integridad documentadas
+- Enums definidos para consistencia de datos
+- ADR-001 documentado (Google Sheets → PostgreSQL)
+- Estrategia de migración clara (umbral: 60% capacidad)
+- Casos de uso críticos resueltos (gasto en USD con TC congelado)
 
 ### Próximos Pasos
 
 1. **Implementación del Schema** (Siguiente paso inmediato)
-   - Crear hoja DATA-ENTRY en Google Sheets
-   - Definir rangos con nombres (Named Ranges)
-   - Crear validaciones de datos (enums)
-   - Proteger estructura (bloquear inserción de columnas)
+ - Crear hoja DATA-ENTRY en Google Sheets
+ - Definir rangos con nombres (Named Ranges)
+ - Crear validaciones de datos (enums)
+ - Proteger estructura (bloquear inserción de columnas)
 
 2. **Scripts de Automatación**
-   - Script de fetch de tipos de cambio (API)
-   - Script de cálculo automático de `monto_base`
-   - Script de validación de integridad
+ - Script de fetch de tipos de cambio (API)
+ - Script de cálculo automático de `monto_base`
+ - Script de validación de integridad
 
 3. **Carga de Datos Iniciales**
-   - Poblar DB_MONEDAS (ARS, USD, EUR mínimo)
-   - Configurar DB_CONFIG (base_moneda_id = ARS)
-   - Crear medios y cuentas básicas
+ - Poblar DB_MONEDAS (ARS, USD, EUR mínimo)
+ - Configurar DB_CONFIG (base_moneda_id = ARS)
+ - Crear medios y cuentas básicas
 
 ---
 
@@ -613,16 +711,16 @@ Implementación completa del Sprint 0 del sistema modular de Apps Script, establ
 
 #### 2. Implementación de 7 Archivos (Sprint 0)
 
-| Archivo              | Líneas     | Responsabilidad                          |
+| Archivo | Líneas | Responsabilidad |
 | -------------------- | ---------- | ---------------------------------------- |
-| 00_Config.js         | 183        | Constantes, rangos, enums, defaults      |
-| 01_Version.js        | 61         | Control de versiones + changelog         |
-| 02_Utils.js          | 227        | IDs, fecha/hora, validación, logging, UI |
-| 03_SheetManager.js   | 186        | Abstracción CRUD sobre Sheets            |
-| 04_DataValidation.js | 194        | Reglas de integridad del schema          |
-| 05_MonedaService.js  | 171        | CRUD de monedas                          |
-| appsscript.json      | 9          | Manifest OAuth                           |
-| **TOTAL**            | **~1,031** | **7 archivos**                           |
+| 00_Config.js | 183 | Constantes, rangos, enums, defaults |
+| 01_Version.js | 61 | Control de versiones + changelog |
+| 02_Utils.js | 227 | IDs, fecha/hora, validación, logging, UI |
+| 03_SheetManager.js | 186 | Abstracción CRUD sobre Sheets |
+| 04_DataValidation.js | 194 | Reglas de integridad del schema |
+| 05_MonedaService.js | 171 | CRUD de monedas |
+| appsscript.json | 9 | Manifest OAuth |
+| **TOTAL** | **~1,031** | **7 archivos** |
 
 #### 3. Funcionalidades Implementadas
 
@@ -643,12 +741,12 @@ Implementación completa del Sprint 0 del sistema modular de Apps Script, establ
 
 **Validaciones Críticas:**
 
-1. ✅ `monto > 0` siempre
-2. ✅ `sentido` define dirección (Ingreso/Egreso)
-3. ✅ `fx_id` obligatorio si `moneda_id ≠ base_moneda_id`
-4. ✅ `fx_id` debe tener `status='ok'`
-5. ✅ `tc > 0`
-6. ✅ `base_moneda_id ≠ quote_moneda_id`
+1. `monto > 0` siempre
+2. `sentido` define dirección (Ingreso/Egreso)
+3. `fx_id` obligatorio si `moneda_id ≠ base_moneda_id`
+4. `fx_id` debe tener `status='ok'`
+5. `tc > 0`
+6. `base_moneda_id ≠ quote_moneda_id`
 
 **Servicio de Monedas:**
 
@@ -675,29 +773,29 @@ Apps Script no tiene control de versiones nativo. El changelog viaja con el cód
 
 ### Resultado
 
-- ✅ 7 archivos modulares listos para Apps Script
-- ✅ ~1,000 líneas de código documentado
-- ✅ 45+ funciones implementadas
-- ✅ Todas las reglas de DATABASE_SCHEMA en código
-- ✅ Sistema versionado (v0.1.0)
-- ✅ CRUD completo de monedas
+- 7 archivos modulares listos para Apps Script
+- ~1,000 líneas de código documentado
+- 45+ funciones implementadas
+- Todas las reglas de DATABASE_SCHEMA en código
+- Sistema versionado (v0.1.0)
+- CRUD completo de monedas
 
 ### Próximos Pasos
 
 1. **Testing Manual** (Pendiente del usuario)
-   - Copiar archivos a Apps Script
-   - Ejecutar `initializeMonedas()`
-   - Verificar creación de ARS, USD, EUR
+ - Copiar archivos a Apps Script
+ - Ejecutar `initializeMonedas()`
+ - Verificar creación de ARS, USD, EUR
 
 2. **Sprint 1** (Próximo)
-   - 06_ExchangeRateService.js
-   - 10_ConfigService.js
-   - Fetch de tipos de cambio desde API
-   - Cálculo de monto_base
+ - 06_ExchangeRateService.js
+ - 10_ConfigService.js
+ - Fetch de tipos de cambio desde API
+ - Cálculo de monto_base
 
 3. **Documentación**
-   - Crear GUIA_MODULOS.md (guía de cada módulo)
-   - Actualizar README con instrucciones de deploy
+ - Crear GUIA_MODULOS.md (guía de cada módulo)
+ - Actualizar README con instrucciones de deploy
 
 ---
 

@@ -3,12 +3,12 @@ name: gsd:design-system
 description: Establish project-wide design foundation through conversation
 argument-hint: ""
 allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - WebFetch
-  - AskUserQuestion
+ - Read
+ - Write
+ - Edit
+ - Bash
+ - WebFetch
+ - AskUserQuestion
 ---
 
 <objective>
@@ -46,9 +46,9 @@ Check if design system exists:
 
 ```bash
 if [[ -f ".planning/DESIGN-SYSTEM.md" ]]; then
-  echo "EXISTS"
+ echo "EXISTS"
 else
-  echo "NEW"
+ echo "NEW"
 fi
 ```
 
@@ -57,9 +57,9 @@ Ask via AskUserQuestion:
 - header: "Existing"
 - question: "A design system already exists. What would you like to do?"
 - options:
-  - "Review and update" - Refine the existing system
-  - "Start fresh" - Replace with new design system
-  - "Cancel" - Keep current system
+ - "Review and update" - Refine the existing system
+ - "Start fresh" - Replace with new design system
+ - "Cancel" - Keep current system
 
 If "Cancel" → exit workflow
 
@@ -69,17 +69,17 @@ Detect project framework for context:
 
 ```bash
 if [[ -f "package.json" ]]; then
-  if grep -q '"next"' package.json; then
-    echo "Next.js (React)"
-  elif grep -q '"react"' package.json; then
-    echo "React"
-  fi
+ if grep -q '"next"' package.json; then
+ echo "Next.js (React)"
+ elif grep -q '"react"' package.json; then
+ echo "React"
+ fi
 elif ls *.xcodeproj 2>/dev/null || [[ -f "Package.swift" ]]; then
-  echo "SwiftUI"
+ echo "SwiftUI"
 elif [[ -f "requirements.txt" ]]; then
-  echo "Python"
+ echo "Python"
 else
-  echo "HTML/CSS"
+ echo "HTML/CSS"
 fi
 ```
 
@@ -91,23 +91,23 @@ Ask via AskUserQuestion:
 - header: "References"
 - question: "Do you have visual references to guide the design direction?"
 - options:
-  - "Yes, I have images/screenshots" - I'll provide files or paste images
-  - "Yes, I have website URLs" - I'll share sites I like
-  - "Both" - I have images and URLs
-  - "No, start from description" - I'll describe what I want
+ - "Yes, I have images/screenshots" - I'll provide files or paste images
+ - "Yes, I have website URLs" - I'll share sites I like
+ - "Both" - I have images and URLs
+ - "No, start from description" - I'll describe what I want
 
 **If user provides references:**
 - For images: Use Read tool to analyze, extract:
-  - Color palette
-  - Typography style
-  - Spacing patterns
-  - Component styles
-  - Overall aesthetic
+ - Color palette
+ - Typography style
+ - Spacing patterns
+ - Component styles
+ - Overall aesthetic
 
 - For URLs: Use WebFetch to analyze, extract:
-  - Visual patterns
-  - Design language
-  - Component approaches
+ - Visual patterns
+ - Design language
+ - Component approaches
 
 Summarize findings:
 "From your references, I see: [summary of extracted aesthetic patterns]"
@@ -124,10 +124,10 @@ Then probe with AskUserQuestion:
 - header: "Style"
 - question: "Which best describes your target aesthetic?"
 - options:
-  - "Clean & minimal" - Lots of whitespace, subtle, typography-focused
-  - "Bold & energetic" - High contrast, strong colors, dynamic
-  - "Warm & friendly" - Rounded corners, soft colors, approachable
-  - "Dark & sophisticated" - Dark mode primary, elegant, professional
+ - "Clean & minimal" - Lots of whitespace, subtle, typography-focused
+ - "Bold & energetic" - High contrast, strong colors, dynamic
+ - "Warm & friendly" - Rounded corners, soft colors, approachable
+ - "Dark & sophisticated" - Dark mode primary, elegant, professional
 
 Follow up based on selection to refine.
 
@@ -137,9 +137,9 @@ Ask via AskUserQuestion:
 - header: "Colors"
 - question: "Do you have brand colors, or should we create a palette?"
 - options:
-  - "I have brand colors" - I'll provide hex values
-  - "Create from scratch" - Help me build a palette
-  - "Derive from references" - Use colors from my visual references
+ - "I have brand colors" - I'll provide hex values
+ - "Create from scratch" - Help me build a palette
+ - "Derive from references" - Use colors from my visual references
 
 **If brand colors provided:**
 Collect primary, secondary, accent colors.
@@ -161,10 +161,10 @@ Ask via AskUserQuestion:
 - header: "Typography"
 - question: "Font preference?"
 - options:
-  - "System fonts" - Native OS fonts (fast, reliable)
-  - "Inter / Clean sans" - Modern, highly legible
-  - "Custom / I have fonts" - I'll specify fonts
-  - "Suggest based on aesthetic" - Match to my chosen style
+ - "System fonts" - Native OS fonts (fast, reliable)
+ - "Inter / Clean sans" - Modern, highly legible
+ - "Custom / I have fonts" - I'll specify fonts
+ - "Suggest based on aesthetic" - Match to my chosen style
 
 Build type scale based on selection.
 
@@ -174,9 +174,9 @@ Ask via AskUserQuestion:
 - header: "Components"
 - question: "Component style preference?"
 - options:
-  - "Rounded & soft" - Large border radius, gentle shadows
-  - "Sharp & precise" - Small or no radius, crisp edges
-  - "Mixed" - Rounded buttons, sharp cards (or vice versa)
+ - "Rounded & soft" - Large border radius, gentle shadows
+ - "Sharp & precise" - Small or no radius, crisp edges
+ - "Mixed" - Rounded buttons, sharp cards (or vice versa)
 
 Determine:
 - Border radius scale

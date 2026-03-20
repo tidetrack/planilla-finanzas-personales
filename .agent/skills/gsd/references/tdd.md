@@ -56,13 +56,13 @@ Output: [Working, tested feature]
 </context>
 
 <feature>
-  <name>[Feature name]</name>
-  <files>[source file, test file]</files>
-  <behavior>
-    [Expected behavior in testable terms]
-    Cases: input → expected output
-  </behavior>
-  <implementation>[How to implement once tests pass]</implementation>
+ <name>[Feature name]</name>
+ <files>[source file, test file]</files>
+ <behavior>
+ [Expected behavior in testable terms]
+ Cases: input → expected output
+ </behavior>
+ <implementation>[How to implement once tests pass]</implementation>
 </feature>
 
 <verification>
@@ -170,10 +170,10 @@ if [ -f Cargo.toml ]; then echo "rust"; fi
 **4. Verify setup:**
 ```bash
 # Run empty test suite - should pass with 0 tests
-npm test  # Node
-pytest    # Python
-go test ./...  # Go
-cargo test    # Rust
+npm test # Node
+pytest # Python
+go test ./... # Go
+cargo test # Rust
 ```
 
 **5. Create first test file:**

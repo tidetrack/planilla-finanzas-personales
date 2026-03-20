@@ -61,7 +61,7 @@ Common types: Tech stack, Timeline, Budget, Dependencies, Compatibility, Perform
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| [Choice] | [Why] | [✓ Good / ⚠️ Revisit / — Pending] |
+| [Choice] | [Why] | [✓ Good / ️ Revisit / — Pending] |
 
 ---
 *Last updated: [date] after [trigger]*
@@ -113,9 +113,9 @@ Common types: Tech stack, Timeline, Budget, Dependencies, Compatibility, Perform
 - Significant choices that affect future work
 - Add decisions as they're made throughout the project
 - Track outcome when known:
-  - ✓ Good — decision proved correct
-  - ⚠️ Revisit — decision may need reconsideration
-  - — Pending — too early to evaluate
+ - ✓ Good — decision proved correct
+ - ️ Revisit — decision may need reconsideration
+ - — Pending — too early to evaluate
 
 **Last Updated:**
 - Always note when and why the document was updated
@@ -150,19 +150,19 @@ For existing codebases:
 1. **Map codebase first** via `/gsd:map-codebase`
 
 2. **Infer Validated requirements** from existing code:
-   - What does the codebase actually do?
-   - What patterns are established?
-   - What's clearly working and relied upon?
+ - What does the codebase actually do?
+ - What patterns are established?
+ - What's clearly working and relied upon?
 
 3. **Gather Active requirements** from user:
-   - Present inferred current state
-   - Ask what they want to build next
+ - Present inferred current state
+ - Ask what they want to build next
 
 4. **Initialize:**
-   - Validated = inferred from existing code
-   - Active = user's goals for this work
-   - Out of Scope = boundaries user specifies
-   - Context = includes current codebase state
+ - Validated = inferred from existing code
+ - Active = user's goals for this work
+ - Out of Scope = boundaries user specifies
+ - Context = includes current codebase state
 
 </brownfield>
 

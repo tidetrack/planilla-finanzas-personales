@@ -3,9 +3,9 @@ name: gsd:execute-plan-auth
 description: Authentication gate handling for execute-plan workflow
 argument-hint: ""
 allowed-tools:
-  - Read
-  - Bash
-  - AskUserQuestion
+ - Read
+ - Bash
+ - AskUserQuestion
 ---
 
 <objective>
@@ -53,7 +53,7 @@ Present it to user immediately with exact authentication steps:
 
 ```
 ╔═══════════════════════════════════════════════════════╗
-║  CHECKPOINT: Action Required                          ║
+║ CHECKPOINT: Action Required ║
 ╚═══════════════════════════════════════════════════════╝
 
 Progress: {X}/{Y} tasks complete
@@ -63,8 +63,8 @@ Attempted: {command}
 Error: {error message}
 
 What you need to do:
-  1. Run: {auth command}
-  2. {additional steps}
+ 1. Run: {auth command}
+ 2. {additional steps}
 
 I'll verify: {verification command}
 
@@ -119,9 +119,9 @@ Document authentication gates as normal flow, not deviations:
 During execution, I encountered authentication requirements:
 
 1. Task 3: Vercel CLI required authentication
-   - Paused for `vercel login`
-   - Resumed after authentication
-   - Deployed successfully
+ - Paused for `vercel login`
+ - Resumed after authentication
+ - Deployed successfully
 
 These are normal gates, not errors.
 ```

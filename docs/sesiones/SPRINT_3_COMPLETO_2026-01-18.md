@@ -1,33 +1,33 @@
-# Sprint 3: UI Development - COMPLETO ✅
+# Sprint 3: UI Development - COMPLETO 
 
-**Fecha**: 2026-01-18  
-**Duración**: 5 días (Day 0 → Day 5)  
+**Fecha**: 2026-01-18 
+**Duración**: 5 días (Day 0 → Day 5) 
 **Versión**: v0.4.0
 
 ---
 
-## 🎯 Resumen Ejecutivo
+## Resumen Ejecutivo
 
 Sprint exitosamente completado enfocado en el desarrollo de interfaces de usuario con diseño neumórfico moderno, menús personalizados de Google Sheets y dashboard interactivo.
 
 ### Métricas del Sprint
 
 - **Código nuevo**: ~3,100 líneas (HTML/CSS/JS)
-- **Archivos creados**: 9 (5 UI + 2 servicios actualizados + 2 archivos de diseño)  
+- **Archivos creados**: 9 (5 UI + 2 servicios actualizados + 2 archivos de diseño) 
 - **Componentes UI**: 15+ (Design System + Forms + Dashboards + Lists)
 - **Funciones nuevas**: 20+ (Services + Validations + Helpers + UI)
-- **Tests ejecutados**: Manual end-to-end ✅
+- **Tests ejecutados**: Manual end-to-end 
 - **Progress**: 100% completado
 
 ### Estado Final
 
-✅ **RELEASED** - Todas las funcionalidades implementadas y testeadas
+ **RELEASED** - Todas las funcionalidades implementadas y testeadas
 
 ---
 
-## 📋 Timeline del Sprint
+## Timeline del Sprint
 
-### Day 0: Design System ✅
+### Day 0: Design System 
 
 **Objetivo**: Crear sistema de diseño neumórfico completo y reutilizable
 
@@ -67,20 +67,20 @@ Sprint exitosamente completado enfocado en el desarrollo de interfaces de usuari
 - **Fuente**: League Spartan - moderna, geométrica, 5 weights
 - **Arquitectura**: Atomic Design (átomos → moléculas → organismos)
 - **Sombras**: 
-  - `--shadow-light`: -8px -8px 16px rgba(255,255,255,0.8)
-  - `--shadow-dark`: 8px 8px 16px rgba(174,191,206,0.4)
-  - `--shadow-neu`: Combinación de ambas
+ - `--shadow-light`: -8px -8px 16px rgba(255,255,255,0.8)
+ - `--shadow-dark`: 8px 8px 16px rgba(174,191,206,0.4)
+ - `--shadow-neu`: Combinación de ambas
 
 #### Testing
 
-- ✅ Todos los componentes renderizan correctamente
-- ✅ Fuente Google Fonts carga OK
-- ✅ Neumorphism visual verificado
-- ✅ Responsive breakpoints funcionan
+- Todos los componentes renderizan correctamente
+- Fuente Google Fonts carga OK
+- Neumorphism visual verificado
+- Responsive breakpoints funcionan
 
 ---
 
-### Day 1: Transaction Form ✅
+### Day 1: Transaction Form 
 
 **Objetivo**: Formulario completo para registrar transacciones con validación dual
 
@@ -118,27 +118,27 @@ Sprint exitosamente completado enfocado en el desarrollo de interfaces de usuari
 **Integración Backend**:
 ```javascript
 function submitTransaction() {
-  // Validación client-side
-  // Preparación de objeto trx
-  // google.script.run.createTransaccionFromUI(trx)
-  // Success: Modal
-  // Error: Alert
+ // Validación client-side
+ // Preparación de objeto trx
+ // google.script.run.createTransaccionFromUI(trx)
+ // Success: Modal
+ // Error: Alert
 }
 ```
 
 #### Testing
 
-- ✅ Formulario abre desde menú "Tidetrack 💰 → Nueva Transacción"
-- ✅ Validaciones funcionan (required, positive, date)
-- ✅ Dropdowns cargan catálogos dinámicamente
-- ✅ Filtro de cuentas por sentido OK
-- ✅ Campo fx_id condicional funciona correctamente
-- ✅ Guardado exitoso de transacciones
-- ✅ Modal de éxito con función `resetForm()` funcional
+- Formulario abre desde menú "Tidetrack → Nueva Transacción"
+- Validaciones funcionan (required, positive, date)
+- Dropdowns cargan catálogos dinámicamente
+- Filtro de cuentas por sentido OK
+- Campo fx_id condicional funciona correctamente
+- Guardado exitoso de transacciones
+- Modal de éxito con función `resetForm()` funcional
 
 ---
 
-### Day 2: Custom Menus & Quick Actions ✅
+### Day 2: Custom Menus & Quick Actions 
 
 **Objetivo**: Menú personalizado de Google Sheets para acceso rápido
 
@@ -149,14 +149,14 @@ function submitTransaction() {
 **Trigger `onOpen()`**:
 ```javascript
 function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Tidetrack 💰')
-    .addItem('Nueva Transacción ⚡', 'showTransactionForm')
-    .addItem('Ver Dashboard 📊', 'showMainDashboard')
-    .addSeparator()
-    .addItem('Seed Datos Demo 🎲', 'runDataSeedWithConfirmation')
-    .addItem('Limpiar Transacciones 🗑️', 'clearTransactionsWithConfirmation')
-    .addToUi();
+ const ui = SpreadsheetApp.getUi();
+ ui.createMenu('Tidetrack ')
+ .addItem('Nueva Transacción ', 'showTransactionForm')
+ .addItem('Ver Dashboard ', 'showMainDashboard')
+ .addSeparator()
+ .addItem('Seed Datos Demo ', 'runDataSeedWithConfirmation')
+ .addItem('Limpiar Transacciones ️', 'clearTransactionsWithConfirmation')
+ .addToUi();
 }
 ```
 
@@ -170,12 +170,12 @@ function onOpen() {
 **00_Config.js actualizado**:
 ```javascript
 const MENU_CONFIG = {
-  MENU_NAME: 'Tidetrack 💰',
-  ITEMS: [
-    { name: 'Nueva Transacción ⚡', function: 'showTransactionForm' },
-    { name: 'Ver Dashboard 📊', function: 'showMainDashboard' },
-    // ...
-  ]
+ MENU_NAME: 'Tidetrack ',
+ ITEMS: [
+ { name: 'Nueva Transacción ', function: 'showTransactionForm' },
+ { name: 'Ver Dashboard ', function: 'showMainDashboard' },
+ // ...
+ ]
 };
 ```
 
@@ -191,14 +191,14 @@ const MENU_CONFIG = {
 
 #### Testing
 
-- ✅ Menú aparece automáticamente al abrir Sheet
-- ✅ Todas las opciones funcionales
-- ✅ Seed con confirmación OK
-- ✅ Navegación entre vistas funciona
+- Menú aparece automáticamente al abrir Sheet
+- Todas las opciones funcionales
+- Seed con confirmación OK
+- Navegación entre vistas funciona
 
 ---
 
-### Day 3: Main Dashboard ✅
+### Day 3: Main Dashboard 
 
 **Objetivo**: Dashboard principal con resumen financiero del mes
 
@@ -209,36 +209,36 @@ const MENU_CONFIG = {
 **Secciones del Dashboard**:
 
 1. **Header**:
-   - Título "Tidetrack Dashboard"
-   - Fecha actual formateada (español)
-   - Selector de mes/año
+ - Título "Tidetrack Dashboard"
+ - Fecha actual formateada (español)
+ - Selector de mes/año
 
 2. **Grid de Métricas** (3 cards):
-   - **Saldo Total**: Ingresos - Egresos del mes
-   - **Ingresos**: Suma + contador de transacciones
-   - **Gastos**: Suma + contador de transacciones
-   - Color coding: verde (ingresos), rojo (egresos), azul (saldo)
-   - Iconos emoji: 💰 (saldo), 📈 (ingresos), 📉 (gastos)
+ - **Saldo Total**: Ingresos - Egresos del mes
+ - **Ingresos**: Suma + contador de transacciones
+ - **Gastos**: Suma + contador de transacciones
+ - Color coding: verde (ingresos), rojo (egresos), azul (saldo)
+ - Iconos emoji: (saldo), (ingresos), (gastos)
 
 3. **Acciones Rápidas** (4 cards navegables):
-   - Nueva Transacción ⚡
-   - Ver Movimientos 📋
-   - Análisis 📊
-   - Configuración ⚙️
-   - Hover effects (translateY + shadow elevación)
+ - Nueva Transacción 
+ - Ver Movimientos 
+ - Análisis 
+ - Configuración ️
+ - Hover effects (translateY + shadow elevación)
 
 4. **Últimos Movimientos**:
-   - Top 5 transacciones ordenadas por fecha desc
-   - Muestra: fecha, cuenta, medio, monto con símbolo de moneda
-   - Badge de sentido (Ingreso/Egreso) con colores
+ - Top 5 transacciones ordenadas por fecha desc
+ - Muestra: fecha, cuenta, medio, monto con símbolo de moneda
+ - Badge de sentido (Ingreso/Egreso) con colores
 
 **Backend: getDashboardStats() en UIService**:
 ```javascript
 function getDashboardStats(year, month) {
-  // Filtra transacciones del mes
-  // Calcula totales (ingresos, egresos, balance)
-  // Enriquece con nombres de cuentas/medios
-  // Retorna: { balance, ingresos, egresos, counts, recientes }
+ // Filtra transacciones del mes
+ // Calcula totales (ingresos, egresos, balance)
+ // Enriquece con nombres de cuentas/medios
+ // Retorna: { balance, ingresos, egresos, counts, recientes }
 }
 ```
 
@@ -251,15 +251,15 @@ function getDashboardStats(year, month) {
 
 #### Testing
 
-- ✅ Dashboard carga métricas reales
-- ✅ Saldo/Ingresos/Gastos del mes calculan correctamente
-- ✅ Últimos movimientos se muestran ordenados
-- ✅ Navegación entre Dashboard y Form OK
-- ✅ Selector de mes actualiza datos
+- Dashboard carga métricas reales
+- Saldo/Ingresos/Gastos del mes calculan correctamente
+- Últimos movimientos se muestran ordenados
+- Navegación entre Dashboard y Form OK
+- Selector de mes actualiza datos
 
 ---
 
-### Day 4: Transaction List View ✅
+### Day 4: Transaction List View 
 
 **Objetivo**: Vista de lista completa con filtros y paginación
 
@@ -270,46 +270,46 @@ function getDashboardStats(year, month) {
 **Componentes**:
 
 1. **Header**:
-   - Botón "← Volver al Dashboard"
-   - Título "Historial de Transacciones"
-   - Selector mes/año (consistente con Dashboard)
+ - Botón "← Volver al Dashboard"
+ - Título "Historial de Transacciones"
+ - Selector mes/año (consistente con Dashboard)
 
 2. **Filtros**:
-   - **Sentido**: Dropdown (Todos, Ingreso, Egreso)
-   - **Cuenta**: Dropdown (Todas, + lista dinámica de cuentas)
-   - Botón "Aplicar Filtros"
+ - **Sentido**: Dropdown (Todos, Ingreso, Egreso)
+ - **Cuenta**: Dropdown (Todas, + lista dinámica de cuentas)
+ - Botón "Aplicar Filtros"
 
 3. **Tabla de Transacciones**:
-   - Columnas: Fecha, Tipo, Monto, Cuenta, Medio, Nota
-   - Badge visual para sentido (verde/rojo)
-   - Formato de moneda con símbolo
-   - Hover states en filas
-   - Responsive (scroll horizontal en mobile)
+ - Columnas: Fecha, Tipo, Monto, Cuenta, Medio, Nota
+ - Badge visual para sentido (verde/rojo)
+ - Formato de moneda con símbolo
+ - Hover states en filas
+ - Responsive (scroll horizontal en mobile)
 
 4. **Paginación**:
-   - Límite: 50 transacciones
-   - Mensaje: "Mostrando X de Y transacciones"
+ - Límite: 50 transacciones
+ - Mensaje: "Mostrando X de Y transacciones"
 
 **Backend: getTransactionsList() en UIService**:
 ```javascript
 function getTransactionsList(year, month, filters) {
-  // 1. Obtiene todas las transacciones
-  // 2. Filtra por mes/año
-  // 3. Aplica filtros (sentido, cuenta)
-  // 4. Ordena por fecha desc
-  // 5. Limita a 50
-  // 6. Enriquece con nombres (lookup)
-  // Retorna: { transactions, total, showing, selectedYear, selectedMonth }
+ // 1. Obtiene todas las transacciones
+ // 2. Filtra por mes/año
+ // 3. Aplica filtros (sentido, cuenta)
+ // 4. Ordena por fecha desc
+ // 5. Limita a 50
+ // 6. Enriquece con nombres (lookup)
+ // Retorna: { transactions, total, showing, selectedYear, selectedMonth }
 }
 ```
 
 **showTransactionList() en MenuService**:
 ```javascript
 function showTransactionList() {
-  const html = HtmlService.createHtmlOutputFromFile('UI_TransactionList')
-    .setWidth(1200)
-    .setHeight(900);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Historial de Transacciones');
+ const html = HtmlService.createHtmlOutputFromFile('UI_TransactionList')
+ .setWidth(1200)
+ .setHeight(900);
+ SpreadsheetApp.getUi().showModalDialog(html, 'Historial de Transacciones');
 }
 ```
 
@@ -323,76 +323,76 @@ function showTransactionList() {
 
 #### Testing
 
-- ✅ Vista carga desde menú "Ver Movimientos"
-- ✅ Tabla muestra transacciones del mes actual
-- ✅ Selector de mes actualiza datos
-- ✅ Filtro de sentido funciona (Todos/Ingreso/Egreso)
-- ✅ Filtro de cuenta funciona
-- ✅ Paginación respeta límite de 50
-- ✅ Navegación "← Volver" abre Dashboard
+- Vista carga desde menú "Ver Movimientos"
+- Tabla muestra transacciones del mes actual
+- Selector de mes actualiza datos
+- Filtro de sentido funciona (Todos/Ingreso/Egreso)
+- Filtro de cuenta funciona
+- Paginación respeta límite de 50
+- Navegación "← Volver" abre Dashboard
 
 ---
 
-### Day 5: Testing & Polish ✅
+### Day 5: Testing & Polish 
 
 **Objetivo**: Testing integral y documentación de cierre
 
 #### Testing Ejecutado
 
 **1. End-to-End Flow**:
-- ✅ Menú → Nueva Transacción → Fill form → Save → Modal → Nueva Transacción
-- ✅ Dashboard → Ver Movimientos → Transaction List → Volver → Dashboard
-- ✅ Create transaction → Verify in list → Verify in Dashboard stats
-- ✅ USD transaction → fx_id required → Select FX → Save → Verify
+- Menú → Nueva Transacción → Fill form → Save → Modal → Nueva Transacción
+- Dashboard → Ver Movimientos → Transaction List → Volver → Dashboard
+- Create transaction → Verify in list → Verify in Dashboard stats
+- USD transaction → fx_id required → Select FX → Save → Verify
 
 **2. Form Validation**:
-- ✅ Required fields validation (fecha, monto, moneda, sentido, cuenta, medio)
-- ✅ Positive number validation for monto
-- ✅ Date format validation
-- ✅ fx_id required when moneda != base_moneda
-- ✅ Success/error alerts display correctly
+- Required fields validation (fecha, monto, moneda, sentido, cuenta, medio)
+- Positive number validation for monto
+- Date format validation
+- fx_id required when moneda != base_moneda
+- Success/error alerts display correctly
 
 **3. UI/UX**:
-- ✅ Buttons respond to hover (visual feedback)
-- ✅ Loading states show spinner
-- ✅ Success modal displays after save
-- ✅ Error messages clear and helpful
-- ✅ Navigation buttons work
+- Buttons respond to hover (visual feedback)
+- Loading states show spinner
+- Success modal displays after save
+- Error messages clear and helpful
+- Navigation buttons work
 
 **4. Data Display**:
-- ✅ Dashboard stats calculate correctly (balance = ingresos - egresos)
-- ✅ Recent transactions show correct data (top 5, ordered)
-- ✅ Transaction list shows all columns properly
-- ✅ Month selector updates data
-- ✅ Filters apply correctly (sentido, cuenta)
+- Dashboard stats calculate correctly (balance = ingresos - egresos)
+- Recent transactions show correct data (top 5, ordered)
+- Transaction list shows all columns properly
+- Month selector updates data
+- Filters apply correctly (sentido, cuenta)
 
 **5. Responsive Design**:
-- ✅ Dashboard: 3-column grid → 1-column on mobile
-- ✅ Transaction Form: 2-column grid → 1-column on mobile
-- ✅ Transaction List: horizontal scroll on small screens
-- ✅ All text readable
-- ✅ Buttons accessible and tappable
+- Dashboard: 3-column grid → 1-column on mobile
+- Transaction Form: 2-column grid → 1-column on mobile
+- Transaction List: horizontal scroll on small screens
+- All text readable
+- Buttons accessible and tappable
 
 #### Polish Completado
 
-- ✅ Modal de éxito agregado a `UI_TransactionForm.html`
-  - CSS styles para modal
-  - HTML markup
-  - Función `resetForm()` implementada
-- ✅ Consistencia de diseño verificada en todos los componentes
-- ✅ Todos los archivos HTML self-contained (CSS + JS embebidos)
-- ✅ Nombres de funciones clarificados
-- ✅ Comentarios agregados a código complejo
+- Modal de éxito agregado a `UI_TransactionForm.html`
+ - CSS styles para modal
+ - HTML markup
+ - Función `resetForm()` implementada
+- Consistencia de diseño verificada en todos los componentes
+- Todos los archivos HTML self-contained (CSS + JS embebidos)
+- Nombres de funciones clarificados
+- Comentarios agregados a código complejo
 
 #### Documentación Creada
 
-- ✅ Este documento: `SPRINT_3_COMPLETO_2026-01-18.md`
-- ✅ Actualización de `HISTORIAL_DESARROLLO.md` (Sprint 3 marcado completo)
-- ✅ Actualización de `CHANGELOG.md` (v0.4.0 cerrado)
+- Este documento: `SPRINT_3_COMPLETO_2026-01-18.md`
+- Actualización de `HISTORIAL_DESARROLLO.md` (Sprint 3 marcado completo)
+- Actualización de `CHANGELOG.md` (v0.4.0 cerrado)
 
 ---
 
-## 🏗️ Arquitectura Técnica
+## ️ Arquitectura Técnica
 
 ### Patrón: Self-Contained HTML
 
@@ -402,17 +402,17 @@ Todos los archivos UI siguen el mismo patrón:
 <!DOCTYPE html>
 <html>
 <head>
-  <style>
-    /* CSS Design System embebido */
-    /* CSS específico de componente */
-  </style>
+ <style>
+ /* CSS Design System embebido */
+ /* CSS específico de componente */
+ </style>
 </head>
 <body>
-  <!-- HTML markup -->
-  <script>
-    // JavaScript embebido
-    // Llamadas a google.script.run
-  </script>
+ <!-- HTML markup -->
+ <script>
+ // JavaScript embebido
+ // Llamadas a google.script.run
+ </script>
 </body>
 </html>
 ```
@@ -432,24 +432,24 @@ Todos los archivos UI siguen el mismo patrón:
 ```javascript
 // Frontend (HTML file)
 google.script.run
-  .withSuccessHandler(onSuccess)
-  .withFailureHandler(onError)
-  .backendFunction(params);
+ .withSuccessHandler(onSuccess)
+ .withFailureHandler(onError)
+ .backendFunction(params);
 
 // Backend (11_UIService.js)
 function backendFunction(params) {
-  try {
-    // Lógica
-    return result;
-  } catch (e) {
-    throw new Error(e.message);
-  }
+ try {
+ // Lógica
+ return result;
+ } catch (e) {
+ throw new Error(e.message);
+ }
 }
 ```
 
 ---
 
-## 📊 Análisis de Código
+## Análisis de Código
 
 ### Líneas de Código por Archivo
 
@@ -501,44 +501,44 @@ function backendFunction(params) {
 
 ---
 
-## 🐛 Bugs Resueltos
+## Bugs Resueltos
 
 ### Bug #1: Función huérfana en UIService (CRÍTICO)
 
-**Fecha**: Day 3  
-**Archivo**: `11_UIService.js`  
-**Problema**: Bloque try-catch fuera de función `createTransaccionFromUI`, causando error de sintaxis  
-**Impacto**: ❌ CRÍTICO - Error impedía cargar el servicio UI completo  
-**Solución**: Re-encapsulado bloque try-catch dentro de la función  
-**Líneas afectadas**: ~50-80  
+**Fecha**: Day 3 
+**Archivo**: `11_UIService.js` 
+**Problema**: Bloque try-catch fuera de función `createTransaccionFromUI`, causando error de sintaxis 
+**Impacto**: CRÍTICO - Error impedía cargar el servicio UI completo 
+**Solución**: Re-encapsulado bloque try-catch dentro de la función 
+**Líneas afectadas**: ~50-80 
 
-**Estado**: ✅ Resuelto
+**Estado**: Resuelto
 
 ### Bug #2: Form ID incorrecto en resetForm()
 
-**Fecha**: Day 5  
-**Archivo**: `UI_TransactionForm.html`  
-**Problema**: `resetForm()` usaba `document.getElementById('trx-form')` pero el form tenía `id="transaction-form"`  
-**Impacto**: ⚠️ MEDIO - Modal de éxito no podía resetear el formulario  
-**Solución**: Cambiado a `document.getElementById('transaction-form').reset()`  
+**Fecha**: Day 5 
+**Archivo**: `UI_TransactionForm.html` 
+**Problema**: `resetForm()` usaba `document.getElementById('trx-form')` pero el form tenía `id="transaction-form"` 
+**Impacto**: ️ MEDIO - Modal de éxito no podía resetear el formulario 
+**Solución**: Cambiado a `document.getElementById('transaction-form').reset()` 
 
-**Estado**: ✅ Resuelto
+**Estado**: Resuelto
 
 ---
 
-## 🎨 Decisiones de Diseño (ADRs)
+## Decisiones de Diseño (ADRs)
 
 ### ADR-004: Neumorphic Design System
 
-**Decisión**: Usar neumorfismo como estética principal  
-**Fecha**: Day 0  
-**Contexto**: Necesitábamos una estética moderna y profesional que se diferenciara de diseños flat comunes  
+**Decisión**: Usar neumorfismo como estética principal 
+**Fecha**: Day 0 
+**Contexto**: Necesitábamos una estética moderna y profesional que se diferenciara de diseños flat comunes 
 
 **Opciones Consideradas**:
 1. Material Design (descartado: muy común)
 2. Flat Design (descartado: poco distintivo)
 3. Glassmorphism (descartado: problemas de accesibilidad)
-4. Neumorphism ✅ (elegido)
+4. Neumorphism (elegido)
 
 **Rationale**:
 - Balance entre modernidad y profesionalismo
@@ -547,22 +547,22 @@ function backendFunction(params) {
 - Excelente para aplicaciones financieras (confianza, solidez)
 
 **Consecuencias**:
-- ✅ Identidad visual única
-- ✅ Feedback visual claro (botones, cards)
-- ⚠️ Requiere cuidado con contraste (accesibilidad)
-- ⚠️ Performance de sombras (mitigado con variables CSS)
+- Identidad visual única
+- Feedback visual claro (botones, cards)
+- ️ Requiere cuidado con contraste (accesibilidad)
+- ️ Performance de sombras (mitigado con variables CSS)
 
 ---
 
 ### ADR-005: HTML Dialogs vs Sidebars
 
-**Decisión**: Usar `showModalDialog()` en vez de sidebars  
-**Fecha**: Day 1  
+**Decisión**: Usar `showModalDialog()` en vez de sidebars 
+**Fecha**: Day 1 
 **Contexto**: Google Apps Script ofrece modals y sidebars para UI
 
 **Opciones Consideradas**:
 1. Sidebars (descartado: espacio limitado)
-2. Modal Dialogs ✅ (elegido)
+2. Modal Dialogs (elegido)
 
 **Rationale**:
 - Mayor espacio visual para forms complejos
@@ -571,10 +571,10 @@ function backendFunction(params) {
 - Focus total en la tarea (no distracción con la sheet)
 
 **Consecuencias**:
-- ✅ Mejor UX para forms multi-campo
-- ✅ Dimensiones flexibles
-- ⚠️ Requiere cerrar modal para volver a sheet
-- ✅ Modal de éxito resuelve flujo de continuidad
+- Mejor UX para forms multi-campo
+- Dimensiones flexibles
+- ️ Requiere cerrar modal para volver a sheet
+- Modal de éxito resuelve flujo de continuidad
 
 **Trade-offs Aceptados**: Cerrar para volver es aceptable porque el modal de éxito ofrece "Nueva Transacción" o "Ir al Dashboard"
 
@@ -582,13 +582,13 @@ function backendFunction(params) {
 
 ### ADR-006: Auto-contenido de Forms (Self-Contained HTML)
 
-**Decisión**: CSS y JS embebidos en cada HTML (no archivos separados)  
-**Fecha**: Day 0  
+**Decisión**: CSS y JS embebidos en cada HTML (no archivos separados) 
+**Fecha**: Day 0 
 **Contexto**: Apps Script no soporta imports tradicionales de CSS/JS
 
 **Opciones Consideradas**:
 1. Archivos separados con `\u003c?!= include() ?\u003e` (descartado)
-2. Self-contained HTML ✅ (elegido)
+2. Self-contained HTML (elegido)
 
 **Rationale**:
 - Apps Script no tiene bundler ni module system
@@ -598,11 +598,11 @@ function backendFunction(params) {
 - Evita problemas de CORS y carga
 
 **Consecuencias**:
-- ✅ Simplicidad de deploy (copiar/pegar archivo completo)
-- ✅ Sin dependencias de carga
-- ✅ Testing individual sencillo
-- ⚠️ Duplicación de Design System (mitigado: ~500 líneas, compresible)
-- ⚠️ Archivos más largos (600-800 líneas, aceptable)
+- Simplicidad de deploy (copiar/pegar archivo completo)
+- Sin dependencias de carga
+- Testing individual sencillo
+- ️ Duplicación de Design System (mitigado: ~500 líneas, compresible)
+- ️ Archivos más largos (600-800 líneas, aceptable)
 
 **Futuro**: Si el proyecto crece, considerar build step con bundler
 
@@ -610,14 +610,14 @@ function backendFunction(params) {
 
 ### ADR-007: Client + Server Validation
 
-**Decisión**: Validación en ambos lados (client-side y server-side)  
-**Fecha**: Day 1  
+**Decisión**: Validación en ambos lados (client-side y server-side) 
+**Fecha**: Day 1 
 **Contexto**: Necesitamos UX inmediato pero también garantizar integridad de datos
 
 **Opciones Consideradas**:
 1. Solo client-side (descartado: inseguro)
 2. Solo server-side (descartado: mala UX)
-3. Dual validation ✅ (elegido)
+3. Dual validation (elegido)
 
 **Rationale**:
 - **Client-side**: Feedback inmediato sin roundtrip, mejor UX
@@ -634,40 +634,40 @@ function validateTransaction(trx, isUpdate) { ... }
 ```
 
 **Consecuencias**:
-- ✅ UX excelente (errores inmediatos)
-- ✅ Datos seguros (validación final en servidor)
-- ⚠️ Duplicación de lógica (mitigado: lógica simple)
-- ✅ Previene errores costosos (violaciones de FK, datos corruptos)
+- UX excelente (errores inmediatos)
+- Datos seguros (validación final en servidor)
+- ️ Duplicación de lógica (mitigado: lógica simple)
+- Previene errores costosos (violaciones de FK, datos corruptos)
 
 ---
 
-## 📈 Métricas de Éxito
+## Métricas de Éxito
 
 ### Objetivos Planificados vs. Alcanzados
 
 | Objetivo | Planificado | Alcanzado | Status |
 |----------|-------------|-----------|--------|
-| Design System | ✅ | ✅ | 100% |
-| Transaction Form | ✅ | ✅ | 100% |
-| Custom Menus | ✅ | ✅ | 100% |
-| Main Dashboard | ✅ | ✅ | 100% |
-| Transaction List | ✅ | ✅ | 100% |
-| Testing E2E | ✅ | ✅ | 100% |
-| Documentation | ✅ | ✅ | 100% |
+| Design System | | | 100% |
+| Transaction Form | | | 100% |
+| Custom Menus | | | 100% |
+| Main Dashboard | | | 100% |
+| Transaction List | | | 100% |
+| Testing E2E | | | 100% |
+| Documentation | | | 100% |
 
 ### Cobertura de Funcionalidades
 
-- ✅ Registro de transacciones (CREATE): 100%
-- ✅ Visualización de dashboard (READ): 100%
-- ✅ Lista de transacciones (READ con filtros): 100%
-- ⏳ Edición de transacciones (UPDATE): 0% (Sprint 4)
-- ⏳ Eliminación de transacciones (DELETE): 0% (Sprint 4)
+- Registro de transacciones (CREATE): 100%
+- Visualización de dashboard (READ): 100%
+- Lista de transacciones (READ con filtros): 100%
+- Edición de transacciones (UPDATE): 0% (Sprint 4)
+- Eliminación de transacciones (DELETE): 0% (Sprint 4)
 
 ---
 
-## 🎓 Lecciones Aprendidas
+## Lecciones Aprendidas
 
-### ✅ Qué Funcionó Bien
+### Qué Funcionó Bien
 
 1. **Diseño neumórfico**: Gran recepción, identidad visual clara
 2. **Self-contained HTML**: Deployment simple, sin problemas de carga
@@ -675,14 +675,14 @@ function validateTransaction(trx, isUpdate) { ... }
 4. **Modal de éxito**: Resolvió flujo de continuidad perfectamente
 5. **Filtros dinámicos**: Cuentas filtradas por sentido simplifican UX
 
-### ⚠️ Desafíos Enfrentados
+### ️ Desafíos Enfrentados
 
 1. **Tamaño de archivos**: HTMLs de 700-800 líneas (aceptable pero cerca del límite)
 2. **Duplicación de Design System**: Cada HTML tiene ~500 líneas de CSS (futuro: considerar build step)
 3. **Testing manual**: Sin tests automatizados (difícil en Apps Script)
 4. **Performance**: Sin optimización de bundle (no crítico aún)
 
-### 💡 Mejoras para Próximos Sprints
+### Mejoras para Próximos Sprints
 
 1. **Build Step**: Considerar Webpack/Rollup para bundling si crece
 2. **Component Library**: Extraer componentes reutilizables a biblioteca
@@ -692,7 +692,7 @@ function validateTransaction(trx, isUpdate) { ... }
 
 ---
 
-## 🚀 Próximos Pasos: Sprint 4
+## Próximos Pasos: Sprint 4
 
 ### Opción A: CRUD Completo + Edición
 
@@ -702,7 +702,7 @@ function validateTransaction(trx, isUpdate) { ... }
 - Formulario en modo "edición" vs. "creación"
 - Validaciones de UPDATE (permitir mismo ID)
 
-**Prioridad**: ⭐⭐⭐ ALTA (completa funcionalidad básica)
+**Prioridad**: ALTA (completa funcionalidad básica)
 
 ### Opción B: Data Visualization & Analytics
 
@@ -712,7 +712,7 @@ function validateTransaction(trx, isUpdate) { ... }
 - Reportes exportables (CSV, PDF)
 - Advanced filters y búsqueda full-text
 
-**Prioridad**: ⭐⭐ MEDIA (valor agregado)
+**Prioridad**: MEDIA (valor agregado)
 
 ### Opción C: Mobile Optimization & PWA
 
@@ -722,7 +722,7 @@ function validateTransaction(trx, isUpdate) { ... }
 - Service Workers (offline support)
 - Push notifications (recordatorios)
 
-**Prioridad**: ⭐ BAJA (mejora de acceso)
+**Prioridad**: BAJA (mejora de acceso)
 
 ### Recomendación
 
@@ -730,42 +730,42 @@ function validateTransaction(trx, isUpdate) { ... }
 
 ---
 
-## 📎 Anexos
+## Anexos
 
 ### Archivos Creados en Sprint 3
 
 ```
 src/
-├── CSS_DesignSystem.html         (500 líneas)
-├── CSS_Components.html           (400 líneas)
-├── UI_DesignSystemTest.html      (300 líneas)
-├── UI_TransactionForm.html       (740 líneas)
-├── UI_MainDashboard.html         (600 líneas)
-├── UI_TransactionList.html       (800 líneas)
-├── 12_MenuService.js            (100 líneas)
+├── CSS_DesignSystem.html (500 líneas)
+├── CSS_Components.html (400 líneas)
+├── UI_DesignSystemTest.html (300 líneas)
+├── UI_TransactionForm.html (740 líneas)
+├── UI_MainDashboard.html (600 líneas)
+├── UI_TransactionList.html (800 líneas)
+├── 12_MenuService.js (100 líneas)
 └── (11_UIService.js - actualizado +300 líneas)
 
 docs/sesiones/
-└── SPRINT_3_COMPLETO_2026-01-18.md  (este archivo)
+└── SPRINT_3_COMPLETO_2026-01-18.md (este archivo)
 ```
 
 ### Funciones Clave
 
 **UIService (11_UIService.js)**:
 ```javascript
-getFormData()                      // Catálogos para dropdowns
-createTransaccionFromUI(trx)       // Wrapper CREATE
-getDashboardStats(year, month)     // Estadísticas del mes
+getFormData() // Catálogos para dropdowns
+createTransaccionFromUI(trx) // Wrapper CREATE
+getDashboardStats(year, month) // Estadísticas del mes
 getTransactionsList(y, m, filters) // Lista filtrada
-showTransactionForm()              // Abre modal form
-showMainDashboard()                // Abre modal dashboard
-showTransactionList()              // Abre modal lista
+showTransactionForm() // Abre modal form
+showMainDashboard() // Abre modal dashboard
+showTransactionList() // Abre modal lista
 ```
 
 **MenuService (12_MenuService.js)**:
 ```javascript
-onOpen()                           // Trigger automático
-createTidetrackMenu()              // Construye menú
+onOpen() // Trigger automático
+createTidetrackMenu() // Construye menú
 ```
 
 ### Screenshots
@@ -774,22 +774,22 @@ createTidetrackMenu()              // Construye menú
 
 ---
 
-## ✅ Conclusión
+## Conclusión
 
 Sprint 3 completado exitosamente al 100%. Todas las funcionalidades planificadas fueron implementadas, testeadas y documentadas. El sistema UI está listo para uso real con:
 
-- ✅ Diseño moderno y profesional (neumórfico)
-- ✅ Registro de transacciones completo
-- ✅ Dashboard con métricas en tiempo real
-- ✅ Lista de transacciones con filtros
-- ✅ Menús personalizados de Google Sheets
-- ✅ Validación dual (cliente + servidor)
-- ✅ UX excelente (modales, loading states, feedback)
+- Diseño moderno y profesional (neumórfico)
+- Registro de transacciones completo
+- Dashboard con métricas en tiempo real
+- Lista de transacciones con filtros
+- Menús personalizados de Google Sheets
+- Validación dual (cliente + servidor)
+- UX excelente (modales, loading states, feedback)
 
 **Próximo Sprint**: Completar CRUD con UPDATE y DELETE.
 
 ---
 
-**Autor**: @ui-ux-designer + @backend-architect  
-**Revisado por**: @context-historian  
+**Autor**: @ui-ux-designer + @backend-architect 
+**Revisado por**: @context-historian 
 **Fecha de cierre**: 2026-01-18

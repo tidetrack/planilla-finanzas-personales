@@ -16,43 +16,43 @@ Al recibir un comando `/gsd [subcomando]`, el agente debe:
 
 ## Referencia rápida de comandos
 
-| Comando                       | Workflow ejecutado                                  |
+| Comando | Workflow ejecutado |
 | ----------------------------- | --------------------------------------------------- |
-| `new-project`                 | `.agent/skills/gsd/workflows/new-project.md`        |
-| `plan-phase [N]`              | `.agent/skills/gsd/workflows/plan-phase.md`         |
-| `execute-phase [N]`           | `.agent/skills/gsd/workflows/execute-phase.md`      |
-| `progress`                    | `.agent/skills/gsd/workflows/progress.md`           |
-| `debug [issue]`               | `.agent/skills/gsd/workflows/debug.md`              |
-| `quick`                       | `.agent/skills/gsd/workflows/quick.md`              |
-| `discuss-phase [N]`           | `.agent/skills/gsd/workflows/discuss-phase.md`      |
-| `verify-work [N]`             | `.agent/skills/gsd/workflows/verify-work.md`        |
-| `map-codebase`                | `.agent/skills/gsd/workflows/map-codebase.md`       |
-| `pause-work`                  | `.agent/skills/gsd/workflows/pause-work.md`         |
-| `resume-work`                 | `.agent/skills/gsd/workflows/resume-work.md`        |
-| `add-todo [desc]`             | `.agent/skills/gsd/workflows/add-todo.md`           |
-| `check-todos [area]`          | `.agent/skills/gsd/workflows/check-todos.md`        |
-| `add-phase <desc>`            | `.agent/skills/gsd/workflows/add-phase.md`          |
-| `insert-phase <after> <desc>` | `.agent/skills/gsd/workflows/insert-phase.md`       |
-| `remove-phase <N>`            | `.agent/skills/gsd/workflows/remove-phase.md`       |
-| `new-milestone [name]`        | `.agent/skills/gsd/workflows/new-milestone.md`      |
-| `complete-milestone <ver>`    | `.agent/skills/gsd/workflows/complete-milestone.md` |
-| `audit-milestone [ver]`       | `.agent/skills/gsd/workflows/audit-milestone.md`    |
-| `settings`                    | `.agent/skills/gsd/workflows/settings.md`           |
+| `new-project` | `.agent/skills/gsd/workflows/new-project.md` |
+| `plan-phase [N]` | `.agent/skills/gsd/workflows/plan-phase.md` |
+| `execute-phase [N]` | `.agent/skills/gsd/workflows/execute-phase.md` |
+| `progress` | `.agent/skills/gsd/workflows/progress.md` |
+| `debug [issue]` | `.agent/skills/gsd/workflows/debug.md` |
+| `quick` | `.agent/skills/gsd/workflows/quick.md` |
+| `discuss-phase [N]` | `.agent/skills/gsd/workflows/discuss-phase.md` |
+| `verify-work [N]` | `.agent/skills/gsd/workflows/verify-work.md` |
+| `map-codebase` | `.agent/skills/gsd/workflows/map-codebase.md` |
+| `pause-work` | `.agent/skills/gsd/workflows/pause-work.md` |
+| `resume-work` | `.agent/skills/gsd/workflows/resume-work.md` |
+| `add-todo [desc]` | `.agent/skills/gsd/workflows/add-todo.md` |
+| `check-todos [area]` | `.agent/skills/gsd/workflows/check-todos.md` |
+| `add-phase <desc>` | `.agent/skills/gsd/workflows/add-phase.md` |
+| `insert-phase <after> <desc>` | `.agent/skills/gsd/workflows/insert-phase.md` |
+| `remove-phase <N>` | `.agent/skills/gsd/workflows/remove-phase.md` |
+| `new-milestone [name]` | `.agent/skills/gsd/workflows/new-milestone.md` |
+| `complete-milestone <ver>` | `.agent/skills/gsd/workflows/complete-milestone.md` |
+| `audit-milestone [ver]` | `.agent/skills/gsd/workflows/audit-milestone.md` |
+| `settings` | `.agent/skills/gsd/workflows/settings.md` |
 
 ## Estructura del skill GSD
 
 ```
 .agent/skills/gsd/
-├── SKILL.md              ← Descripción completa del sistema
-├── agents/               ← 11 sub-agentes especializados
-│   ├── gsd-planner.md
-│   ├── gsd-executor.md
-│   ├── gsd-verifier.md
-│   ├── gsd-debugger.md
-│   └── ... (7 más)
-├── workflows/            ← 32 workflows de operación
-├── references/           ← 15 archivos de referencia técnica
-└── templates/            ← Plantillas para artefactos .planning/
+├── SKILL.md ← Descripción completa del sistema
+├── agents/ ← 11 sub-agentes especializados
+│ ├── gsd-planner.md
+│ ├── gsd-executor.md
+│ ├── gsd-verifier.md
+│ ├── gsd-debugger.md
+│ └── ... (7 más)
+├── workflows/ ← 32 workflows de operación
+├── references/ ← 15 archivos de referencia técnica
+└── templates/ ← Plantillas para artefactos .planning/
 ```
 
 ## Artefactos generados

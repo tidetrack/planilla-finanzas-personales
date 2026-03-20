@@ -4,11 +4,11 @@ Reglas de diseño de producto, UX y hábitos que definen la experiencia.
 
 ---
 
-## 🎨 Principios de UX y Diseño de Interacción
+## Principios de UX y Diseño de Interacción
 
 ### 1. La Estética es un Mecanismo de Reducción de Fricción
 
-> Si hablar de números se siente frío o intimidante, se pospone.  
+> Si hablar de números se siente frío o intimidante, se pospone. 
 > Si se siente claro y agradable, se visit a más.
 
 **Objetivo:** Una experiencia limpia, transparente y fácil de entender, con colores y resúmenes claves.
@@ -29,8 +29,8 @@ Reglas de diseño de producto, UX y hábitos que definen la experiencia.
 
 **Regla de oro:** El dato es espejo, no martillo.
 
-- ✅ Celebrar constancia y logros
-- ❌ Castigar gastos
+- Celebrar constancia y logros
+- Castigar gastos
 
 **Foco:** Empoderar, no juzgar.
 
@@ -47,7 +47,7 @@ En un sistema multi-moneda, multi-medio y multi-evento, el usuario se pierde si 
 
 ---
 
-## 🔄 Hábito como Tecnología
+## Hábito como Tecnología
 
 ### El Problema Central
 
@@ -87,16 +87,16 @@ Las rachas funcionan porque convierten una acción pequeña en **identidad**:
 
 **Principio:** Contextuales y respetuosas
 
-- ✅ Recordatorios suaves si no se registró
-- ✅ Alertas si disponibilidad baja rápido
-- ✅ Mensajes de cierre al final del día
-- ❌ Spam invasivo
+- Recordatorios suaves si no se registró
+- Alertas si disponibilidad baja rápido
+- Mensajes de cierre al final del día
+- Spam invasivo
 
 **El usuario debe sentir:** Acompañamiento positivo
 
 ---
 
-## 💱 Modo Viaje y Multi-Moneda
+## Modo Viaje y Multi-Moneda
 
 ### Por Qué es Diferencial
 
@@ -108,8 +108,8 @@ El modo viaje no es un "feature simpático". Es una **prueba de estrés para el 
 
 **Regla:** Cada transacción se registra en su moneda de origen.
 
-❌ No se fuerza al usuario a convertir antes de registrar  
-✅ Registro natural + Conversión automática en back
+ No se fuerza al usuario a convertir antes de registrar 
+ Registro natural + Conversión automática en back
 
 #### 2. Moneda Base de Visualización
 
@@ -127,18 +127,18 @@ El modo viaje no es un "feature simpático". Es una **prueba de estrés para el 
 
 **Regla:** Las cuentas se crean en el Plan de Cuentas asociadas a una única moneda "por defecto" (la de mayor uso) para acelerar la carga, pero el usuario debe poder sobrescribir libremente dicha moneda al momento de registrar la transacción particular.
 
-❌ No duplicar conceptos o cuentas (evitar "Sueldo ARS" y "Sueldo USD").
-✅ Un solo concepto maestral ("Sueldo") que autocompleta la moneda más probable, pero permite iterarla con 1 clic.
+ No duplicar conceptos o cuentas (evitar "Sueldo ARS" y "Sueldo USD").
+ Un solo concepto maestral ("Sueldo") que autocompleta la moneda más probable, pero permite iterarla con 1 clic.
 
 ### Pipeline de Conversión
 
 ```
 Usuario registra → "5000" en moneda local
-    ↓
+ ↓
 Sistema busca/guarda TC del día (fx_id)
-    ↓
+ ↓
 Calculo monto equivalente en moneda base
-    ↓
+ ↓
 Almacena ambos: monto_origen + monto_base
 ```
 
@@ -154,7 +154,7 @@ Almacena ambos: monto_origen + monto_base
 
 ---
 
-## 🧑‍🤝‍🧑 Gastos Compartidos
+## ‍‍ Gastos Compartidos
 
 ### Principio: Opt-in y Progresivo
 
@@ -181,7 +181,7 @@ Almacena ambos: monto_origen + monto_base
 
 ---
 
-## 📚 Educación Breve Integrada
+## Educación Breve Integrada
 
 ### Principio: Del Dato al Criterio, Sin Curso
 
@@ -196,7 +196,7 @@ Almacena ambos: monto_origen + monto_base
 
 **Ejemplo:**
 ```
-💡 Gasto variable alto
+ Gasto variable alto
 
 Tus gastos variables están 20% arriba del promedio.
 
@@ -215,19 +215,19 @@ Palancas: Revisar frecuencia de compras espontáneas.
 
 ---
 
-## 📏 Economía de Atención
+## Economía de Atención
 
 **Principio maestro:** Cada interacción extra tiene costo.
 
 ### Reducción de Decisiones
 
-- ❌ No pedir elegir entre 10 opciones cuando 1 alcanza
-- ❌ No pedir escribir cuando nota opcional funciona
-- ❌ No pedir convertir moneda cuando back puede hacerlo
+- No pedir elegir entre 10 opciones cuando 1 alcanza
+- No pedir escribir cuando nota opcional funciona
+- No pedir convertir moneda cuando back puede hacerlo
 
 ### Cada Reducción de Fricción = Mayor Probabilidad de Hábito
 
 ---
 
-**Versión del Documento**: 1.0  
+**Versión del Documento**: 1.0 
 **Última actualización**: 2026-01-17

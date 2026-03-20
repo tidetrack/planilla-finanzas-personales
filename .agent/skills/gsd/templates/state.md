@@ -119,13 +119,13 @@ STATE.md is the project's short-term memory spanning all phases and sessions.
 
 **Writing:** After every significant action
 - execute: After SUMMARY.md created
-  - Update position (phase, plan, status)
-  - Note new decisions (detail in PROJECT.md)
-  - Add blockers/concerns
+ - Update position (phase, plan, status)
+ - Note new decisions (detail in PROJECT.md)
+ - Add blockers/concerns
 - transition: After phase marked complete
-  - Update progress bar
-  - Clear resolved blockers
-  - Refresh Project Reference date
+ - Update progress bar
+ - Clear resolved blockers
+ - Refresh Project Reference date
 
 </lifecycle>
 

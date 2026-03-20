@@ -15,8 +15,8 @@
 // ============================================
 
 const SHEETS = {
-  PLAN_CUENTAS: 'Plan de Cuentas',
-  DATA_ENTRY: 'Hoja de Cargas'
+ PLAN_CUENTAS: 'Plan de Cuentas',
+ DATA_ENTRY: 'Hoja de Cargas'
 };
 
 const HEADER_ROW = 3;
@@ -27,36 +27,36 @@ const DATA_START_ROW = 4;
 // ============================================
 
 const RANGES = {
-  INGRESOS: {
-    sheet: SHEETS.PLAN_CUENTAS,
-    start: 'I',
-    end: 'K',
-    columns: { nombre: 'I', moneda: 'J', proyecto: 'K' }
-  },
-  COSTOS_FIJOS: {
-    sheet: SHEETS.PLAN_CUENTAS,
-    start: 'M',
-    end: 'O',
-    columns: { nombre: 'M', moneda: 'N', proyecto: 'O' }
-  },
-  COSTOS_VARIABLES: {
-    sheet: SHEETS.PLAN_CUENTAS,
-    start: 'Q',
-    end: 'S',
-    columns: { nombre: 'Q', moneda: 'R', proyecto: 'S' }
-  },
-  MEDIOS_PAGO: {
-    sheet: SHEETS.PLAN_CUENTAS,
-    start: 'U',
-    end: 'W',
-    columns: { nombre: 'U', moneda: 'V', proyecto: 'W' }
-  },
-  PROYECTOS: {
-    sheet: SHEETS.PLAN_CUENTAS,
-    start: 'AC',
-    end: 'AD',
-    columns: { nombre: 'AC', tipo: 'AD' }
-  }
+ INGRESOS: {
+ sheet: SHEETS.PLAN_CUENTAS,
+ start: 'I',
+ end: 'K',
+ columns: { nombre: 'I', moneda: 'J', proyecto: 'K' }
+ },
+ COSTOS_FIJOS: {
+ sheet: SHEETS.PLAN_CUENTAS,
+ start: 'M',
+ end: 'O',
+ columns: { nombre: 'M', moneda: 'N', proyecto: 'O' }
+ },
+ COSTOS_VARIABLES: {
+ sheet: SHEETS.PLAN_CUENTAS,
+ start: 'Q',
+ end: 'S',
+ columns: { nombre: 'Q', moneda: 'R', proyecto: 'S' }
+ },
+ MEDIOS_PAGO: {
+ sheet: SHEETS.PLAN_CUENTAS,
+ start: 'U',
+ end: 'W',
+ columns: { nombre: 'U', moneda: 'V', proyecto: 'W' }
+ },
+ PROYECTOS: {
+ sheet: SHEETS.PLAN_CUENTAS,
+ start: 'Y',
+ end: 'Z',
+ columns: { nombre: 'Y', tipo: 'Z' }
+ }
 };
 
 // ============================================
@@ -65,32 +65,14 @@ const RANGES = {
 
 // ADR-003: Las monedas disponibles se gestionan como constante de backend.
 // No requieren una tabla en la hoja de cálculo.
-const MONEDAS_DISPONIBLES = ['ARS', 'USD', 'AUD', 'EUR', 'BRL', 'GBP', 'CAD', 'CLP', 'UYU'];
-
-// ============================================
-// ENUMS (VALORES CERRADOS)
-// ============================================
-
-const ENUM_SENTIDO = ['Ingreso', 'Egreso'];
-
-const ENUM_MACRO_TIPO = [
-  'Ingreso',
-  'Gasto fijo',
-  'Gasto variable',
-  'Ahorro',
-  'Dólares' // U otro tipo de categorización personalizada
-];
+const MONEDAS_DISPONIBLES = ['ARS', 'USD', 'AUD', 'EUR'];
 
 // ============================================
 // MENSAJES DE ERROR
 // ============================================
 
 const ERROR_MESSAGES = {
-  SHEET_NOT_FOUND: 'Hoja DATA-ENTRY no encontrada',
-  INVALID_ENUM: 'Valor no permitido. Valores válidos: ',
-  VALIDATION_FAILED: 'Validación fallida: ',
-  DUPLICATE_ID: 'ID duplicado: ',
-  REQUIRED_FIELD: 'Campo obligatorio: '
+ SHEET_NOT_FOUND: 'Hoja no encontrada'
 };
 
 // ============================================
@@ -98,10 +80,10 @@ const ERROR_MESSAGES = {
 // ============================================
 
 const MENU_CONFIG = {
-  MAIN_MENU: 'Tidetrack',
-  ITEMS: [
-    { name: 'Gestor: Plan de Cuentas', function: 'showAbmPlanCuentas' }
-  ]
+ MAIN_MENU: 'Tidetrack',
+ ITEMS: [
+ { name: 'Gestor: Plan de Cuentas', function: 'showAbmPlanCuentas' }
+ ]
 };
 
 // ============================================
@@ -109,15 +91,15 @@ const MENU_CONFIG = {
 // ============================================
 
 const NAV_CONFIG = {
-  SHEETS: {
-    INICIO: 'Inicio',
-    TABLERO: 'Tablero',
-    CARGAS: 'Cargas',
-    ESPACIO_BLANCO_1: 'Espacio blanco 1',
-    ESPACIO_BLANCO_2: 'Espacio blanco 2',
-    ESPACIO_BLANCO_3: 'Espacio blanco 3',
-    DATA_ENTRY: 'DATA-ENTRY'
-  },
-  SHOW_TOAST_ON_NAVIGATE: true,
-  TOAST_DURATION: 2  // segundos
+ SHEETS: {
+ INICIO: 'Inicio',
+ TABLERO: 'Tablero',
+ CARGAS: 'Cargas',
+ ESPACIO_BLANCO_1: 'Espacio blanco 1',
+ ESPACIO_BLANCO_2: 'Espacio blanco 2',
+ ESPACIO_BLANCO_3: 'Espacio blanco 3',
+ DATA_ENTRY: 'DATA-ENTRY'
+ },
+ SHOW_TOAST_ON_NAVIGATE: true,
+ TOAST_DURATION: 2 // segundos
 };

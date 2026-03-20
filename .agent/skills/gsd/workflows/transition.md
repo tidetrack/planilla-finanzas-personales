@@ -3,11 +3,11 @@ name: gsd:transition
 description: Mark current phase complete and advance to next phase
 argument-hint: ""
 allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - AskUserQuestion
+ - Read
+ - Write
+ - Edit
+ - Bash
+ - AskUserQuestion
 ---
 
 <objective>
@@ -66,7 +66,7 @@ Phase [X] has incomplete plans:
 - {phase}-02-SUMMARY.md ✗ Missing
 - {phase}-03-SUMMARY.md ✗ Missing
 
-⚠️ Safety rail: Skipping plans requires confirmation (destructive action)
+️ Safety rail: Skipping plans requires confirmation (destructive action)
 
 Options:
 1. Continue current phase (execute remaining plans)
@@ -107,11 +107,11 @@ Update the roadmap file:
 
 ## Progress
 
-| Phase             | Plans Complete | Status      | Completed  |
+| Phase | Plans Complete | Status | Completed |
 | ----------------- | -------------- | ----------- | ---------- |
-| 1. Foundation     | 3/3            | Complete    | 2025-01-15 |
-| 2. Authentication | 0/2            | Not started | -          |
-| 3. Core Features  | 0/1            | Not started | -          |
+| 1. Foundation | 3/3 | Complete | 2025-01-15 |
+| 2. Authentication | 0/2 | Not started | - |
+| 3. Core Features | 0/1 | Not started | - |
 ```
 
 ## Phase 5: Evolve Project
@@ -127,19 +127,19 @@ cat .planning/phases/XX-current/*-SUMMARY.md
 **Assess requirement changes:**
 
 1. **Requirements validated?**
-   - Move to Validated with phase reference: `- ✓ [Requirement] — Phase X`
+ - Move to Validated with phase reference: `- ✓ [Requirement] — Phase X`
 
 2. **Requirements invalidated?**
-   - Move to Out of Scope with reason
+ - Move to Out of Scope with reason
 
 3. **Requirements emerged?**
-   - Add to Active: `- [ ] [New requirement]`
+ - Add to Active: `- [ ] [New requirement]`
 
 4. **Decisions to log?**
-   - Add to Key Decisions table with outcome
+ - Add to Key Decisions table with outcome
 
 5. **"What This Is" still accurate?**
-   - Update if the product has meaningfully changed
+ - Update if the product has meaningfully changed
 
 **Update "Last updated" footer:**
 
@@ -210,7 +210,7 @@ Count total phases and identify the highest phase number.
 
 ---
 
-## ▶ Next Up
+## Next Up
 
 **Phase [X+1]: [Name]** — [Goal from ROADMAP.md]
 
@@ -233,11 +233,11 @@ Count total phases and identify the highest phase number.
 ```
 ## ✓ Phase {X}: {Phase Name} Complete
 
-🎉 Milestone {version} is 100% complete — all {N} phases finished!
+ Milestone {version} is 100% complete — all {N} phases finished!
 
 ---
 
-## ▶ Next Up
+## Next Up
 
 **Complete Milestone {version}** — archive and prepare for next
 

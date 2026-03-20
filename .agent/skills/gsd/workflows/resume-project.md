@@ -3,11 +3,11 @@ name: gsd:resume-project
 description: Instantly restore full project context for session continuation
 argument-hint: ""
 allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Task
-  - AskUserQuestion
+ - Read
+ - Write
+ - Bash
+ - Task
+ - AskUserQuestion
 ---
 
 <objective>
@@ -82,14 +82,14 @@ ls .planning/phases/*/.continue-here*.md 2>/dev/null
 
 # Check for plans without summaries (incomplete execution)
 for plan in .planning/phases/*/*-PLAN.md; do
-  summary="${plan/PLAN/SUMMARY}"
-  [ ! -f "$summary" ] && echo "Incomplete: $plan"
+ summary="${plan/PLAN/SUMMARY}"
+ [ ! -f "$summary" ] && echo "Incomplete: $plan"
 done 2>/dev/null
 
 # Check for interrupted agents
 if [ -f .planning/current-agent-id.txt ] && [ -s .planning/current-agent-id.txt ]; then
-  AGENT_ID=$(cat .planning/current-agent-id.txt | tr -d '\n')
-  echo "Interrupted agent: $AGENT_ID"
+ AGENT_ID=$(cat .planning/current-agent-id.txt | tr -d '\n')
+ echo "Interrupted agent: $AGENT_ID"
 fi
 ```
 
@@ -111,33 +111,33 @@ Present complete project status to user:
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  PROJECT STATUS                                               ║
+║ PROJECT STATUS ║
 ╠══════════════════════════════════════════════════════════════╣
-║  Building: [one-liner from PROJECT.md "What This Is"]         ║
-║                                                               ║
-║  Phase: [X] of [Y] - [Phase name]                            ║
-║  Plan:  [A] of [B] - [Status]                                ║
-║  Progress: [██████░░░░] XX%                                  ║
-║                                                               ║
-║  Last activity: [date] - [what happened]                     ║
+║ Building: [one-liner from PROJECT.md "What This Is"] ║
+║ ║
+║ Phase: [X] of [Y] - [Phase name] ║
+║ Plan: [A] of [B] - [Status] ║
+║ Progress: [██████░░░░] XX% ║
+║ ║
+║ Last activity: [date] - [what happened] ║
 ╚══════════════════════════════════════════════════════════════╝
 
 [If incomplete work found:]
-⚠️  Incomplete work detected:
-    - [.continue-here file or incomplete plan]
+️ Incomplete work detected:
+ - [.continue-here file or incomplete plan]
 
 [If interrupted agent found:]
-⚠️  Interrupted agent detected:
-    Agent ID: [id]
-    Task: [task description from agent-history.json]
+️ Interrupted agent detected:
+ Agent ID: [id]
+ Task: [task description from agent-history.json]
 
 [If pending todos exist:]
-📋 [N] pending todos — /gsd:check-todos to review
+ [N] pending todos — /gsd:check-todos to review
 
 [If blockers exist:]
-⚠️  Carried concerns:
-    - [blocker 1]
-    - [blocker 2]
+️ Carried concerns:
+ - [blocker 1]
+ - [blocker 2]
 ```
 
 ## Phase 5: Determine Next Action
@@ -193,34 +193,34 @@ Wait for user selection.
 Based on user selection, route to appropriate workflow:
 
 - **Execute plan** → Show command for user to run after clearing:
-  ```
-  ---
+ ```
+ ---
 
-  ## ▶ Next Up
+ ## Next Up
 
-  **{phase}-{plan}: [Plan Name]** — [objective]
+ **{phase}-{plan}: [Plan Name]** — [objective]
 
-  `/gsd:execute-phase {phase}`
+ `/gsd:execute-phase {phase}`
 
-  <sub>`/clear` first → fresh context window</sub>
+ <sub>`/clear` first → fresh context window</sub>
 
-  ---
-  ```
+ ---
+ ```
 
 - **Plan phase** → Show command for user to run after clearing:
-  ```
-  ---
+ ```
+ ---
 
-  ## ▶ Next Up
+ ## Next Up
 
-  **Phase [N]: [Name]** — [Goal]
+ **Phase [N]: [Name]** — [Goal]
 
-  `/gsd:plan-phase [phase-number]`
+ `/gsd:plan-phase [phase-number]`
 
-  <sub>`/clear` first → fresh context window</sub>
+ <sub>`/clear` first → fresh context window</sub>
 
-  ---
-  ```
+ ---
+ ```
 
 - **Transition** → /gsd:transition
 - **Check todos** → Read .planning/todos/pending/, present summary

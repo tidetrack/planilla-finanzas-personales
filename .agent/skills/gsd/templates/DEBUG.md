@@ -35,16 +35,16 @@ started: [when it broke / always broken]
 <!-- APPEND only - prevents re-investigating after /clear -->
 
 - hypothesis: [theory that was wrong]
-  evidence: [what disproved it]
-  timestamp: [when eliminated]
+ evidence: [what disproved it]
+ timestamp: [when eliminated]
 
 ## Evidence
 <!-- APPEND only - facts discovered during investigation -->
 
 - timestamp: [when found]
-  checked: [what was examined]
-  found: [what was observed]
-  implication: [what this means]
+ checked: [what was examined]
+ found: [what was observed]
+ implication: [what this means]
 
 ## Resolution
 <!-- OVERWRITE as understanding evolves -->

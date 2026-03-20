@@ -46,8 +46,8 @@ Features that seem good but create problems.
 
 ```
 [Feature A]
-    └──requires──> [Feature B]
-                       └──requires──> [Feature C]
+ └──requires──> [Feature B]
+ └──requires──> [Feature C]
 
 [Feature D] ──enhances──> [Feature A]
 

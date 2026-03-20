@@ -6,28 +6,28 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
-## v0.6.0 - Simplificación de Arquitectura de Monedas (2026-02-13) ✅ RELEASED
+## v0.6.0 - Simplificación de Arquitectura de Monedas (2026-02-13) RELEASED
 
-### 🎯 Resumen del Sprint
+### Resumen del Sprint
 
 Sprint enfocado en simplificar la arquitectura del sistema de monedas, eliminando gestión dinámica y hardcodeando 5 monedas fijas, removiendo UI de configuración y reduciendo complejidad del código.
 
-**Estado:** Sprint completado en 1 día (100%) - RELEASED  
-**Fecha de cierre:** 2026-02-13  
+**Estado:** Sprint completado en 1 día (100%) - RELEASED 
+**Fecha de cierre:** 2026-02-13 
 **Código reducido:** ~1,190 líneas (~23% del módulo) | **Archivos eliminados:** 4 | **Bugs resueltos:** 3 críticos
 
 ---
 
-### ✨ Added
+### Added
 
 #### Core Configuration
 
 - **`CURRENCIES` constant** en `00_Config.js` - 5 monedas hardcodeadas:
-  - ARS (Peso Argentino) - Moneda base
-  - USD (Dólar Estadounidense)
-  - EUR (Euro)
-  - AUD (Dólar Australiano)
-  - CNY (Yuan Chino)
+ - ARS (Peso Argentino) - Moneda base
+ - USD (Dólar Estadounidense)
+ - EUR (Euro)
+ - AUD (Dólar Australiano)
+ - CNY (Yuan Chino)
 - **`BASE_CURRENCY` constant** - Define 'ARS' como moneda base del sistema
 - **`AVAILABLE_CURRENCY_IDS`** - Array de IDs disponibles para iteración
 
@@ -40,36 +40,36 @@ Sprint enfocado en simplificar la arquitectura del sistema de monedas, eliminand
 
 ---
 
-### 🔄 Changed
+### Changed
 
 #### Backend Services Updated
 
 - **`06_ExchangeRateService.js`**:
-  - Reemplazadas todas las llamadas a `getMonedaByISO()` con acceso directo a `CURRENCIES`
-  - `updateAuxSheet()` usa `Object.values(CURRENCIES)` en lugar de `getAllMonedas()`
-  - `saveDolarAPIRate()` usa `CURRENCIES.ARS` y `CURRENCIES.USD` directamente
-  - `fetchExchangeRatesFromAPI()` itera sobre `CURRENCIES`
-  - Fixed property references: `.moneda_id` → `.id` (3 locations)
+ - Reemplazadas todas las llamadas a `getMonedaByISO()` con acceso directo a `CURRENCIES`
+ - `updateAuxSheet()` usa `Object.values(CURRENCIES)` en lugar de `getAllMonedas()`
+ - `saveDolarAPIRate()` usa `CURRENCIES.ARS` y `CURRENCIES.USD` directamente
+ - `fetchExchangeRatesFromAPI()` itera sobre `CURRENCIES`
+ - Fixed property references: `.moneda_id` → `.id` (3 locations)
 - **`04_DataValidation.js`**:
-  - `checkMonedaExists()` ahora valida contra `CURRENCIES` en vez de tabla `MONEDAS`
-  - Error message mejorado con lista de monedas disponibles
+ - `checkMonedaExists()` ahora valida contra `CURRENCIES` en vez de tabla `MONEDAS`
+ - Error message mejorado con lista de monedas disponibles
 
 - **`11_UIService.js`**:
-  - `getDashboardDropdowns()` usa `Object.values(CURRENCIES)` directamente
+ - `getDashboardDropdowns()` usa `Object.values(CURRENCIES)` directamente
 
 - **`98_DataSeeder.js`**:
-  - `seedCompleto()` ya no llama a `setupCompleto()` (monedas hardcodeadas)
-  - `seedTransacciones()` usa `Object.values(CURRENCIES)` y `BASE_CURRENCY`
-  - `randomMoneda()` usa `m.id` en lugar de `m.moneda_id`
-  - Logs actualizados reflejando 5 monedas hardcodeadas
+ - `seedCompleto()` ya no llama a `setupCompleto()` (monedas hardcodeadas)
+ - `seedTransacciones()` usa `Object.values(CURRENCIES)` y `BASE_CURRENCY`
+ - `randomMoneda()` usa `m.id` en lugar de `m.moneda_id`
+ - Logs actualizados reflejando 5 monedas hardcodeadas
 
 - **`99_SetupDirect.js`**:
-  - `setupCompleto()` ya no inicializa MONEDAS ni CONFIG
-  - Agregados comentarios explicando hardcoding de configuración
+ - `setupCompleto()` ya no inicializa MONEDAS ni CONFIG
+ - Agregados comentarios explicando hardcoding de configuración
 
 ---
 
-### ❌ Removed
+### Removed
 
 #### Files Deleted (4 archivos, ~1,270 líneas)
 
@@ -86,7 +86,7 @@ Sprint enfocado en simplificar la arquitectura del sistema de monedas, eliminand
 
 ---
 
-### 🐛 Fixed
+### Fixed
 
 #### Bug #1: "Tabla no configurada: CONFIG"
 
@@ -113,7 +113,7 @@ Sprint enfocado en simplificar la arquitectura del sistema de monedas, eliminand
 
 ---
 
-### 📊 Metrics
+### Metrics
 
 **Reducción de Código**:
 
@@ -130,14 +130,14 @@ Sprint enfocado en simplificar la arquitectura del sistema de monedas, eliminand
 
 **Verificación de Datos**:
 
-- ✅ `updateExchangeRates()` ejecuta sin errores
-- ✅ DolarAPI guarda 2 rates (oficial + MEP)
-- ✅ ExchangeRate-API procesa 166 rates, guarda EUR, AUD, CNY
-- ✅ AUX_COTIZACIONES poblado con 4 monedas en columnas AV-AZ
+- `updateExchangeRates()` ejecuta sin errores
+- DolarAPI guarda 2 rates (oficial + MEP)
+- ExchangeRate-API procesa 166 rates, guarda EUR, AUD, CNY
+- AUX_COTIZACIONES poblado con 4 monedas en columnas AV-AZ
 
 ---
 
-### 🎓 Lessons Learned
+### Lessons Learned
 
 1. **Sincronización Local vs Apps Script**: Archivos eliminados localmente pueden persistir en el editor web
 2. **Property Naming Consistency**: Cambios en estructura de datos requieren búsqueda exhaustiva de referencias
@@ -146,7 +146,7 @@ Sprint enfocado en simplificar la arquitectura del sistema de monedas, eliminand
 
 ---
 
-### 📝 ADR Candidato
+### ADR Candidato
 
 **ADR-001: Hardcoding de Monedas**
 
@@ -173,11 +173,11 @@ Sprint enfocado en simplificar la arquitectura del sistema de monedas, eliminand
 - Agregar nueva moneda requiere cambio de código (no UI)
 - No hay historial de cambios de monedas en BD
 
-**Estado**: ✅ Implementado
+**Estado**: Implementado
 
 ---
 
-### 📎 Referencias
+### Referencias
 
 **Archivos Modificados (6)**:
 
@@ -192,57 +192,57 @@ Sprint enfocado en simplificar la arquitectura del sistema de monedas, eliminand
 
 ---
 
-## v0.5.0 - Sprint 4: ABM Catálogos (2026-01-23) ✅ RELEASED
+## v0.5.0 - Sprint 4: ABM Catálogos (2026-01-23) RELEASED
 
-### 🎯 Resumen del Sprint
+### Resumen del Sprint
 
 Sprint enfocado en gestión completa de Cuentas y Medios de Pago desde interfaz gráfica, permitiendo a usuarios crear, editar y eliminar sus propias categorías y métodos de pago.
 
-**Estado:** Sprint completado en 1 día (100%) - RELEASED  
-**Fecha de cierre:** 2026-01-23  
-**Código nuevo:** ~2,400 líneas | **Archivos creados:** 2 | **Testing:** ✅ 17 tests completos
+**Estado:** Sprint completado en 1 día (100%) - RELEASED 
+**Fecha de cierre:** 2026-01-23 
+**Código nuevo:** ~2,400 líneas | **Archivos creados:** 2 | **Testing:** 17 tests completos
 
 ---
 
-### ✨ Added
+### Added
 
 #### UI Components
 
 - **UI_CuentasManager.html**: Gestor de cuentas con CRUD completo (~857 líneas)
-  - Popup 700x650 con diseño Ocean theme
-  - Lista searchable de cuentas existentes
-  - Formulario crear/editar: nombre, macro_tipo, es_recurrente (toggle switch)
-  - Botones Edit/Delete con iconos Material
-  - Confirmación para save/delete
-  - Modal post-acción ("Seguir aquí" / "Volver al Dashboard")
-  - Auto-reset de formulario tras operaciones exitosas
-  - Search filter con hide/show dinámico
-  - Toggle "Es recurrente" con diseño liquid glass (glassmorphism)
+ - Popup 700x650 con diseño Ocean theme
+ - Lista searchable de cuentas existentes
+ - Formulario crear/editar: nombre, macro_tipo, es_recurrente (toggle switch)
+ - Botones Edit/Delete con iconos Material
+ - Confirmación para save/delete
+ - Modal post-acción ("Seguir aquí" / "Volver al Dashboard")
+ - Auto-reset de formulario tras operaciones exitosas
+ - Search filter con hide/show dinámico
+ - Toggle "Es recurrente" con diseño liquid glass (glassmorphism)
 
 - **UI_MediosManager.html**: Gestor de medios de pago con CRUD completo (~918 líneas)
-  - Popup 700x650 con diseño Ocean theme
-  - Lista searchable de medios existentes
-  - Formulario crear/editar: nombre, tipo, moneda, uso_principal
-  - Dropdown dinámico de monedas (DB_MONEDAS)
-  - Confirmación para save/delete
-  - Modal post-acción con navegación
-  - Auto-reset de formulario
-  - Search filter con hide/show dinámico
+ - Popup 700x650 con diseño Ocean theme
+ - Lista searchable de medios existentes
+ - Formulario crear/editar: nombre, tipo, moneda, uso_principal
+ - Dropdown dinámico de monedas (DB_MONEDAS)
+ - Confirmación para save/delete
+ - Modal post-acción con navegación
+ - Auto-reset de formulario
+ - Search filter con hide/show dinámico
 
 #### Backend Extensions
 
 - **11_UIService.js**: API Wrappers y show functions (+118 líneas)
-  - `showCuentasManager()`: Abre popup de cuentas
-  - `showMediosManager()`: Abre popup de medios
-  - `getCuentasList()`, `createCuentaFromUI()`, `updateCuentaFromUI()`, `deleteCuentaFromUI()`
-  - `getMediosList()`, `createMedioFromUI()`, `updateMedioFromUI()`, `deleteMedioFromUI()`
+ - `showCuentasManager()`: Abre popup de cuentas
+ - `showMediosManager()`: Abre popup de medios
+ - `getCuentasList()`, `createCuentaFromUI()`, `updateCuentaFromUI()`, `deleteCuentaFromUI()`
+ - `getMediosList()`, `createMedioFromUI()`, `updateMedioFromUI()`, `deleteMedioFromUI()`
 
 #### Dashboard Integration
 
 - **UI_MainDashboard.html**: Nuevos botones de gestión
-  - ✅ "Gestionar Cuentas" (icon: category) - reemplaza "Reportes Mensuales"
-  - ✅ "Gestionar Medios" (icon: credit_card) - reemplaza "Ver Historial"
-  - Funciones navigation: `openCuentasManager()`, `openMediosManager()`
+ - "Gestionar Cuentas" (icon: category) - reemplaza "Reportes Mensuales"
+ - "Gestionar Medios" (icon: credit_card) - reemplaza "Ver Historial"
+ - Funciones navigation: `openCuentasManager()`, `openMediosManager()`
 
 #### UX Enhancements (Beyond Original Scope)
 
@@ -256,23 +256,23 @@ Sprint enfocado en gestión completa de Cuentas y Medios de Pago desde interfaz 
 
 ---
 
-### 🔧 Changed
+### Changed
 
 #### Validation Enhancements
 
 - **08_CuentaService.js**: `deleteCuenta()` (líneas 163-173)
-  - Agregada validación FK (Foreign Key constraint)
-  - Previene eliminación si cuenta tiene transacciones asociadas
-  - Mensaje de error claro explicando restricción
+ - Agregada validación FK (Foreign Key constraint)
+ - Previene eliminación si cuenta tiene transacciones asociadas
+ - Mensaje de error claro explicando restricción
 
 - **07_MedioPagoService.js**: `deleteMedioPago()` (líneas 186-196)
-  - Agregada validación FK
-  - Previene eliminación si medio tiene transacciones asociadas
-  - Mensaje de error claro explicando restricción
+ - Agregada validación FK
+ - Previene eliminación si medio tiene transacciones asociadas
+ - Mensaje de error claro explicando restricción
 
 ---
 
-### 🐛 Fixed
+### Fixed
 
 #### Critical Bug #1: Race Condition in confirmAction()
 
@@ -283,21 +283,21 @@ Sprint enfocado en gestión completa de Cuentas y Medios de Pago desde interfaz 
 ```javascript
 // ANTES (incorrecto)
 function confirmAction() {
-  closeModal(); // ← Esto eliminaba pendingAction
-  if (pendingAction) {
-    // ← Siempre false
-    pendingAction(); // ← NUNCA se ejecutaba
-  }
+ closeModal(); // ← Esto eliminaba pendingAction
+ if (pendingAction) {
+ // ← Siempre false
+ pendingAction(); // ← NUNCA se ejecutaba
+ }
 }
 
 // DESPUÉS (correcto)
 function confirmAction() {
-  const actionToExecute = pendingAction; // ← Guardar primero
-  pendingAction = null;
-  closeModal();
-  if (actionToExecute) {
-    actionToExecute(); // ← Ahora SÍ ejecuta
-  }
+ const actionToExecute = pendingAction; // ← Guardar primero
+ pendingAction = null;
+ closeModal();
+ if (actionToExecute) {
+ actionToExecute(); // ← Ahora SÍ ejecuta
+ }
 }
 ```
 
@@ -310,48 +310,48 @@ function confirmAction() {
 ```css
 /* ANTES */
 .modal-overlay {
-  z-index: 1000; /* ❌ Menor que container */
+ z-index: 1000; /* Menor que container */
 }
 
 /* DESPUÉS */
 .modal-overlay {
-  z-index: 20000; /* ✅ Por encima del container */
+ z-index: 20000; /* Por encima del container */
 }
 ```
 
 ---
 
-### 📊 Testing
+### Testing
 
 #### Cuentas Manager (7 tests)
 
-- ✅ Create new cuenta
-- ✅ Edit existing cuenta
-- ✅ Delete cuenta (no transactions)
-- ✅ Delete cuenta (with transactions - FK constraint)
-- ✅ Search filter functionality
-- ✅ Modal visibility (z-index fix)
-- ✅ Form auto-reset
+- Create new cuenta
+- Edit existing cuenta
+- Delete cuenta (no transactions)
+- Delete cuenta (with transactions - FK constraint)
+- Search filter functionality
+- Modal visibility (z-index fix)
+- Form auto-reset
 
 #### Medios Manager (6 tests)
 
-- ✅ Create new medio
-- ✅ Edit existing medio
-- ✅ Delete medio (no transactions)
-- ✅ Delete medio (with transactions - FK constraint)
-- ✅ Moneda dropdown population
-- ✅ Race condition fix verification
+- Create new medio
+- Edit existing medio
+- Delete medio (no transactions)
+- Delete medio (with transactions - FK constraint)
+- Moneda dropdown population
+- Race condition fix verification
 
 #### Integration (4 tests)
 
-- ✅ Create cuenta → appears in transaction form dropdown
-- ✅ Dashboard navigation to managers
-- ✅ Back to dashboard from managers
-- ✅ All CRUD operations persist to DB_CUENTAS and DB_MEDIOS_PAGO
+- Create cuenta → appears in transaction form dropdown
+- Dashboard navigation to managers
+- Back to dashboard from managers
+- All CRUD operations persist to DB_CUENTAS and DB_MEDIOS_PAGO
 
 ---
 
-### 🎨 Design Features
+### Design Features
 
 - **Ocean Theme Consistency**: Ambos popups usan paleta #eff2f9, #39444d, #6e7f8d
 - **Material Icons**: category, credit_card, edit, delete, add_circle, arrow_back
@@ -362,88 +362,88 @@ function confirmAction() {
 
 ---
 
-## v0.4.0 - Sprint 3: UI Development (2026-01-18) ✅ RELEASED
+## v0.4.0 - Sprint 3: UI Development (2026-01-18) RELEASED
 
-### 🎯 Resumen del Sprint
+### Resumen del Sprint
 
 Sprint enfocado en interfaces de usuario con diseño neumórfico moderno, menús personalizados y dashboard interactivo.
 
-**Estado:** Days 0-5 completados (100%) - RELEASED  
-**Fecha de cierre:** 2026-01-18  
-**Código nuevo:** ~3,100 líneas | **Archivos creados:** 9 | **Testing:** ✅ Completo
+**Estado:** Days 0-5 completados (100%) - RELEASED 
+**Fecha de cierre:** 2026-01-18 
+**Código nuevo:** ~3,100 líneas | **Archivos creados:** 9 | **Testing:** Completo
 
 ---
 
-### Day 5 Completed: Testing & Documentation ✅
+### Day 5 Completed: Testing & Documentation 
 
-#### 🧪 Testing
+#### Testing
 
-- ✅ End-to-end flow (Menu → Form → Save → Modal → List → Dashboard)
-- ✅ Form validation (required, positive, date, fx_id conditional)
-- ✅ UI/UX (hover, loading, success modal, error messages)
-- ✅ Data display (dashboard stats, recent transactions, filters)
-- ✅ Responsive design (3-col → 1-col grid, mobile-first)
+- End-to-end flow (Menu → Form → Save → Modal → List → Dashboard)
+- Form validation (required, positive, date, fx_id conditional)
+- UI/UX (hover, loading, success modal, error messages)
+- Data display (dashboard stats, recent transactions, filters)
+- Responsive design (3-col → 1-col grid, mobile-first)
 
-#### 📝 Documentation
+#### Documentation
 
-- ✅ `SPRINT_3_COMPLETO_2026-01-18.md` (comprehensive sprint document)
-- ✅ Updated `HISTORIAL_DESARROLLO.md` (Sprint 3 marked complete)
-- ✅ Updated `CHANGELOG.md` (this file, v0.4.0 released)
+- `SPRINT_3_COMPLETO_2026-01-18.md` (comprehensive sprint document)
+- Updated `HISTORIAL_DESARROLLO.md` (Sprint 3 marked complete)
+- Updated `CHANGELOG.md` (this file, v0.4.0 released)
 
-#### 🐛 Bug Fixed
+#### Bug Fixed
 
 - Form ID in `resetForm()` corrected (`'transaction-form'`)
 
 ---
 
-### Day 4 Completed: Transaction List View ✅
+### Day 4 Completed: Transaction List View 
 
-#### ✨ Added
+#### Added
 
 - **UI_TransactionList.html**: Vista de lista completa (~800 líneas)
-  - Tabla: Fecha, Tipo, Monto, Cuenta, Medio, Nota
-  - Filtros por sentido (Todos/Ingreso/Egreso)
-  - Filtros por cuenta (Todas + lista dinámica)
-  - Selector mes/año (consistente con Dashboard)
-  - Paginación (50 transacciones max)
-  - Badges visuales (verde ingreso, rojo egreso)
-  - Responsive (scroll horizontal mobile)
+ - Tabla: Fecha, Tipo, Monto, Cuenta, Medio, Nota
+ - Filtros por sentido (Todos/Ingreso/Egreso)
+ - Filtros por cuenta (Todas + lista dinámica)
+ - Selector mes/año (consistente con Dashboard)
+ - Paginación (50 transacciones max)
+ - Badges visuales (verde ingreso, rojo egreso)
+ - Responsive (scroll horizontal mobile)
 
 - **11_UIService.js**: `getTransactionsList(year, month, filters)`
-  - Filtrado por mes/año y sentido/cuenta
-  - Ordenamiento fecha desc
-  - Enriquecimiento con nombres (lookup)
-  - Retorna: transactions, total, showing
+ - Filtrado por mes/año y sentido/cuenta
+ - Ordenamiento fecha desc
+ - Enriquecimiento con nombres (lookup)
+ - Retorna: transactions, total, showing
 
 - **12_Menu Service.js**: `showTransactionList()` (modal 1200x900)
 
-#### 📊 Testing
+#### Testing
 
-- ✅ Carga desde menú "Ver Movimientos"
-- ✅ Filtros funcionales (sentido, cuenta, mes)
-- ✅ Navegación "← Volver" funcional
+- Carga desde menú "Ver Movimientos"
+- Filtros funcionales (sentido, cuenta, mes)
+- Navegación "← Volver" funcional
 
 ---
 
-### Day 3 Completed: Main Dashboard ✅
+### Day 3 Completed: Main Dashboard 
 
-#### ✨ Added
+#### Added
 
 - **UI_MainDashboard.html**: Dashboard principal con diseño neumórfico
-  - Grid de métricas (Saldo, Ingresos, Gastos del mes)
-  - Stats cards con iconos y valores dinámicos
-  - Sección de acciones rápidas (4 cards navegables)
-  - Lista de últimos movimientos (top 5 transacciones)
-  - Responsive design (mobile-first)
-  - Integración completa con backend
+ - Grid de métricas (Saldo, Ingresos, Gastos del mes)
+ - Stats cards con iconos y valores dinámicos
+ - Sección de acciones rápidas (4 cards navegables)
+ - Lista de últimos movimientos (top 5 transacciones)
+ - Responsive design (mobile-first)
+ - Integración completa con backend
 
 - **11_UIService.js**: Agregado `getDashboardStats()`
-  - Cálculo de totales del mes actual
-  - Filtrado y ordenamiento de transacciones
-  - Enriquecimiento de datos (nombres de cuentas/medios)
-  - Retorna: balance, ingresos, egresos, counts, recientes
+ - Cálculo de totales del mes actual
+ - Filtrado y ordenamiento de transacciones
+ - Enriquecimiento de datos (nombres de cuentas/medios)
+ - Retorna: balance, ingresos, egresos, counts, recientes
 
-#### 🎨 Design Features
+#### Design Features
 
 - Layout grid adaptativo (3 columnas en desktop, 1 en mobile)
 - Action cards con hover effects (translateY + shadow)
@@ -451,7 +451,7 @@ Sprint enfocado en interfaces de usuario con diseño neumórfico moderno, menús
 - Iconos emoji para categorías visuales
 - Color coding: verde (ingresos), rojo (egresos)
 
-#### 📊 Dashboard Metrics
+#### Dashboard Metrics
 
 - **Saldo Total:** Ingresos - Egresos del mes
 - **Ingresos:** Suma + contador de transacciones
@@ -460,79 +460,79 @@ Sprint enfocado en interfaces de usuario con diseño neumórfico moderno, menús
 
 ---
 
-### Day 2 Completed: Custom Menus & Quick Actions ✅
+### Day 2 Completed: Custom Menus & Quick Actions 
 
-#### ✨ Added
+#### Added
 
 - **12_MenuService.js**: Servicio de menús personalizados
-  - Trigger `onOpen()` automático
-  - Menú "Tidetrack 💰" en barra de Google Sheets
-  - Handlers para todas las acciones del menú
-  - Confirmaciones para acciones destructivas
+ - Trigger `onOpen()` automático
+ - Menú "Tidetrack " en barra de Google Sheets
+ - Handlers para todas las acciones del menú
+ - Confirmaciones para acciones destructivas
 
 - **00_Config.js**: Actualizado con `MENU_CONFIG`
-  - Configuración centralizada del menú
-  - Items con nombres y funciones asignadas
-  - Soporte para separadores
+ - Configuración centralizada del menú
+ - Items con nombres y funciones asignadas
+ - Soporte para separadores
 
 - **11_UIService.js**: Expandido con funciones UI
-  - `showTransactionForm()`: Abre formulario de transacción
-  - `showMainDashboard()`: Abre dashboard principal
-  - `getFormData()`: Obtiene catálogos para dropdowns
-  - `createTransaccionFromUI()`: Wrapper para crear transacciones
-  - `getLatestRatesForMoneda()`: Obtiene tipos de cambio
+ - `showTransactionForm()`: Abre formulario de transacción
+ - `showMainDashboard()`: Abre dashboard principal
+ - `getFormData()`: Obtiene catálogos para dropdowns
+ - `createTransaccionFromUI()`: Wrapper para crear transacciones
+ - `getLatestRatesForMoneda()`: Obtiene tipos de cambio
 
 - **98_DataSeeder.js**: Agregado wrapper UI
-  - `runDataSeedWithConfirmation()`: Dialog de confirmación
-  - Auto-inicializa catálogos si no existen
-  - Feedback visual de éxito/error
+ - `runDataSeedWithConfirmation()`: Dialog de confirmación
+ - Auto-inicializa catálogos si no existen
+ - Feedback visual de éxito/error
 
-#### 🎨 Menu Structure
+#### Menu Structure
 
 ```
-Tidetrack 💰
-├── Nueva Transacción ⚡
-├── Ver Dashboard 📊
+Tidetrack 
+├── Nueva Transacción 
+├── Ver Dashboard 
 ├── ──────────────────
-├── Seed Datos Demo 🎲
-└── Limpiar Transacciones 🗑️
+├── Seed Datos Demo 
+└── Limpiar Transacciones ️
 ```
 
-#### 📊 Testing
+#### Testing
 
-- ✅ Menú aparece automáticamente al abrir Sheet
-- ✅ Todas las opciones funcionales
-- ✅ Navegación entre vistas OK
-- ✅ Confirmaciones de acciones destructivas
+- Menú aparece automáticamente al abrir Sheet
+- Todas las opciones funcionales
+- Navegación entre vistas OK
+- Confirmaciones de acciones destructivas
 
 ---
 
-### Day 1 Completed: Transaction Form ✅
+### Day 1 Completed: Transaction Form 
 
-#### ✨ Added
+#### Added
 
 - **UI_TransactionForm.html**: Formulario completo de transacciones
-  - Campos: fecha, monto, moneda, sentido, cuenta, medio, nota
-  - Validación client-side (JavaScript inline)
-  - Validación server-side (integración con DataValidation)
-  - Smart defaults: fecha=hoy, sentido=Egreso
-  - Dropdowns dinámicos filtrados por sentido
-  - Campo fx_id condicional (solo si moneda != base)
-  - Feedback visual (success/error alerts)
-  - Loading states con spinner
-  - Auto-cierre después de guardar exitosamente
+ - Campos: fecha, monto, moneda, sentido, cuenta, medio, nota
+ - Validación client-side (JavaScript inline)
+ - Validación server-side (integración con DataValidation)
+ - Smart defaults: fecha=hoy, sentido=Egreso
+ - Dropdowns dinámicos filtrados por sentido
+ - Campo fx_id condicional (solo si moneda != base)
+ - Feedback visual (success/error alerts)
+ - Loading states con spinner
+ - Auto-cierre después de guardar exitosamente
 
 - **JS_FormValidation.html**: Validaciones client-side
-  - `validateRequired()`, `validatePositive()`, `validateDate()`
-  - `showFieldError()`, `clearFieldError()`, `clearAllErrors()`
-  - Validación en tiempo real
+ - `validateRequired()`, `validatePositive()`, `validateDate()`
+ - `showFieldError()`, `clearFieldError()`, `clearAllErrors()`
+ - Validación en tiempo real
 
 - **JS_ApiClient.html**: Cliente para google.script.run
-  - `submitTransaction()`: Envío asíncrono
-  - Handlers de success/failure
-  - Loading states management
+ - `submitTransaction()`: Envío asíncrono
+ - Handlers de success/failure
+ - Loading states management
 
-#### 🎨 UX Features
+#### UX Features
 
 - Neumorphic design consistente con design system
 - Inputs con sombra inset (depth visual)
@@ -540,72 +540,72 @@ Tidetrack 💰
 - Alerts con iconos y colores según tipo
 - Form grid responsive (2 cols → 1 col mobile)
 
-#### 📊 Testing
+#### Testing
 
-- ✅ Formulario abre correctamente desde menú
-- ✅ Validaciones funcionan (required, positive, date)
-- ✅ Dropdowns cargan catálogos dinámicamente
-- ✅ Filtro de cuentas por sentido OK
-- ✅ Campo fx_id aparece/oculta correctamente
-- ✅ Guardado exitoso de transacciones
-- ✅ Integración con backend validado
+- Formulario abre correctamente desde menú
+- Validaciones funcionan (required, positive, date)
+- Dropdowns cargan catálogos dinámicamente
+- Filtro de cuentas por sentido OK
+- Campo fx_id aparece/oculta correctamente
+- Guardado exitoso de transacciones
+- Integración con backend validado
 
 ---
 
-### Day 0 Completed: Design System ✅
+### Day 0 Completed: Design System 
 
-#### ✨ Added
+#### Added
 
 - **CSS_DesignSystem.html** (500+ líneas): Sistema de diseño completo
-  - Variables CSS (colores, tipografía, spacing, shadows)
-  - CSS Reset
-  - Utilities (typography, spacing, layout, flex, grid)
-  - Componentes base (buttons, inputs, selects, labels)
-  - Neumorphic shadows (dual light/dark)
-  - League Spartan font de Google Fonts
-  - Responsive breakpoint (768px)
+ - Variables CSS (colores, tipografía, spacing, shadows)
+ - CSS Reset
+ - Utilities (typography, spacing, layout, flex, grid)
+ - Componentes base (buttons, inputs, selects, labels)
+ - Neumorphic shadows (dual light/dark)
+ - League Spartan font de Google Fonts
+ - Responsive breakpoint (768px)
 
 - **CSS_Components.html** (400+ líneas): Componentes específicos
-  - StatCard (métricas financieras con iconos)
-  - Badge (status indicators)
-  - Alert (success, error, warning, info)
-  - Table (con hover states)
-  - Modal/Dialog
-  - Tooltip
-  - Progress bar
-  - Skeleton loader
-  - Chip/Tag
-  - Empty state
+ - StatCard (métricas financieras con iconos)
+ - Badge (status indicators)
+ - Alert (success, error, warning, info)
+ - Table (con hover states)
+ - Modal/Dialog
+ - Tooltip
+ - Progress bar
+ - Skeleton loader
+ - Chip/Tag
+ - Empty state
 
 - **UI_DesignSystemTest.html**: Página de testing visual
-  - Showcase de todos los componentes
-  - Paleta de colores
-  - Typography scale
-  - Estados interactivos
+ - Showcase de todos los componentes
+ - Paleta de colores
+ - Typography scale
+ - Estados interactivos
 
 - **11_UIService.js**: Servicio base para dialogs
-  - Función `include()` para templates
-  - `showDesignSystemTest()` para testing
+ - Función `include()` para templates
+ - `showDesignSystemTest()` para testing
 
-#### 🎨 Design Decisions
+#### Design Decisions
 
 - **Estética:** Neumorfismo con sombras duales suaves
 - **Paleta:** Grises/azules (#e8ecf1 base, acentos verde/rojo para ingresos/egresos)
 - **Fuente:** League Spartan (300-700 weights)
 - **Arquitectura:** Atomic Design (átomos → moléculas → organismos)
 
-#### 📊 Testing
+#### Testing
 
-- ✅ Visual testing completo
-- ✅ Todos los componentes renderizan correctamente
-- ✅ Neumorfismo aplicado (sombras suaves, depth correcta)
-- ✅ Fuente Google cargada
+- Visual testing completo
+- Todos los componentes renderizan correctamente
+- Neumorfismo aplicado (sombras suaves, depth correcta)
+- Fuente Google cargada
 
 ---
 
-## v0.3.0 - Sprint 2: Catálogos & Data Seeding (2026-01-18) ✅ RELEASED
+## v0.3.0 - Sprint 2: Catálogos & Data Seeding (2026-01-18) RELEASED
 
-### 🎯 Resumen del Sprint
+### Resumen del Sprint
 
 Sprint completado exitosamente en 6 días (Day 0 → Day 5) con implementación completa de:
 
@@ -615,120 +615,120 @@ Sprint completado exitosamente en 6 días (Day 0 → Day 5) con implementación 
 - DataSeeder para generación de datos de prueba
 - Suite de testing integral (41/41 tests pasados)
 
-### Day 5 Completed: Integration Testing ✅
+### Day 5 Completed: Integration Testing 
 
-#### ✨ Added
+#### Added
 
 - **TESTS_Sprint2_Final.js**: Suite de 5 tests de integración end-to-end
-  - Test 1: Setup completo del sistema
-  - Test 2: Generación de transacciones (seed)
-  - Test 3: Validación de integridad referencial
-  - Test 4: Cálculos financieros (totales, promedios)
-  - Test 5: Performance y capacidad
+ - Test 1: Setup completo del sistema
+ - Test 2: Generación de transacciones (seed)
+ - Test 3: Validación de integridad referencial
+ - Test 4: Cálculos financieros (totales, promedios)
+ - Test 5: Performance y capacidad
 
 - **walkthrough.md**: Documentación completa del Sprint 2
-  - Timeline detallado (Days 0-5)
-  - Todos los entregables
-  - Tests ejecutados
-  - Bugs resueltos
+ - Timeline detallado (Days 0-5)
+ - Todos los entregables
+ - Tests ejecutados
+ - Bugs resueltos
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 5/5 tests de integración pasados
-- ✅ Sistema validado end-to-end
-- ✅ 41/41 tests totales del sprint
+- 5/5 tests de integración pasados
+- Sistema validado end-to-end
+- 41/41 tests totales del sprint
 
-### Day 4 Completed: TransactionService ✅
+### Day 4 Completed: TransactionService 
 
-#### ✨ Added
+#### Added
 
 - **09_TransactionService.js**: Servicio completo para DB_TRANSACCIONES (core del sistema)
-  - CRUD: createTransaccion(), getAllTransacciones(), getTransaccionById(), updateTransaccion(), deleteTransaccion()
-  - Filtrado: getTransaccionesBySentido(), getTransaccionesByFechas()
-  - Auto-ID: Genera TRX-XXXXXX automáticamente
-  - Cálculo automático de monto_base
-  - Validación CRÍTICA: fx_id obligatorio para monedas extranjeras
-  - clearAllTransacciones() - Para re-seed
-  - calcularTotales(), getResumenTransacciones()
+ - CRUD: createTransaccion(), getAllTransacciones(), getTransaccionById(), updateTransaccion(), deleteTransaccion()
+ - Filtrado: getTransaccionesBySentido(), getTransaccionesByFechas()
+ - Auto-ID: Genera TRX-XXXXXX automáticamente
+ - Cálculo automático de monto_base
+ - Validación CRÍTICA: fx_id obligatorio para monedas extranjeras
+ - clearAllTransacciones() - Para re-seed
+ - calcularTotales(), getResumenTransacciones()
 - **98_DataSeeder.js**: Actualizado con seedTransacciones()
-  - Genera N transacciones aleatorias realistas
-  - 70% egresos, 30% ingresos
-  - 80% moneda base, 20% extranjeras (con fx_id auto)
-  - Montos realistas según sentido
+ - Genera N transacciones aleatorias realistas
+ - 70% egresos, 30% ingresos
+ - 80% moneda base, 20% extranjeras (con fx_id auto)
+ - Montos realistas según sentido
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 10/10 tests pasados
+- 10/10 tests pasados
 - Validación fx_id funcionando correctamente
 - Cálculo monto_base verificado
 - Seed de 10 transacciones OK
 
-### Day 3 Completed: DataSeeder - Parte 1 ✅
+### Day 3 Completed: DataSeeder - Parte 1 
 
-#### ✨ Added
+#### Added
 
 - **98_DataSeeder.js**: Utilidades para seeding
-  - seedCompleto() - Inicializa todos los catálogos
-  - Helper functions: randomDate(), randomMonto(), randomDescripcion(), randomCuenta(), randomMedio(), etc.
-  - checkPrerequisites() - Verifica catálogos
-  - Placeholders para seedTransacciones() (implementado en Day 4)
+ - seedCompleto() - Inicializa todos los catálogos
+ - Helper functions: randomDate(), randomMonto(), randomDescripcion(), randomCuenta(), randomMedio(), etc.
+ - checkPrerequisites() - Verifica catálogos
+ - Placeholders para seedTransacciones() (implementado en Day 4)
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 3/3 tests pasados
+- 3/3 tests pasados
 - seedCompleto() funciona correctamente
 - Todas las funciones helper validadas
 
-### Day 2 Completed: CuentaService ✅
+### Day 2 Completed: CuentaService 
 
-#### ✨ Added
+#### Added
 
 - **08_CuentaService.js**: Servicio completo para DB_CUENTAS
-  - CRUD: createCuenta(), getAllCuentas(), getCuentaById(), updateCuenta(), deleteCuenta()
-  - Filtrado: getCuentasByMacroTipo()
-  - Auto-ID: Genera CTA-XXX automáticamente
-  - initializeCuentasBasicas() - 11 cuentas (3 ingresos + 8 egresos)
-  - Integración completa con schema (4 columnas: cuenta_id, nombre_cuentas, macro_tipo, es_recurrente)
+ - CRUD: createCuenta(), getAllCuentas(), getCuentaById(), updateCuenta(), deleteCuenta()
+ - Filtrado: getCuentasByMacroTipo()
+ - Auto-ID: Genera CTA-XXX automáticamente
+ - initializeCuentasBasicas() - 11 cuentas (3 ingresos + 8 egresos)
+ - Integración completa con schema (4 columnas: cuenta_id, nombre_cuentas, macro_tipo, es_recurrente)
 
-#### 🔧 Fixed
+#### Fixed
 
 - validateCuenta() en DataValidation
-  - Agregado parámetro `isUpdate` para evitar error en updates
-  - Eliminada función duplicada vieja
+ - Agregado parámetro `isUpdate` para evitar error en updates
+ - Eliminada función duplicada vieja
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 9/9 tests pasados
+- 9/9 tests pasados
 - Validaciones funcionando correctamente
 - Auto-IDs generando CTA-001, CTA-002, etc.
 
-### Day 1 Completed: MedioPagoService ✅
+### Day 1 Completed: MedioPagoService 
 
-#### ✨ Added
+#### Added
 
 - **07_MedioPagoService.js**: Servicio completo para DB_MEDIOS_PAGO
-  - CRUD: createMedioPago(), getAllMediosPago(), getMedioPagoById(), updateMedioPago(), deleteMedioPago()
-  - Filtrado: getMediosByTipo()
-  - Auto-ID: Genera MED-XXX automáticamente
-  - initializeMediosPagoBasicos() - 5 medios preconfigurados
-  - Integración completa con schema (5 columnas: medio_id, nombre_medio, tipo, moneda_id, uso_principal)
+ - CRUD: createMedioPago(), getAllMediosPago(), getMedioPagoById(), updateMedioPago(), deleteMedioPago()
+ - Filtrado: getMediosByTipo()
+ - Auto-ID: Genera MED-XXX automáticamente
+ - initializeMediosPagoBasicos() - 5 medios preconfigurados
+ - Integración completa con schema (5 columnas: medio_id, nombre_medio, tipo, moneda_id, uso_principal)
 
-#### 🔧 Fixed
+#### Fixed
 
 - validateMedioPago() en DataValidation
-  - Agregado parámetro `isUpdate` para evitar error en updates
-  - Validación de FK moneda_id
-  - Validación de enum uso_principal (opcional)
+ - Agregado parámetro `isUpdate` para evitar error en updates
+ - Validación de FK moneda_id
+ - Validación de enum uso_principal (opcional)
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 9/9 tests pasados
+- 9/9 tests pasados
 - Validaciones funcionando correctamente
 - Auto-IDs generando MED-001, MED-002, etc.
 
-### Day 0 Completed: Auto-ID Migration ✅
+### Day 0 Completed: Auto-ID Migration 
 
-#### 🔧 Changed
+#### Changed
 
 - **02_Utils.js**: Agregado `generateNextId(tableName, prefix, padding)`
 - **05_MonedaService.js**: `createMoneda(nombre, simbolo)` - sin moneda_id manual
@@ -736,9 +736,9 @@ Sprint completado exitosamente en 6 días (Day 0 → Day 5) con implementación 
 - **10_ConfigService.js**: config_id auto-generado (CFG-XXX)
 - **99_SetupDirect.js**: Actualizado para usar auto-IDs
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 5/5 tests pasados
+- 5/5 tests pasados
 - MON-001, MON-002, MON-003 en vez de ARS, USD, EUR
 - FX-00001, FX-00002 en vez de timestamps
 
@@ -746,32 +746,32 @@ Sprint completado exitosamente en 6 días (Day 0 → Day 5) con implementación 
 
 ## v0.2.0 - Sprint 1: Exchange Rates & Config (2026-01-17)
 
-### ✨ Added
+### Added
 
 - **10_ConfigService.js**: Configuración global del sistema
-  - getConfig(), setBaseMoneda(), setFuentePreferida()
-  - initializeConfig() con defaults (ARS, oficial)
-  - Advertencias al cambiar moneda base
+ - getConfig(), setBaseMoneda(), setFuentePreferida()
+ - initializeConfig() con defaults (ARS, oficial)
+ - Advertencias al cambiar moneda base
 - **06_ExchangeRateService.js**: Gestión de tipos de cambio
-  - CRUD de DB_TIPOS_CAMBIO
-  - fetchExchangeRatesFromAPI() - Integración con ExchangeRate-API
-  - getLatestRate() - Obtiene TC más reciente para un par
-  - calculateMontoBase() - Conversión con validación de par
-  - cleanupOldRates() - Limpieza de rates antiguos
+ - CRUD de DB_TIPOS_CAMBIO
+ - fetchExchangeRatesFromAPI() - Integración con ExchangeRate-API
+ - getLatestRate() - Obtiene TC más reciente para un par
+ - calculateMontoBase() - Conversión con validación de par
+ - cleanupOldRates() - Limpieza de rates antiguos
 - **99_SetupDirect.js**: Utilidades de setup
-  - setupCompleto() - Inicialización del sistema en un comando
-  - initializeMonedasDirect(), initializeConfigDirect()
-  - Funciones de testing (test3 a test14)
+ - setupCompleto() - Inicialización del sistema en un comando
+ - initializeMonedasDirect(), initializeConfigDirect()
+ - Funciones de testing (test3 a test14)
 
-### 🔧 Fixed
+### Fixed
 
 - Mejorado: initializeMonedas() solo agrega monedas faltantes
 - Corregido: Detección de filas vacías en getTableData()
 - Implementado: Inserción directa en celdas específicas
 
-### 📊 Testing
+### Testing
 
-- ✅ 14 tests completos (2026-01-18)
+- 14 tests completos (2026-01-18)
 - ConfigService: Lectura, escritura, validaciones
 - ExchangeRateService: CRUD, API, cálculos
 - Todas las validaciones funcionando correctamente
@@ -780,43 +780,43 @@ Sprint completado exitosamente en 6 días (Day 0 → Day 5) con implementación 
 
 ## v0.1.0 - Sprint 0: Core Setup (2026-01-17)
 
-### ✨ Added
+### Added
 
 - **00_Config.js**: Configuración global del sistema
-  - Constantes de hoja y rangos de columnas
-  - Enums para valores cerrados (sentido, macro_tipo, fuente, status)
-  - Configuración de API
-  - Mensajes de error centralizados
+ - Constantes de hoja y rangos de columnas
+ - Enums para valores cerrados (sentido, macro_tipo, fuente, status)
+ - Configuración de API
+ - Mensajes de error centralizados
 - **01_Version.js**: Sistema de versionado
-  - Control de versiones Semantic Versioning
-  - Changelog embebido
-  - Funciones de logging de versión
+ - Control de versiones Semantic Versioning
+ - Changelog embebido
+ - Funciones de logging de versión
 - **02_Utils.js**: Utilidades generales
-  - Generación de IDs únicos
-  - Manejo de fecha/hora
-  - Validación de enums
-  - Logging centralizado (error, info, success)
-  - Notificaciones al usuario (toast, alert)
-  - Utilidades de conversión de datos
+ - Generación de IDs únicos
+ - Manejo de fecha/hora
+ - Validación de enums
+ - Logging centralizado (error, info, success)
+ - Notificaciones al usuario (toast, alert)
+ - Utilidades de conversión de datos
 - **03_SheetManager.js**: Gestor de acceso a hojas
-  - Abstracción de operaciones CRUD
-  - Lectura de tablas (`getTableData`, `getTableRange`)
-  - Escritura (`appendRow`, `updateRow`, `deleteRow`)
-  - Búsqueda por ID (`findById`, `existsById`)
-  - Utilidades de columnas
+ - Abstracción de operaciones CRUD
+ - Lectura de tablas (`getTableData`, `getTableRange`)
+ - Escritura (`appendRow`, `updateRow`, `deleteRow`)
+ - Búsqueda por ID (`findById`, `existsById`)
+ - Utilidades de columnas
 - **04_DataValidation.js**: Validaciones de schema
-  - Implementa todas las reglas de DATABASE_SCHEMA
-  - Validación de monedas, tipos de cambio, medios, cuentas, transacciones
-  - **Regla crítica**: fx_id obligatorio para moneda extranjera
-  - Validación de integridad referencial (FKs)
+ - Implementa todas las reglas de DATABASE_SCHEMA
+ - Validación de monedas, tipos de cambio, medios, cuentas, transacciones
+ - **Regla crítica**: fx_id obligatorio para moneda extranjera
+ - Validación de integridad referencial (FKs)
 - **05_MonedaService.js**: Servicio de monedas
-  - CRUD completo para DB_MONEDAS
-  - Inicialización de monedas básicas (ARS, USD, EUR)
-  - Utilidades para dropdowns
+ - CRUD completo para DB_MONEDAS
+ - Inicialización de monedas básicas (ARS, USD, EUR)
+ - Utilidades para dropdowns
 - **appsscript.json**: Manifest OAuth
-  - Scopes para acceso a Sheets y requests externos
+ - Scopes para acceso a Sheets y requests externos
 
-### 🔧 Technical Notes
+### Technical Notes
 
 - Sistema modular con 7 archivos
 - ~1,000 líneas de código
@@ -836,50 +836,50 @@ Las versiones siguen [Semantic Versioning](https://semver.org/):
 
 ### Tipos de Cambios
 
-- ✨ **Added** para nuevas funcionalidades
-- 🔧 **Changed** para cambios en funcionalidad existente
-- 🚨 **Deprecated** para funcionalidades que se eliminarán pronto
-- ❌ **Removed** para funcionalidades eliminadas
-- 🐛 **Fixed** para correcciones de bugs
-- 🔒 **Security** para vulnerabilidades corregidas
+- **Added** para nuevas funcionalidades
+- **Changed** para cambios en funcionalidad existente
+- **Deprecated** para funcionalidades que se eliminarán pronto
+- **Removed** para funcionalidades eliminadas
+- **Fixed** para correcciones de bugs
+- **Security** para vulnerabilidades corregidas
 
-### ✨ Added
+### Added
 
 - **00_Config.js**: Configuración global del sistema
-  - Constantes de hoja y rangos de columnas
-  - Enums para valores cerrados (sentido, macro_tipo, fuente, status)
-  - Configuración de API
-  - Mensajes de error centralizados
+ - Constantes de hoja y rangos de columnas
+ - Enums para valores cerrados (sentido, macro_tipo, fuente, status)
+ - Configuración de API
+ - Mensajes de error centralizados
 - **01_Version.js**: Sistema de versionado
-  - Control de versiones Semantic Versioning
-  - Changelog embebido
-  - Funciones de logging de versión
+ - Control de versiones Semantic Versioning
+ - Changelog embebido
+ - Funciones de logging de versión
 - **02_Utils.js**: Utilidades generales
-  - Generación de IDs únicos
-  - Manejo de fecha/hora
-  - Validación de enums
-  - Logging centralizado (error, info, success)
-  - Notificaciones al usuario (toast, alert)
-  - Utilidades de conversión de datos
+ - Generación de IDs únicos
+ - Manejo de fecha/hora
+ - Validación de enums
+ - Logging centralizado (error, info, success)
+ - Notificaciones al usuario (toast, alert)
+ - Utilidades de conversión de datos
 - **03_SheetManager.js**: Gestor de acceso a hojas
-  - Abstracción de operaciones CRUD
-  - Lectura de tablas (`getTableData`, `getTableRange`)
-  - Escritura (`appendRow`, `updateRow`, `deleteRow`)
-  - Búsqueda por ID (`findById`, `existsById`)
-  - Utilidades de columnas
+ - Abstracción de operaciones CRUD
+ - Lectura de tablas (`getTableData`, `getTableRange`)
+ - Escritura (`appendRow`, `updateRow`, `deleteRow`)
+ - Búsqueda por ID (`findById`, `existsById`)
+ - Utilidades de columnas
 - **04_DataValidation.js**: Validaciones de schema
-  - Implementa todas las reglas de DATABASE_SCHEMA
-  - Validación de monedas, tipos de cambio, medios, cuentas, transacciones
-  - **Regla crítica**: fx_id obligatorio para moneda extranjera
-  - Validación de integridad referencial (FKs)
+ - Implementa todas las reglas de DATABASE_SCHEMA
+ - Validación de monedas, tipos de cambio, medios, cuentas, transacciones
+ - **Regla crítica**: fx_id obligatorio para moneda extranjera
+ - Validación de integridad referencial (FKs)
 - **05_MonedaService.js**: Servicio de monedas
-  - CRUD completo para DB_MONEDAS
-  - Inicialización de monedas básicas (ARS, USD, EUR)
-  - Utilidades para dropdowns
+ - CRUD completo para DB_MONEDAS
+ - Inicialización de monedas básicas (ARS, USD, EUR)
+ - Utilidades para dropdowns
 - **appsscript.json**: Manifest OAuth
-  - Scopes para acceso a Sheets y requests externos
+ - Scopes para acceso a Sheets y requests externos
 
-### 🔧 Technical Notes
+### Technical Notes
 
 - Sistema modular con 7 archivos
 - ~1,000 líneas de código
@@ -891,60 +891,60 @@ Las versiones siguen [Semantic Versioning](https://semver.org/):
 
 ## v0.4.0 - Sprint 3: UI Development (2026-01-18) - IN PROGRESS
 
-### Day 0 Completed: Design System ✅
+### Day 0 Completed: Design System 
 
-#### ✨ Added
+#### Added
 
 - **CSS_DesignSystem.html** (500+ líneas): Sistema de diseño completo
-  - Variables CSS (colores, tipografía, spacing, shadows)
-  - CSS Reset
-  - Utilities (typography, spacing, layout, flex, grid)
-  - Componentes base (buttons, inputs, selects, labels)
-  - Neumorphic shadows (dual light/dark)
-  - League Spartan font de Google Fonts
-  - Responsive breakpoint (768px)
+ - Variables CSS (colores, tipografía, spacing, shadows)
+ - CSS Reset
+ - Utilities (typography, spacing, layout, flex, grid)
+ - Componentes base (buttons, inputs, selects, labels)
+ - Neumorphic shadows (dual light/dark)
+ - League Spartan font de Google Fonts
+ - Responsive breakpoint (768px)
 
 - **CSS_Components.html** (400+ líneas): Componentes específicos
-  - StatCard (métricas financieras con iconos)
-  - Badge (status indicators)
-  - Alert (success, error, warning, info)
-  - Table (con hover states)
-  - Modal/Dialog
-  - Tooltip
-  - Progress bar
-  - Skeleton loader
-  - Chip/Tag
-  - Empty state
+ - StatCard (métricas financieras con iconos)
+ - Badge (status indicators)
+ - Alert (success, error, warning, info)
+ - Table (con hover states)
+ - Modal/Dialog
+ - Tooltip
+ - Progress bar
+ - Skeleton loader
+ - Chip/Tag
+ - Empty state
 
 - **UI_DesignSystemTest.html**: Página de testing visual
-  - Showcase de todos los componentes
-  - Paleta de colores
-  - Typography scale
-  - Estados interactivos
+ - Showcase de todos los componentes
+ - Paleta de colores
+ - Typography scale
+ - Estados interactivos
 
 - **11_UIService.js**: Servicio para dialogs
-  - Función `include()` para templates
-  - `showDesignSystemTest()` para testing
+ - Función `include()` para templates
+ - `showDesignSystemTest()` para testing
 
-#### 🎨 Design Decisions
+#### Design Decisions
 
 - **Estética:** Neumorfismo con sombras duales suaves
 - **Paleta:** Grises/azules (#e8ecf1 base, acentos verde/rojo para ingresos/egresos)
 - **Fuente:** League Spartan (300-700 weights)
 - **Arquitectura:** Atomic Design (átomos → moléculas → organismos)
 
-#### 📊 Testing
+#### Testing
 
-- ✅ Visual testing completo
-- ✅ Todos los componentes renderizan correctamente
-- ✅ Neumorfismo aplicado (sombras suaves, depth correcta)
-- ✅ Fuente Google cargada
+- Visual testing completo
+- Todos los componentes renderizan correctamente
+- Neumorfismo aplicado (sombras suaves, depth correcta)
+- Fuente Google cargada
 
 ---
 
-## v0.3.0 - Sprint 2: Catálogos & Data Seeding (2026-01-18) ✅ RELEASED
+## v0.3.0 - Sprint 2: Catálogos & Data Seeding (2026-01-18) RELEASED
 
-### 🎯 Resumen del Sprint
+### Resumen del Sprint
 
 Sprint completado exitosamente en 6 días (Day 0 → Day 5) con implementación completa de:
 
@@ -954,120 +954,120 @@ Sprint completado exitosamente en 6 días (Day 0 → Day 5) con implementación 
 - DataSeeder para generación de datos de prueba
 - Suite de testing integral (41/41 tests pasados)
 
-### Day 5 Completed: Integration Testing ✅
+### Day 5 Completed: Integration Testing 
 
-#### ✨ Added
+#### Added
 
 - **TESTS_Sprint2_Final.js**: Suite de 5 tests de integración end-to-end
-  - Test 1: Setup completo del sistema
-  - Test 2: Generación de transacciones (seed)
-  - Test 3: Validación de integridad referencial
-  - Test 4: Cálculos financieros (totales, promedios)
-  - Test 5: Performance y capacidad
+ - Test 1: Setup completo del sistema
+ - Test 2: Generación de transacciones (seed)
+ - Test 3: Validación de integridad referencial
+ - Test 4: Cálculos financieros (totales, promedios)
+ - Test 5: Performance y capacidad
 
 - **walkthrough.md**: Documentación completa del Sprint 2
-  - Timeline detallado (Days 0-5)
-  - Todos los entregables
-  - Tests ejecutados
-  - Bugs resueltos
+ - Timeline detallado (Days 0-5)
+ - Todos los entregables
+ - Tests ejecutados
+ - Bugs resueltos
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 5/5 tests de integración pasados
-- ✅ Sistema validado end-to-end
-- ✅ 41/41 tests totales del sprint
+- 5/5 tests de integración pasados
+- Sistema validado end-to-end
+- 41/41 tests totales del sprint
 
-### Day 4 Completed: TransactionService ✅
+### Day 4 Completed: TransactionService 
 
-#### ✨ Added
+#### Added
 
 - **09_TransactionService.js**: Servicio completo para DB_TRANSACCIONES (core del sistema)
-  - CRUD: createTransaccion(), getAllTransacciones(), getTransaccionById(), updateTransaccion(), deleteTransaccion()
-  - Filtrado: getTransaccionesBySentido(), getTransaccionesByFechas()
-  - Auto-ID: Genera TRX-XXXXXX automáticamente
-  - Cálculo automático de monto_base
-  - Validación CRÍTICA: fx_id obligatorio para monedas extranjeras
-  - clearAllTransacciones() - Para re-seed
-  - calcularTotales(), getResumenTransacciones()
+ - CRUD: createTransaccion(), getAllTransacciones(), getTransaccionById(), updateTransaccion(), deleteTransaccion()
+ - Filtrado: getTransaccionesBySentido(), getTransaccionesByFechas()
+ - Auto-ID: Genera TRX-XXXXXX automáticamente
+ - Cálculo automático de monto_base
+ - Validación CRÍTICA: fx_id obligatorio para monedas extranjeras
+ - clearAllTransacciones() - Para re-seed
+ - calcularTotales(), getResumenTransacciones()
 - **98_DataSeeder.js**: Actualizado con seedTransacciones()
-  - Genera N transacciones aleatorias realistas
-  - 70% egresos, 30% ingresos
-  - 80% moneda base, 20% extranjeras (con fx_id auto)
-  - Montos realistas según sentido
+ - Genera N transacciones aleatorias realistas
+ - 70% egresos, 30% ingresos
+ - 80% moneda base, 20% extranjeras (con fx_id auto)
+ - Montos realistas según sentido
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 10/10 tests pasados
+- 10/10 tests pasados
 - Validación fx_id funcionando correctamente
 - Cálculo monto_base verificado
 - Seed de 10 transacciones OK
 
-### Day 3 Completed: DataSeeder - Parte 1 ✅
+### Day 3 Completed: DataSeeder - Parte 1 
 
-#### ✨ Added
+#### Added
 
 - **98_DataSeeder.js**: Utilidades para seeding
-  - seedCompleto() - Inicializa todos los catálogos
-  - Helper functions: randomDate(), randomMonto(), randomDescripcion(), randomCuenta(), randomMedio(), etc.
-  - checkPrerequisites() - Verifica catálogos
-  - Placeholders para seedTransacciones() (implementado en Day 4)
+ - seedCompleto() - Inicializa todos los catálogos
+ - Helper functions: randomDate(), randomMonto(), randomDescripcion(), randomCuenta(), randomMedio(), etc.
+ - checkPrerequisites() - Verifica catálogos
+ - Placeholders para seedTransacciones() (implementado en Day 4)
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 3/3 tests pasados
+- 3/3 tests pasados
 - seedCompleto() funciona correctamente
 - Todas las funciones helper validadas
 
-### Day 2 Completed: CuentaService ✅
+### Day 2 Completed: CuentaService 
 
-#### ✨ Added
+#### Added
 
 - **08_CuentaService.js**: Servicio completo para DB_CUENTAS
-  - CRUD: createCuenta(), getAllCuentas(), getCuentaById(), updateCuenta(), deleteCuenta()
-  - Filtrado: getCuentasByMacroTipo()
-  - Auto-ID: Genera CTA-XXX automáticamente
-  - initializeCuentasBasicas() - 11 cuentas (3 ingresos + 8 egresos)
-  - Integración completa con schema (4 columnas: cuenta_id, nombre_cuentas, macro_tipo, es_recurrente)
+ - CRUD: createCuenta(), getAllCuentas(), getCuentaById(), updateCuenta(), deleteCuenta()
+ - Filtrado: getCuentasByMacroTipo()
+ - Auto-ID: Genera CTA-XXX automáticamente
+ - initializeCuentasBasicas() - 11 cuentas (3 ingresos + 8 egresos)
+ - Integración completa con schema (4 columnas: cuenta_id, nombre_cuentas, macro_tipo, es_recurrente)
 
-#### 🔧 Fixed
+#### Fixed
 
 - validateCuenta() en DataValidation
-  - Agregado parámetro `isUpdate` para evitar error en updates
-  - Eliminada función duplicada vieja
+ - Agregado parámetro `isUpdate` para evitar error en updates
+ - Eliminada función duplicada vieja
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 9/9 tests pasados
+- 9/9 tests pasados
 - Validaciones funcionando correctamente
 - Auto-IDs generando CTA-001, CTA-002, etc.
 
-### Day 1 Completed: MedioPagoService ✅
+### Day 1 Completed: MedioPagoService 
 
-#### ✨ Added
+#### Added
 
 - **07_MedioPagoService.js**: Servicio completo para DB_MEDIOS_PAGO
-  - CRUD: createMedioPago(), getAllMediosPago(), getMedioPagoById(), updateMedioPago(), deleteMedioPago()
-  - Filtrado: getMediosByTipo()
-  - Auto-ID: Genera MED-XXX automáticamente
-  - initializeMediosPagoBasicos() - 5 medios preconfigurados
-  - Integración completa con schema (5 columnas: medio_id, nombre_medio, tipo, moneda_id, uso_principal)
+ - CRUD: createMedioPago(), getAllMediosPago(), getMedioPagoById(), updateMedioPago(), deleteMedioPago()
+ - Filtrado: getMediosByTipo()
+ - Auto-ID: Genera MED-XXX automáticamente
+ - initializeMediosPagoBasicos() - 5 medios preconfigurados
+ - Integración completa con schema (5 columnas: medio_id, nombre_medio, tipo, moneda_id, uso_principal)
 
-#### 🔧 Fixed
+#### Fixed
 
 - validateMedioPago() en DataValidation
-  - Agregado parámetro `isUpdate` para evitar error en updates
-  - Validación de FK moneda_id
-  - Validación de enum uso_principal (opcional)
+ - Agregado parámetro `isUpdate` para evitar error en updates
+ - Validación de FK moneda_id
+ - Validación de enum uso_principal (opcional)
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 9/9 tests pasados
+- 9/9 tests pasados
 - Validaciones funcionando correctamente
 - Auto-IDs generando MED-001, MED-002, etc.
 
-### Day 0 Completed: Auto-ID Migration ✅
+### Day 0 Completed: Auto-ID Migration 
 
-#### 🔧 Changed
+#### Changed
 
 - **02_Utils.js**: Agregado `generateNextId(tableName, prefix, padding)`
 - **05_MonedaService.js**: `createMoneda(nombre, simbolo)` - sin moneda_id manual
@@ -1075,9 +1075,9 @@ Sprint completado exitosamente en 6 días (Day 0 → Day 5) con implementación 
 - **10_ConfigService.js**: config_id auto-generado (CFG-XXX)
 - **99_SetupDirect.js**: Actualizado para usar auto-IDs
 
-#### 📊 Testing
+#### Testing
 
-- ✅ 5/5 tests pasados
+- 5/5 tests pasados
 - MON-001, MON-002, MON-003 en vez de ARS, USD, EUR
 - FX-00001, FX-00002 en vez de timestamps
 
@@ -1085,37 +1085,37 @@ Sprint completado exitosamente en 6 días (Day 0 → Day 5) con implementación 
 
 ## v0.2.0 - Sprint 1: Exchange Rates & Config (2026-01-17)
 
-### ✨ Added
+### Added
 
 - **10_ConfigService.js**: Configuración global del sistema
-  - getConfig(), setBaseMoneda(), setFuentePreferida()
-  - initializeConfig() con defaults (ARS, oficial)
-  - Advertencias al cambiar moneda base
+ - getConfig(), setBaseMoneda(), setFuentePreferida()
+ - initializeConfig() con defaults (ARS, oficial)
+ - Advertencias al cambiar moneda base
 - **06_ExchangeRateService.js**: Gestión de tipos de cambio
-  - CRUD de DB_TIPOS_CAMBIO
-  - fetchExchangeRatesFromAPI() - Integración con ExchangeRate-API
-  - getLatestRate() - Obtiene TC más reciente para un par
-  - calculateMontoBase() - Conversión con validación de par
-  - cleanupOldRates() - Limpieza de rates antiguos
+ - CRUD de DB_TIPOS_CAMBIO
+ - fetchExchangeRatesFromAPI() - Integración con ExchangeRate-API
+ - getLatestRate() - Obtiene TC más reciente para un par
+ - calculateMontoBase() - Conversión con validación de par
+ - cleanupOldRates() - Limpieza de rates antiguos
 - **99_SetupDirect.js**: Utilidades de setup
-  - setupCompleto() - Inicialización del sistema en un comando
-  - initializeMonedasDirect(), initializeConfigDirect()
-  - Funciones de testing (test3 a test14)
+ - setupCompleto() - Inicialización del sistema en un comando
+ - initializeMonedasDirect(), initializeConfigDirect()
+ - Funciones de testing (test3 a test14)
 
-### 🔧 Fixed
+### Fixed
 
 - Mejorado: initializeMonedas() solo agrega monedas faltantes
 - Corregido: Detección de filas vacías en getTableData()
 - Implementado: Inserción directa en celdas específicas
 
-### 📊 Testing
+### Testing
 
-- ✅ 14 tests completos (2026-01-18)
+- 14 tests completos (2026-01-18)
 - ConfigService: Lectura, escritura, validaciones
 - ExchangeRateService: CRUD, API, cálculos
 - Todas las validaciones funcionando correctamente
 
-### 🚀 Próximo Sprint
+### Próximo Sprint
 
 v0.3.0 - Catálogos & Data Seeding
 
@@ -1140,9 +1140,9 @@ Las versiones siguen [Semantic Versioning](https://semver.org/):
 
 ### Tipos de Cambios
 
-- ✨ **Added** para nuevas funcionalidades
-- 🔧 **Changed** para cambios en funcionalidad existente
-- 🚨 **Deprecated** para funcionalidades que se eliminarán pronto
-- ❌ **Removed** para funcionalidades eliminadas
-- 🐛 **Fixed** para correcciones de bugs
-- 🔒 **Security** para vulnerabilidades corregidas
+- **Added** para nuevas funcionalidades
+- **Changed** para cambios en funcionalidad existente
+- **Deprecated** para funcionalidades que se eliminarán pronto
+- **Removed** para funcionalidades eliminadas
+- **Fixed** para correcciones de bugs
+- **Security** para vulnerabilidades corregidas

@@ -3,13 +3,13 @@ name: gsd:discuss-design
 description: Design phase-specific UI through conversation, then generate mockups
 argument-hint: "<phase-number>"
 allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - Task
-  - WebFetch
-  - AskUserQuestion
+ - Read
+ - Write
+ - Edit
+ - Bash
+ - Task
+ - WebFetch
+ - AskUserQuestion
 ---
 
 <objective>
@@ -72,10 +72,10 @@ Check for project design system:
 
 ```bash
 if [[ -f ".planning/DESIGN-SYSTEM.md" ]]; then
-  echo "Design system found - loading as context"
-  # Read and summarize key points
+ echo "Design system found - loading as context"
+ # Read and summarize key points
 else
-  echo "No design system - will use ui-principles defaults"
+ echo "No design system - will use ui-principles defaults"
 fi
 ```
 
@@ -89,17 +89,17 @@ If design system exists, load and summarize key constraints:
 
 ```bash
 if [[ -f "package.json" ]]; then
-  if grep -q '"next"' package.json; then
-    FRAMEWORK="nextjs"
-  elif grep -q '"react"' package.json; then
-    FRAMEWORK="react"
-  fi
+ if grep -q '"next"' package.json; then
+ FRAMEWORK="nextjs"
+ elif grep -q '"react"' package.json; then
+ FRAMEWORK="react"
+ fi
 elif ls *.xcodeproj 2>/dev/null || [[ -f "Package.swift" ]]; then
-  FRAMEWORK="swift"
+ FRAMEWORK="swift"
 elif [[ -f "requirements.txt" ]]; then
-  FRAMEWORK="python"
+ FRAMEWORK="python"
 else
-  FRAMEWORK="html"
+ FRAMEWORK="html"
 fi
 ```
 
@@ -129,10 +129,10 @@ Ask via AskUserQuestion:
 - header: "References"
 - question: "Do you have visual references for this specific phase?"
 - options:
-  - "Yes, images/screenshots" - I'll provide files
-  - "Yes, URLs" - I'll share example sites
-  - "Both" - Images and URLs
-  - "No, use design system" - Work from existing system
+ - "Yes, images/screenshots" - I'll provide files
+ - "Yes, URLs" - I'll share example sites
+ - "Both" - Images and URLs
+ - "No, use design system" - Work from existing system
 
 **If references provided:**
 Analyze and extract:
@@ -156,8 +156,8 @@ After ~4 questions, ask:
 - header: "More?"
 - question: "More questions about {component}, or move on?"
 - options:
-  - "More questions" - I want to clarify further
-  - "Move on" - I've said enough
+ - "More questions" - I want to clarify further
+ - "Move on" - I've said enough
 
 Continue until all components understood.
 
@@ -209,9 +209,9 @@ Ask via AskUserQuestion:
 - header: "Ready?"
 - question: "Ready to generate mockups?"
 - options:
-  - "Generate mockups" - Create the visual files
-  - "Adjust design" - I want to change something
-  - "Add more" - I have more components to discuss
+ - "Generate mockups" - Create the visual files
+ - "Adjust design" - I want to change something
+ - "Add more" - I have more components to discuss
 
 ## Phase 11: Generate Mockups
 
@@ -224,27 +224,27 @@ mkdir -p "$PHASE_DIR/mockups"
 Spawn design specialist agent:
 
 Task(
-  prompt="@/usr/lib/node_modules/clawdbot/skills/gsd/agents/design-specialist.md
+ prompt="@/usr/lib/node_modules/clawdbot/skills/gsd/agents/design-specialist.md
 
-  <context>
-  **Phase:** {phase_number} - {phase_name}
-  **Framework:** {detected_framework}
-  **Design System:** @.planning/DESIGN-SYSTEM.md
+ <context>
+ **Phase:** {phase_number} - {phase_name}
+ **Framework:** {detected_framework}
+ **Design System:** @.planning/DESIGN-SYSTEM.md
 
-  **Components to create:**
-  {component_specs}
+ **Components to create:**
+ {component_specs}
 
-  **Layout:**
-  {layout_description}
+ **Layout:**
+ {layout_description}
 
-  **States:**
-  {state_requirements}
-  </context>
+ **States:**
+ {state_requirements}
+ </context>
 
-  Create mockups in: {PHASE_DIR}/mockups/",
-  subagent_type="general-purpose",
-  model="sonnet",
-  description="Generate phase mockups"
+ Create mockups in: {PHASE_DIR}/mockups/",
+ subagent_type="general-purpose",
+ model="sonnet",
+ description="Generate phase mockups"
 )
 
 ## Phase 12: Review Mockups
@@ -266,9 +266,9 @@ Ask via AskUserQuestion:
 - header: "Review"
 - question: "Review the mockups. What's the verdict?"
 - options:
-  - "Approved" - These look good, proceed
-  - "Iterate" - I want changes
-  - "Major revision" - Start fresh on specific components
+ - "Approved" - These look good, proceed
+ - "Iterate" - I want changes
+ - "Major revision" - Start fresh on specific components
 
 **If "Iterate":**
 Ask what changes needed, update mockups, re-present.
@@ -316,13 +316,13 @@ Include:
 The design is ready for implementation.
 
 Option 1: Plan the phase
-  /gsd:plan-phase {phase_number}
+ /gsd:plan-phase {phase_number}
 
 Option 2: View mockups
-  {preview_command}
+ {preview_command}
 
 Option 3: Edit design
-  Open .planning/phases/{phase}/${PHASE}-DESIGN.md
+ Open .planning/phases/{phase}/${PHASE}-DESIGN.md
 
 The planner will automatically load {PHASE}-DESIGN.md as context.
 

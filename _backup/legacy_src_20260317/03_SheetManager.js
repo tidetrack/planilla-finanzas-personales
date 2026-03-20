@@ -21,14 +21,14 @@
  * @throws {Error} Si la hoja no existe
  */
 function getSheet(sheetName) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(sheetName);
+ const ss = SpreadsheetApp.getActiveSpreadsheet();
+ const sheet = ss.getSheetByName(sheetName);
 
-    if (!sheet) {
-        throw new Error(`Hoja ${sheetName} no encontrada`);
-    }
+ if (!sheet) {
+ throw new Error(`Hoja ${sheetName} no encontrada`);
+ }
 
-    return sheet;
+ return sheet;
 }
 
 // ============================================
@@ -41,17 +41,17 @@ function getSheet(sheetName) {
  * @returns {GoogleAppsScript.Spreadsheet.Range} Rango de la tabla
  */
 function getTableRange(tableName) {
-    const config = RANGES[tableName];
-    
-    if (!config) {
-        throw new Error(`Tabla no configurada: ${tableName}`);
-    }
+ const config = RANGES[tableName];
+ 
+ if (!config) {
+ throw new Error(`Tabla no configurada: ${tableName}`);
+ }
 
-    const sheet = getSheet(config.sheet);
-    const lastRow = sheet.getLastRow();
-    const range = `${config.start}${DATA_START_ROW}:${config.end}${lastRow}`;
+ const sheet = getSheet(config.sheet);
+ const lastRow = sheet.getLastRow();
+ const range = `${config.start}${DATA_START_ROW}:${config.end}${lastRow}`;
 
-    return sheet.getRange(range);
+ return sheet.getRange(range);
 }
 
 /**
@@ -60,11 +60,11 @@ function getTableRange(tableName) {
  * @returns {Array<Array>} Datos de la tabla
  */
 function getTableData(tableName) {
-    const range = getTableRange(tableName);
-    const values = range.getValues();
+ const range = getTableRange(tableName);
+ const values = range.getValues();
 
-    // Filtrar filas vacías (todas las celdas vacías)
-    return values.filter(row => row.some(cell => cell !== ''));
+ // Filtrar filas vacías (todas las celdas vacías)
+ return values.filter(row => row.some(cell => cell !== ''));
 }
 
 /**
@@ -73,8 +73,8 @@ function getTableData(tableName) {
  * @returns {number} Cantidad de filas
  */
 function countTableRows(tableName) {
-    const data = getTableData(tableName);
-    return data.length;
+ const data = getTableData(tableName);
+ return data.length;
 }
 
 // ============================================
@@ -88,37 +88,37 @@ function countTableRows(tableName) {
  * @returns {number} Índice de la fila agregada
  */
 function appendRow(tableName, rowData) {
-    const config = RANGES[tableName];
-    const sheet = getSheet(config.sheet);
+ const config = RANGES[tableName];
+ const sheet = getSheet(config.sheet);
 
-    // CRÍTICO: Obtener la última fila con datos EN LAS COLUMNAS DE ESTA TABLA
-    // NO usar sheet.getLastRow() que devuelve la última fila de TODA la hoja
-    const startCol = columnLetterToIndex(config.start);
-    const endCol = columnLetterToIndex(config.end);
+ // CRÍTICO: Obtener la última fila con datos EN LAS COLUMNAS DE ESTA TABLA
+ // NO usar sheet.getLastRow() que devuelve la última fila de TODA la hoja
+ const startCol = columnLetterToIndex(config.start);
+ const endCol = columnLetterToIndex(config.end);
 
-    // Buscar la última fila con datos en el rango de columnas de esta tabla
-    let lastRowWithData = HEADER_ROW;
+ // Buscar la última fila con datos en el rango de columnas de esta tabla
+ let lastRowWithData = HEADER_ROW;
 
-    // Leer todas las filas desde DATA_START_ROW hacia abajo en la primera columna de la tabla
-    const firstColumn = sheet.getRange(config.start + DATA_START_ROW + ':' + config.start + '1000');
-    const values = firstColumn.getValues();
+ // Leer todas las filas desde DATA_START_ROW hacia abajo en la primera columna de la tabla
+ const firstColumn = sheet.getRange(config.start + DATA_START_ROW + ':' + config.start + '1000');
+ const values = firstColumn.getValues();
 
-    for (let i = 0; i < values.length; i++) {
-        if (values[i][0] !== '') {
-            lastRowWithData = DATA_START_ROW + i;
-        }
-    }
+ for (let i = 0; i < values.length; i++) {
+ if (values[i][0] !== '') {
+ lastRowWithData = DATA_START_ROW + i;
+ }
+ }
 
-    const newRow = lastRowWithData === HEADER_ROW ? DATA_START_ROW : lastRowWithData + 1;
+ const newRow = lastRowWithData === HEADER_ROW ? DATA_START_ROW : lastRowWithData + 1;
 
-    const range = sheet.getRange(
-        `${config.start}${newRow}:${config.end}${newRow}`
-    );
+ const range = sheet.getRange(
+ `${config.start}${newRow}:${config.end}${newRow}`
+ );
 
-    range.setValues([rowData]);
-    logSuccess(`Fila agregada a ${tableName} en fila ${newRow}`);
+ range.setValues([rowData]);
+ logSuccess(`Fila agregada a ${tableName} en fila ${newRow}`);
 
-    return newRow;
+ return newRow;
 }
 
 /**
@@ -128,16 +128,16 @@ function appendRow(tableName, rowData) {
  * @param {Array} rowData Nuevos datos
  */
 function updateRow(tableName, rowIndex, rowData) {
-    const config = RANGES[tableName];
-    const sheet = getSheet(config.sheet);
-    const actualRow = DATA_START_ROW + rowIndex;
+ const config = RANGES[tableName];
+ const sheet = getSheet(config.sheet);
+ const actualRow = DATA_START_ROW + rowIndex;
 
-    const range = sheet.getRange(
-        `${config.start}${actualRow}:${config.end}${actualRow}`
-    );
+ const range = sheet.getRange(
+ `${config.start}${actualRow}:${config.end}${actualRow}`
+ );
 
-    range.setValues([rowData]);
-    logSuccess(`Fila ${rowIndex} actualizada en ${tableName}`);
+ range.setValues([rowData]);
+ logSuccess(`Fila ${rowIndex} actualizada en ${tableName}`);
 }
 
 /**
@@ -146,12 +146,12 @@ function updateRow(tableName, rowIndex, rowData) {
  * @param {number} rowIndex Índice de fila (relativo a DATA_START_ROW)
  */
 function deleteRow(tableName, rowIndex) {
-    const config = RANGES[tableName];
-    const sheet = getSheet(config.sheet);
-    const actualRow = DATA_START_ROW + rowIndex;
+ const config = RANGES[tableName];
+ const sheet = getSheet(config.sheet);
+ const actualRow = DATA_START_ROW + rowIndex;
 
-    sheet.deleteRow(actualRow);
-    logSuccess(`Fila ${rowIndex} eliminada de ${tableName}`);
+ sheet.deleteRow(actualRow);
+ logSuccess(`Fila ${rowIndex} eliminada de ${tableName}`);
 }
 
 // ============================================
@@ -166,18 +166,18 @@ function deleteRow(tableName, rowIndex) {
  * @returns {Object|null} {rowIndex, rowData} o null si no se encuentra
  */
 function findById(tableName, id, idColumnIndex = 0) {
-    const data = getTableData(tableName);
+ const data = getTableData(tableName);
 
-    for (let i = 0; i < data.length; i++) {
-        if (data[i][idColumnIndex] === id) {
-            return {
-                rowIndex: i,
-                rowData: data[i]
-            };
-        }
-    }
+ for (let i = 0; i < data.length; i++) {
+ if (data[i][idColumnIndex] === id) {
+ return {
+ rowIndex: i,
+ rowData: data[i]
+ };
+ }
+ }
 
-    return null;
+ return null;
 }
 
 /**
@@ -188,7 +188,7 @@ function findById(tableName, id, idColumnIndex = 0) {
  * @returns {boolean} true si existe
  */
 function existsById(tableName, id, idColumnIndex = 0) {
-    return findById(tableName, id, idColumnIndex) !== null;
+ return findById(tableName, id, idColumnIndex) !== null;
 }
 
 // ============================================
@@ -201,11 +201,11 @@ function existsById(tableName, id, idColumnIndex = 0) {
  * @returns {number} Índice 1-based
  */
 function columnLetterToIndex(columnLetter) {
-    let index = 0;
-    for (let i = 0; i < columnLetter.length; i++) {
-        index = index * 26 + (columnLetter.charCodeAt(i) - 64);
-    }
-    return index;
+ let index = 0;
+ for (let i = 0; i < columnLetter.length; i++) {
+ index = index * 26 + (columnLetter.charCodeAt(i) - 64);
+ }
+ return index;
 }
 
 /**
@@ -214,15 +214,15 @@ function columnLetterToIndex(columnLetter) {
  * @returns {Object} Mapa de nombre_campo → índice relativo (0-based)
  */
 function getColumnIndexes(tableName) {
-    const config = RANGES[tableName];
-    const startIndex = columnLetterToIndex(config.start);
-    const indexes = {};
+ const config = RANGES[tableName];
+ const startIndex = columnLetterToIndex(config.start);
+ const indexes = {};
 
-    Object.keys(config.columns).forEach(fieldName => {
-        const colLetter = config.columns[fieldName];
-        const colIndex = columnLetterToIndex(colLetter);
-        indexes[fieldName] = colIndex - startIndex;
-    });
+ Object.keys(config.columns).forEach(fieldName => {
+ const colLetter = config.columns[fieldName];
+ const colIndex = columnLetterToIndex(colLetter);
+ indexes[fieldName] = colIndex - startIndex;
+ });
 
-    return indexes;
+ return indexes;
 }

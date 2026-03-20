@@ -2,8 +2,8 @@
 name: gsd:settings
 description: Configure GSD workflow toggles and model profile
 allowed-tools:
-  - Read
-  - Write
+ - Read
+ - Write
 ---
 
 <objective>
@@ -17,8 +17,8 @@ Updates `.planning/config.json`.
 
 ```bash
 if [ ! -f .planning/config.json ]; then
-  echo "ERROR: No config found. Run /gsd new-project first."
-  exit 1
+ echo "ERROR: No config found. Run /gsd new-project first."
+ exit 1
 fi
 ```
 
@@ -52,12 +52,12 @@ Ask user for each setting:
 
 ```json
 {
-  "model_profile": "balanced",
-  "workflow": {
-    "research": true,
-    "plan_check": true,
-    "verifier": true
-  }
+ "model_profile": "balanced",
+ "workflow": {
+ "research": true,
+ "plan_check": true,
+ "verifier": true
+ }
 }
 ```
 

@@ -3,12 +3,12 @@ name: gsd:quick
 description: Execute a quick task with GSD guarantees (atomic commits, state tracking) but skip optional agents
 argument-hint: ""
 allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - Bash
+ - Read
+ - Write
+ - Edit
+ - Glob
+ - Grep
+ - Bash
 ---
 
 <objective>
@@ -59,9 +59,9 @@ Check that an active GSD project exists:
 
 ```bash
 if [ ! -f .planning/ROADMAP.md ]; then
-  echo "Quick mode requires an active project with ROADMAP.md."
-  echo "Run /gsd new-project first."
-  exit 1
+ echo "Quick mode requires an active project with ROADMAP.md."
+ echo "Run /gsd new-project first."
+ exit 1
 fi
 ```
 
@@ -98,9 +98,9 @@ mkdir -p .planning/quick
 last=$(ls -1d .planning/quick/[0-9][0-9][0-9]-* 2>/dev/null | sort -r | head -1 | xargs -I{} basename {} | grep -oE '^[0-9]+')
 
 if [ -z "$last" ]; then
-  next_num="001"
+ next_num="001"
 else
-  next_num=$(printf "%03d" $((10#$last + 1)))
+ next_num=$(printf "%03d" $((10#$last + 1)))
 fi
 ```
 
@@ -135,7 +135,7 @@ Spawn gsd-planner with quick mode context:
 
 ```
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-planner.md for your role and instructions.
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-planner.md for your role and instructions.
 
 <planning_context>
 
@@ -160,9 +160,9 @@ Write plan to: ${QUICK_DIR}/${next_num}-PLAN.md
 Return: ## PLANNING COMPLETE with plan path
 </output>
 ",
-    label="Quick plan: ${DESCRIPTION}",
-    model="{planner_model}",
-    cleanup="keep"
+ label="Quick plan: ${DESCRIPTION}",
+ model="{planner_model}",
+ cleanup="keep"
 )
 ```
 
@@ -186,7 +186,7 @@ Spawn gsd-executor with plan:
 
 ```
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-executor.md for your role and instructions.
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-executor.md for your role and instructions.
 
 Execute quick task ${next_num}.
 
@@ -205,9 +205,9 @@ ${STATE_CONTENT}
 - Do NOT update ROADMAP.md (quick tasks are separate from planned phases)
 </constraints>
 ",
-    label="Execute: ${DESCRIPTION}",
-    model="{executor_model}",
-    cleanup="keep"
+ label="Execute: ${DESCRIPTION}",
+ model="{executor_model}",
+ cleanup="keep"
 )
 ```
 

@@ -34,36 +34,36 @@ Create `~/.claude-code-router/config.json`:
 
 ```json
 {
-  "APIKEY": "your-primary-api-key",
-  "PROXY_URL": "http://127.0.0.1:7890",
-  "LOG": true,
-  "API_TIMEOUT_MS": 600000,
-  "Providers": [
-    {
-      "name": "anthropic",
-      "api_base_url": "https://api.anthropic.com",
-      "api_key": "your-anthropic-key",
-      "models": ["claude-3-5-sonnet-latest", "claude-3-5-opus-latest"]
-    },
-    {
-      "name": "z-ai",
-      "api_base_url": "https://open.bigmodel.cn/api/paas/v4/",
-      "api_key": "your-z-ai-key",
-      "models": ["glm-4.7"]
-    },
-    {
-      "name": "openrouter",
-      "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
-      "api_key": "your-openrouter-key",
-      "models": ["deepseek/deepseek-reasoner", "google/gemini-2.5-pro-preview"]
-    }
-  ],
-  "Router": {
-    "default": "anthropic,claude-3-5-sonnet-latest",
-    "background": "z-ai,glm-4.7",
-    "think": "openrouter,deepseek/deepseek-reasoner",
-    "longContext": "anthropic,claude-3-5-opus-latest"
-  }
+ "APIKEY": "your-primary-api-key",
+ "PROXY_URL": "http://127.0.0.1:7890",
+ "LOG": true,
+ "API_TIMEOUT_MS": 600000,
+ "Providers": [
+ {
+ "name": "anthropic",
+ "api_base_url": "https://api.anthropic.com",
+ "api_key": "your-anthropic-key",
+ "models": ["claude-3-5-sonnet-latest", "claude-3-5-opus-latest"]
+ },
+ {
+ "name": "z-ai",
+ "api_base_url": "https://open.bigmodel.cn/api/paas/v4/",
+ "api_key": "your-z-ai-key",
+ "models": ["glm-4.7"]
+ },
+ {
+ "name": "openrouter",
+ "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
+ "api_key": "your-openrouter-key",
+ "models": ["deepseek/deepseek-reasoner", "google/gemini-2.5-pro-preview"]
+ }
+ ],
+ "Router": {
+ "default": "anthropic,claude-3-5-sonnet-latest",
+ "background": "z-ai,glm-4.7",
+ "think": "openrouter,deepseek/deepseek-reasoner",
+ "longContext": "anthropic,claude-3-5-opus-latest"
+ }
 }
 ```
 
@@ -95,65 +95,65 @@ Edit `.planning/phase-models.json` to customize per-phase model selection:
 
 ```json
 {
-  "description": "Per-phase model configuration for GSD Autopilot",
-  "default_model": "claude-3-5-sonnet-latest",
-  "phases": {
-    "1": {
-      "model": "claude-3-5-sonnet-latest",
-      "reasoning": "Initial setup and architecture - Sonnet is cost-effective"
-    },
-    "2": {
-      "model": "claude-3-5-opus-latest",
-      "reasoning": "Complex implementation requiring deep reasoning"
-    },
-    "3": {
-      "model": "claude-3-5-sonnet-latest",
-      "reasoning": "Standard development work"
-    },
-    "gaps": {
-      "model": "glm-4.7",
-      "reasoning": "Gap closure is typically straightforward fixes"
-    },
-    "continuation": {
-      "model": "claude-3-5-sonnet-latest",
-      "reasoning": "Checkpoint continuations need context"
-    },
-    "verification": {
-      "model": "glm-4.7",
-      "reasoning": "Verification is systematic testing"
-    },
-    "milestone_complete": {
-      "model": "claude-3-5-sonnet-latest",
-      "reasoning": "Completion task is straightforward"
-    }
-  },
-  "provider_routing": {
-    "claude-3-5-sonnet-latest": {
-      "provider": "anthropic",
-      "base_url": "https://api.anthropic.com"
-    },
-    "claude-3-5-opus-latest": {
-      "provider": "anthropic",
-      "base_url": "https://api.anthropic.com"
-    },
-    "glm-4.7": {
-      "provider": "z-ai",
-      "base_url": "https://open.bigmodel.cn/api/paas/v4/",
-      "auth_header": "Authorization"
-    },
-    "deepseek-reasoner": {
-      "provider": "openrouter",
-      "model_name": "deepseek/deepseek-reasoner",
-      "base_url": "https://openrouter.ai/api/v1/chat/completions"
-    }
-  },
-  "cost_optimization": {
-    "enabled": true,
-    "auto_downgrade_on_budget": {
-      "threshold_percent": 80,
-      "fallback_model": "claude-3-5-haiku-latest"
-    }
-  }
+ "description": "Per-phase model configuration for GSD Autopilot",
+ "default_model": "claude-3-5-sonnet-latest",
+ "phases": {
+ "1": {
+ "model": "claude-3-5-sonnet-latest",
+ "reasoning": "Initial setup and architecture - Sonnet is cost-effective"
+ },
+ "2": {
+ "model": "claude-3-5-opus-latest",
+ "reasoning": "Complex implementation requiring deep reasoning"
+ },
+ "3": {
+ "model": "claude-3-5-sonnet-latest",
+ "reasoning": "Standard development work"
+ },
+ "gaps": {
+ "model": "glm-4.7",
+ "reasoning": "Gap closure is typically straightforward fixes"
+ },
+ "continuation": {
+ "model": "claude-3-5-sonnet-latest",
+ "reasoning": "Checkpoint continuations need context"
+ },
+ "verification": {
+ "model": "glm-4.7",
+ "reasoning": "Verification is systematic testing"
+ },
+ "milestone_complete": {
+ "model": "claude-3-5-sonnet-latest",
+ "reasoning": "Completion task is straightforward"
+ }
+ },
+ "provider_routing": {
+ "claude-3-5-sonnet-latest": {
+ "provider": "anthropic",
+ "base_url": "https://api.anthropic.com"
+ },
+ "claude-3-5-opus-latest": {
+ "provider": "anthropic",
+ "base_url": "https://api.anthropic.com"
+ },
+ "glm-4.7": {
+ "provider": "z-ai",
+ "base_url": "https://open.bigmodel.cn/api/paas/v4/",
+ "auth_header": "Authorization"
+ },
+ "deepseek-reasoner": {
+ "provider": "openrouter",
+ "model_name": "deepseek/deepseek-reasoner",
+ "base_url": "https://openrouter.ai/api/v1/chat/completions"
+ }
+ },
+ "cost_optimization": {
+ "enabled": true,
+ "auto_downgrade_on_budget": {
+ "threshold_percent": 80,
+ "fallback_model": "claude-3-5-haiku-latest"
+ }
+ }
 }
 ```
 
@@ -244,13 +244,13 @@ Enable automatic model downgrading when approaching budget limit:
 
 ```json
 {
-  "cost_optimization": {
-    "enabled": true,
-    "auto_downgrade_on_budget": {
-      "threshold_percent": 80,
-      "fallback_model": "claude-3-5-haiku-latest"
-    }
-  }
+ "cost_optimization": {
+ "enabled": true,
+ "auto_downgrade_on_budget": {
+ "threshold_percent": 80,
+ "fallback_model": "claude-3-5-haiku-latest"
+ }
+ }
 }
 ```
 
@@ -260,13 +260,13 @@ Automatically route by detected task type:
 
 ```json
 {
-  "task_type_routing": {
-    "research": "claude-3-5-sonnet-latest",
-    "planning": "claude-3-5-haiku-latest",
-    "coding": "claude-3-5-sonnet-latest",
-    "verification": "claude-3-5-haiku-latest",
-    "testing": "glm-4.7"
-  }
+ "task_type_routing": {
+ "research": "claude-3-5-sonnet-latest",
+ "planning": "claude-3-5-haiku-latest",
+ "coding": "claude-3-5-sonnet-latest",
+ "verification": "claude-3-5-haiku-latest",
+ "testing": "glm-4.7"
+ }
 }
 ```
 
@@ -276,21 +276,21 @@ Configure automatic failover between providers:
 
 ```json
 {
-  "provider_routing": {
-    "claude-3-5-sonnet-latest": [
-      {
-        "provider": "anthropic",
-        "base_url": "https://api.anthropic.com",
-        "priority": 1
-      },
-      {
-        "provider": "openrouter",
-        "model_name": "anthropic/claude-3-5-sonnet",
-        "base_url": "https://openrouter.ai/api/v1/chat/completions",
-        "priority": 2
-      }
-    ]
-  }
+ "provider_routing": {
+ "claude-3-5-sonnet-latest": [
+ {
+ "provider": "anthropic",
+ "base_url": "https://api.anthropic.com",
+ "priority": 1
+ },
+ {
+ "provider": "openrouter",
+ "model_name": "anthropic/claude-3-5-sonnet",
+ "base_url": "https://openrouter.ai/api/v1/chat/completions",
+ "priority": 2
+ }
+ ]
+ }
 }
 ```
 
@@ -386,34 +386,34 @@ Total cost accumulates across all phases.
 <best_practices>
 
 1. **Start Conservative, Optimize Later**
-   - Begin with all phases using `claude-3-5-sonnet-latest`
-   - Profile actual costs and performance
-   - Gradually move suitable phases to cheaper models
+ - Begin with all phases using `claude-3-5-sonnet-latest`
+ - Profile actual costs and performance
+ - Gradually move suitable phases to cheaper models
 
 2. **Document Model Choices**
-   - Always include `reasoning` field explaining model choice
-   - Makes it easier to revisit and optimize later
-   - Helps team understand trade-offs
+ - Always include `reasoning` field explaining model choice
+ - Makes it easier to revisit and optimize later
+ - Helps team understand trade-offs
 
 3. **Use Budget Tracking**
-   - Set `budget_limit_usd` in `.planning/config.json`
-   - Enable `auto_downgrade_on_budget`
-   - Review cost after each milestone
+ - Set `budget_limit_usd` in `.planning/config.json`
+ - Enable `auto_downgrade_on_budget`
+ - Review cost after each milestone
 
 4. **Test Critical Phases**
-   - Complex architecture phases (`--from-phase 2`)
-   - Use premium models for unrecoverable operations
-   - Don't over-optimize early phases
+ - Complex architecture phases (`--from-phase 2`)
+ - Use premium models for unrecoverable operations
+ - Don't over-optimize early phases
 
 5. **Keep Fallbacks**
-   - Always configure `default_model`
-   - Ensure at least one provider works for all models
-   - Test CCR configuration before long autopilot runs
+ - Always configure `default_model`
+ - Ensure at least one provider works for all models
+ - Test CCR configuration before long autopilot runs
 
 6. **Monitor Token Usage**
-   - Review logs for unexpected cost spikes
-   - Large token usage may indicate context issues
-   - Consider splitting overly complex phases
+ - Review logs for unexpected cost spikes
+ - Large token usage may indicate context issues
+ - Consider splitting overly complex phases
 
 </best_practices>
 
@@ -423,19 +423,19 @@ Total cost accumulates across all phases.
 
 ```json
 {
-  "default_model": "glm-4.7",
-  "phases": {
-    "1": { "model": "glm-4.7" },
-    "2": { "model": "claude-3-5-sonnet-latest" },
-    "3": { "model": "glm-4.7" }
-  },
-  "cost_optimization": {
-    "enabled": true,
-    "auto_downgrade_on_budget": {
-      "threshold_percent": 70,
-      "fallback_model": "glm-4.7"
-    }
-  }
+ "default_model": "glm-4.7",
+ "phases": {
+ "1": { "model": "glm-4.7" },
+ "2": { "model": "claude-3-5-sonnet-latest" },
+ "3": { "model": "glm-4.7" }
+ },
+ "cost_optimization": {
+ "enabled": true,
+ "auto_downgrade_on_budget": {
+ "threshold_percent": 70,
+ "fallback_model": "glm-4.7"
+ }
+ }
 }
 ```
 
@@ -443,12 +443,12 @@ Total cost accumulates across all phases.
 
 ```json
 {
-  "default_model": "claude-3-5-opus-latest",
-  "phases": {
-    "1": { "model": "claude-3-5-opus-latest" },
-    "2": { "model": "claude-3-5-opus-latest" },
-    "3": { "model": "claude-3-5-opus-latest" }
-  }
+ "default_model": "claude-3-5-opus-latest",
+ "phases": {
+ "1": { "model": "claude-3-5-opus-latest" },
+ "2": { "model": "claude-3-5-opus-latest" },
+ "3": { "model": "claude-3-5-opus-latest" }
+ }
 }
 ```
 
@@ -456,17 +456,17 @@ Total cost accumulates across all phases.
 
 ```json
 {
-  "provider_routing": {
-    "claude-3-5-sonnet-latest": {
-      "provider": "openrouter",
-      "model_name": "anthropic/claude-3-5-sonnet",
-      "base_url": "https://openrouter.ai/api/v1/chat/completions"
-    },
-    "glm-4.7": {
-      "provider": "z-ai",
-      "base_url": "https://open.bigmodel.cn/api/paas/v4/"
-    }
-  }
+ "provider_routing": {
+ "claude-3-5-sonnet-latest": {
+ "provider": "openrouter",
+ "model_name": "anthropic/claude-3-5-sonnet",
+ "base_url": "https://openrouter.ai/api/v1/chat/completions"
+ },
+ "glm-4.7": {
+ "provider": "z-ai",
+ "base_url": "https://open.bigmodel.cn/api/paas/v4/"
+ }
+ }
 }
 ```
 
@@ -475,11 +475,11 @@ Total cost accumulates across all phases.
 <summary>
 
 CCR integration with GSD Autopilot provides:
-- ✅ **Cost Optimization**: Route simple tasks to cheap models
-- ✅ **Capability Matching**: Use premium models only where needed
-- ✅ **Provider Flexibility**: Mix Anthropic, OpenAI, Z-AI, OpenRouter
-- ✅ **Automatic Fallback**: Works without CCR if not configured
-- ✅ **Transparent**: Model selection logged for debugging
+- **Cost Optimization**: Route simple tasks to cheap models
+- **Capability Matching**: Use premium models only where needed
+- **Provider Flexibility**: Mix Anthropic, OpenAI, Z-AI, OpenRouter
+- **Automatic Fallback**: Works without CCR if not configured
+- **Transparent**: Model selection logged for debugging
 
 Start with the template configuration, test on a small project, then optimize for your specific needs!
 

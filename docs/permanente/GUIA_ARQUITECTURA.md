@@ -4,7 +4,7 @@ Arquitectura técnica del sistema de finanzas personales.
 
 ---
 
-## 🎯 Decisión de Arquitectura: Google Sheets como Backend
+## Decisión de Arquitectura: Google Sheets como Backend
 
 ### ADR-001: Uso de Google Sheets para MVP
 
@@ -32,23 +32,23 @@ Implementación:
 
 | Opción | Pros | Contras | Decisión |
 |--------|------|---------|----------|
-| **Google Sheets** | ✅ Cero costo<br>✅ Acceso inmediato<br>✅ Colaboración nativa | ⚠️ Límite ~5M celdas<br>⚠️ Performance en > 10k filas | **Elegida para MVP** |
-| **Firebase/Firestore** | ✅ Escalable<br>✅ Real-time | ❌ Costo<br>❌ Complejidad inicial | ❌ Overkill para MVP |
-| **PostgreSQL (Supabase)** | ✅ Relacional robusto<br>✅ Queries complejas | ❌ Requiere deploy<br>❌ Overhead operativo | ⏭️ Migración futura |
-| **SQLite local** | ✅ Simple<br>✅ Sin servidor | ❌ No colaborativo<br>❌ Difícil multi-dispositivo | ❌ No cumple requisitos |
+| **Google Sheets** | Cero costo<br> Acceso inmediato<br> Colaboración nativa | ️ Límite ~5M celdas<br>️ Performance en > 10k filas | **Elegida para MVP** |
+| **Firebase/Firestore** | Escalable<br> Real-time | Costo<br> Complejidad inicial | Overkill para MVP |
+| **PostgreSQL (Supabase)** | Relacional robusto<br> Queries complejas | Requiere deploy<br> Overhead operativo | ️ Migración futura |
+| **SQLite local** | Simple<br> Sin servidor | No colaborativo<br> Difícil multi-dispositivo | No cumple requisitos |
 
 #### Consecuencias
 
 **Positivas:**
-- ✅ Validación rápida del modelo de datos
-- ✅ Usuario puede ver/auditar datos directamente
-- ✅ Compatible con flujo original (planilla → producto)
-- ✅ Migración futura posible (schema ya está normalizado)
+- Validación rápida del modelo de datos
+- Usuario puede ver/auditar datos directamente
+- Compatible con flujo original (planilla → producto)
+- Migración futura posible (schema ya está normalizado)
 
 **Negativas:**
-- ⚠️ Límites de escala (máx ~5,000 transacciones/año realistas)
-- ⚠️ Performance degradada en queries complejas
-- ⚠️ Requiere scripts para mantener integridad
+- ️ Límites de escala (máx ~5,000 transacciones/año realistas)
+- ️ Performance degradada en queries complejas
+- ️ Requiere scripts para mantener integridad
 
 **Estrategia de Migración:**
 - Cuando > 3,000 transacciones o > 50 cotizaciones/día → Migrar a PostgreSQL
@@ -72,12 +72,12 @@ Implementación:
 
 #### Consecuencias
 **Positivas:**
-- ✅ Plan de cuentas minimalista, limpio y sin duplicidad conceptual de entidades.
-- ✅ Ingreso de datos (Data Entry) ultrarrápido garantizado por la predicción UI.
-- ✅ Flexibilidad funcional para transacciones aisladas o atípicas.
+- Plan de cuentas minimalista, limpio y sin duplicidad conceptual de entidades.
+- Ingreso de datos (Data Entry) ultrarrápido garantizado por la predicción UI.
+- Flexibilidad funcional para transacciones aisladas o atípicas.
 
 **Negativas:**
-- ⚠️ Demanda programar escuchadores de eventos DOM (`onchange`) y lógica reactiva en el formulario HTML futuro de transacciones. 
+- ️ Demanda programar escuchadores de eventos DOM (`onchange`) y lógica reactiva en el formulario HTML futuro de transacciones. 
 
 ### ADR-003: Monedas como Constante de Backend (sin tabla en BD)
 
@@ -96,16 +96,16 @@ Implementación:
 
 #### Consecuencias
 **Positivas:**
-- ✅ Plan de cuentas simplificado: 5 tablas en vez de 6.
-- ✅ El ABM "Plan de Cuentas" gana foco: sólo gestiona entidades realmente variables (Ingresos, Costos, Medios, Proyectos).
-- ✅ Elimina una DB table en la hoja, reduciendo superficie de errores.
+- Plan de cuentas simplificado: 5 tablas en vez de 6.
+- El ABM "Plan de Cuentas" gana foco: sólo gestiona entidades realmente variables (Ingresos, Costos, Medios, Proyectos).
+- Elimina una DB table en la hoja, reduciendo superficie de errores.
 
 **Negativas:**
-- ⚠️ Agregar una nueva moneda requiere un deploy de código (no apto para usuario final sin acceso al repo).
+- ️ Agregar una nueva moneda requiere un deploy de código (no apto para usuario final sin acceso al repo).
 
 ---
 
-## 🏗️ Arquitectura del Sistema
+## ️ Arquitectura del Sistema
 
 ### Stack Tecnológico
 
@@ -121,49 +121,49 @@ Implementación:
 
 ```
 ┌─────────────────────────────────────────┐
-│         Usuario (Google Sheets UI)       │
-│   (Interfaz temporal durante MVP)       │
+│ Usuario (Google Sheets UI) │
+│ (Interfaz temporal durante MVP) │
 └──────────────────┬──────────────────────┘
-                   │
-                   ↓
+ │
+ ↓
 ┌─────────────────────────────────────────┐
-│     Google Apps Script (Backend Logic)   │
+│ Google Apps Script (Backend Logic) │
 ├─────────────────────────────────────────┤
-│ • Validaciones e integridad (ABM)       │
-│ • Navegación entre hojas                │
-│ • Catálogos fijos: MONEDAS_DISPONIBLES  │ ← ADR-003
+│ • Validaciones e integridad (ABM) │
+│ • Navegación entre hojas │
+│ • Catálogos fijos: MONEDAS_DISPONIBLES │ ← ADR-003
 └──────────────────┬──────────────────────┘
-                   │
-                   ↓
+ │
+ ↓
 ┌─────────────────────────────────────────┐
-│   Plan de Cuentas (Google Sheet)         │
+│ Plan de Cuentas (Google Sheet) │
 ├─────────────────────────────────────────┤
-│ • INGRESOS         (I:K)                │
-│ • COSTOS_FIJOS     (M:O)                │
-│ • COSTOS_VARIABLES (Q:S)                │
-│ • MEDIOS_PAGO      (U:W)                │
-│ • PROYECTOS        (AC:AD)              │
+│ • INGRESOS (I:K) │
+│ • COSTOS_FIJOS (M:O) │
+│ • COSTOS_VARIABLES (Q:S) │
+│ • MEDIOS_PAGO (U:W) │
+│ • PROYECTOS (Y:Z) │
 └─────────────────────────────────────────┘
 ```
 
 ---
 
-## 🔄 Flujo de Datos
+## Flujo de Datos
 
 ### 1. Registro de Transacción
 
 ```
 Usuario carga transacción
-    ↓
+ ↓
 Apps Script valida:
-  - cuenta_id existe?
-  - medio_id existe?
-  - moneda_id existe?
-    ↓
+ - cuenta_id existe?
+ - medio_id existe?
+ - moneda_id existe?
+ ↓
 SI moneda ≠ base:
-  - Buscar fx_id aplicable
-  - Calcular monto_base
-    ↓
+ - Buscar fx_id aplicable
+ - Calcular monto_base
+ ↓
 Guardar en DB_TRANSACCIONES
 ```
 
@@ -171,16 +171,16 @@ Guardar en DB_TRANSACCIONES
 
 ```
 Trigger diario (o manual)
-    ↓
+ ↓
 Apps Script llama API
-    ↓
+ ↓
 Recibe JSON con cotizaciones
-    ↓
+ ↓
 Para cada par de monedas:
-  - Crear nuevo fx_id
-  - Guardar tc, fuente, provider
-  - Guardar timestamp y raw_payload
-    ↓
+ - Crear nuevo fx_id
+ - Guardar tc, fuente, provider
+ - Guardar timestamp y raw_payload
+ ↓
 Registrar en DB_TIPOS_CAMBIO
 ```
 
@@ -188,18 +188,18 @@ Registrar en DB_TIPOS_CAMBIO
 
 ```
 Usuario pide reporte mensual
-    ↓
+ ↓
 Apps Script query:
-  - Filtrar DB_TRANSACCIONES por fecha
-  - Agrupar por cuenta_id
-  - Sumar monto_base (todo en moneda base)
-    ↓
+ - Filtrar DB_TRANSACCIONES por fecha
+ - Agrupar por cuenta_id
+ - Sumar monto_base (todo en moneda base)
+ ↓
 Generar tabla resumen
 ```
 
 ---
 
-## 📊 Modelo de Datos
+## Modelo de Datos
 
 Ver [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) para detalles completos.
 
@@ -222,7 +222,7 @@ WHERE fecha = '2026-01-17'
 
 ---
 
-## 🔐 Seguridad y Privacidad
+## Seguridad y Privacidad
 
 ### Acceso a Datos
 
@@ -251,7 +251,7 @@ WHERE fecha = '2026-01-17'
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ### Fase MVP (Google Sheets)
 
@@ -263,10 +263,10 @@ WHERE fecha = '2026-01-17'
 **Scripts de Validación:**
 ```javascript
 function validateIntegrity() {
-  // Verificar que todas las FK existen
-  // Verificar que tc > 0
-  // Verificar que monto > 0
-  // Generar reporte de inconsistencias
+ // Verificar que todas las FK existen
+ // Verificar que tc > 0
+ // Verificar que monto > 0
+ // Generar reporte de inconsistencias
 }
 ```
 
@@ -278,7 +278,7 @@ function validateIntegrity() {
 
 ---
 
-## 📈 Estrategia de Escalabilidad
+## Estrategia de Escalabilidad
 
 ### Límites de Google Sheets
 
@@ -305,7 +305,7 @@ function validateIntegrity() {
 
 ---
 
-## 🔧 Mantenimiento y Operaciones
+## Mantenimiento y Operaciones
 
 ### Rutinas Diarias (Automatizadas)
 
@@ -321,35 +321,27 @@ function validateIntegrity() {
 
 ---
 
-## 🚀 Roadmap Técnico
+## Roadmap Técnico
 
-### Q1 2026 - MVP en Sheets
-- [x] Diseño de schema
-- [ ] Implementación de tablas
-- [ ] Scripts de validación
-- [ ] Script de fetch de TC
-- [ ] Dashboard básico
+### Etapa 1: MVP Vivo (Core)
+- [x] Arquitectura de Hojas Modulares y catálogos
+- [x] Validaciones de backend y endpoints
+- [x] Componentes de UI y ABM Plan Cuentas
+- [ ] Hoja de Cargas (Data Entry rápido)
 
-### Q2 2026 - App Mobile (React Native)
-- [ ] Diseño de UI/UX
-- [ ] Implementación de registro ultrarrápido
-- [ ] Integración con Sheets (lectura/escritura)
-- [ ] Modo offline básico
+### Etapa 2: Análisis y Hábito
+- [ ] Módulo Tablero General (vía QUERY)
+- [ ] Módulo Presupuestación Mensual
+- [ ] Módulo Resumen Anual
+- [ ] Sistema de rachas de registro
 
-### Q3 2026 - Migración a DB Real
-- [ ] Setup PostgreSQL (Supabase)
-- [ ] API REST (Node.js)
-- [ ] Migración de datos históricos
-- [ ] Actualización de app mobile
-
-### Q4 2026 - Features Avanzadas
-- [ ] Gastos compartidos
-- [ ] Rachas y hábitos
-- [ ] Educación contextual
-- [ ] Optimización de performance
+### Etapa 3: Plataforma (Futuro)
+- [ ] Gastos compartidos entre usuarios
+- [ ] Evaluación de migración a DB externa (si excede límites)
+- [ ] Educación financiera contextual
 
 ---
 
-**Versión de Arquitectura**: 1.1  
-**Stack Actual**: Google Sheets + Apps Script  
-**Última actualización**: 2026-03-17
+**Versión de Arquitectura**: 1.2 
+**Stack Actual**: Google Sheets + Apps Script 
+**Última actualización**: 2026-03-20

@@ -2,62 +2,62 @@
 
 Documentación detallada de cada módulo del sistema modular de Tidetrack.
 
-**Última actualización**: 2026-03-17  
+**Última actualización**: 2026-03-17 
 **Versión Actual**: v0.4.8
 
 ---
 
-## 📋 Índice de Módulos
+## Índice de Módulos
 
 | # | Módulo | Capa | Estado |
 |---|--------|------|--------|
-| 00 | Config | Configuración | ✅ v0.4.8 |
-| 01 | Version | Configuración | ✅ v0.1.0 |
-| 02 | Utils | Utilidades | ✅ v0.3.0 |
-| 03 | SheetManager | Acceso a Datos | ✅ v0.3.0 |
-| 11 | UIService | Interfaz / ABM | ✅ v0.4.8 |
-| 12 | MenuService | Interfaz | ✅ v0.4.8 |
-| 13 | NavigationService | Interfaz | ✅ v0.4.0 |
+| 00 | Config | Configuración | v0.4.8 |
+| 01 | Version | Configuración | v0.1.0 |
+| 02 | Utils | Utilidades | v0.3.0 |
+| 03 | SheetManager | Acceso a Datos | v0.3.0 |
+| 11 | UIService | Interfaz / ABM | v0.4.8 |
+| 12 | MenuService | Interfaz | v0.4.8 |
+| 13 | NavigationService | Interfaz | v0.4.0 |
 
 **Archivos HTML UI:**
-- UI_AbmPlanCuentas.html - ✅ v0.4.8 (ABM multi-entidad del Plan de Cuentas)
-- UI_SharedStyles.html - ✅ v0.4.8 (Design System compartido)
+- UI_AbmPlanCuentas.html - v0.4.8 (ABM multi-entidad del Plan de Cuentas)
+- UI_SharedStyles.html - v0.4.8 (Design System compartido)
 
 ---
 
-## 🏗️ Arquitectura por Capas
+## ️ Arquitectura por Capas
 
 ```
 ┌─────────────────────────────────────┐
-│  CAPA 5: INTERFAZ (UI)              │
-│  11_UIPopups, 12_MenuActions        │
+│ CAPA 5: INTERFAZ (UI) │
+│ 11_UIPopups, 12_MenuActions │
 └─────────────────┬───────────────────┘
-                  ↓
+ ↓
 ┌─────────────────────────────────────┐
-│  CAPA 4: SERVICIOS (Business Logic) │
-│  05-10: Moneda, FX, Medio, Cuenta,  │
-│         Transaction, Config         │
+│ CAPA 4: SERVICIOS (Business Logic) │
+│ 05-10: Moneda, FX, Medio, Cuenta, │
+│ Transaction, Config │
 └─────────────────┬───────────────────┘
-                  ↓
+ ↓
 ┌─────────────────────────────────────┐
-│  CAPA 3: VALIDACIÓN                 │
-│  04_DataValidation                  │
+│ CAPA 3: VALIDACIÓN │
+│ 04_DataValidation │
 └─────────────────┬───────────────────┘
-                  ↓
+ ↓
 ┌─────────────────────────────────────┐
-│  CAPA 2: ACCESO A DATOS             │
-│  03_SheetManager                    │
+│ CAPA 2: ACCESO A DATOS │
+│ 03_SheetManager │
 └─────────────────┬───────────────────┘
-                  ↓
+ ↓
 ┌─────────────────────────────────────┐
-│  CAPA 1: UTILIDADES Y CONFIG        │
-│  00_Config, 01_Version, 02_Utils    │
+│ CAPA 1: UTILIDADES Y CONFIG │
+│ 00_Config, 01_Version, 02_Utils │
 └─────────────────────────────────────┘
 ```
 
 ---
 
-## 📦 Módulos Detallados
+## Módulos Detallados
 
 ### 00_Config.js - Configuración Global
 
@@ -87,7 +87,7 @@ const monedas = MONEDAS_DISPONIBLES; // ['ARS', 'USD', 'AUD', 'EUR', ...]
 
 // Validar sentido
 if (!ENUM_SENTIDO.includes(valor)) {
-  throw new Error("Sentido inválido");
+ throw new Error("Sentido inválido");
 }
 ```
 
@@ -122,14 +122,14 @@ logVersionInfo();
 ```javascript
 // Al inicio de cada sprint, actualizar:
 const VERSION = {
-  major: 0,
-  minor: 2,  // ← Incrementar minor
-  patch: 0,
-  changelog: `
-    v0.2.0 (2026-01-20)
-    + Agregado: ExchangeRateService
-    ...
-  `
+ major: 0,
+ minor: 2, // ← Incrementar minor
+ patch: 0,
+ changelog: `
+ v0.2.0 (2026-01-20)
+ + Agregado: ExchangeRateService
+ ...
+ `
 };
 ```
 
@@ -162,25 +162,25 @@ formatDate(new Date(), 'dd/MM/yyyy')
 #### Validación
 ```javascript
 validateEnum('Ingreso', ENUM_SENTIDO, 'sentido')
-// ✅ OK
+// OK
 
 validateEnum('Salida', ENUM_SENTIDO, 'sentido')
-// ❌ Error: Valor no permitido
+// Error: Valor no permitido
 
 validatePositive(100, 'monto')
-// ✅ OK
+// OK
 
 validateRequired(null, 'moneda_id')
-// ❌ Error: Campo obligatorio
+// Error: Campo obligatorio
 ```
 
 #### Logging
 ```javascript
 logError('Error al cargar datos', {tabla: 'MONEDAS'})
-// Output: ❌ ERROR: Error al cargar datos
+// Output: ERROR: Error al cargar datos
 
 logSuccess('Moneda creada correctamente')
-// Output: ✅ SUCCESS: Moneda creada correctamente
+// Output: SUCCESS: Moneda creada correctamente
 ```
 
 #### Notificaciones
@@ -262,55 +262,55 @@ const existe = existsById('INGRESOS', 'Sueldo', 0); // true/false
 #### Monedas
 ```javascript
 function validateMoneda(moneda) {
-  // Verifica:
-  // - moneda_id, nombre_moneda, simbolo no vacíos
-  // - moneda_id no duplicado
+ // Verifica:
+ // - moneda_id, nombre_moneda, simbolo no vacíos
+ // - moneda_id no duplicado
 }
 ```
 
 #### Tipos de Cambio
 ```javascript
 function validateExchangeRate(fx) {
-  // Verifica:
-  // - tc > 0
-  // - base_moneda_id ≠ quote_moneda_id
-  // - base y quote existen en DB_MONEDAS
-  // - fuente y status son enums válidos
+ // Verifica:
+ // - tc > 0
+ // - base_moneda_id ≠ quote_moneda_id
+ // - base y quote existen en DB_MONEDAS
+ // - fuente y status son enums válidos
 }
 ```
 
 #### Transacciones (REGLA CRÍTICA)
 ```javascript
 function validateTransaction(trx, config) {
-  // Verifica:
-  // - monto > 0
-  // - sentido válido (Ingreso/Egreso)
-  // - cuenta_id, medio_id, moneda_id existen (FKs)
-  
-  // REGLA FUNDAMENTAL:
-  if (trx.moneda_id !== config.base_moneda_id) {
-    // fx_id es OBLIGATORIO
-    validateRequired(trx.fx_id, 'fx_id');
-    
-    // fx_id debe existir y tener status='ok'
-    const fx = findById('TIPOS_CAMBIO', trx.fx_id, 0);
-    if (fx.status !== 'ok') {
-      throw new Error("fx_id debe tener status='ok'");
-    }
-  }
+ // Verifica:
+ // - monto > 0
+ // - sentido válido (Ingreso/Egreso)
+ // - cuenta_id, medio_id, moneda_id existen (FKs)
+ 
+ // REGLA FUNDAMENTAL:
+ if (trx.moneda_id !== config.base_moneda_id) {
+ // fx_id es OBLIGATORIO
+ validateRequired(trx.fx_id, 'fx_id');
+ 
+ // fx_id debe existir y tener status='ok'
+ const fx = findById('TIPOS_CAMBIO', trx.fx_id, 0);
+ if (fx.status !== 'ok') {
+ throw new Error("fx_id debe tener status='ok'");
+ }
+ }
 }
 ```
 
 **Uso en Servicios:**
 ```javascript
 function createMoneda(id, nombre, simbolo) {
-  const moneda = {moneda_id: id, nombre_moneda: nombre, simbolo};
-  
-  // SIEMPRE validar antes de escribir
-  validateMoneda(moneda);
-  
-  // Solo si validación pasa, escribir
-  appendRow('MONEDAS', [id, nombre, simbolo]);
+ const moneda = {moneda_id: id, nombre_moneda: nombre, simbolo};
+ 
+ // SIEMPRE validar antes de escribir
+ validateMoneda(moneda);
+ 
+ // Solo si validación pasa, escribir
+ appendRow('MONEDAS', [id, nombre, simbolo]);
 }
 ```
 
@@ -348,14 +348,14 @@ const codes = getMonedaCodes(); // ['ARS', 'USD', 'EUR']
 ```javascript
 // Crear
 createMoneda('BRL', 'Real brasileño', 'R$');
-// ✅ Valida + inserta + muestra toast
+// Valida + inserta + muestra toast
 
 // Actualizar
 updateMoneda('BRL', 'Real de Brasil', 'R$');
 
 // Eliminar
 deleteMoneda('BRL');
-// ⚠️ Muestra advertencia si tiene FKs
+// ️ Muestra advertencia si tiene FKs
 ```
 
 #### Inicialización
@@ -368,36 +368,36 @@ initializeMonedas();
 **Flujo Interno:**
 ```
 Usuario llama createMoneda('EUR', 'Euro', '€')
-    ↓
+ ↓
 MonedaService valida (via DataValidation)
-    ↓
+ ↓
 Si OK: MonedaService escribe (via SheetManager)
-    ↓
+ ↓
 SheetManager accede a Sheets (usando Config)
-    ↓
+ ↓
 Fila insertada + Toast mostrado
 ```
 
 ---
 
-## 🔄 Flujo de Dependencias
+## Flujo de Dependencias
 
 ```
 Config ────→ Utils ────→ SheetManager ────→ DataValidation ────→ Services
-  ↑                                               ↓
-  └───────────────────────────────────────────────┘
-           (Services leen Config para validaciones)
+ ↑ ↓
+ └───────────────────────────────────────────────┘
+ (Services leen Config para validaciones)
 ```
 
 **Reglas:**
-- ❌ Servicios NO llaman a otros Servicios directamente
-- ✅ Servicios llaman a DataValidation
-- ✅ DataValidation llama a SheetManager (para verificar FKs)
-- ✅ SheetManager llama a Utils
+- Servicios NO llaman a otros Servicios directamente
+- Servicios llaman a DataValidation
+- DataValidation llama a SheetManager (para verificar FKs)
+- SheetManager llama a Utils
 
 ---
 
-## 📚 Convenciones de Código
+## Convenciones de Código
 
 ### Nombrado de Funciones
 
@@ -422,24 +422,24 @@ Config ────→ Utils ────→ SheetManager ────→ DataVa
  * @throws {Error} Cuándo lanza error
  */
 function miFuncion(parametro1) {
-  // ...
+ // ...
 }
 ```
 
 ---
 
-## ✅ Checklist de Implementación de Nuevo Módulo
+## Checklist de Implementación de Nuevo Módulo
 
 Cuando crees un nuevo módulo (ej: `07_MedioPagoService.js`):
 
 1. [ ] Usar número secuencial correcto
 2. [ ] Incluir header JSDoc con @version, @since, @lastModified
 3. [ ] Implementar funciones CRUD estándar:
-   - [ ] `getAll<Entidad>()`
-   - [ ] `get<Entidad>ById(id)`
-   - [ ] `create<Entidad>(...)`
-   - [ ] `update<Entidad>(id, ...)`
-   - [ ] `delete<Entidad>(id)`
+ - [ ] `getAll<Entidad>()`
+ - [ ] `get<Entidad>ById(id)`
+ - [ ] `create<Entidad>(...)`
+ - [ ] `update<Entidad>(id, ...)`
+ - [ ] `delete<Entidad>(id)`
 4. [ ] Llamar a `validate<Entidad>()` antes de crear/actualizar
 5. [ ] Usar `SheetManager` para todas las operaciones de Sheets
 6. [ ] Mostrar toast al usuario en operaciones exitosas
@@ -449,7 +449,7 @@ Cuando crees un nuevo módulo (ej: `07_MedioPagoService.js`):
 
 ---
 
-## 🚀 Próximos Módulos (Planificados)
+## Próximos Módulos (Planificados)
 
 ### 06_ExchangeRateService.js (Sprint 1)
 - `getAllExchangeRates()`
@@ -488,7 +488,7 @@ Cuando crees un nuevo módulo (ej: `07_MedioPagoService.js`):
 
 ---
 
-**Versión de la Guía**: 3.0  
-**Última actualización**: 2026-03-17  
-**Módulos Documentados**: 7 de 7 (100% corresponden a archivos existentes)  
+**Versión de la Guía**: 3.0 
+**Última actualización**: 2026-03-17 
+**Módulos Documentados**: 7 de 7 (100% corresponden a archivos existentes) 
 **Archivos HTML UI**: 2 de 2 (activos en producción)

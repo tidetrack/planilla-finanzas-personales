@@ -3,10 +3,10 @@ name: gsd:debug
 description: Systematic debugging with persistent state across context resets
 argument-hint: "[issue description]"
 allowed-tools:
-  - Read
-  - Bash
-  - Write
-  - Edit
+ - Read
+ - Bash
+ - Write
+ - Edit
 ---
 
 <objective>
@@ -80,7 +80,7 @@ Fill prompt and spawn:
 
 ```
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-debugger.md for your role and instructions.
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-debugger.md for your role and instructions.
 
 <objective>
 Investigate issue: {slug}
@@ -105,9 +105,9 @@ goal: find_and_fix
 Create: .planning/debug/{slug}.md
 </debug_file>
 ",
-    label="Debug {slug}",
-    model="{debugger_model}",
-    cleanup="keep"
+ label="Debug {slug}",
+ model="{debugger_model}",
+ cleanup="keep"
 )
 ```
 
@@ -116,9 +116,9 @@ Create: .planning/debug/{slug}.md
 **If `## ROOT CAUSE FOUND`:**
 - Display root cause and evidence summary
 - Offer options:
-  - "Fix now" - spawn fix subagent
-  - "Plan fix" - suggest /gsd plan-phase --gaps
-  - "Manual fix" - done
+ - "Fix now" - spawn fix subagent
+ - "Plan fix" - suggest /gsd plan-phase --gaps
+ - "Manual fix" - done
 
 **If `## DEBUG COMPLETE`:**
 - Display fix applied and verification
@@ -132,9 +132,9 @@ Create: .planning/debug/{slug}.md
 **If `## INVESTIGATION INCONCLUSIVE`:**
 - Show what was checked and eliminated
 - Offer options:
-  - "Continue investigating" - spawn new agent with additional context
-  - "Manual investigation" - done
-  - "Add more context" - gather more symptoms, spawn again
+ - "Continue investigating" - spawn new agent with additional context
+ - "Manual investigation" - done
+ - "Add more context" - gather more symptoms, spawn again
 
 ## 5. Spawn Continuation Agent (After Checkpoint)
 
@@ -142,7 +142,7 @@ When user responds to checkpoint, spawn fresh agent:
 
 ```
 sessions_spawn(
-    task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-debugger.md for your role and instructions.
+ task="First, read /usr/lib/node_modules/clawdbot/skills/gsd/agents/gsd-debugger.md for your role and instructions.
 
 <objective>
 Continue debugging {slug}. Evidence is in the debug file.
@@ -161,9 +161,9 @@ Debug file: .planning/debug/{slug}.md
 goal: find_and_fix
 </mode>
 ",
-    label="Continue debug {slug}",
-    model="{debugger_model}",
-    cleanup="keep"
+ label="Continue debug {slug}",
+ model="{debugger_model}",
+ cleanup="keep"
 )
 ```
 
@@ -175,7 +175,7 @@ After debug completes:
 ```
 ---
 
-## 🔧 Debug Complete
+## Debug Complete
 
 **Issue:** {slug}
 **Root Cause:** {from debug file}

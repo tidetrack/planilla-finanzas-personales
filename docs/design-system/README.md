@@ -14,7 +14,7 @@ Archivo de **referencia completa** con todas las variables CSS, estilos base y c
 
 **Template de referencia OBLIGATORIO** para crear nuevos módulos HTML.
 
-> **⚠️ IMPORTANTE:** Apps Script NO soporta includes dinámicos de manera confiable.
+> **️ IMPORTANTE:** Apps Script NO soporta includes dinámicos de manera confiable.
 >
 > **En lugar de usar includes:** Cuando crees un nuevo módulo HTML, DEBES copiar el contenido completo de `<style>` desde `UI_SharedStyles.html` y pegarlo en tu nuevo archivo.
 
@@ -61,24 +61,24 @@ Al crear un nuevo módulo HTML, incluir los estilos compartidos y usar las clase
 ```html
 <!DOCTYPE html>
 <html>
-  <head>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
-      rel="stylesheet"
-    />
+ <head>
+ <link
+ href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+ rel="stylesheet"
+ />
+ <link
+ href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+ rel="stylesheet"
+ />
 
-    <?!= include('UI_SharedStyles') ?>
+ <?!= include('UI_SharedStyles') ?>
 
-    <!-- Estilos específicos del módulo aquí -->
-  </head>
-  <body>
-    <div class="manager-container">
-      <!-- Usar clases compartidas -->
-    </div>
-  </body>
+ <!-- Estilos específicos del módulo aquí -->
+ </head>
+ <body>
+ <div class="manager-container">
+ <!-- Usar clases compartidas -->
+ </div>
+ </body>
 </html>
 ```

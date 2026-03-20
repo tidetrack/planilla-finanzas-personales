@@ -19,10 +19,10 @@ Template for `.planning/codebase/STRUCTURE.md` - captures physical file organiza
 
 ```
 [project-root]/
-├── [dir]/          # [Purpose]
-├── [dir]/          # [Purpose]
-├── [dir]/          # [Purpose]
-└── [file]          # [Purpose]
+├── [dir]/ # [Purpose]
+├── [dir]/ # [Purpose]
+├── [dir]/ # [Purpose]
+└── [file] # [Purpose]
 ```
 
 ## Directory Purposes
@@ -124,17 +124,17 @@ Template for `.planning/codebase/STRUCTURE.md` - captures physical file organiza
 
 ```
 get-shit-done/
-├── bin/                # Executable entry points
-├── commands/           # Slash command definitions
-│   └── gsd/           # GSD-specific commands
-├── get-shit-done/     # Skill resources
-│   ├── references/    # Principle documents
-│   ├── templates/     # File templates
-│   └── workflows/     # Multi-step procedures
-├── src/               # Source code (if applicable)
-├── tests/             # Test files
-├── package.json       # Project manifest
-└── README.md          # User documentation
+├── bin/ # Executable entry points
+├── commands/ # Slash command definitions
+│ └── gsd/ # GSD-specific commands
+├── get-shit-done/ # Skill resources
+│ ├── references/ # Principle documents
+│ ├── templates/ # File templates
+│ └── workflows/ # Multi-step procedures
+├── src/ # Source code (if applicable)
+├── tests/ # Test files
+├── package.json # Project manifest
+└── README.md # User documentation
 ```
 
 ## Directory Purposes
@@ -270,11 +270,11 @@ get-shit-done/
 **ASCII tree format:**
 ```
 root/
-├── dir1/           # Purpose
-│   ├── subdir/    # Purpose
-│   └── file.ts    # Purpose
-├── dir2/          # Purpose
-└── file.ts        # Purpose
+├── dir1/ # Purpose
+│ ├── subdir/ # Purpose
+│ └── file.ts # Purpose
+├── dir2/ # Purpose
+└── file.ts # Purpose
 ```
 
 **Useful for phase planning when:**

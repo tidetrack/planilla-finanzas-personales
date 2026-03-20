@@ -3,9 +3,9 @@ name: gsd:list-phase-assumptions
 description: Surface Claude's assumptions about a phase before planning
 argument-hint: "<phase-number>"
 allowed-tools:
-  - Read
-  - Bash
-  - AskUserQuestion
+ - Read
+ - Bash
+ - AskUserQuestion
 ---
 
 <objective>

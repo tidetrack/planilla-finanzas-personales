@@ -6,3 +6,6 @@
 ## Monedas
 
 1. Hay que cambiar toda la estética para que sea similar a cuentas y medios.
+
+
+

@@ -25,10 +25,10 @@ Template for `.planning/codebase/TESTING.md` - captures test framework and patte
 
 **Run Commands:**
 ```bash
-[e.g., "npm test" or "npm run test"]              # Run all tests
-[e.g., "npm test -- --watch"]                     # Watch mode
-[e.g., "npm test -- path/to/file.test.ts"]       # Single file
-[e.g., "npm run test:coverage"]                   # Coverage report
+[e.g., "npm test" or "npm run test"] # Run all tests
+[e.g., "npm test -- --watch"] # Watch mode
+[e.g., "npm test -- path/to/file.test.ts"] # Single file
+[e.g., "npm run test:coverage"] # Coverage report
 ```
 
 ## Test File Organization
@@ -46,12 +46,12 @@ Template for `.planning/codebase/TESTING.md` - captures test framework and patte
 ```
 [Show actual directory pattern, e.g.:
 src/
-  lib/
-    utils.ts
-    utils.test.ts
-  services/
-    user-service.ts
-    user-service.test.ts
+ lib/
+ utils.ts
+ utils.test.ts
+ services/
+ user-service.ts
+ user-service.test.ts
 ]
 ```
 
@@ -62,17 +62,17 @@ src/
 [Show actual pattern used, e.g.:
 
 describe('ModuleName', () => {
-  describe('functionName', () => {
-    it('should handle success case', () => {
-      // arrange
-      // act
-      // assert
-    });
+ describe('functionName', () => {
+ it('should handle success case', () => {
+ // arrange
+ // act
+ // assert
+ });
 
-    it('should handle error case', () => {
-      // test code
-    });
-  });
+ it('should handle error case', () => {
+ // test code
+ });
+ });
 });
 ]
 ```
@@ -94,7 +94,7 @@ describe('ModuleName', () => {
 
 // Mock external dependency
 vi.mock('./external-service', () => ({
-  fetchData: vi.fn()
+ fetchData: vi.fn()
 }));
 
 // Mock in test
@@ -120,12 +120,12 @@ mockFetch.mockResolvedValue({ data: 'test' });
 
 // Factory pattern
 function createTestUser(overrides?: Partial<User>): User {
-  return {
-    id: 'test-id',
-    name: 'Test User',
-    email: 'test@example.com',
-    ...overrides
-  };
+ return {
+ id: 'test-id',
+ name: 'Test User',
+ email: 'test@example.com',
+ ...overrides
+ };
 }
 
 // Fixture file
@@ -178,8 +178,8 @@ export const mockUsers = [/* ... */];
 [Show pattern, e.g.:
 
 it('should handle async operation', async () => {
-  const result = await asyncFunction();
-  expect(result).toBe('expected');
+ const result = await asyncFunction();
+ expect(result).toBe('expected');
 });
 ]
 ```
@@ -189,12 +189,12 @@ it('should handle async operation', async () => {
 [Show pattern, e.g.:
 
 it('should throw on invalid input', () => {
-  expect(() => functionCall()).toThrow('error message');
+ expect(() => functionCall()).toThrow('error message');
 });
 
 // Async error
 it('should reject on failure', async () => {
-  await expect(asyncCall()).rejects.toThrow('error message');
+ await expect(asyncCall()).rejects.toThrow('error message');
 });
 ]
 ```
@@ -227,10 +227,10 @@ it('should reject on failure', async () => {
 
 **Run Commands:**
 ```bash
-npm test                              # Run all tests
-npm test -- --watch                   # Watch mode
-npm test -- path/to/file.test.ts     # Single file
-npm run test:coverage                 # Coverage report
+npm test # Run all tests
+npm test -- --watch # Watch mode
+npm test -- path/to/file.test.ts # Single file
+npm run test:coverage # Coverage report
 ```
 
 ## Test File Organization
@@ -246,15 +246,15 @@ npm run test:coverage                 # Coverage report
 **Structure:**
 ```
 src/
-  lib/
-    parser.ts
-    parser.test.ts
-  services/
-    install-service.ts
-    install-service.test.ts
-  bin/
-    install.ts
-    (no test - integration tested via CLI)
+ lib/
+ parser.ts
+ parser.test.ts
+ services/
+ install-service.ts
+ install-service.test.ts
+ bin/
+ install.ts
+ (no test - integration tested via CLI)
 ```
 
 ## Test Structure
@@ -264,26 +264,26 @@ src/
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('ModuleName', () => {
-  describe('functionName', () => {
-    beforeEach(() => {
-      // reset state
-    });
+ describe('functionName', () => {
+ beforeEach(() => {
+ // reset state
+ });
 
-    it('should handle valid input', () => {
-      // arrange
-      const input = createTestInput();
+ it('should handle valid input', () => {
+ // arrange
+ const input = createTestInput();
 
-      // act
-      const result = functionName(input);
+ // act
+ const result = functionName(input);
 
-      // assert
-      expect(result).toEqual(expectedOutput);
-    });
+ // assert
+ expect(result).toEqual(expectedOutput);
+ });
 
-    it('should throw on invalid input', () => {
-      expect(() => functionName(null)).toThrow('Invalid input');
-    });
-  });
+ it('should throw on invalid input', () => {
+ expect(() => functionName(null)).toThrow('Invalid input');
+ });
+ });
 });
 ```
 
@@ -306,18 +306,18 @@ import { externalFunction } from './external';
 
 // Mock module
 vi.mock('./external', () => ({
-  externalFunction: vi.fn()
+ externalFunction: vi.fn()
 }));
 
 describe('test suite', () => {
-  it('mocks function', () => {
-    const mockFn = vi.mocked(externalFunction);
-    mockFn.mockReturnValue('mocked result');
+ it('mocks function', () => {
+ const mockFn = vi.mocked(externalFunction);
+ mockFn.mockReturnValue('mocked result');
 
-    // test code using mocked function
+ // test code using mocked function
 
-    expect(mockFn).toHaveBeenCalledWith('expected arg');
-  });
+ expect(mockFn).toHaveBeenCalledWith('expected arg');
+ });
 });
 ```
 
@@ -338,11 +338,11 @@ describe('test suite', () => {
 ```typescript
 // Factory functions in test file
 function createTestConfig(overrides?: Partial<Config>): Config {
-  return {
-    targetDir: '/tmp/test',
-    global: false,
-    ...overrides
-  };
+ return {
+ targetDir: '/tmp/test',
+ global: false,
+ ...overrides
+ };
 }
 
 // Shared fixtures in tests/fixtures/
@@ -397,20 +397,20 @@ open coverage/index.html
 **Async Testing:**
 ```typescript
 it('should handle async operation', async () => {
-  const result = await asyncFunction();
-  expect(result).toBe('expected');
+ const result = await asyncFunction();
+ expect(result).toBe('expected');
 });
 ```
 
 **Error Testing:**
 ```typescript
 it('should throw on invalid input', () => {
-  expect(() => parse(null)).toThrow('Cannot parse null');
+ expect(() => parse(null)).toThrow('Cannot parse null');
 });
 
 // Async error
 it('should reject on file not found', async () => {
-  await expect(readConfig('invalid.txt')).rejects.toThrow('ENOENT');
+ await expect(readConfig('invalid.txt')).rejects.toThrow('ENOENT');
 });
 ```
 
@@ -422,8 +422,8 @@ import * as fs from 'fs-extra';
 vi.mock('fs-extra');
 
 it('mocks file system', () => {
-  vi.mocked(fs.readFile).mockResolvedValue('file content');
-  // test code
+ vi.mocked(fs.readFile).mockResolvedValue('file content');
+ // test code
 });
 ```
 

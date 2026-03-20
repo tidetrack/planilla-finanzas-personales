@@ -66,9 +66,9 @@ score: N/M must-haves verified
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| src/app/api/chat/route.ts | 12 | `// TODO: implement` | ⚠️ Warning | Indicates incomplete |
-| src/components/Chat.tsx | 45 | `return <div>Placeholder</div>` | 🛑 Blocker | Renders no content |
-| src/hooks/useChat.ts | - | File missing | 🛑 Blocker | Expected hook doesn't exist |
+| src/app/api/chat/route.ts | 12 | `// TODO: implement` | ️ Warning | Indicates incomplete |
+| src/components/Chat.tsx | 45 | `return <div>Placeholder</div>` | Blocker | Renders no content |
+| src/hooks/useChat.ts | - | File missing | Blocker | Expected hook doesn't exist |
 
 **Anti-patterns:** {N} found ({blockers} blockers, {warnings} warnings)
 
@@ -99,21 +99,21 @@ None — all verifiable items checked programmatically.
 ### Critical Gaps (Block Progress)
 
 1. **{Gap name}**
-   - Missing: {what's missing}
-   - Impact: {why this blocks the goal}
-   - Fix: {what needs to happen}
+ - Missing: {what's missing}
+ - Impact: {why this blocks the goal}
+ - Fix: {what needs to happen}
 
 2. **{Gap name}**
-   - Missing: {what's missing}
-   - Impact: {why this blocks the goal}
-   - Fix: {what needs to happen}
+ - Missing: {what's missing}
+ - Impact: {why this blocks the goal}
+ - Fix: {what needs to happen}
 
 ### Non-Critical Gaps (Can Defer)
 
 1. **{Gap name}**
-   - Issue: {what's wrong}
-   - Impact: {limited impact because...}
-   - Recommendation: {fix now or defer}
+ - Issue: {what's wrong}
+ - Impact: {limited impact because...}
+ - Recommendation: {fix now or defer}
 
 ## Recommended Fix Plans
 
@@ -173,9 +173,9 @@ None — all verifiable items checked programmatically.
 - For FAILED: "Missing because X" or "Stub because Y"
 
 **Severity levels:**
-- 🛑 Blocker: Prevents goal achievement, must fix
-- ⚠️ Warning: Indicates incomplete but doesn't block
-- ℹ️ Info: Notable but not problematic
+- Blocker: Prevents goal achievement, must fix
+- ️ Warning: Indicates incomplete but doesn't block
+- ️ Info: Notable but not problematic
 
 **Fix plan generation:**
 - Only generate if gaps_found
@@ -251,9 +251,9 @@ score: 2/5 must-haves verified
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| src/components/Chat.tsx | 8 | `<div>Chat will be here</div>` | 🛑 Blocker | No actual content |
-| src/app/api/chat/route.ts | 5 | `return Response.json([])` | 🛑 Blocker | Hardcoded empty |
-| src/app/api/chat/route.ts | 12 | `// TODO: save to database` | ⚠️ Warning | Incomplete |
+| src/components/Chat.tsx | 8 | `<div>Chat will be here</div>` | Blocker | No actual content |
+| src/app/api/chat/route.ts | 5 | `return Response.json([])` | Blocker | Hardcoded empty |
+| src/app/api/chat/route.ts | 12 | `// TODO: save to database` | ️ Warning | Incomplete |
 
 **Anti-patterns:** 3 found (2 blockers, 1 warning)
 
@@ -266,19 +266,19 @@ None needed until automated gaps are fixed.
 ### Critical Gaps (Block Progress)
 
 1. **Chat component is placeholder**
-   - Missing: Actual message list rendering
-   - Impact: Users see "Chat will be here" instead of messages
-   - Fix: Implement Chat.tsx to fetch and render messages
+ - Missing: Actual message list rendering
+ - Impact: Users see "Chat will be here" instead of messages
+ - Fix: Implement Chat.tsx to fetch and render messages
 
 2. **API routes are stubs**
-   - Missing: Database integration in GET and POST
-   - Impact: No data persistence, no real functionality
-   - Fix: Wire prisma calls in route handlers
+ - Missing: Database integration in GET and POST
+ - Impact: No data persistence, no real functionality
+ - Fix: Wire prisma calls in route handlers
 
 3. **No wiring between frontend and backend**
-   - Missing: fetch calls in components
-   - Impact: Even if API worked, UI wouldn't call it
-   - Fix: Add useEffect fetch in Chat, onSubmit fetch in ChatInput
+ - Missing: fetch calls in components
+ - Impact: Even if API worked, UI wouldn't call it
+ - Fix: Add useEffect fetch in Chat, onSubmit fetch in ChatInput
 
 ## Recommended Fix Plans
 

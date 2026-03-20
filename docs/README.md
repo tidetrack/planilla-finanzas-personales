@@ -4,7 +4,7 @@
 
 ---
 
-## 📍 Inicio Rápido
+## Inicio Rápido
 
 **Nuevo en el proyecto?** Comienza aquí:
 1. [README principal](../README.md)
@@ -13,7 +13,7 @@
 
 ---
 
-## 📂 Documentación Permanente
+## Documentación Permanente
 
 Documentos que se mantienen actualizados a lo largo del proyecto:
 
@@ -28,7 +28,7 @@ Documentos que se mantienen actualizados a lo largo del proyecto:
 
 ---
 
-## 📋 Gestión del Proyecto
+## Gestión del Proyecto
 
 | Documento | Descripción |
 |-----------|-------------|
@@ -37,7 +37,7 @@ Documentos que se mantienen actualizados a lo largo del proyecto:
 
 ---
 
-## 📁 Sesiones de Desarrollo
+## Sesiones de Desarrollo
 
 El directorio [sesiones/](sesiones/) contiene documentación de sesiones de trabajo específicas, organizadas por fecha.
 
@@ -45,7 +45,7 @@ Formato: `YYYY-MM-DD_descripcion-sesion.md`
 
 ---
 
-## 🔍 Cómo Navegar la Documentación
+## Cómo Navegar la Documentación
 
 ### Por Rol
 
@@ -66,7 +66,7 @@ Formato: `YYYY-MM-DD_descripcion-sesion.md`
 
 ---
 
-## 📝 Convenciones
+## Convenciones
 
 - Toda documentación en formato Markdown
 - Archivos permanentes en `/docs/permanente/`

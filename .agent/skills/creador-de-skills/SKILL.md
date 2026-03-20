@@ -18,9 +18,9 @@ description: Genera skills reutilizables para Antigravity con estructura estanda
 1. **Nombre del skill**: corto, en minúsculas, con guiones (ej: `planificar-video`, `auditar-landing`)
 2. **Propósito**: qué hace el skill y cuándo se usa
 3. **Nivel de libertad**:
-   - Alta: brainstorming, ideas, alternativas
-   - Media: documentos, copys, estructuras
-   - Baja: operaciones frágiles, scripts, cambios técnicos
+ - Alta: brainstorming, ideas, alternativas
+ - Media: documentos, copys, estructuras
+ - Baja: operaciones frágiles, scripts, cambios técnicos
 4. **Inputs que requiere**: datos necesarios para ejecutar el skill
 5. **Output esperado**: formato exacto de salida (lista, tabla, JSON, markdown, etc.)
 6. **Recursos adicionales** (opcional): scripts, plantillas, ejemplos
@@ -36,28 +36,28 @@ description: Genera skills reutilizables para Antigravity con estructura estanda
 ### Fase 2: Estructura
 5. **Crear carpeta**: `agent/skills/<nombre-del-skill>/`
 6. **Generar SKILL.md** con frontmatter YAML:
-   ```yaml
-   ---
-   name: <nombre-del-skill>
-   description: <descripción breve en tercera persona, máx 220 chars>
-   ---
-   ```
+ ```yaml
+ ---
+ name: <nombre-del-skill>
+ description: <descripción breve en tercera persona, máx 220 chars>
+ ---
+ ```
 7. **Evaluar recursos adicionales**:
-   - `recursos/`: solo si hay guías, plantillas o tokens necesarios
-   - `scripts/`: solo si hay utilidades ejecutables
-   - `ejemplos/`: solo si aportan valor las implementaciones de referencia
+ - `recursos/`: solo si hay guías, plantillas o tokens necesarios
+ - `scripts/`: solo si hay utilidades ejecutables
+ - `ejemplos/`: solo si aportan valor las implementaciones de referencia
 
 ### Fase 3: Documentación
 8. **Escribir secciones obligatorias**:
-   - Cuándo usar este skill (triggers concretos)
-   - Inputs necesarios (lista clara)
-   - Workflow (pasos numerados o fases)
-   - Instrucciones (reglas de ejecución)
-   - Output (formato exacto)
+ - Cuándo usar este skill (triggers concretos)
+ - Inputs necesarios (lista clara)
+ - Workflow (pasos numerados o fases)
+ - Instrucciones (reglas de ejecución)
+ - Output (formato exacto)
 9. **Agregar manejo de errores**:
-   - Qué hacer si el output no cumple el formato
-   - Cómo pedir feedback al usuario
-   - Cómo iterar sin romper el estándar
+ - Qué hacer si el output no cumple el formato
+ - Cómo pedir feedback al usuario
+ - Cómo iterar sin romper el estándar
 
 ### Fase 4: Validación
 10. **Revisar coherencia**: el skill debe ser autosuficiente

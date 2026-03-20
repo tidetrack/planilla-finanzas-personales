@@ -3,10 +3,10 @@ name: gsd:check-todos
 description: List pending todos and select one to work on
 argument-hint: "[area filter]"
 allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Glob
+ - Read
+ - Write
+ - Bash
+ - Glob
 ---
 
 <objective>
@@ -58,10 +58,10 @@ Check for area filter in arguments:
 
 ```bash
 for file in .planning/todos/pending/*.md; do
-  created=$(grep "^created:" "$file" | cut -d' ' -f2)
-  title=$(grep "^title:" "$file" | cut -d':' -f2- | xargs)
-  area=$(grep "^area:" "$file" | cut -d' ' -f2)
-  echo "$created|$title|$area|$file"
+ created=$(grep "^created:" "$file" | cut -d' ' -f2)
+ title=$(grep "^title:" "$file" | cut -d':' -f2- | xargs)
+ area=$(grep "^area:" "$file" | cut -d' ' -f2)
+ echo "$created|$title|$area|$file"
 done | sort
 ```
 
@@ -186,9 +186,9 @@ If todo was moved to done/:
 COMMIT_PLANNING_DOCS=$(cat .planning/config.json 2>/dev/null | grep -o '"commit_docs"[[:space:]]*:[[:space:]]*[^,}]*' | grep -o 'true\|false' || echo "true")
 
 if [ "$COMMIT_PLANNING_DOCS" = "true" ]; then
-  git add ".planning/todos/done/{filename}"
-  [ -f .planning/STATE.md ] && git add .planning/STATE.md
-  git commit -m "docs: start work on todo - {title}"
+ git add ".planning/todos/done/{filename}"
+ [ -f .planning/STATE.md ] && git add .planning/STATE.md
+ git commit -m "docs: start work on todo - {title}"
 fi
 ```
 
