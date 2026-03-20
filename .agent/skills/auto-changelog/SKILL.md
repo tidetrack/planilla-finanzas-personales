@@ -5,11 +5,11 @@ description: Agente autónomo de versionado. Al finalizar cualquier feature o fi
 
 # Auto-Changelog — Agente de Versionado Automático
 
-## Cuándo usar este skill
-- **Siempre** que se finalice una feature, fix, o mejora (lo coordina el `tidetrack-pm`).
+## Cuando usar este skill
+- Siempre que se finalice una feature, fix, o mejora que involucre codigo en el directorio `src/`.
 - Cuando el usuario diga "actualiza el changelog" o "registra los cambios".
-- Al cerrar un sprint o hito importante.
-- **Nunca esperes que el usuario lo pida manualmente** — debe ser el penúltimo paso de toda secuencia de cierre.
+- Al cerrar un sprint o hito importante de desarrollo.
+- IMPORTANTE: Si los cambios ocurrieron EXCLUSIVAMENTE fuera de `src/` (ej: modificaciones a agentes, reglas, documentacion markdown, etc.), **NO** se debe actualizar `ZZ_Changelog.js`. El changelog en JS pertenece estrictamente al entorno de Apps Script.
 
 ## Inputs necesarios
 1. **Descripción de lo que se hizo**: Recibida como contexto de la tarea finalizada.
@@ -61,8 +61,9 @@ Formato obligatorio para `ZZ_Changelog.js`:
 ```
 
 ## Instrucciones
-- **Cero Emojis**: Aplica la regla estricta `.agent/rules/no-emojis.md`. NO uses emojis bajo ningún concepto ni en el changelog ni en el historial.
-- **Sé preciso en la versión**: Leer siempre la versión real del archivo, no adivinarla. Evaluar si corresponde un salto de versión o solo una iteración (`-IteracionNN`).
+- Cero Emojis: Aplica la regla estricta `.agent/rules/no-emojis.md`. NO uses emojis bajo nigun concepto ni en el changelog ni en el historial.
+- EXCLUSIVIDAD SRC: El archivo `ZZ_Changelog.js` vive en `src/` y se pushea a Google Apps Script. Solo debe recibir versiones si hubo alteraciones reales en el codigo fuente. Cambios en README, docs o scripts locales NO entran al Changelog.
+- Se preciso en la version: Leer siempre la version real del archivo, no adivinarla. Evaluar si corresponde un salto de version o solo una iteracion (`-IteracionNN`).
 - **Formato estricto**: El `ZZ_Changelog.js` tiene un formato exacto que debe mantenerse (es un comentario JS de bloque, no markdown).
 - **No omitas el Historial**: Ambos archivos deben actualizarse en el mismo paso.
 - Si no tenés suficiente contexto sobre qué cambió, preguntá al usuario UNA sola vez antes de proceder.

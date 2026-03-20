@@ -4,15 +4,6 @@
  * ============================================
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
- *
- * ---
- *
- * [2026-03-20] v0.4.9-Iteracion01 - Modernizacion de Documentacion y GitHub Docs:
- * - Creacion del agente github-docs y separacion formal de responsabilidades con agente-contextual.
- * - Reescritura completa de README.md y ESTRUCTURA.md como wiki navegable (GUIA_MODULOS, GUIA_ARQUITECTURA, etc.).
- * - Actualizacion del roadmap en GUIA_ARQUITECTURA.md.
- * - Imposicion de la regla estricta CERO EMOJIS (no-emojis.md) en todo el repositorio. Script de limpieza ejecutado en /docs y /src.
- *
  * ---
  *
  * [2026-03-20] v0.4.9 - Optimización de Rendimiento y Ajustes UI en ABM:
