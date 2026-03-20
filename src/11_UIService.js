@@ -79,28 +79,34 @@ function saveAbmRecord(payload) {
 
  let rowData = [];
  
- switch(entity) {
- case 'INGRESOS':
- case 'COSTOS_FIJOS':
- case 'COSTOS_VARIABLES':
- case 'MEDIOS_PAGO':
- rowData = [
- payload.nombre.trim(), 
- payload.monedaRelacionada || '', 
- payload.proyectoRelacionado || ''
- ];
- break;
- 
- case 'PROYECTOS':
- rowData = [
- payload.nombre.trim(),
- payload.tipoProyecto || 'General'
- ];
- break;
- 
- default:
- throw new Error('Entidad desconocida: ' + entity);
- }
+        switch(entity) {
+            case 'INGRESOS':
+            case 'COSTOS_FIJOS':
+            case 'COSTOS_VARIABLES':
+                rowData = [
+                    payload.nombre.trim(), 
+                    payload.proyectoRelacionado || ''
+                ];
+                break;
+            
+            case 'MEDIOS_PAGO':
+                rowData = [
+                    payload.nombre.trim(), 
+                    payload.monedaRelacionada || '', 
+                    payload.proyectoRelacionado || ''
+                ];
+                break;
+            
+            case 'PROYECTOS':
+                rowData = [
+                    payload.nombre.trim(),
+                    payload.tipoProyecto || 'General'
+                ];
+                break;
+            
+            default:
+                throw new Error('Entidad desconocida: ' + entity);
+        }
 
  appendRow(entity, rowData);
  
@@ -125,17 +131,31 @@ function getCategoryAccounts(entityType) {
  const result = [];
  
  data.forEach((row, index) => {
- const nombre = row[0] ? row[0].toString().trim() : '';
- if (nombre) {
- result.push({
- rowIndex: index,
- nombre: nombre,
- moneda: row[1] || '',
- proyecto: row[2] || '',
- tipo: row[1] || '' // Para proyectos, la columna 2 es el tipo
- });
- }
- });
+            const nombre = row[0] ? row[0].toString().trim() : '';
+            if (nombre) {
+                let moneda = '';
+                let proyecto = '';
+                let tipo = '';
+                
+                if (entityType === 'MEDIOS_PAGO') {
+                    moneda = row[1] || '';
+                    proyecto = row[2] || '';
+                } else if (entityType === 'PROYECTOS') {
+                    tipo = row[1] || '';
+                } else {
+                    // INGRESOS, COSTOS_FIJOS, COSTOS_VARIABLES
+                    proyecto = row[1] || '';
+                }
+
+                result.push({
+                    rowIndex: index,
+                    nombre: nombre,
+                    moneda: moneda,
+                    proyecto: proyecto,
+                    tipo: tipo
+                });
+            }
+        });
  
  return result;
  } catch (e) {
@@ -171,16 +191,22 @@ function updateAbmRecord(payload) {
  }
  });
  
- let rowData = [];
- switch(entity) {
- case 'INGRESOS': case 'COSTOS_FIJOS': case 'COSTOS_VARIABLES': case 'MEDIOS_PAGO':
- rowData = [payload.nombre.trim(), payload.monedaRelacionada || '', payload.proyectoRelacionado || ''];
- break;
- case 'PROYECTOS':
- rowData = [payload.nombre.trim(), payload.tipoProyecto || 'General'];
- break;
- default: throw new Error('Entidad desconocida: ' + entity);
- }
+        let rowData = [];
+        switch(entity) {
+            case 'INGRESOS': 
+            case 'COSTOS_FIJOS': 
+            case 'COSTOS_VARIABLES': 
+                rowData = [payload.nombre.trim(), payload.proyectoRelacionado || ''];
+                break;
+            case 'MEDIOS_PAGO':
+                rowData = [payload.nombre.trim(), payload.monedaRelacionada || '', payload.proyectoRelacionado || ''];
+                break;
+            case 'PROYECTOS':
+                rowData = [payload.nombre.trim(), payload.tipoProyecto || 'General'];
+                break;
+            default: 
+                throw new Error('Entidad desconocida: ' + entity);
+        }
  
  updateRow(entity, rowIndexA, rowData);
  return { success: true, nombre: payload.nombre, entityType: entity };

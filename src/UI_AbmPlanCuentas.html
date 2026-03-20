@@ -6,23 +6,11 @@
     <?!= include('UI_SharedStyles'); ?>
 
     <style>
-        /* ── Base: height real al modal ── */
-        html, body {
-            height: 100vh;
+        /* ── Base: color invertido ── */
+        body {
+            background-color: #FFFFFF !important;
             margin: 0;
             padding: 0;
-            overflow: hidden;
-            background-color: #FFFFFF !important;
-        }
-
-        /* ── Wrapper: flex vertical 100% ── */
-        .popup-wrapper {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            padding: 24px 20px 20px;
-            box-sizing: border-box;
-            position: relative;
         }
 
         /* ── Header: siempre arriba ── */
@@ -46,20 +34,7 @@
             margin: 0;
         }
 
-        /* ── Zona Central: Centrado vertical real del resto ── */
-        .content-zone {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: stretch;
-            transition: justify-content 0.4s ease;
-        }
 
-        /* Cuando hay contenido (modo activo), movemos el foco arriba */
-        .content-zone.top-mode {
-            justify-content: flex-start;
-        }
 
         /* ── Paneles y Cajas (Color invertido: fondo #eff2f9) ── */
         .panel {
@@ -162,15 +137,12 @@
     </div>
 </div>
 
-<div class="popup-wrapper">
-    <!-- El Header siempre arriba, no lo tocamos en JS -->
-    <div class="intro-header">
+<div class="container container-xs">
+    <!-- El Header siempre arriba -->
+    <div class="intro-header" id="introHeader">
         <h1>Plan de Cuentas</h1>
-        <p>Alta, Baja y Modificación de Catálogos</p>
+        <p id="introSubtitle">Alta, Baja y Modificación de Categorías</p>
     </div>
-
-    <!-- Zona flexible que se encarga del centrado -->
-    <div class="content-zone" id="contentZone">
         
         <form id="abmForm" onsubmit="handleFormSubmit(event)">
             
@@ -193,14 +165,14 @@
                 <button type="button" id="btnModeUpdate" class="btn btn-secondary" style="flex:1;" onclick="setMode('UPDATE')">Modificar / Eliminar</button>
             </div>
 
-            <!-- Alertas -->
-            <div id="errorAlert" class="panel hidden" style="background:#FEE2E2; color:#DC2626; border-color:#F87171;">
+            <!-- Alertas - (Sin class="panel" para que el CSS !important no pise sus colores) -->
+            <div id="errorAlert" class="hidden" style="background:#FEE2E2; color:#DC2626; border-color:#F87171; padding:16px; border-radius:8px; border-width:1px; border-style:solid; margin-bottom:16px;">
                 <span id="errorMessageText"></span>
             </div>
-            <div id="updateAlert" class="panel hidden" style="background:#FEF3C7; color:#B45309; border-color:#FCD34D;">
+            <div id="updateAlert" class="hidden" style="background:#FEF3C7; color:#B45309; border-color:#FCD34D; padding:16px; border-radius:8px; border-width:1px; border-style:solid; margin-bottom:16px;">
                 <strong>Modificación:</strong> Los cambios afectarán al historial de esta cuenta.
             </div>
-            <div id="deleteAlert" class="panel hidden" style="background:#FEE2E2; color:#DC2626; border-color:#F87171;">
+            <div id="deleteAlert" class="hidden" style="background:#FEE2E2; color:#DC2626; border-color:#F87171; padding:16px; border-radius:8px; border-width:1px; border-style:solid; margin-bottom:16px;">
                 <strong>Baja definitiva:</strong> ¿Estás seguro? Esta acción no puede deshacerse.
             </div>
 
@@ -232,16 +204,20 @@
                     <label for="proyectoRelacionado" class="form-label">Proyecto <span style="font-weight:300; font-size:12px; color:var(--text-secondary)">(Opcional)</span></label>
                     <select id="proyectoRelacionado" name="proyectoRelacionado" class="form-select"></select>
                 </div>
+            </div>
 
-                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px;">
-                    <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cancelar</button>
+            <!-- Botones Universales siempre visibles abajo del formulario -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:32px; padding-top:16px; border-top:1px solid #e2e8f0;">
+                <div>
                     <button type="button" class="btn btn-danger hidden" id="btnDelete" onclick="handleDeleteClick()">Eliminar</button>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cancelar</button>
                     <button type="submit" class="btn btn-primary" id="btnSubmit">Guardar</button>
                 </div>
             </div>
 
         </form>
-    </div>
 </div>
 
 <script>
@@ -272,7 +248,6 @@
 
     function handleEntityChange() {
         const entity = document.getElementById('entityType').value;
-        const zone = document.getElementById('contentZone');
         
         hideAllAlerts();
         selectedAccount = null;
@@ -282,14 +257,11 @@
         document.getElementById('btnModeUpdate').className = 'btn btn-secondary';
 
         if (!entity) {
-            zone.classList.remove('top-mode');
             document.getElementById('modeSelectorWrapper').classList.add('hidden');
             document.getElementById('dynamicFields').classList.add('hidden');
             return;
         }
 
-        // Transición: mover lo centrado hacia arriba
-        zone.classList.add('top-mode');
         const ms = document.getElementById('modeSelectorWrapper');
         ms.classList.remove('hidden');
         ms.style.display = 'flex';
@@ -304,22 +276,30 @@
         const gP = document.getElementById('groupProyectoRel');
         [gT, gM, gP].forEach(x => x.classList.add('hidden'));
 
-        if(entity === 'PROYECTOS') gT.classList.remove('hidden');
-        else if(entity === 'MEDIOS_PAGO') { lbl.textContent = 'Medio Bancario'; gM.classList.remove('hidden'); gP.classList.remove('hidden'); }
-        else { lbl.textContent = 'Nombre de Cuenta'; gM.classList.remove('hidden'); gP.classList.remove('hidden'); }
+        if(entity === 'PROYECTOS') {
+            gT.classList.remove('hidden');
+        } else if(entity === 'MEDIOS_PAGO') { 
+            lbl.textContent = 'Medio Bancario'; 
+            gM.classList.remove('hidden'); 
+            gP.classList.remove('hidden'); 
+        } else { 
+            lbl.textContent = 'Nombre de Cuenta'; 
+            gP.classList.remove('hidden'); 
+        }
     }
 
     function setMode(mode) {
         currentMode = mode;
         const btnC = document.getElementById('btnModeCreate');
         const btnU = document.getElementById('btnModeUpdate');
+        const entityValue = document.getElementById('entityType').value; // Guardar valor antes de reset
         hideAllAlerts();
 
         if(mode === 'CREATE') {
             btnC.className = 'btn btn-primary';
             btnU.className = 'btn btn-secondary';
             document.getElementById('abmForm').reset();
-            document.getElementById('entityType').value = systemData.lastEntity || ''; // Hack to keep entity
+            document.getElementById('entityType').value = entityValue; // Restaurar valor guardado
             document.getElementById('accountSelectorWrapper').classList.add('hidden');
             document.getElementById('dynamicFields').classList.remove('hidden');
             document.getElementById('btnSubmit').textContent = 'Guardar';
@@ -409,7 +389,6 @@
 
     function resetFormForNew() {
         const ent = document.getElementById('entityType').value;
-        const zone = document.getElementById('contentZone');
         document.getElementById('abmForm').reset();
         document.getElementById('entityType').value = ent; // Preserve entity
         hideAllAlerts();

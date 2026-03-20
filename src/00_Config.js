@@ -30,32 +30,32 @@ const RANGES = {
  INGRESOS: {
  sheet: SHEETS.PLAN_CUENTAS,
  start: 'I',
- end: 'K',
- columns: { nombre: 'I', moneda: 'J', proyecto: 'K' }
+ end: 'J',
+ columns: { nombre: 'I', proyecto: 'J' }
  },
  COSTOS_FIJOS: {
  sheet: SHEETS.PLAN_CUENTAS,
- start: 'M',
- end: 'O',
- columns: { nombre: 'M', moneda: 'N', proyecto: 'O' }
+ start: 'L',
+ end: 'M',
+ columns: { nombre: 'L', proyecto: 'M' }
  },
  COSTOS_VARIABLES: {
  sheet: SHEETS.PLAN_CUENTAS,
- start: 'Q',
- end: 'S',
- columns: { nombre: 'Q', moneda: 'R', proyecto: 'S' }
+ start: 'O',
+ end: 'P',
+ columns: { nombre: 'O', proyecto: 'P' }
  },
  MEDIOS_PAGO: {
  sheet: SHEETS.PLAN_CUENTAS,
- start: 'U',
- end: 'W',
- columns: { nombre: 'U', moneda: 'V', proyecto: 'W' }
+ start: 'R',
+ end: 'T',
+ columns: { nombre: 'R', moneda: 'S', proyecto: 'T' }
  },
  PROYECTOS: {
  sheet: SHEETS.PLAN_CUENTAS,
- start: 'Y',
- end: 'Z',
- columns: { nombre: 'Y', tipo: 'Z' }
+ start: 'V',
+ end: 'W',
+ columns: { nombre: 'V', tipo: 'W' }
  }
 };
 
@@ -82,7 +82,9 @@ const ERROR_MESSAGES = {
 const MENU_CONFIG = {
  MAIN_MENU: 'Tidetrack',
  ITEMS: [
- { name: 'Gestor: Plan de Cuentas', function: 'showAbmPlanCuentas' }
+ { name: 'Gestor: Plan de Cuentas', function: 'showAbmPlanCuentas' },
+ { separator: true },
+ { name: '🔧 [Dev] On/Off Protección Cuentas', function: 'togglePlanCuentasProtection' }
  ]
 };
 
