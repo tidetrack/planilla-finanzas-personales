@@ -190,7 +190,6 @@ function deleteRow(tableName, rowIndex) {
  logSuccess(`Registro ${rowIndex} eliminado aislamientamente de ${tableName}`);
 }
 
-// (Funciones findById y existsById purgadas por Lean Code Expert ya que no eran requeridas por el scope actual)
 
 // ============================================
 // UTILIDADES DE COLUMNAS
@@ -209,4 +208,3 @@ function columnLetterToIndex(columnLetter) {
  return index;
 }
 
-// (Función getColumnIndexes purgada por Lean Code Expert)

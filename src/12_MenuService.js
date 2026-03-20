@@ -37,7 +37,3 @@ function createCustomMenu() {
 }
 
 // ===== HANDLERS DEL MENÚ =====
-
-// Los handlers de opciones del menú (ej. showTransactionForm, showDashboard) 
-// han sido eliminados de esta versión simplificada orientada únicamente
-// a la gestión del Plan de Cuentas (Gestor ABM).
