@@ -6,6 +6,37 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-21 - Fix Auto-Sorting Sync Cache (v0.7.7)
+
+### Evento
+El Auto-Sorting introducido en v0.7.5 no terminaba de gatillar durante las inyecciones rápidas como el forzado de carga histórica, dejando las fechas mezcladas.
+
+### Decisiones Técnicas
+- Se comprobó que el método `sheet.getLastRow()` de GAS sufre de un delay interno provocado por la caché asíncrona de inserción múltiple (`setValues()`), lo que provocaba que la medición determinara que la tabla estaba vacía al momento de ordenar.
+- Como Fix Definitivo se prescindió del chequeo visual de GAS y se introdujo un algoritmo matemático ciego: `targetRow + paddedData.length - 1`, lo que predice exactamente qué tan honda llegó la tabla y fuerza el sort inmediatamente.
+
+### Archivos Modificados
+- **`[MOD]` Backend**: `06_RegistrosService.js`.
+- **`[MOD]` Docs**: `ZZ_Changelog.js` y `HISTORIAL_DESARROLLO.md`.
+
+---
+
+## 2026-03-21 - Alerta UI para Protección Multi-celda (v0.7.6)
+
+### Evento
+El usuario decidió optar por mantener la protección de Plan de Cuentas vía `onEdit`, pero solicitó una alerta visual más clara e intrusiva para cuando ocurran ediciones multi-celda accidentalmente, en lugar de intentar reconstruirlas mediante caché complejo.
+
+### Decisiones Técnicas
+- Se implementó `SpreadsheetApp.getUi().alert()` dentro de la interrupción `isMultiCell` en `handlePlanCuentasEdit()` (`14_EventHandlers.js`).
+- La alerta detiene el flujo visual y exige al usuario hacer clic en "Aceptar" para continuar, asegurándose de que lea la instrucción de usar `Ctrl+Z` para recuperar sus datos. 
+- Se añadió un bloque `try/catch` con fallback a `toast` por si el trigger asíncrono pierde el contexto de UI.
+
+### Archivos Modificados
+- **`[MOD]` Backend**: `14_EventHandlers.js`.
+- **`[MOD]` Docs**: `ZZ_Changelog.js` y `HISTORIAL_DESARROLLO.md`.
+
+---
+
 ## 2026-03-21 - Auto-Sorting de Base de Datos Cached (v0.7.5)
 
 ### Evento
