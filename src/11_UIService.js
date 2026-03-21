@@ -81,8 +81,8 @@ function saveAbmRecord(payload) {
  
         switch(entity) {
             case 'INGRESOS':
-            case 'COSTOS_FIJOS':
-            case 'COSTOS_VARIABLES':
+            case 'GASTOS_FIJOS':
+            case 'GASTOS_VARIABLES':
                 rowData = [
                     payload.nombre.trim(), 
                     payload.proyectoRelacionado || ''
@@ -143,7 +143,7 @@ function getCategoryAccounts(entityType) {
                 } else if (entityType === 'PROYECTOS') {
                     tipo = row[1] || '';
                 } else {
-                    // INGRESOS, COSTOS_FIJOS, COSTOS_VARIABLES
+                    // INGRESOS, GASTOS_FIJOS, GASTOS_VARIABLES
                     proyecto = row[1] || '';
                 }
 
@@ -194,8 +194,8 @@ function updateAbmRecord(payload) {
         let rowData = [];
         switch(entity) {
             case 'INGRESOS': 
-            case 'COSTOS_FIJOS': 
-            case 'COSTOS_VARIABLES': 
+            case 'GASTOS_FIJOS': 
+            case 'GASTOS_VARIABLES': 
                 rowData = [payload.nombre.trim(), payload.proyectoRelacionado || ''];
                 break;
             case 'MEDIOS_PAGO':

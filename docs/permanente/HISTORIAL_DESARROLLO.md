@@ -6,6 +6,40 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-21 - Nomenclatura Global a "Gastos" (v0.7.4)
+
+### Evento
+El usuario solicitó cambiar la nomenclatura de "Costos Fijos" y "Costos Variables" a "Gastos Fijos" y "Gastos Variables" respectivamente en toda la extensión del proyecto y la UI.
+
+### Decisiones Técnicas
+- Se realizó un barrido con Replace All mediante regex identificando 14 locaciones específicas a modificar.
+- Modificadas las claves de configuración del diccionario `RANGES` en `00_Config.js`. 
+- Modificados los endpoints del `switch` statement en `11_UIService.js` y el Frontend HTML de la modal `UI_AbmPlanCuentas.html`.
+- Cambios en las lógicas literales de deducción base y en la migración.
+- El cambio a nivel celda de base de datos fue advertido al usuario para que lo realice manually mediante "Buscar y Reemplazar", dada la política estricta de Antigravity de no mutar Data operativa por accidente. 
+
+### Archivos Modificados
+- **`[MOD]` Backend**: `00_Config.js`, `06_RegistrosService.js`, `11_UIService.js`, `99_MigrationLogic.js`.
+- **`[MOD]` Frontend**: `UI_AbmPlanCuentas.html`.
+- **`[MOD]` Docs**: `CONTEXTO_LLM.md`, `GUIA_ARQUITECTURA.md`, `README.md`, `ZZ_Changelog.js`, `HISTORIAL_DESARROLLO.md`.
+
+---
+
+## 2026-03-20 - Fix Dev Toggle Protección Plan Cuentas (v0.7.3)
+
+### Evento
+El usuario reportó que la función dev de proteger la hoja "Plan de Cuentas" no funcionaba ("no me funcionó"). Se identificó que la UX del toggle era confusa (el estado por defecto era protegido, por lo que el primer clic lo desprotegía) y que las ediciones multi-celda (como copy-paste masivo) no se revertían automáticamente.
+
+### Decisiones Técnicas
+- Se reescribió explícitamente la función `togglePlanCuentasProtection()` (`14_EventHandlers.js`) para mostrar un cuadro de diálogo (YES/NO) revelando el estado actual (Activado/Desactivado) previo a la confirmación.
+- Debido a las limitaciones de GAS (sin `e.oldValue` en multi-edit), `handlePlanCuentasEdit()` ahora intercepta operaciones `range.getNumRows() > 1` y advierte mediante un `toast` que deben presionar `Ctrl+Z` si afectaron datos accidentalmente.
+
+### Archivos Modificados
+- **`[MOD]` `src/14_EventHandlers.js`**: Refactor de toggle e interrupción isMultiCell.
+- **`[MOD]` Docs**: `ZZ_Changelog.js` e `HISTORIAL_DESARROLLO.md` actualizados a v0.7.3.
+
+---
+
 ## 2026-03-20 - Recalculador Masivo de Tipos de Cambio (v0.7.2)
 
 ### Evento

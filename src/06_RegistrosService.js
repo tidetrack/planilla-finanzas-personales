@@ -36,8 +36,8 @@ function procesarCargas() {
 
     // 2.1 Precargar categorías para deducción de Tipo de Cuenta
     const ingresosCat = getTableData('INGRESOS').map(r => r[0]);
-    const fijosCat = getTableData('COSTOS_FIJOS').map(r => r[0]);
-    const variablesCat = getTableData('COSTOS_VARIABLES').map(r => r[0]);
+    const fijosCat = getTableData('GASTOS_FIJOS').map(r => r[0]);
+    const variablesCat = getTableData('GASTOS_VARIABLES').map(r => r[0]);
 
     const cacheMap = { USD: {}, AUD: {}, EUR: {} };
     tcUsdData.forEach(r => { if (r[0]) cacheMap.USD[formatDateISO(r[0])] = r[1] });
@@ -63,12 +63,12 @@ function procesarCargas() {
 
             const dateStr = formatDateISO(dateObj);
 
-            // Deducir Tipo de Cuenta (Ingreso, Costo Fijo, Costo Variable)
+            // Deducir Tipo de Cuenta (Ingreso, Gasto Fijo, Gasto Variable)
             let tipoCuenta = '';
             const cuentaName = row[2];
             if (ingresosCat.includes(cuentaName)) tipoCuenta = 'Ingreso';
-            else if (fijosCat.includes(cuentaName)) tipoCuenta = 'Costo Fijo';
-            else if (variablesCat.includes(cuentaName)) tipoCuenta = 'Costo Variable';
+            else if (fijosCat.includes(cuentaName)) tipoCuenta = 'Gasto Fijo';
+            else if (variablesCat.includes(cuentaName)) tipoCuenta = 'Gasto Variable';
 
             // ARS Base
             const tcArs = 1.0;

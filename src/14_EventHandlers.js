@@ -48,22 +48,28 @@ function handlePlanCuentasEdit(e) {
         // 1. Revertir el valor usando e.oldValue para celda individual
         // Si no hay oldValue (la celda estaba vacía o fue un pegado múltiple), limpiamos.
         // Nota: Multi-ediciones no tienen oldValue disponible nativamente en GAS.
-        if (e.oldValue !== undefined) {
-            range.setValue(e.oldValue);
+        const isMultiCell = range.getNumRows() > 1 || range.getNumColumns() > 1;
+
+        if (isMultiCell) {
+            // No podemos revertir con exactitud múltiples celdas si tenían datos previos. 
+            // Sugerimos al usuario hacer Ctrl+Z.
+            e.source.toast(
+                'Edición múltiple bloqueada. ⚠️ Por favor usá Ctrl+Z (Deshacer) si borraste o sobreescribiste datos sin querer.',
+                'Protección Activa',
+                8
+            );
         } else {
-            // Checkeo para evitar limpiar una multi-selección accidentalmente borrada
-            if (range.getNumRows() === 1 && range.getNumColumns() === 1) {
+            if (e.oldValue !== undefined) {
+                range.setValue(e.oldValue);
+            } else {
                 range.clearContent();
             }
+            e.source.toast(
+                'Bloqueado. Para proteger tus métricas, ingresá desde la acción rápida > Gestionar Cuentas.',
+                'Edición Directa Bloqueada',
+                6
+            );
         }
-
-        // 2. Mostrar Alerta / Toast nativo
-        // (Nota: Google Apps Script bloquea showModalDialog dentro de triggers simples por seguridad anti-phishing)
-        e.source.toast(
-            'Para proteger tus métricas, ingresá desde la acción rápida > Gestionar Cuentas.',
-            'Edición Directa Bloqueada',
-            6
-        );
     }
 }
 
@@ -78,20 +84,30 @@ function togglePlanCuentasProtection() {
     const isCurrentlyProtected = currentState !== 'false';
     const ui = SpreadsheetApp.getUi();
     
-    if (isCurrentlyProtected) {
-        props.setProperty('PC_PROTECTION_ENABLED', 'false');
-        ui.alert(
-            '🔓 Protección Desactivada',
-            'Ahora podés editar el Plan de Cuentas libremente en la grilla sin que el sistema revierta tus cambios.\n\n⚠️ RECORDÁ reactivarla cuando termines para evitar daños accidentales a la base de datos.',
-            ui.ButtonSet.OK
-        );
-    } else {
-        props.setProperty('PC_PROTECTION_ENABLED', 'true');
-        ui.alert(
-            '🔒 Protección Activada',
-            'La hoja Plan de Cuentas vuelve a estar blindada contra ediciones manuales accidentales.',
-            ui.ButtonSet.OK
-        );
+    const estadoStr = isCurrentlyProtected ? '🔒 ACTIVADA' : '🔓 DESACTIVADA';
+    
+    const response = ui.alert(
+        'Configuración de Protección',
+        `La protección de la hoja "Plan de Cuentas" actualmente se encuentra:\n\n${estadoStr}\n\n¿Deseás cambiar este estado?`,
+        ui.ButtonSet.YES_NO
+    );
+
+    if (response === ui.Button.YES) {
+        if (isCurrentlyProtected) {
+            props.setProperty('PC_PROTECTION_ENABLED', 'false');
+            ui.alert(
+                '🔓 Protección Desactivada',
+                'Ahora podés editar el Plan de Cuentas libremente en la grilla sin que el sistema revierta tus cambios.\n\n⚠️ RECORDÁ reactivarla cuando termines para evitar daños accidentales a la base de datos.',
+                ui.ButtonSet.OK
+            );
+        } else {
+            props.setProperty('PC_PROTECTION_ENABLED', 'true');
+            ui.alert(
+                '🔒 Protección Activada',
+                'La hoja Plan de Cuentas vuelve a estar blindada contra ediciones manuales accidentales.',
+                ui.ButtonSet.OK
+            );
+        }
     }
 }
 

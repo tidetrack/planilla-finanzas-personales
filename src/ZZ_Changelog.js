@@ -4,6 +4,17 @@
  * ============================================
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
+ *
+ * [2026-03-21] v0.7.4 - Rename Global "Costos" a "Gastos":
+ * - Refactorización quirúrgica de constantes, endpoints y strings en frontend y backend (`COSTOS_FIJOS` -> `GASTOS_FIJOS`).
+ * - Actualización de las herramientas de deducción en `RegistrosService` y `MigrationEngine`.
+ *
+ * ---
+ *
+ * [2026-03-20] v0.7.3 - Fix Dev Toggle Protección Plan Cuentas:
+ * - Se corrigió la UX del menú `togglePlanCuentasProtection()` agregando un prompt de confirmación explícito para evitar desactivaciones accidentales.
+ * - Se mejoró `handlePlanCuentasEdit()` (onEdit) para detectar ediciones multi-celda y sugerir al usuario el uso de Ctrl+Z dado que Apps Script no provee oldValue para pegados masivos.
+ *
  * ---
  *
  * [2026-03-20] v0.7.2 - Recalculador Masivo TC:

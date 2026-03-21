@@ -229,7 +229,7 @@ Generar tabla resumen
 Ver [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) para detalles completos.
 
 **Resumen:**
-- 5 tablas en hoja Plan de Cuentas (Ingresos, Costos Fijos, Costos Variables, Medios de Pago, Proyectos)
+- 5 tablas en hoja Plan de Cuentas (Ingresos, Gastos Fijos, Gastos Variables, Medios de Pago, Proyectos)
 - Monedas: constante `MONEDAS_DISPONIBLES` en `00_Config.js` (ADR-003)
 - Catálogos: Medios, Cuentas, Proyectos
 - Operativa: Tipos de Cambio (con auditoría completa, a implementar)

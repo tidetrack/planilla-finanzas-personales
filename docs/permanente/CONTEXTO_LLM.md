@@ -21,8 +21,8 @@ Actúa como catálogo de entidades estáticas.
 - **Fila de Inicio de Datos**: 4
 - **Catalogos / Rangos**:
   - `INGRESOS`: Columnas **I:J** (I = Nombre, J = Proyecto)
-  - `COSTOS_FIJOS`: Columnas **L:M** (L = Nombre, M = Proyecto)
-  - `COSTOS_VARIABLES`: Columnas **O:P** (O = Nombre, P = Proyecto)
+  - `GASTOS_FIJOS`: Columnas **L:M** (L = Nombre, M = Proyecto)
+  - `GASTOS_VARIABLES`: Columnas **O:P** (O = Nombre, P = Proyecto)
   - `MEDIOS_PAGO`: Columnas **R:T** (R = Nombre, S = Moneda, T = Proyecto)
   - `PROYECTOS`: Columnas **V:W** (V = Nombre, W = Tipo)
 
@@ -47,7 +47,7 @@ Data Lake inmutable e histórico con absolutamente todas las transacciones proce
   - **I**: Monto
   - **J**: Tipo *(Traído de Cargas)*
   - **K**: Cuenta
-  - **L**: Tipo de Cuenta *(Deducido en backend: "Ingreso", "Costo Fijo" o "Costo Variable")*
+  - **L**: Tipo de Cuenta *(Deducido en backend: "Ingreso", "Gasto Fijo" o "Gasto Variable")*
   - **M**: Medio
   - **N**: Moneda
   - **O**: Fecha *(Sirve de pivote para ordenar Z-A dinámicamente)*

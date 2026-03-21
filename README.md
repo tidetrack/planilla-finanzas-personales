@@ -46,7 +46,7 @@ El sistema está compuesto por hojas independientes. Cada una tiene rangos fijos
 
 | Hoja | Rango | Contenido |
 |---|---|---|
-| `Plan de Cuentas` | I:K, M:O, Q:S, U:W, Y:Z | Catálogos: Ingresos, Costos Fijos, Costos Variables, Medios de Pago, Proyectos |
+| `Plan de Cuentas` | I:K, M:O, Q:S, U:W, Y:Z | Catálogos: Ingresos, Gastos Fijos, Gastos Variables, Medios de Pago, Proyectos |
 | `Hoja de Cargas` | *(pendiente)* | Data Entry simplificado |
 | `Tablero General` | *(pendiente)* | Dashboard con métricas del mes vía `QUERY()` |
 | `Presupuestación` | *(pendiente)* | Módulo de planificación mensual |

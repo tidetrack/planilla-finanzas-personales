@@ -30,8 +30,8 @@ function analizarBdAntigua() {
 
     // Cargar Plan de Cuentas Actual
     const pcIngresos = getTableData('INGRESOS').map(r => r[0]);
-    const pcFijos = getTableData('COSTOS_FIJOS').map(r => r[0]);
-    const pcVariables = getTableData('COSTOS_VARIABLES').map(r => r[0]);
+    const pcFijos = getTableData('GASTOS_FIJOS').map(r => r[0]);
+    const pcVariables = getTableData('GASTOS_VARIABLES').map(r => r[0]);
     const pcAllCuentas = [...pcIngresos, ...pcFijos, ...pcVariables];
     
     const pcMediosData = getTableData('MEDIOS_PAGO'); // [Nombre, Moneda, Proyecto]
@@ -95,8 +95,8 @@ function migrarBdAntigua() {
     tcEurData.forEach(r => { if (r[0]) cacheMap.EUR[formatDateISO(r[0])] = r[1]; });
 
     const ingresosCat = getTableData('INGRESOS').map(r => r[0]);
-    const fijosCat = getTableData('COSTOS_FIJOS').map(r => r[0]);
-    const variablesCat = getTableData('COSTOS_VARIABLES').map(r => r[0]);
+    const fijosCat = getTableData('GASTOS_FIJOS').map(r => r[0]);
+    const variablesCat = getTableData('GASTOS_VARIABLES').map(r => r[0]);
 
     // Mapa de Medios -> Moneda
     const pcMediosData = getTableData('MEDIOS_PAGO');
@@ -128,8 +128,8 @@ function migrarBdAntigua() {
         const cuenta = row[3] || 'Desconocida';
         let tipoCuenta = 'Sin Clasificar';
         if (ingresosCat.includes(cuenta)) tipoCuenta = 'Ingreso';
-        else if (fijosCat.includes(cuenta)) tipoCuenta = 'Costo Fijo';
-        else if (variablesCat.includes(cuenta)) tipoCuenta = 'Costo Variable';
+        else if (fijosCat.includes(cuenta)) tipoCuenta = 'Gasto Fijo';
+        else if (variablesCat.includes(cuenta)) tipoCuenta = 'Gasto Variable';
 
         const medio = row[4];
         let moneda = medioToCurrency[medio] || 'ARS';
