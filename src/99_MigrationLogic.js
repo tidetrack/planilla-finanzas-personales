@@ -176,3 +176,74 @@ function migrarBdAntigua() {
     }
     ui.alert('Proceso Completo', msg, ui.ButtonSet.OK);
 }
+
+/**
+ * Herramienta [Dev] para recalcular todos los TC de la base de Registros en bloque.
+ * Lee las fechas y sobrescribe las columnas Q:T interpolando el Caché actual (Modo ARS Base).
+ */
+function recalcularTcRegistros() {
+    const ui = SpreadsheetApp.getUi();
+    const response = ui.alert('Precaución', '¿Verificaste tener la Caché cargada al 100%? Esta acción sobreescribirá todas las cotizaciones de la Hoja Registros.', ui.ButtonSet.YES_NO);
+    if (response !== ui.Button.YES) return;
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const registrosSheet = ss.getSheetByName(SHEETS.REGISTROS);
+    
+    const lastRow = registrosSheet.getLastRow();
+    if (lastRow < 2) return;
+
+    // Obtener Fechas (Col O = index absoluto 15)
+    // Rango O2:O
+    const fechasRange = registrosSheet.getRange(2, 15, lastRow - 1, 1);
+    const fechasData = fechasRange.getValues();
+
+    // Diccionarios actuales de Cotizaciones
+    const tcUsdData = getTableData('TC_USD');
+    const tcAudData = getTableData('TC_AUD');
+    const tcEurData = getTableData('TC_EUR');
+    
+    const cacheMap = { USD: {}, AUD: {}, EUR: {} };
+    tcUsdData.forEach(r => { if (r[0]) cacheMap.USD[formatDateISO(r[0])] = r[1]; });
+    tcAudData.forEach(r => { if (r[0]) cacheMap.AUD[formatDateISO(r[0])] = r[1]; });
+    tcEurData.forEach(r => { if (r[0]) cacheMap.EUR[formatDateISO(r[0])] = r[1]; });
+
+    const newValues = [];
+    let fallbackCounter = 0;
+
+    fechasData.forEach(row => {
+        let rawDate = row[0];
+        if (!rawDate) {
+            newValues.push(['', '', '', '']);
+            return;
+        }
+        
+        let dateObj = new Date(rawDate);
+        if (isNaN(dateObj.getTime())) {
+            newValues.push(['', '', '', '']);
+            return;
+        }
+
+        const dateStr = formatDateISO(dateObj);
+
+        let tcUsd = cacheMap.USD[dateStr];
+        let tcAud = cacheMap.AUD[dateStr];
+        let tcEur = cacheMap.EUR[dateStr];
+        
+        if (!tcUsd || !tcAud || !tcEur) fallbackCounter++;
+        
+        if (!tcUsd) tcUsd = 1050.0;
+        if (!tcAud) tcAud = 650.0;
+        if (!tcEur) tcEur = 1100.0;
+
+        // Q=17(ARS), R=18(USD), S=19(AUD), T=20(EUR)
+        newValues.push([1.0, tcUsd, tcAud, tcEur]);
+    });
+
+    // Sobreescribir columnas Q:T
+    const tcRange = registrosSheet.getRange(2, 17, lastRow - 1, 4);
+    tcRange.setValues(newValues);
+
+    let msg = `Se recalcularon ${newValues.length} transacciones exitosamente.\n\n`;
+    if (fallbackCounter > 0) msg += `ATENCIÓN: Hubo ${fallbackCounter} interpolaciones usando fallback.`;
+    ui.alert('Proceso Completo', msg, ui.ButtonSet.OK);
+}

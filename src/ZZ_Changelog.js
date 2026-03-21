@@ -6,6 +6,12 @@
  * (Añadir nuevos registros arriba)
  * ---
  *
+ * [2026-03-20] v0.7.2 - Recalculador Masivo TC:
+ * - Herramienta [Dev] `recalcularTcRegistros()` para aplicar retrospectivamente la lógica base ARS a la hoja Registros.
+ * - Ideal para usuarios que ya migraron BD Antigua antes del parche `v0.7.1`.
+ *
+ * ---
+ *
  * [2026-03-20] v0.7.1 - Base Monetaria ARS:
  * - Se invirtió la matemática de Tipos de Cambio. Ahora `TC_ARS` es fijo en 1.0.
  * - `TC_USD` guarda el valor de argentinadatos, y `TC_EUR`/`TC_AUD` triangulan con Frankfurter hacia ARS.

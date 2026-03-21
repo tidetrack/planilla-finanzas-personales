@@ -6,6 +6,22 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-20 - Recalculador Masivo de Tipos de Cambio (v0.7.2)
+
+### Evento
+Al introducir la *Base Monetaria ARS* (v0.7.1), surgió la necesidad de aplicar esta nueva lógica matemática a las transacciones que ya habitaban en la hoja `Registros` (especialmente las recién importadas desde `BD antigua` con el motor v0.7.0).
+
+### Decisiones Técnicas
+- Se incorporó la función `recalcularTcRegistros()` en `99_MigrationLogic.js`.
+- Es una macro altamente agresiva que extrae la columna de Fecha de toda la hoja `Registros` en un solo array, mapea la caché para cada día, crea un array 2D exacto del volumen de la hoja (con `1.0`, `TC_USD`, `TC_AUD`, `TC_EUR`) y aplica un `.setValues()` aplastando masivamente las columnas Q:T.
+- La función se expuso en el menú estandar `[Dev] Recalcular TC en Registros` y asume que el usuario pobló la caché previamente.
+
+### Archivos Modificados
+- **`[MOD]` `src/99_MigrationLogic.js`**: Núcleo del recalculador batch.
+- **`[MOD]` `src/00_Config.js`**: Endpoint de UI menu.
+
+---
+
 ## 2026-03-20 - Pivot Monetario a Base ARS (v0.7.1)
 
 ### Evento
