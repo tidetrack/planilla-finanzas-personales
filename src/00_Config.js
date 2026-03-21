@@ -36,13 +36,13 @@ const RANGES = {
  end: 'J',
  columns: { nombre: 'I', proyecto: 'J' }
  },
- COSTOS_FIJOS: {
+    GASTOS_FIJOS: {
  sheet: SHEETS.PLAN_CUENTAS,
  start: 'L',
  end: 'M',
  columns: { nombre: 'L', proyecto: 'M' }
  },
- COSTOS_VARIABLES: {
+    GASTOS_VARIABLES: {
  sheet: SHEETS.PLAN_CUENTAS,
  start: 'O',
  end: 'P',
