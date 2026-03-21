@@ -14,7 +14,7 @@ let cachedArsData = null;
 function fetchArsRate(dateString) {
     if (!cachedArsData) {
         try {
-            const url = 'https://api.argentinadatos.com/v1/cotizaciones/dolares/oficial';
+            const url = 'https://api.argentinadatos.com/v1/cotizaciones/dolares/oficial/';
             const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
             
             if (response.getResponseCode() !== 200) {
