@@ -52,18 +52,18 @@ Data Lake inmutable e histórico con absolutamente todas las transacciones proce
   - **N**: Moneda
   - **O**: Fecha *(Sirve de pivote para ordenar Z-A dinámicamente)*
   - **P**: Nota
-  - **Q**: TC_ARS *(Cotización ARS venta respecto al USD)*
-  - **R**: TC_USD *(Siempre 1.0)*
-  - **S**: TC_AUD *(Cotización AUD respecto al USD)*
-  - **T**: TC_EUR *(Cotización EUR respecto al USD)*
+  - **Q**: TC_ARS *(Siempre 1.0)*
+  - **R**: TC_USD *(Cotización del dólar en pesos)*
+  - **S**: TC_AUD *(Cantidad de pesos equivalentes a 1 AUD)*
+  - **T**: TC_EUR *(Cantidad de pesos equivalentes a 1 EUR)*
 
 ### D. Hoja: `Tipos de Cambio`
 Memoria caché estática de cotizaciones diarias para evitar exceder los límites de la API HTTP.
 - **Fila de Encabezados**: 3
 - **Fila de Inicio de Datos**: 4
 - **Grupos (Fecha | Cotización)**:
-  - **TC_ARS**: Columnas **I:J**
-  - **TC_USD**: Columnas **L:M** (siempre 1.0)
+  - **TC_ARS**: Columnas **I:J** (siempre 1.0)
+  - **TC_USD**: Columnas **L:M**
   - **TC_AUD**: Columnas **O:P**
   - **TC_EUR**: Columnas **R:S**
 

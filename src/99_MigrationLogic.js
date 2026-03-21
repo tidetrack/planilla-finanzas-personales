@@ -84,13 +84,13 @@ function migrarBdAntigua() {
     // A=0(Fecha), B=1(Ing), C=2(Egr), D=3(Cuenta), E=4(Medio), F=5(Ignorar), G=6(Nota)
 
     // Diccionarios actuales de Cotizaciones
-    const tcArsData = getTableData('TC_ARS');
+    const tcUsdData = getTableData('TC_USD');
     const tcAudData = getTableData('TC_AUD');
     const tcEurData = getTableData('TC_EUR');
     
     // Hash Maps rápidos
-    const cacheMap = { ARS: {}, AUD: {}, EUR: {} };
-    tcArsData.forEach(r => { if (r[0]) cacheMap.ARS[formatDateISO(r[0])] = r[1]; });
+    const cacheMap = { USD: {}, AUD: {}, EUR: {} };
+    tcUsdData.forEach(r => { if (r[0]) cacheMap.USD[formatDateISO(r[0])] = r[1]; });
     tcAudData.forEach(r => { if (r[0]) cacheMap.AUD[formatDateISO(r[0])] = r[1]; });
     tcEurData.forEach(r => { if (r[0]) cacheMap.EUR[formatDateISO(r[0])] = r[1]; });
 
@@ -138,23 +138,23 @@ function migrarBdAntigua() {
         const dateStr = formatDateISO(dateObj);
 
         // Uso de caché pre-llenada por forzarCargaHistorica(). 
-        // Si no se encuentra, usa fallback genérico (Evita golpear la API por cada row).
-        let tcArs = cacheMap.ARS[dateStr];
+        // Si no se encuentra, usa fallback genérico
+        let tcUsd = cacheMap.USD[dateStr];
         let tcAud = cacheMap.AUD[dateStr];
         let tcEur = cacheMap.EUR[dateStr];
         
-        if (!tcArs || !tcAud || !tcEur) {
+        if (!tcUsd || !tcAud || !tcEur) {
             fallbackCounter++;
         }
         
         // Asignaciones finales si fallback
-        if (!tcArs) tcArs = 1000.0;
-        if (!tcAud) tcAud = 1.6;
-        if (!tcEur) tcEur = 0.95;
+        if (!tcUsd) tcUsd = 1050.0;
+        if (!tcAud) tcAud = 650.0;
+        if (!tcEur) tcEur = 1100.0;
 
         registrosToAppend.push([
             monto, tipo, cuenta, tipoCuenta, medio, moneda, dateObj, nota,
-            tcArs, 1.0, tcAud, tcEur
+            1.0, tcUsd, tcAud, tcEur
         ]);
     });
 

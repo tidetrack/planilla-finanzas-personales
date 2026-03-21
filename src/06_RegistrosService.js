@@ -30,7 +30,7 @@ function procesarCargas() {
     ss.toast(`Procesando ${validRows.length} registro(s)...`, 'Procesando', 5);
 
     // 2. Precargar las cachés de Tipos de Cambio
-    const tcArsData = getTableData('TC_ARS');
+    const tcUsdData = getTableData('TC_USD');
     const tcAudData = getTableData('TC_AUD');
     const tcEurData = getTableData('TC_EUR');
 
@@ -39,12 +39,12 @@ function procesarCargas() {
     const fijosCat = getTableData('COSTOS_FIJOS').map(r => r[0]);
     const variablesCat = getTableData('COSTOS_VARIABLES').map(r => r[0]);
 
-    const cacheMap = { ARS: {}, AUD: {}, EUR: {} };
-    tcArsData.forEach(r => { if (r[0]) cacheMap.ARS[formatDateISO(r[0])] = r[1] });
+    const cacheMap = { USD: {}, AUD: {}, EUR: {} };
+    tcUsdData.forEach(r => { if (r[0]) cacheMap.USD[formatDateISO(r[0])] = r[1] });
     tcAudData.forEach(r => { if (r[0]) cacheMap.AUD[formatDateISO(r[0])] = r[1] });
     tcEurData.forEach(r => { if (r[0]) cacheMap.EUR[formatDateISO(r[0])] = r[1] });
 
-    let newTcArsToAppend = [];
+    let newTcUsdToAppend = [];
     let newTcAudToAppend = [];
     let newTcEurToAppend = [];
     const registrosToAppend = [];
@@ -70,29 +70,30 @@ function procesarCargas() {
             else if (fijosCat.includes(cuentaName)) tipoCuenta = 'Costo Fijo';
             else if (variablesCat.includes(cuentaName)) tipoCuenta = 'Costo Variable';
 
-            // TC ARS
-            let tcArs = cacheMap.ARS[dateStr];
-            if (!tcArs) {
-                tcArs = fetchArsRate(dateStr);
-                cacheMap.ARS[dateStr] = tcArs;
-                newTcArsToAppend.push([dateObj, tcArs]);
-            }
+            // ARS Base
+            const tcArs = 1.0;
 
-            // TC Internacional (AUD/EUR via Frankfurter)
+            // TC Internacional (USD vía argentinadatos, AUD/EUR vía triangulación)
+            let tcUsd = cacheMap.USD[dateStr];
             let tcAud = cacheMap.AUD[dateStr];
             let tcEur = cacheMap.EUR[dateStr];
             
-            if (!tcAud || !tcEur) {
+            if (!tcUsd || !tcAud || !tcEur) {
+                const arsRate = fetchArsRate(dateStr);
                 const intlRates = fetchInternationalRates(dateStr);
-                tcAud = intlRates.AUD;
-                tcEur = intlRates.EUR;
+                
+                tcUsd = arsRate;
+                tcAud = arsRate / intlRates.AUD;
+                tcEur = arsRate / intlRates.EUR;
+
+                cacheMap.USD[dateStr] = tcUsd;
                 cacheMap.AUD[dateStr] = tcAud;
                 cacheMap.EUR[dateStr] = tcEur;
+                
+                newTcUsdToAppend.push([dateObj, tcUsd]);
                 newTcAudToAppend.push([dateObj, tcAud]);
                 newTcEurToAppend.push([dateObj, tcEur]);
             }
-
-            const tcUsd = 1.0;
 
             // Fila Destino: [Monto, Tipo, Cuenta, Tipo de Cuenta, Medio, Moneda, Fecha, Nota, TC_ARS, TC_USD, TC_AUD, TC_EUR]
             registrosToAppend.push([
@@ -102,7 +103,7 @@ function procesarCargas() {
         });
 
         // 3. Escribir nuevos TCs a la hoja "Tipos de Cambio"
-        if (newTcArsToAppend.length > 0) appendMassive('TC_ARS', newTcArsToAppend, 4);
+        if (newTcUsdToAppend.length > 0) appendMassive('TC_USD', newTcUsdToAppend, 4);
         if (newTcAudToAppend.length > 0) appendMassive('TC_AUD', newTcAudToAppend, 4);
         if (newTcEurToAppend.length > 0) appendMassive('TC_EUR', newTcEurToAppend, 4);
 

@@ -6,6 +6,22 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-20 - Pivot Monetario a Base ARS (v0.7.1)
+
+### Evento
+El usuario detectó que gestionar la consolidación general patrimonial usando el USD como moneda ancla 1.0 dificultaba enormemente las llamadas `QUERY` analíticas y la legibilidad. Se solicitó pivotar el sistema entero para que ARS sea la base real y las divisas se guarden bajo su cotización directa en Pesos.
+
+### Decisiones Técnicas
+- Se transpusieron lógicamente las inyecciones en la base de datos de Tipos de Cambio. `TC_ARS` quedó como un fixed value de `1.0`. Por su parte, la extracción directa de la API `argentinadatos` ahora alimenta de lleno a `TC_USD`.
+- Para EUR y AUD se incorporó el recálculo matemático de "Triangulación" (`cotizacion_USD_en_ARS / ratio_Euro_vs_Dolar`) ya que las APIs provistas funcionan como pares relativos al dólar (EUR/USD).
+- Se actualizó el `PROMPT_MAESTRO` y `CONTEXTO_LLM` para enseñarle al cerebro Gemini/NotebookLM que de ahora en más, unificar y agrupar importes es mera cuestión de multiplicar cada celda iterada.
+
+### Archivos Modificados
+- **`[MOD]` `src/15_ExchangeRateApi.js`, `src/06_RegistrosService.js`, `src/99_MigrationLogic.js`** — Transposición del núcleo de caché y fallback matemáticos.
+- **`[MOD]` Docs**: `CONTEXTO_LLM.md`, `PROMPT_MAESTRO.md`, `ZZ_Changelog.js`, `HISTORIAL_DESARROLLO.md`.
+
+---
+
 ## 2026-03-20 - Motor de Migración de Base de Datos Legacy (v0.7.0)
 
 ### Evento

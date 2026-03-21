@@ -129,16 +129,17 @@ function forzarCargaHistorica() {
         let currentStr = formatDateISO(d);
         let currDateObj = new Date(d);
         
-        // ars busca siempre via fetchArsRate que usa la caché en memoria que ya cargamos arriba:
-        let rateArs = fetchArsRate(currentStr);
-        let rateEur = getFrankRate(currentStr, 'EUR');
-        let rateAud = getFrankRate(currentStr, 'AUD');
-        let rateUsd = 1.0;
+        let valUsdInArs = fetchArsRate(currentStr);
+        let valEurInUsd = getFrankRate(currentStr, 'EUR');
+        let valAudInUsd = getFrankRate(currentStr, 'AUD');
 
-        if (rateArs) arsAppend.push([currDateObj, rateArs]);
-        if (rateEur) eurAppend.push([currDateObj, rateEur]);
-        if (rateAud) audAppend.push([currDateObj, rateAud]);
-        usdAppend.push([currDateObj, rateUsd]);
+        if (valUsdInArs) {
+            usdAppend.push([currDateObj, valUsdInArs]);
+            arsAppend.push([currDateObj, 1.0]); // ARS base
+
+            if (valEurInUsd) eurAppend.push([currDateObj, valUsdInArs / valEurInUsd]);
+            if (valAudInUsd) audAppend.push([currDateObj, valUsdInArs / valAudInUsd]);
+        }
     }
 
     // Limpiar celdas previas (I4 a T, saltando los headers en row 3)

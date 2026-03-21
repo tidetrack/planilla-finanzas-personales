@@ -6,6 +6,13 @@
  * (Añadir nuevos registros arriba)
  * ---
  *
+ * [2026-03-20] v0.7.1 - Base Monetaria ARS:
+ * - Se invirtió la matemática de Tipos de Cambio. Ahora `TC_ARS` es fijo en 1.0.
+ * - `TC_USD` guarda el valor de argentinadatos, y `TC_EUR`/`TC_AUD` triangulan con Frankfurter hacia ARS.
+ * - Mayor facilidad estructural para queries (`Value * Exchange Rate = Value in ARS`).
+ *
+ * ---
+ *
  * [2026-03-20] v0.7.0 - Motor de Migración de BD Legacy:
  * - Se introdujo `99_MigrationLogic.js` con soporte para importar bases 2024+.
  * - Identificador y autocompletador de diccionarios faltantes (Cuentas y Medios).
