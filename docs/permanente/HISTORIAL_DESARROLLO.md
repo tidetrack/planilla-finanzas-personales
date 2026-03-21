@@ -6,6 +6,26 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-20 - Motor de Migración de Base de Datos Legacy (v0.7.0)
+
+### Evento
+El usuario requirió un motor automatizado permanente para migrar bases de datos (2024+) provenientes del sistema anterior de registro no-estandarizado, deduciendo automáticamente información cruzada y detectando diccionarios faltantes.
+
+### Decisiones Técnicas
+- Se amplió la constante `FLOOR_DATE` a `2024-01-01` en los servicios de API y Registros para permitir descargas masivas históricas de cotizaciones.
+- Se introdujo el módulo `99_MigrationLogic.js` con dos etapas funcionales interactivas:
+  1. **Análisis de Faltantes**: Cruza `BD antigua` contra `Plan de Cuentas`. Inyecta masivamente medios desconocidos con "ARS" usando `appendMassive` y devuelve en pantalla las "Cuentas" desconocidas imprimiéndolas en la Columna H de la BD antigua para decisión del usuario.
+  2. **Migración Titánica**: Procesa por batch la traducción del modelo viejo (A:G) al modelo `Registros` (12-Array), consultando en el acto la memoria caché cargada de Tipos de Cambio.
+- Se actualizó el `CONTEXTO_LLM.md` para instruir a la IA sobre la naturaleza de la hoja `BD_ANTIGUA`.
+
+### Archivos Modificados
+- **`[NEW]` `src/99_MigrationLogic.js`** — Funciones de análisis y parseo masivo.
+- **`[MOD]` `src/00_Config.js`** — Añadida hoja `BD_ANTIGUA` y menús Dev interactivos correspondientes.
+- **`[MOD]` `src/06_RegistrosService.js` / `15_ExchangeRateApi.js`** — Modificación del piso temporal histórico (2024).
+- **`[MOD]` `docs/permanente/CONTEXTO_LLM.md`** — Adición estricta del esquema de la hoja transicional de migración.
+
+---
+
 ## 2026-03-20 - Herramienta de Carga Histórica de Tipos de Cambio (v0.6.2)
 
 ### Evento

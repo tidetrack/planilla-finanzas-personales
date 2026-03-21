@@ -6,6 +6,13 @@
  * (Añadir nuevos registros arriba)
  * ---
  *
+ * [2026-03-20] v0.7.0 - Motor de Migración de BD Legacy:
+ * - Se introdujo `99_MigrationLogic.js` con soporte para importar bases 2024+.
+ * - Identificador y autocompletador de diccionarios faltantes (Cuentas y Medios).
+ * - Se extendió `FLOOR_DATE` en `06_RegistrosService.js` y `15_ExchangeRateApi.js` al 01/01/2024.
+ *
+ * ---
+ *
  * [2026-03-20] v0.6.2 - Carga Histórica de TC:
  * - Se añadió la herramienta [Dev] `forzarCargaHistorica()` en `15_ExchangeRateApi.js`.
  * - Permite generar un barrido desde el 01/01/2026 reconstruyendo el historial de las 4 divisas simultáneas con fallback a viernes para fines de semana.

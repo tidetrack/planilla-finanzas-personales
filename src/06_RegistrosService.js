@@ -49,7 +49,7 @@ function procesarCargas() {
     let newTcEurToAppend = [];
     const registrosToAppend = [];
 
-    const FLOOR_DATE = new Date('2026-01-01T12:00:00Z');
+    const FLOOR_DATE = new Date('2024-01-01T12:00:00Z');
 
     try {
         validRows.forEach((row, i) => {

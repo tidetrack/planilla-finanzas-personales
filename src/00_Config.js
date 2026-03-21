@@ -18,7 +18,8 @@ const SHEETS = {
     PLAN_CUENTAS: 'Plan de Cuentas',
     DATA_ENTRY: 'Hoja de Cargas',
     REGISTROS: 'Registros',
-    TIPOS_CAMBIO: 'Tipos de cambio'
+    TIPOS_CAMBIO: 'Tipos de cambio',
+    BD_ANTIGUA: 'BD antigua'
 };
 
 const HEADER_ROW = 3;
@@ -118,6 +119,10 @@ const MENU_CONFIG = {
         { separator: true },
         { name: '🔧 [Dev] Procesar Cargas', function: 'procesarCargas' },
         { name: '🔧 [Dev] Forzar Carga Histórica TC', function: 'forzarCargaHistorica' },
+        { separator: true },
+        { name: '🔧 [Dev] Analizar BD Antigua', function: 'analizarBdAntigua' },
+        { name: '🔧 [Dev] Migrar BD Antigua', function: 'migrarBdAntigua' },
+        { separator: true },
         { name: '🔧 [Dev] On/Off Protección Cuentas', function: 'togglePlanCuentasProtection' }
     ]
 };

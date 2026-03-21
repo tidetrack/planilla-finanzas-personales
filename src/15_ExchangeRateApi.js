@@ -71,19 +71,19 @@ function fetchInternationalRates(dateString) {
 }
 
 /**
- * Herramienta [Dev] para forzar la carga del histórico desde el 01/01/2026 hasta hoy.
+ * Herramienta [Dev] para forzar la carga del histórico desde el 01/01/2024 hasta hoy.
  * Sobreescribe o llena los datos en la hoja Tipos de Cambio para las 4 monedas.
  */
 function forzarCargaHistorica() {
     const ui = SpreadsheetApp.getUi();
-    const response = ui.alert('Forzar Carga Histórica', '¿Estás seguro de que querés cargar todos los tipos de cambio desde el 01/01/2026 hasta hoy? Esto demorará unos segundos y reescribirá el caché.', ui.ButtonSet.YES_NO);
+    const response = ui.alert('Forzar Carga Histórica', '¿Estás seguro de que querés cargar todos los tipos de cambio desde el 01/01/2024 hasta hoy? Esto demorará unos segundos y reescribirá el caché.', ui.ButtonSet.YES_NO);
     if (response !== ui.Button.YES) return;
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEETS.TIPOS_CAMBIO);
 
     // Fechas de rango
-    const startDate = new Date('2026-01-01T12:00:00Z');
+    const startDate = new Date('2024-01-01T12:00:00Z');
     const endDate = new Date();
     
     // Obtener array histórico de ARS (Llamada inicial levanta y purga caché en script)

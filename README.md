@@ -127,7 +127,7 @@ El proyecto se desarrolla con un equipo de agentes de IA especializados en [Anti
 
 ## Estado Actual del Proyecto
 
-**Versión**: `v0.6.0` | **Fecha**: 2026-03-20
+**Versión**: `v0.7.0` | **Fecha**: 2026-03-20
 
 | Sprint | Versión | Estado | Descripción |
 |---|---|---|---|
@@ -138,7 +138,8 @@ El proyecto se desarrolla con un equipo de agentes de IA especializados en [Anti
 | ABM Plan Cuentas | v0.4.1-v0.4.9 | Completo | ABM multi-entidad + optimización |
 | Hoja de Cargas | v0.5.1 | Completo | Data Entry interactivo autocompletado |
 | Registros Batch | v0.6.0 | Completo | Batch a Registros y Caché API Monedas |
-| Módulos Análisis | v0.7.0+ | Roadmap | Dashboard, Presupuestación, Anual |
+| Migración Legacy | v0.7.0 | Completo | Motor de importación BD Antigua 2024+ |
+| Módulos Análisis | v0.8.0+ | Roadmap | Dashboard, Presupuestación, Anual |
 
 ---
 
@@ -200,4 +201,4 @@ chore(config): agregar moneda AUD
 
 ---
 
-*Tidetrack Personal Finance Tracker - v0.6.0 - Última actualización: 2026-03-20*
+*Tidetrack Personal Finance Tracker - v0.7.0 - Última actualización: 2026-03-20*

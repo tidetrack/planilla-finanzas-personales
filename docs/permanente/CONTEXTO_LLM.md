@@ -67,6 +67,19 @@ Memoria caché estática de cotizaciones diarias para evitar exceder los límite
   - **TC_AUD**: Columnas **O:P**
   - **TC_EUR**: Columnas **R:S**
 
+### E. Hoja: `BD antigua` (Módulo de Migración Legacy)
+Herramienta permanente para transicionar usuarios desde versiones 2024.
+- **Fila de Encabezados**: 1
+- **Fila de Inicio de Datos**: 2
+- **Columnas**:
+  - **A**: Fecha
+  - **B**: Ingreso (Monto)
+  - **C**: Egreso (Monto)
+  - **D**: Detalle (Equivale a Cuenta)
+  - **E**: Medio
+  - **G**: Observación (Nota)
+  - **H**: Cuentas Faltantes (Columna calculada por el script de análisis)
+
 ---
 
 ## 3. Lógica Backend (Apps Script) Existente
