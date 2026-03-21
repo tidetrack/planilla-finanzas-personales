@@ -6,6 +6,22 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-21 - Auto-Sorting de Base de Datos Cached (v0.7.5)
+
+### Evento
+El usuario solicitó que la solapa de Base de Datos de `Tipos de Cambio` tuviera siempre el formato de lectura descendente (Z a A), alojando las fechas más recientes en la cima de la tabla (Fila 4), sin tener que depender de manipulación manual.
+
+### Decisiones Técnicas
+- Modificada la directriz central `appendMassive()` de `06_RegistrosService.js`.
+- Se incrustó un algoritmo hook condicional que escanea si la inserción (Target) es un caché modular `TC_*` (como `TC_ARS` o `TC_USD`).
+- Si es verdadero, el script mide el vector individual específico de esa tabla dentro del sheet global (ya que hay 4 tablas asimétricas viviendo una al lado de la otra). Captura hasta la última fila poblada de esa columna particular, la encierra y dispara automáticamente un `Range.sort(descending: true)` por cuenta propia sin fricción de usuario. 
+
+### Archivos Modificados
+- **`[MOD]` Backend**: `06_RegistrosService.js`.
+- **`[MOD]` Docs**: `ZZ_Changelog.js` y `HISTORIAL_DESARROLLO.md`.
+
+---
+
 ## 2026-03-21 - Nomenclatura Global a "Gastos" (v0.7.4)
 
 ### Evento

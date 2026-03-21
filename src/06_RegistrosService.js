@@ -182,4 +182,24 @@ function appendMassive(tableName, data2D, minRow = DATA_START_ROW) {
 
     const range = sheet.getRange(targetRow, startColIdx, paddedData.length, numCols);
     range.setValues(paddedData);
+
+    // [ALGORITMO AUTOMÁTICO] Si la inserción es de Tipos de Cambio, ordenarla temporalmente Z-A in situ
+    if (tableName.startsWith('TC_') && sheet.getName() === SHEETS.TIPOS_CAMBIO) {
+        const globalLast = sheet.getLastRow();
+        if (globalLast >= minRow) {
+            // Buscamos exacto el fondo de esta columna particular (porque las 4 tablas pueden tener distintos largos)
+            const colVector = sheet.getRange(minRow, startColIdx, globalLast - minRow + 1, 1).getValues();
+            let lastRealRow = minRow - 1;
+            for (let i = colVector.length - 1; i >= 0; i--) {
+                if (colVector[i][0] !== '') {
+                    lastRealRow = minRow + i;
+                    break;
+                }
+            }
+            if (lastRealRow >= minRow) {
+                const tableRange = sheet.getRange(minRow, startColIdx, lastRealRow - minRow + 1, numCols);
+                tableRange.sort({ column: startColIdx, ascending: false }); // Sort x fecha Z-A
+            }
+        }
+    }
 }

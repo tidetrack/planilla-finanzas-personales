@@ -5,6 +5,11 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-03-21] v0.7.5 - Auto-Sort en Tipos de Cambio:
+ * - Se le inyectó inteligencia a `appendMassive` para que al apendear hacia cachés `TC_` en la hoja `Tipos de Cambio`, lea la tabla lateral específica y la ordene cronológicamente de la Z a la A por cuenta propia.
+ * 
+ * ---
+ *
  * [2026-03-21] v0.7.4 - Rename Global "Costos" a "Gastos":
  * - Refactorización quirúrgica de constantes, endpoints y strings en frontend y backend (`COSTOS_FIJOS` -> `GASTOS_FIJOS`).
  * - Actualización de las herramientas de deducción en `RegistrosService` y `MigrationEngine`.
