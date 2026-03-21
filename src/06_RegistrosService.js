@@ -184,7 +184,7 @@ function appendMassive(tableName, data2D, minRow = DATA_START_ROW) {
     range.setValues(paddedData);
 
     // [ALGORITMO AUTOMÁTICO] Si la inserción es de Tipos de Cambio, ordenarla temporalmente Z-A in situ
-    if (tableName.startsWith('TC_') && sheet.getName() === SHEETS.TIPOS_CAMBIO) {
+    if (tableName.startsWith('TC_') && sheet.getName().toLowerCase() === SHEETS.TIPOS_CAMBIO.toLowerCase()) {
         // Aprovechamos targetRow y la longitud real del array insertado para no depender de sheet.getLastRow() que sufre lag asíncrono
         const finalBlockRow = targetRow + paddedData.length - 1;
         if (finalBlockRow >= minRow) {

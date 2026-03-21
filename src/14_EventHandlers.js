@@ -4,13 +4,13 @@
  */
 
 /**
- * Trigger Simple: onEdit
- * Se ejecuta automáticamente al modificarse cualquier celda en la planilla.
- * Actúa como un Router/Dispatcher hacia módulos o validadores específicos.
+ * Trigger Instalable: appOnEdit
+ * (Se renombró de 'onEdit' para evitar que se ejecute dos veces, una vez configurado el Instalable).
+ * Se ejecuta al modificarse cualquier celda en la planilla (requiere configuración manual en Triggers).
  * 
  * @param {GoogleAppsScript.Events.SheetsOnEdit} e Objeto del evento
  */
-function onEdit(e) {
+function appOnEdit(e) {
     if (!e || !e.range) return;
 
     const sheetName = e.source.getActiveSheet().getName();
@@ -52,12 +52,47 @@ function handlePlanCuentasEdit(e) {
 
         if (isMultiCell) {
             // No podemos revertir con exactitud múltiples celdas si tenían datos previos. 
-            // Sugerimos al usuario hacer Ctrl+Z.
-            e.source.toast(
-                'Edición múltiple bloqueada. ⚠️ Por favor usá Ctrl+Z (Deshacer) si borraste o sobreescribiste datos sin querer.',
-                'Protección Activa',
-                8
-            );
+            // Sugerimos al usuario hacer Ctrl+Z con una alerta intrusiva y visible.
+            const ui = SpreadsheetApp.getUi();
+            // Intentar mostrar diálogo HTML personalizado con diseño institucional (rojo, tipografía correcta).
+            // NOTA: Requiere que onEdit sea un disparador instalable. En trigger simple fallará e irá al catch.
+            try {
+                const htmlOutput = HtmlService.createHtmlOutput(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;600&display=swap" rel="stylesheet">
+                        <style>
+                            body { font-family: 'League Spartan', sans-serif; background-color: #fdf2f2; padding: 20px; color: #2d3748; }
+                            .alert-container { border-left: 4px solid #dc3545; padding-left: 15px; }
+                            h2 { color: #dc3545; margin-top: 0; font-weight: 600; }
+                            p { font-size: 14px; line-height: 1.5; }
+                            .highlight { background-color: #fce8e8; padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #dc3545; }
+                            /* Botón simulado para consistencia visual, aunque el modal debe cerrarse con la X nativa */
+                            .btn-close { display: inline-block; margin-top: 15px; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: 'League Spartan', sans-serif; font-weight: 600; text-align: center; width: 100%; box-sizing: border-box; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="alert-container">
+                            <h2>Edición Múltiple Bloqueada</h2>
+                            <p>El sistema de seguridad ha detectado la alteración de múltiples celdas en el Plan de Cuentas.</p>
+                            <p>Para proteger la integridad de la base de datos, el sistema no puede restaurar esto masivamente de forma automática.</p>
+                            <p>Si esto fue un accidente, por favor cierra esta ventana e inmediatamente presiona <span class="highlight">Ctrl + Z</span> (Deshacer) en tu teclado.</p>
+                            <button class="btn-close" onclick="google.script.host.close()">Entendido</button>
+                        </div>
+                    </body>
+                    </html>
+                `).setWidth(450).setHeight(340);
+                
+                ui.showModalDialog(htmlOutput, 'Alerta de Seguridad Crítica');
+            } catch (error) {
+                // Fallback a alert limpio nativo (sin emojis) si se ejecuta desde el OnEdit simple
+                ui.alert(
+                    'Edición Múltiple Detectada',
+                    'El sistema de protección detectó que borraste o modificaste múltiples celdas a la vez en el Plan de Cuentas.\n\nAl no poder restaurarlas automáticamente, te solicitamos que presiones "Aceptar" e inmediatamente uses Ctrl+Z (Deshacer) en tu teclado si esto fue un accidente.',
+                    ui.ButtonSet.OK
+                );
+            }
         } else {
             if (e.oldValue !== undefined) {
                 range.setValue(e.oldValue);
@@ -84,11 +119,11 @@ function togglePlanCuentasProtection() {
     const isCurrentlyProtected = currentState !== 'false';
     const ui = SpreadsheetApp.getUi();
     
-    const estadoStr = isCurrentlyProtected ? '🔒 ACTIVADA' : '🔓 DESACTIVADA';
+    const estadoStr = isCurrentlyProtected ? 'ACTIVADA' : 'DESACTIVADA';
     
     const response = ui.alert(
         'Configuración de Protección',
-        `La protección de la hoja "Plan de Cuentas" actualmente se encuentra:\n\n${estadoStr}\n\n¿Deseás cambiar este estado?`,
+        `La protección de la hoja "Plan de Cuentas" actualmente se encuentra:\n\n[ ${estadoStr} ]\n\n¿Deseás cambiar este estado?`,
         ui.ButtonSet.YES_NO
     );
 
@@ -96,14 +131,14 @@ function togglePlanCuentasProtection() {
         if (isCurrentlyProtected) {
             props.setProperty('PC_PROTECTION_ENABLED', 'false');
             ui.alert(
-                '🔓 Protección Desactivada',
-                'Ahora podés editar el Plan de Cuentas libremente en la grilla sin que el sistema revierta tus cambios.\n\n⚠️ RECORDÁ reactivarla cuando termines para evitar daños accidentales a la base de datos.',
+                'Protección Desactivada',
+                'Ahora podés editar el Plan de Cuentas libremente en la grilla sin que el sistema revierta tus cambios.\n\nRECORDÁ reactivarla cuando termines para evitar daños accidentales a la base de datos.',
                 ui.ButtonSet.OK
             );
         } else {
             props.setProperty('PC_PROTECTION_ENABLED', 'true');
             ui.alert(
-                '🔒 Protección Activada',
+                'Protección Activada',
                 'La hoja Plan de Cuentas vuelve a estar blindada contra ediciones manuales accidentales.',
                 ui.ButtonSet.OK
             );
