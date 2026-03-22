@@ -5,6 +5,11 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-03-22] v0.7.9 - Fórmulas Nativas Tiempo Real (RealTime API):
+ * - Se integraron 3 Custom Functions (`=TIDETRACK_USD()`, `=TIDETRACK_EUR()`, `=TIDETRACK_AUD()`) disponibles globalmente para invocar desde cualquier celda de Google Sheets.
+ * 
+ * ---
+ *
  * [2026-03-21] v0.7.8 - Fix Case Sensitivity en Auto-Sort:
  * - Se detectó que el Auto-Sorting fallaba silenciosamente si la pestaña física se llamaba "Tipos de Cambio" en lugar de "Tipos de cambio". Se aplicó un bypass de casing (`.toLowerCase()`).
  * 

@@ -156,3 +156,42 @@ function forzarCargaHistorica() {
 
     ss.toast(`Se generaron ${arsAppend.length} registros históricos por divisa.`, '¡Carga Exitosa!', 6);
 }
+
+// ============================================
+// CUSTOM FORMULAS (Funciones Personalizadas para celdas)
+// ============================================
+
+/**
+ * Devuelve la cotización Oficial del Dólar Estadounidense (Venta) de hoy.
+ * Úsala en cualquier celda escribiendo: =TIDETRACK_USD()
+ * @customfunction
+ */
+function TIDETRACK_USD() {
+    const today = formatDateISO(new Date());
+    return fetchArsRate(today);
+}
+
+/**
+ * Devuelve la cotización del Euro triangulada a ARS de hoy.
+ * Úsala en cualquier celda escribiendo: =TIDETRACK_EUR()
+ * @customfunction
+ */
+function TIDETRACK_EUR() {
+    const today = formatDateISO(new Date());
+    const ars = fetchArsRate(today);
+    const intl = fetchInternationalRates(today);
+    return ars / intl.EUR;
+}
+
+/**
+ * Devuelve la cotización del Dólar Australiano triangulada a ARS de hoy.
+ * Úsala en cualquier celda escribiendo: =TIDETRACK_AUD()
+ * @customfunction
+ */
+function TIDETRACK_AUD() {
+    const today = formatDateISO(new Date());
+    const ars = fetchArsRate(today);
+    const intl = fetchInternationalRates(today);
+    return ars / intl.AUD;
+}
+
