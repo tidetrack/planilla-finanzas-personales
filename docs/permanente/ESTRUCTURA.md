@@ -40,6 +40,7 @@ planilla-finanzas-personales/
 │ │ ├── PRINCIPIOS_DISEÑO.md # Reglas de UX y experiencia de usuario
 │ │ ├── RESUMEN_PROYECTO.md # Visión general de Tidetrack
 │ │ ├── ROADMAP_PRODUCTO.md # Etapas y prioridades del producto
+│ │ ├── TIDETRACK_ARQUITECTURA_ESTRICTA.json # JSON crudo generado (Para NotebookLM)
 │ │ └── database_er_diagram.png # Diagrama ER de relaciones
 │ ├── sesiones/ # Notas de sesiones de trabajo específicas
 │ │ └── Notas Fran.md # Notas personales del desarrollador
