@@ -128,6 +128,35 @@ Implementación:
 **Negativas:**
 - ️ Impide tener la data "viva" de las tablas convertidas instantes de la carga; requiere apretar "Cargar Lote".
 
+### ADR-005: Estructura de Bloques Analíticos y Margen de UI (Offset)
+
+**Fecha**: 2026-03-23
+
+#### Contexto
+A través del escrutinio profundo del JSON de arquitectura, se detectó un patrón de diseño universal no documentado previamente: la convivencia entre "Frontends" y "Backends" en Google Sheets requiere de manipulación visual del DOM de la grilla.
+
+#### Decisión
+**Implementar un "Offset" estructural en las Bases de Datos y "Frozen Columns" en los Tableros.**
+
+Implementación:
+- **Tableros / UI**: Hojas como `Inicio`, `Tablero` y `Cargas` tienen congeladas exactamente 6 columnas a la izquierda. Esto genera un "Sidebar" permanente mientras el escrutinio horizontal fluye a la derecha.
+- **Bases de Datos (Data Lakes)**: Hojas como `Registros` y `Plan de Cuentas` comienzan su verdadero header en la columna `H` o `I` (ej: `"Registros."`). Las primeras 7 columnas quedan vacías/inútiles a nivel backend para reservar el espacio físico en caso de que un usuario scrollee o para alojar metadatos ocultos.
+
+### ADR-006: Motores Singulares de Cálculo (Hidden Engines)
+
+**Fecha**: 2026-03-23
+
+#### Contexto
+Procesar métricas matriciales directamente en la hoja `Tablero` provocaba anidamientos absurdos de `SUMIFS` e interfaces frágiles frente a manipulaciones del usuario.
+
+#### Decisión
+**Segregar el procesamiento matricial en Hojas Ocultas que actúan como Motores de Cálculo.**
+
+Implementación:
+- La hoja oculta `CALCU` absorbe el cruce multidimensional (Mes vs Rubro) resolviendo `SUMIFS` a lo largo de 30 columnas y 30 filas.
+- La hoja oculta `ANUAL` consolida la data empaquetada.
+- Las vistas públicas (el Frontend) solo consumen estos resultados, logrando una estricta Separación de Concerns.
+
 ---
 
 ## ️ Arquitectura del Sistema

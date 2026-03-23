@@ -28,7 +28,9 @@ planilla-finanzas-personales/
 │ ├── permanente/ # Documentos vivos (actualización continua)
 │ │ ├── ARQUITECTURA_AGENTICA.md # Sistema multi-agente de desarrollo
 │ │ ├── CHANGELOG.md # Historial completo de versiones
+│ │ ├── CONTEXTO_DATOS.md # Diccionario 100% fiel de Backend (Offsets, reglas)
 │ │ ├── CONTEXTO_NEGOCIO.md # Círculo de oro, modelo de negocio
+│ │ ├── CONTEXTO_UI.md # Arquitectura de los paneles interactivos
 │ │ ├── DATABASE_SCHEMA.md # Esquema de tablas en Google Sheets
 │ │ ├── ESTRUCTURA.md # Este archivo. Mapa de carpetas.
 │ │ ├── GUIA_ARQUITECTURA.md # ADRs y decisiones técnicas formales
@@ -54,6 +56,7 @@ planilla-finanzas-personales/
 │ │ ├── auto-changelog/ # Versionado automático
 │ │ ├── github-docs/ # Documentación técnica pública GitHub
 │ │ ├── github-sync/ # Commits y push a repositorio
+│ │ ├── data-mapper/ # Extrae y mapea JSONs de arquitectura
 │ │ ├── lean-code-expert/ # Limpieza y refactorización
 │ │ ├── creador-de-skills/ # Generador de nuevos skills
 │ │ ├── gsd/ # Get Shit Done: planificación y ejecución
@@ -127,4 +130,4 @@ El pipeline estándar para cerrar cualquier feature:
 
 ---
 
-*Tidetrack - ESTRUCTURA.md - v0.4.9 - 2026-03-20*
+*Tidetrack - ESTRUCTURA.md - v0.8.0 - 2026-03-23*

@@ -11,13 +11,18 @@ Documentación detallada de cada módulo del sistema modular de Tidetrack.
 
 | # | Módulo | Capa | Estado |
 |---|--------|------|--------|
-| 00 | Config | Configuración | v0.4.8 |
+| 00 | Config | Configuración | v0.8.0 |
 | 01 | Version | Configuración | v0.1.0 |
 | 02 | Utils | Utilidades | v0.3.0 |
-| 03 | SheetManager | Acceso a Datos | v0.3.0 |
+| 03 | SheetManager | Acceso a Datos | v0.4.9 |
+| 06 | RegistrosService | Servicios / Lógica | v0.6.0 |
 | 11 | UIService | Interfaz / ABM | v0.4.8 |
-| 12 | MenuService | Interfaz | v0.4.8 |
-| 13 | NavigationService | Interfaz | v0.4.0 |
+| 12 | MenuService | Interfaz | v0.8.0 |
+| 13 | NavigationService| Interfaz | v0.4.0 |
+| 14 | EventHandlers | Eventos (onEdit) | v0.7.6 |
+| 15 | ExchangeRateApi | API Externa | v0.7.1 |
+| 98 | DevTools_Scanner | Herramientas / JSON | v0.8.0 |
+| 99 | MigrationLogic | Base de Datos | v0.7.0 |
 
 **Archivos HTML UI:**
 - UI_AbmPlanCuentas.html - v0.4.8 (ABM multi-entidad del Plan de Cuentas)
@@ -488,7 +493,7 @@ Cuando crees un nuevo módulo (ej: `07_MedioPagoService.js`):
 
 ---
 
-**Versión de la Guía**: 3.0 
-**Última actualización**: 2026-03-17 
-**Módulos Documentados**: 7 de 7 (100% corresponden a archivos existentes) 
+**Versión de la Guía**: 3.5 
+**Última actualización**: 2026-03-23 
+**Módulos Documentados**: 12 de 12 (100% corresponden a archivos existentes) 
 **Archivos HTML UI**: 2 de 2 (activos en producción)

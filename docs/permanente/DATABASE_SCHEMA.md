@@ -10,6 +10,9 @@ Esquema de base de datos implementado en **Google Sheets** con disciplina relaci
 
 **Decisión de diseño:** Usar la hoja **DATA-ENTRY** de Google Sheets como backend con estructura relacional estricta.
 
+> [!WARNING]  
+> **Offset Estructural (v0.8.0):** El posicionamiento exacto de letras (ej. B3:D3) documentado en este esquema representa el diseño lógico original. Físicamente, todas las hojas de la Base de Datos han sufrido un desplazamiento horizontal (**Offset**) de entre 6 y 8 columnas a la izquierda. Ver `CONTEXTO_DATOS.md` y `ADR-005` para más detalles sobre cómo interactúan los márgenes de UI con los datos puros.
+
 **Ventajas:**
 - Facilidad operativa (no requiere servidor)
 - Accesibilidad inmediata

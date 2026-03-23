@@ -6,6 +6,22 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-03-23 - Escrutinio Arquitectónico v1.0 (Infrastructure as Code)
+
+### Evento
+El usuario proporcionó un JSON masivo (`TIDETRACK_ARQUITECTURA_ESTRICTA.json`) generado desde la planilla para que la inteligencia artificial realice un barrido 100% fiel de toda la arquitectura de datos, fórmulas y metadatos visuales, sin omitir un solo detalle.
+
+### Decisiones Técnicas
+- Se implementó un protocolo mediante el agente `@data-mapper` para separar el paradigma documental en dos grandes ejes: `CONTEXTO_DATOS.md` (para Bases de Datos) y `CONTEXTO_UI.md` (para tableros e interfaces interactuables).
+- Se ejecutó un script en Node.js que parseó los 580KB de datos brutos, aislando patrones de fórmulas matriciales `QUERY` y `LET`, identificando el offset permanente de 6 a 8 columnas en todas las hojas.
+- Se actualizaron las reglas canónicas en `GUIA_ARQUITECTURA.md` incluyendo el ADR-005 (Offset estructural) y ADR-006 (Hidden Engines).
+- Se preservó el JSON original en `_backup/` para referencias futuras inmutables.
+
+### Archivos Modificados
+- **`[MOD]` Docs**: `GUIA_ARQUITECTURA.md`, `HISTORIAL_DESARROLLO.md`.
+- **`[NEW]` Docs**: `CONTEXTO_DATOS.md`, `CONTEXTO_UI.md`.
+- **`[DEL]` Docs**: `CONTEXTO_LLM.md` (dividido en los dos archivos anteriores).
+
 ## 2026-03-21 - Fix Auto-Sorting Sync Cache (v0.7.7)
 
 ### Evento

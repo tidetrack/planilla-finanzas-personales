@@ -124,7 +124,9 @@ const MENU_CONFIG = {
         { name: '🔧 [Dev] Migrar BD Antigua', function: 'migrarBdAntigua' },
         { name: '🔧 [Dev] Recalcular TC en Registros', function: 'recalcularTcRegistros' },
         { separator: true },
-        { name: '🔧 [Dev] On/Off Protección Cuentas', function: 'togglePlanCuentasProtection' }
+        { name: '🔧 [Dev] On/Off Protección Cuentas', function: 'togglePlanCuentasProtection' },
+        { separator: true },
+        { name: '🤖 [DevTools] Exportar Arquitectura', function: 'exportarArquitecturaTotal' }
     ]
 };
 

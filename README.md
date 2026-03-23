@@ -17,6 +17,8 @@ Este repositorio sirve como documentación técnica completa. Cada sección es u
 | [Módulos del Sistema](./docs/permanente/GUIA_MODULOS.md) | Documentación técnica de cada archivo `.js`. |
 | [Guía de Arquitectura + ADRs](./docs/permanente/GUIA_ARQUITECTURA.md) | Decisiones técnicas formales (Architecture Decision Records). |
 | [Historial de Desarrollo](./docs/permanente/HISTORIAL_DESARROLLO.md) | Bitácora cronológica completa del proyecto. |
+| [Contexto de Datos](./docs/permanente/CONTEXTO_DATOS.md) | Diccionario estructural de los Data Lakes (Backend). |
+| [Contexto UI](./docs/permanente/CONTEXTO_UI.md) | Arquitectura de los paneles visuales interactivos. |
 | [Schema de Base de Datos](./docs/permanente/DATABASE_SCHEMA.md) | Estructura de tablas en Google Sheets. |
 | [Contexto de Negocio](./docs/permanente/CONTEXTO_NEGOCIO.md) | Círculo de oro, propuesta de valor y estrategia. |
 | [Roadmap de Producto](./docs/permanente/ROADMAP_PRODUCTO.md) | Etapas del MVP a la plataforma. |
@@ -201,4 +203,4 @@ chore(config): agregar moneda AUD
 
 ---
 
-*Tidetrack Personal Finance Tracker - v0.7.0 - Última actualización: 2026-03-20*
+*Tidetrack Personal Finance Tracker - v0.8.0 - Última actualización: 2026-03-23*

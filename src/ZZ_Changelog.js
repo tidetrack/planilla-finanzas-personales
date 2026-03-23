@@ -5,6 +5,13 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-03-23] v0.8.0 - Herramientas de Escrutinio Arquitectónico:
+ * - Módulo DevTools añadido: `98_DevTools_Scanner.js`. 
+ * - Permite exportar el 100% de la arquitectura de la planilla (metadatos, fórmulas, colores, offsets) a un snapshot JSON.
+ * - Actualización de permisos de Drive en `appsscript.json`.
+ * 
+ * ---
+ *
  * [2026-03-22] v0.7.9 - Fórmulas Nativas Tiempo Real (RealTime API):
  * - Se integraron 3 Custom Functions (`=TIDETRACK_USD()`, `=TIDETRACK_EUR()`, `=TIDETRACK_AUD()`) disponibles globalmente para invocar desde cualquier celda de Google Sheets.
  * 
