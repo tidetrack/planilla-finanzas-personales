@@ -6,6 +6,38 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-06-05 - Cierre Fase 1: auditoría de módulos deprecados y gap de validación
+
+### Evento
+Cierre del último ítem de la Fase 1 de `PLAN_IMPLEMENTACION.md`: verificar que la lógica de los módulos deprecados en `_backup/legacy_src_20260317/` fue absorbida por el `src/` actual (v0.8.0). Auditoría ejecutada por el agente `qa-tester` (read-only) con los dos hallazgos críticos verificados manualmente contra el código.
+
+### Hallazgo principal
+La migración de marzo no fue un porting 1:1 sino una **reescritura arquitectónica deliberada**: el modelo relacional con IDs (`CUENTAS`, `MEDIOS_PAGO`, `TRANSACCIONES` con `trx_id`/`cuenta_id`/`medio_id`) se reemplazó por strings planos en las hojas del Plan de Cuentas. Ninguna función legacy sobrevive con el mismo nombre en `src/`.
+
+### Destino de cada módulo deprecado
+- `04_DataValidation.js` -> PARCIAL. Validación de nombre vacío/duplicado quedó inline en `11_UIService.js`; los chequeos de integridad referencial (FK) no se reimplementaron.
+- `06_ExchangeRateService.js` -> PARCIAL. Fetch de cotizaciones reescrito en `15_ExchangeRateApi.js` (argentinadatos + Frankfurter + custom functions). Se eliminaron el CRUD programático de TIPOS_CAMBIO, el trigger horario y la hoja auxiliar.
+- `07_MedioPagoService.js` / `08_CuentaService.js` -> PARCIAL. CRUD absorbido en `11_UIService.js` (ABM) + `03_SheetManager.js`. Se perdió el FK check antes de eliminar.
+- `09_TransactionService.js` -> PARCIAL. Ingesta batch reemplazada por `06_RegistrosService.js:procesarCargas`. Lectura/update/delete individual y resumen estadístico no reimplementados (no son gap inmediato: el Tablero usa fórmulas QUERY).
+- `98_DataSeeder.js` -> DROPPED intencional. El slot 98 lo ocupa `98_DevTools_Scanner.js` (función distinta).
+- `TESTS_Sprint5.js` -> DROPPED obsoleto. Testea un modelo de datos que ya no existe.
+
+### Gaps de validación detectados (deuda derivada a appscript-backend)
+La simplificación a strings planos eliminó la capa de integridad referencial sin reemplazo. Verificados en código:
+- **[CRITICO] Gap 1 — Delete sin FK check.** `11_UIService.js:deleteAbmRecord` (línea 226) llama `deleteRow` sin verificar si la cuenta/medio tiene Registros asociados. Riesgo de Registros huérfanos silenciosos.
+- **[CRITICO] Gap 2 — Carga sin validar contra Plan de Cuentas.** `06_RegistrosService.js:procesarCargas` (líneas 66-71) deduce `tipoCuenta` y, si la cuenta no matchea ningún catálogo, la escribe igual con `tipo_cuenta=''` sin alertar. Severidad real condicionada a si la Hoja de Cargas usa dropdowns (pendiente de confirmar con Cowork).
+- **[MODERADO] Gap 3 — Cotización sin validar `tc > 0`.** `procesarCargas` congela el valor devuelto por la API sin chequear que sea > 0.
+- **[BAJO] Gap 4 — Sin operaciones de lectura/query programática del ledger.** Deuda para presupuestación, resumen anual y la futura webapp.
+- **[BAJO] Gap 5 — Sin trigger horario de cotizaciones.** Solo se actualizan vía ejecución manual de `[Dev] Forzar Carga Histórica TC`.
+
+### Conclusión
+La absorción funcional del core está completa y la reescritura está justificada para el MVP en Sheets. Los Gaps 1 y 2 son los únicos con impacto operacional inmediato y quedan como pendientes de evaluación de fix por `appscript-backend`. Con esto se da por cerrada la Fase 1 de sincronización de conocimiento.
+
+### Archivos Modificados
+- **`[MOD]` Docs**: `HISTORIAL_DESARROLLO.md`.
+
+---
+
 ## 2026-06-05 - Sync de metadata y limpieza documental (v0.8.0 mantenimiento)
 
 ### Evento
