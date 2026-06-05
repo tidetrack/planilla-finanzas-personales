@@ -9,3 +9,8 @@ package-lock.json
 .DS_Store
 .vscode/
 _backup/
+
+# Secrets - NUNCA versionar
+.env
+.env.local
+.env.*.local
