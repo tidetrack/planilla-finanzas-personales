@@ -2,7 +2,7 @@
 
 > Propósito: Fuente de verdad sobre la organización del repositorio. Toda nueva carpeta o archivo debe registrarse aquí antes de crearse. Los agentes de IA usan este documento como referencia canónica.
 
-Versión: v0.4.9 | Última actualización: 2026-03-20
+Versión: v0.8.0 | Última actualización: 2026-06-05
 
 ---
 
@@ -12,60 +12,97 @@ Versión: v0.4.9 | Última actualización: 2026-03-20
 planilla-finanzas-personales/
 │
 ├── src/ # Código fuente (Apps Script)
-│ ├── 00_Config.js # Constantes, rangos, enums, monedas
+│ ├── 00_Config.js # Constantes, rangos, enums, monedas, menús
 │ ├── 01_Version.js # Control de versión semántica
-│ ├── 02_Utils.js # Utilidades generales y logging
-│ ├── 03_SheetManager.js # Layer de acceso a datos (CRUD sobre Sheets)
-│ ├── 11_UIService.js # Servicios de UI y endpoints GAS
+│ ├── 02_Utils.js # Utilidades generales y logging (logError/logInfo/logSuccess)
+│ ├── 03_SheetManager.js # Layer de acceso a datos (getTableData, appendRow, updateRow, deleteRow)
+│ ├── 06_RegistrosService.js # Pipeline batch procesarCargas(): validación, deducción, cotizaciones
+│ ├── 11_UIService.js # Endpoints para google.script.run (ABM forms)
 │ ├── 12_MenuService.js # Menú personalizado "Tidetrack"
-│ ├── 13_NavigationService.js # Navegación entre hojas
-│ ├── UI_SharedStyles.html # Design System CSS compartido
+│ ├── 13_NavigationService.js # Navegación entre hojas con toast
+│ ├── 14_EventHandlers.js # Triggers: appOnEdit (protección Plan Cuentas, autocomplete Cargas)
+│ ├── 15_ExchangeRateApi.js # Fetch cotizaciones + custom functions TIDETRACK_USD/EUR/AUD
+│ ├── 98_DevTools_Scanner.js # Exportar JSON de arquitectura completa
+│ ├── 99_MigrationLogic.js # Migración desde BD antigua (legacy)
+│ ├── UI_SharedStyles.html # Design System CSS compartido (neumorphic, League Spartan)
 │ ├── UI_AbmPlanCuentas.html # ABM multi-entidad Plan de Cuentas
 │ ├── ZZ_Changelog.js # Historial de versiones in-code
 │ └── appsscript.json # Manifest OAuth de Apps Script
 │
 ├── docs/ # Documentación del proyecto
 │ ├── permanente/ # Documentos vivos (actualización continua)
-│ │ ├── ARQUITECTURA_AGENTICA.md # Sistema multi-agente de desarrollo
+│ │ ├── ARQUITECTURA_AGENTICA.md # Sistema multi-agente de desarrollo (legacy Antigravity)
 │ │ ├── CHANGELOG.md # Historial completo de versiones
-│ │ ├── CONTEXTO_DATOS.md # Diccionario 100% fiel de Backend (Offsets, reglas)
+│ │ ├── CONTEXTO_DATOS.md # Diccionario 100% fiel de Backend (offsets, reglas)
 │ │ ├── CONTEXTO_NEGOCIO.md # Círculo de oro, modelo de negocio
 │ │ ├── CONTEXTO_UI.md # Arquitectura de los paneles interactivos
 │ │ ├── DATABASE_SCHEMA.md # Esquema de tablas en Google Sheets
-│ │ ├── ESTRUCTURA.md # Este archivo. Mapa de carpetas.
+│ │ ├── ESTRUCTURA.md # Este archivo. Mapa de carpetas. Fuente de verdad.
+│ │ ├── FORMULAS_TABLERO.md # Código fuente y lógica de fórmulas del Tablero
 │ │ ├── GUIA_ARQUITECTURA.md # ADRs y decisiones técnicas formales
 │ │ ├── GUIA_MODULOS.md # Documentación técnica de módulos .js
 │ │ ├── HISTORIAL_DESARROLLO.md # Bitácora cronológica del proyecto
+│ │ ├── MAPA_HOJAS.md # GIDs, layout y dependencias de todas las hojas (incl. ocultas)
+│ │ ├── PLAN_IMPLEMENTACION.md # Hoja de ruta dual Claude Code + Cowork
 │ │ ├── planilla-reinversión.md # Documento fundacional del pivote
 │ │ ├── PRINCIPIOS_DISEÑO.md # Reglas de UX y experiencia de usuario
+│ │ ├── PROMPT_MAESTRO.md # Prompts de referencia para el ecosistema agéntico
 │ │ ├── RESUMEN_PROYECTO.md # Visión general de Tidetrack
 │ │ ├── ROADMAP_PRODUCTO.md # Etapas y prioridades del producto
-│ │ ├── TIDETRACK_ARQUITECTURA_ESTRICTA.json # JSON crudo generado (Para NotebookLM)
+│ │ ├── TABLERO_ARQUITECTURA.md # Arquitectura del Tablero (en desarrollo)
+│ │ ├── TIDETRACK_ARQUITECTURA_ESTRICTA.json # JSON crudo generado por DevTools (para NotebookLM)
 │ │ └── database_er_diagram.png # Diagrama ER de relaciones
 │ ├── sesiones/ # Notas de sesiones de trabajo específicas
-│ │ └── Notas Fran.md # Notas personales del desarrollador
+│ │ ├── 2026-02-13_v0.6.0_Simplificacion-Monedas.md # Sesión simplificación de monedas
+│ │ ├── 2026-06-05_bootstrap-gobernanza-claude-code.md # Bootstrap ecosistema Claude Code
+│ │ ├── Notas Fran.md # Notas personales del desarrollador
+│ │ ├── SPRINT_2_COMPLETO_2026-01-18.md # Cierre Sprint 2
+│ │ ├── SPRINT_3_COMPLETO_2026-01-18.md # Cierre Sprint 3
+│ │ ├── TESTING_DAY_0.md # Testing inicial
+│ │ ├── TESTING_SPRINT_0.md # Testing Sprint 0
+│ │ └── TESTING_SPRINT_1.md # Testing Sprint 1
 │ ├── PRODUCT_BACKLOG.md # Sprints y backlog priorizado
 │ ├── REGLAS_AGENTE.md # Convenciones de desarrollo
 │ └── README.md # Índice de documentación
 │
-├── .agent/ # Configuración del ecosistema agéntico
-│ ├── skills/ # Un directorio por agente
-│ │ ├── tidetrack-pm/ # Dispatcher y orquestador central
+├── .claude/ # Capa de gobernanza Claude Code (manda cuando se trabaja desde Claude Code)
+│ ├── agents/ # Subagentes especializados (7 agentes activos)
+│ │ ├── tidetrack-pm.md # Dispatcher y orquestador central
+│ │ ├── appscript-backend.md # Experto en lógica Apps Script (src/*.js, pipelines, deploy)
+│ │ ├── appscript-ui.md # Especialista en HtmlService y UI embebida
+│ │ ├── docs-keeper.md # Coherencia documental (changelog, ADRs, estructura)
+│ │ ├── qa-tester.md # Validación pipeline, integridad relacional, idempotencia
+│ │ ├── lean-refactor.md # Limpieza y refactorización sin cambio de comportamiento
+│ │ └── security-auditor.md # Scopes OAuth, secrets, funciones expuestas
+│ └── agent-memory/ # Memoria persistente de agentes
+│   └── tidetrack-pm/ # Memoria del PM (proyecto, usuario, reglas de coordinación)
+│     ├── MEMORY.md
+│     ├── feedback_coordination_rules.md
+│     ├── project_agent_team.md
+│     └── user_franco.md
+│
+├── .agent/ # Capa legacy Antigravity/Gemini (referencia histórica)
+│ ├── skills/ # Skills Antigravity (un directorio por agente legacy)
+│ │ ├── tidetrack-pm/ # PM legacy (Antigravity)
 │ │ ├── agente-contextual/ # Bibliotecario: historial + ADRs
-│ │ ├── appscript-backend/ # Experto en lógica Apps Script
-│ │ ├── frontend-ui-ux/ # Especialista en HtmlService y UI
-│ │ ├── auto-changelog/ # Versionado automático
-│ │ ├── github-docs/ # Documentación técnica pública GitHub
-│ │ ├── github-sync/ # Commits y push a repositorio
-│ │ ├── data-mapper/ # Extrae y mapea JSONs de arquitectura
-│ │ ├── lean-code-expert/ # Limpieza y refactorización
-│ │ ├── creador-de-skills/ # Generador de nuevos skills
-│ │ ├── gsd/ # Get Shit Done: planificación y ejecución
-│ │ └── update-docs/ # Actualización de documentación
-│ ├── rules/ # Reglas de cumplimiento obligatorio
+│ │ ├── appscript-backend/ # Backend legacy
+│ │ ├── frontend-ui-ux/ # UI legacy
+│ │ ├── auto-changelog/ # Versionado automático legacy
+│ │ ├── github-docs/ # Documentación legacy
+│ │ ├── github-sync/ # Sync legacy
+│ │ ├── data-mapper/ # Mapeo de JSONs legacy
+│ │ ├── lean-code-expert/ # Refactorización legacy
+│ │ ├── creador-de-skills/ # Generador de skills legacy
+│ │ ├── gsd/ # Get Shit Done legacy
+│ │ └── update-docs/ # Actualización de docs legacy
+│ ├── rules/ # Reglas de cumplimiento obligatorio (compartidas Claude Code + Antigravity)
+│ │ ├── appscript-link.md # Vínculo y convenciones para Apps Script
+│ │ ├── changelog-obligatorio.md # Actualización de changelog en cada iteración
+│ │ ├── contexto-en-codigo.md # Cabeceras conceptuales en archivos .js/.html
 │ │ ├── dispatcher.md # Lógica de enrutamiento de agentes
-│ │ ├── no-emojis.md # Regla estricta de tono profesional
-│ │ └── estructura-obligatoria.md # Reglas de estructura de carpetas
+│ │ ├── documentacion-conceptual.md # Doc conceptual por feature mayor en docs/permanente/
+│ │ ├── estructura-obligatoria.md # Reglas de estructura de carpetas
+│ │ └── no-emojis.md # Regla estricta de tono profesional
 │ └── workflows/ # Flujos de trabajo reutilizables
 │
 ├── scripts/ # Herramientas de automatización local
@@ -85,7 +122,7 @@ planilla-finanzas-personales/
 
 ## Reglas de Estructura (Obligatorias)
 
-Estas reglas son aplicadas por el agente `agente-contextual` y definidas en `.agent/rules/estructura-obligatoria.md`:
+Estas reglas son definidas en `.agent/rules/estructura-obligatoria.md` y aplicadas por `docs-keeper` (Claude Code) y `agente-contextual` (Antigravity):
 
 | Regla | Detalle |
 |---|---|
@@ -103,12 +140,11 @@ Estas reglas son aplicadas por el agente `agente-contextual` y definidas en `.ag
 El pipeline estándar para cerrar cualquier feature:
 
 ```
-1. appscript-backend → implementa lógica GAS
-2. appscript-ui → implementa popup/interfaz HTML
-3. lean-code-expert → limpieza final (si aplica)
-4. auto-changelog → actualiza ZZ_Changelog.js
-5. github-docs → actualiza README + docs públicos ← este archivo
-6. github-sync → commit semántico + push
+1. appscript-backend → implementa lógica GAS (src/*.js)
+2. appscript-ui      → implementa popup/interfaz HTML
+3. lean-refactor     → limpieza final (si aplica)
+4. docs-keeper       → actualiza ZZ_Changelog.js + HISTORIAL_DESARROLLO.md + ESTRUCTURA.md
+5. tidetrack-pm      → commit semántico + push
 ```
 
 ---
@@ -121,14 +157,19 @@ El pipeline estándar para cerrar cualquier feature:
 | `01_Version.js` | Activo | v0.1.0 |
 | `02_Utils.js` | Activo | v0.1.0 |
 | `03_SheetManager.js` | Activo - optimizado en v0.4.9 | v0.1.0 |
+| `06_RegistrosService.js` | Activo - pipeline batch procesarCargas() | v0.5.0 |
 | `11_UIService.js` | Activo - endpoints ABM en v0.4.7 | v0.4.0 |
 | `12_MenuService.js` | Activo | v0.4.0 |
 | `13_NavigationService.js` | Activo | v0.4.0 |
-| `UI_SharedStyles.html` | Activo - Design System institucional | v0.4.3 |
-| `UI_AbmPlanCuentas.html` | Activo - ABM en refinamiento | v0.4.1 |
+| `14_EventHandlers.js` | Activo - appOnEdit con autocomplete y protección | v0.5.0 |
+| `15_ExchangeRateApi.js` | Activo - cotizaciones + custom functions GAS | v0.6.0 |
+| `98_DevTools_Scanner.js` | Activo - exporta JSON de arquitectura completa | v0.8.0 |
+| `99_MigrationLogic.js` | Activo - migración desde BD antigua (legacy) | v0.5.0 |
+| `UI_SharedStyles.html` | Activo - Design System institucional (neumorphic) | v0.4.3 |
+| `UI_AbmPlanCuentas.html` | Activo - ABM multi-entidad Plan de Cuentas | v0.4.1 |
 | `ZZ_Changelog.js` | Activo | v0.4.0 |
 | `appsscript.json` | Activo | v0.1.0 |
 
 ---
 
-*Tidetrack - ESTRUCTURA.md - v0.8.0 - 2026-03-23*
+*Tidetrack - ESTRUCTURA.md - v0.8.0 - 2026-06-05*
