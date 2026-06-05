@@ -49,7 +49,6 @@ planilla-finanzas-personales/
 │ │ ├── PROMPT_MAESTRO.md # Prompts de referencia para el ecosistema agéntico
 │ │ ├── RESUMEN_PROYECTO.md # Visión general de Tidetrack
 │ │ ├── ROADMAP_PRODUCTO.md # Etapas y prioridades del producto
-│ │ ├── TABLERO_ARQUITECTURA.md # Arquitectura del Tablero (en desarrollo)
 │ │ ├── TIDETRACK_ARQUITECTURA_ESTRICTA.json # JSON crudo generado por DevTools (para NotebookLM)
 │ │ └── database_er_diagram.png # Diagrama ER de relaciones
 │ ├── sesiones/ # Notas de sesiones de trabajo específicas

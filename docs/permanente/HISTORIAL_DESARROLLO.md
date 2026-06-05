@@ -6,6 +6,23 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-06-05 - Sync de metadata y limpieza documental (v0.8.0 mantenimiento)
+
+### Evento
+Cierre de la sesión dual Claude Code + Cowork. Tras consolidar el bootstrap de gobernanza y el mapeo de hojas, se resolvieron hallazgos menores de coherencia detectados durante la sincronización de la documentación.
+
+### Decisiones Técnicas
+- Se sincronizó `01_Version.js`, que declaraba internamente `0.1.0` (Sprint 0) desde enero, a la versión real del producto `v0.8.0`. Para evitar futuras derivas, el changelog embebido del módulo dejó de duplicar el historial y ahora declara explícitamente a `src/ZZ_Changelog.js` como fuente de verdad canónica.
+- Se eliminó `docs/permanente/TABLERO_ARQUITECTURA.md`, un placeholder vacío de 0 bytes que no aportaba valor; el documento de arquitectura del Tablero se creará formalmente cuando comience esa feature (las fórmulas ya viven en `FORMULAS_TABLERO.md`).
+- Se sincronizó `ESTRUCTURA.md` a v0.8.0: módulos faltantes de `src/`, los tres documentos de Cowork (`MAPA_HOJAS`, `PLAN_IMPLEMENTACION`, `FORMULAS_TABLERO`) y la nueva capa de gobernanza `.claude/`.
+
+### Archivos Modificados
+- **`[MOD]` Backend**: `01_Version.js`, `ZZ_Changelog.js`.
+- **`[MOD]` Docs**: `ESTRUCTURA.md`, `HISTORIAL_DESARROLLO.md`.
+- **`[DEL]` Docs**: `TABLERO_ARQUITECTURA.md` (placeholder vacío).
+
+---
+
 ## 2026-03-23 - Escrutinio Arquitectónico v1.0 (Infrastructure as Code)
 
 ### Evento

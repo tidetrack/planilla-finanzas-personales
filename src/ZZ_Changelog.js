@@ -5,6 +5,13 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-06-05] v0.8.0 (mantenimiento) - Sync de metadata y limpieza documental:
+ * - Sincronizado `01_Version.js` de 0.1.0 (Sprint 0) a v0.8.0; el changelog embebido ahora apunta a este archivo como fuente de verdad.
+ * - Eliminado `docs/permanente/TABLERO_ARQUITECTURA.md` (placeholder vacío de 0 bytes); se recreará al construir el Tablero.
+ * - `ESTRUCTURA.md` sincronizado a v0.8.0 (módulos de src/, docs de Cowork, capa .claude/).
+ *
+ * ---
+ *
  * [2026-03-23] v0.8.0 - Herramientas de Escrutinio Arquitectónico:
  * - Módulo DevTools añadido: `98_DevTools_Scanner.js`. 
  * - Permite exportar el 100% de la arquitectura de la planilla (metadatos, fórmulas, colores, offsets) a un snapshot JSON.

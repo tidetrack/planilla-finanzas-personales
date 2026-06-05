@@ -3,16 +3,16 @@
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
  * 
- * @version 0.1.0
+ * @version 0.8.0
  * @since 0.1.0
- * @lastModified 2026-01-17
+ * @lastModified 2026-06-05
  */
 
 // [AGILE-VALOR] Control de versiones esencial para el mantenimiento del entorno.
 
 const VERSION = {
  major: 0,
- minor: 1,
+ minor: 8,
  patch: 0,
 
  /**
@@ -23,11 +23,12 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-01-17',
- releaseName: 'Sprint 0 - Core Setup',
+ releaseDate: '2026-03-23',
+ releaseName: 'v0.8.0 - Herramientas de Escrutinio Arquitectónico',
 
  /**
- * Changelog embebido
+ * Changelog embebido (solo refleja el release vigente).
+ * FUENTE DE VERDAD del historial completo: src/ZZ_Changelog.js
  * Formato: Semantic Versioning
  * + Agregado
  * * Mejorado
@@ -35,16 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
-v0.1.0 (2026-01-17) - Sprint 0: Core Setup
-+ Configuración global (00_Config.js)
-+ Sistema de versionado (01_Version.js)
-+ Utilidades generales (02_Utils.js)
-+ Gestor de hojas (03_SheetManager.js)
-+ Validaciones de schema (04_DataValidation.js)
-+ Servicio de monedas (05_MonedaService.js)
-+ Manifest OAuth (appsscript.json)
+v0.8.0 (2026-03-23) - Herramientas de Escrutinio Arquitectónico
++ Módulo DevTools (98_DevTools_Scanner.js): exporta el 100% de la arquitectura a un snapshot JSON.
++ Custom Functions de cotización en tiempo real (TIDETRACK_USD/EUR/AUD).
+* Permisos de Drive actualizados en appsscript.json.
 
-Próximo Sprint: v0.2.0 - Tipos de Cambio
+Historial completo y canónico en: src/ZZ_Changelog.js
  `
 };
 
