@@ -17,10 +17,12 @@ Registro canónico de todas las hojas de la planilla con sus GIDs, propósito y 
 | Cargas | 1889618311 | Formulario batch de carga de transacciones | Produccion |
 | Mirada Interanual | — | Resumen historico anual (consume ANUAL) | WIP |
 | Plan de Cuentas | 738279722 | Catalogo maestro de 5 tablas relacionales | Produccion |
-| Tipos de Cambio | — | Data lake historico de cotizaciones (4 vectores) | Produccion |
-| Registros | 709656625 | Ledger transaccional append-only | Produccion |
+| Tipos de cambio | — (re-mapear) | Data lake historico de cotizaciones (4 vectores, layout nuevo) | Produccion |
+| Registros | — (re-mapear) | Ledger transaccional append-only (layout nuevo) | Produccion |
 | Bocetos | — | Prototipado visual de pantallas nuevas | Dev |
 | Espacio blanco 2 | — | Espacio libre de trabajo | Dev |
+
+> Nota: los GIDs de "Registros" y "Tipos de cambio" cambiaron con la migracion 2026-06-22 (las hojas de produccion actuales son las ex-"Copia de..."). El GID 709656625 anterior corresponde a la hoja que ahora es "Registros_legacy". Re-mapear via DevTools o inspeccion DOM.
 
 ## Hojas Ocultas (Motores y Archivo)
 
@@ -29,6 +31,8 @@ Registro canónico de todas las hojas de la planilla con sus GIDs, propósito y 
 | CALCU | 367882887 | Motor mensual: cruces matriciales para Tablero | ADR-006 |
 | ANUAL | 1358411018 | Motor anual: agregaciones para Mirada Interanual | ADR-006 |
 | DATA-ENTRY | 1849033622 | Prototipo del nuevo schema relacional normalizado | DATABASE_SCHEMA.md |
+| Registros_legacy | — (re-mapear) | Backup del ledger pre-migracion (~2879 filas, layout I:T) | Migracion 2026-06-22 |
+| Tipos de cambio_legacy | — (re-mapear) | Backup del data lake TC pre-migracion (bloques I:J/L:M/O:P/R:S) | Migracion 2026-06-22 |
 | CARGAS (Forest.) | — | Backup/prototipo alternativo de hoja de Cargas | Legacy |
 | BD Antigua | — | Registros historicos pre-Tidetrack (formato plano) | Legacy |
 | Mirada Interanual backup | — | Backup del modulo anual | Legacy |
@@ -38,12 +42,13 @@ Registro canónico de todas las hojas de la planilla con sus GIDs, propósito y 
 
 ## Layout de Datos - Produccion
 
-> Patron universal (ADR-005): todas las BD tienen offset horizontal de 6-8 columnas.
-> Columnas A-H son margen UI. Los headers estan en fila 3, datos desde fila 4.
+> Nota de migracion (2026-06-22): el offset historico de ADR-005 fue eliminado
+> en "Registros" y "Tipos de cambio". Esas hojas ahora arrancan en columna B.
+> Plan de Cuentas y Cargas NO cambiaron y siguen con offset (I+).
 
-### Plan de Cuentas (gid=738279722)
+### Plan de Cuentas (gid=738279722) - SIN CAMBIOS
 
-5 tablas relacionales co-ubicadas en la misma hoja:
+5 tablas relacionales co-ubicadas. Header fila 3, datos desde fila 4. Offset I+.
 
 | Tabla interna | Columnas | Campos |
 |---------------|----------|--------|
@@ -53,43 +58,54 @@ Registro canónico de todas las hojas de la planilla con sus GIDs, propósito y 
 | MEDIOS_PAGO | R:T | nombre, moneda, proyecto |
 | PROYECTOS | V:W | nombre, tipo (Liquidez / Ahorro / Inversion) |
 
-Formula consolidadora en columna de validacion:
+Bloque "Categorias": Y2 titulo, Y3 header, Y4 formula consolidadora:
 ```excel
 =ARRAYFORMULA(QUERY(FLATTEN({I4:I;L4:L;O4:O;R4:R}),"SELECT * WHERE Col1 IS NOT NULL",0))
 ```
-Esta formula aplana las 4 tablas de cuentas en una lista plana para los dropdowns de validacion de datos en Cargas.
+Aplana las 4 tablas de cuentas en una lista plana para los dropdowns de validacion de datos en Cargas.
 
-### Registros (gid=709656625)
+### Registros (produccion) - LAYOUT NUEVO desde 2026-06-22
 
-Ledger append-only. ~2879 filas x 20 columnas (al momento del mapeo).
+Ledger append-only. Header en fila 5, datos desde fila 6. Sin offset (B:M). GID pendiente de re-mapeo.
 
 | Col | Campo | Notas |
 |-----|-------|-------|
-| I | monto | Siempre positivo (ADR) |
-| J | tipo | "Ingreso" o "Egreso" |
-| K | cuenta | FK -> Plan de Cuentas |
-| L | tipo_cuenta | Ingreso / Gasto fijo / Gasto variable |
-| M | medio | FK -> MEDIOS_PAGO |
-| N | moneda | ARS / USD / AUD / EUR |
-| O | fecha | Timestamp congelado al procesar |
-| P | nota | Texto libre |
-| Q | tc_ars | Tipo de cambio ARS congelado |
-| R | tc_usd | Tipo de cambio USD congelado |
-| S | tc_aud | Tipo de cambio AUD congelado |
-| T | tc_eur | Tipo de cambio EUR congelado |
+| B | Monto | Siempre positivo |
+| C | Tipo | "Ingreso" o "Egreso" |
+| D | Cuenta | FK -> Plan de Cuentas |
+| E | Tipo de Cuenta | Ingreso / Gasto fijo / Gasto variable |
+| F | Medio | FK -> MEDIOS_PAGO |
+| G | Moneda | ARS / USD / AUD / EUR |
+| H | Fecha | Timestamp congelado al procesar |
+| I | Nota | Texto libre |
+| J | Valor ARS | TC ARS congelado |
+| K | Valor USD | TC USD congelado |
+| L | Valor AUD | TC AUD congelado |
+| M | Valor EUR | TC EUR congelado |
 
-### Tipos de Cambio
+### Registros_legacy (oculta) - BACKUP
 
-4 vectores de cotizaciones historicas, mismo offset que el resto:
+Hoja de solo lectura. Layout anterior (~2879 filas). Header fila 2, datos desde fila 3.
+Columnas I:T (offset historico de ADR-005). GID pendiente de re-mapeo.
+
+### Tipos de cambio (produccion) - LAYOUT NUEVO desde 2026-06-22
+
+4 vectores de cotizaciones historicas. Titulos de bloque fila 5, sub-headers (Fecha/Cotizacion)
+fila 6, datos desde fila 7. Sin offset (bloques arrancan en B). GID pendiente de re-mapeo.
 
 | Par | Columnas |
 |-----|----------|
-| TC_ARS (ARS/ARS base) | I:J |
-| TC_USD (USD/ARS) | L:M |
-| TC_AUD (AUD/ARS) | O:P |
-| TC_EUR (EUR/ARS) | R:S |
+| TC_ARS (ARS base = 1.0) | B:C |
+| TC_USD (USD/ARS oficial) | E:F |
+| TC_AUD (AUD/ARS) | H:I |
+| TC_EUR (EUR/ARS) | K:L |
 
 Carga via batch `procesarCargas()` que consume argentinadatos.com (ARS) y frankfurter.app (EUR/AUD).
+
+### Tipos de cambio_legacy (oculta) - BACKUP
+
+Hoja de solo lectura. Layout anterior. Header fila 3, datos desde fila 4.
+Bloques I:J (ARS), L:M (USD), O:P (AUD), R:S (EUR). GID pendiente de re-mapeo.
 
 ### Cargas (gid=1889618311)
 
@@ -149,3 +165,4 @@ Contiene el nuevo schema relacional normalizado (ver DATABASE_SCHEMA.md v1.0). A
 | Fecha | Accion | Autor |
 |-------|--------|-------|
 | 2026-06-05 | Primer mapeo completo de GIDs via inspeccion DOM + Chrome | Cowork |
+| 2026-06-22 | Actualizacion layout Registros (B:M, fila 5/6) y Tipos de cambio (B/E/H/K, fila 6/7). Incorporacion hojas _legacy ocultas. GIDs de produccion pendientes de re-mapeo | docs-keeper |

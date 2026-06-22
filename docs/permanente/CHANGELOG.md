@@ -2,14 +2,47 @@
 
 Historial de versiones y cambios significativos del proyecto.
 
-**Formato:** Las versiones más recientes aparecen primero (orden cronológico inverso).
+**Formato:** Las versiones mas recientes aparecen primero (orden cronologico inverso).
 
-> Nota: este documento quedó desfasado entre v0.6.0 y v0.9.0. El historial canónico y completo
-> (incluyendo v0.7.x, v0.8.0 y v0.9.0) vive en `src/ZZ_Changelog.js`.
+> Nota: el historial canonico y completo vive en `src/ZZ_Changelog.js`.
+> Este archivo refleja los releases principales para lectura humana rapida.
 
 ---
 
-## v0.9.3 - Sort best-effort también en appendMassive (2026-06-21)
+## v0.9.4 - Reconciliacion al layout de produccion nuevo (2026-06-22)
+
+### Changed
+
+- **Layout de produccion nuevo sin offset**: las hojas "Registros" y "Tipos de cambio"
+  (ex "Copia de...") migraron a un layout sin el offset historico de ADR-005.
+  Registros ahora en columnas B:M (headerRow=5, dataRow=6). Tipos de cambio con
+  bloques B:C / E:F / H:I / K:L (titulos fila 5, sub-headers fila 6, datos fila 7).
+- **`00_Config.js`**: `RANGES` refactorizado con `headerRow` y `dataRow` por tabla,
+  eliminando la dependencia de las constantes globales `HEADER_ROW` / `DATA_START_ROW`
+  para Registros y TC.
+- **`03_SheetManager.js`**: `getTableRange`, `getTableData`, `appendRow` y
+  `appendMassive` ahora leen `headerRow`/`dataRow` desde `RANGES[tableName]`.
+- **`06_RegistrosService.js`**: sort de Registros actualizado a columna H (Fecha).
+  `appendMassive` de TCs referenciado a los nuevos bloques B/E/H/K.
+
+### Added
+
+- **`99_MigrationLogic.js`**: nueva funcion `migrarLegacyANuevaProduccion()` que copia
+  datos de `Registros_legacy` (layout I:T, headerFila2) y `Tipos de cambio_legacy`
+  (bloques I:J/L:M/O:P/R:S) al layout nuevo de produccion. Idempotente.
+  Nueva entrada de menu [Dev] "Migrar Legacy a Nueva Produccion".
+- Hojas `Registros_legacy` y `Tipos de cambio_legacy` ocultas como backup (~2879 filas).
+
+### Notes
+
+- Plan de Cuentas y Cargas NO cambiaron: mantienen su layout historico (header fila 3,
+  datos fila 4; columnas I+ con offset).
+- ADR-005 actualizado en `GUIA_ARQUITECTURA.md`: el offset se elimino en Registros y
+  Tipos de cambio; persiste en Plan de Cuentas y hojas legacy.
+
+---
+
+## v0.9.3 - Sort best-effort tambien en appendMassive (2026-06-21)
 
 ### Fixed
 

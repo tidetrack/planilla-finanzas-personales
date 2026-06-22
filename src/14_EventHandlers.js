@@ -1,6 +1,23 @@
 /**
  * 14_EventHandlers.js
- * Módulo centralizado para el ruteo de eventos simples de Apps Script (onEdit, onOpen, etc.)
+ * Modulo centralizado para el ruteo de eventos simples de Apps Script (onEdit, onOpen, etc.)
+ *
+ * [CONCEPTO DE NEGOCIO]
+ * Capa de eventos de la planilla: protege el Plan de Cuentas contra edicion directa
+ * y autocompleta campos en la hoja de Cargas al editar Medio o Monto.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+ * La hoja "Cargas" tiene header en fila 4 y datos desde fila 5. La guardia de
+ * handleCargasEdit usa comparacion explicita contra 5 (no DATA_START_ROW=4, que
+ * corresponde al layout de Plan de Cuentas) para evitar que ediciones en el header
+ * de Cargas activen el autocompletado.
+ *
+ * @see 00_Config.js (SHEETS, NAV_CONFIG, DATA_START_ROW)
+ * @see 03_SheetManager.js (getTableData)
+ *
+ * @version 0.9.4
+ * @since 0.1.0
+ * @lastModified 2026-06-22
  */
 
 /**
@@ -158,8 +175,10 @@ function handleCargasEdit(e) {
     const col = range.getColumn();
     const sheet = e.source.getActiveSheet();
 
-    // Solo actuamos en el área de datos
-    if (row < DATA_START_ROW) return;
+    // Los datos de Cargas arrancan en fila 5 (fila 4 es el header de la grilla).
+    // Usamos comparacion explicita contra 5 para no depender de DATA_START_ROW=4,
+    // que corresponde al layout de Plan de Cuentas y no al de esta hoja.
+    if (row < 5) return;
 
     // Ignorar si es una multi-selección/limpieza masiva
     if (range.getNumRows() > 1 || range.getNumColumns() > 1) return;

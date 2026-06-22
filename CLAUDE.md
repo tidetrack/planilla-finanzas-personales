@@ -47,9 +47,11 @@ ZZ_Changelog.js -> Historial de versiones in-code
 
 ## Esquema de Datos
 
-Las tablas viven en Google Sheets con disciplina relacional. Headers en fila 3, datos desde fila 4. Existe un offset horizontal de 6-8 columnas por razones de UI (ADR-005).
+Las tablas viven en Google Sheets. El layout varia por hoja: ver detalle abajo y en `docs/permanente/MAPA_HOJAS.md`.
 
-### Plan de Cuentas (5 tablas)
+### Plan de Cuentas (5 tablas) - SIN CAMBIOS
+
+Headers en fila 3, datos desde fila 4. Offset horizontal de 6-8 columnas (ADR-005 vigente).
 
 | Tabla | Columnas | Campos |
 |-------|----------|--------|
@@ -59,13 +61,41 @@ Las tablas viven en Google Sheets con disciplina relacional. Headers en fila 3, 
 | MEDIOS_PAGO | R:T | nombre, moneda, proyecto |
 | PROYECTOS | V:W | nombre, tipo (Liquidez/Ahorro/Inversion) |
 
-### Registros (ledger de transacciones)
+Ademas: bloque "Categorias" en columna Y (Y2 titulo, Y3 header, Y4 formula ARRAYFORMULA/QUERY/FLATTEN consolidadora).
 
-Columnas I:T en hoja "Registros": monto, tipo, cuenta, tipo_cuenta, medio, moneda, fecha, nota, tc_ars, tc_usd, tc_aud, tc_eur
+### Registros (ledger de transacciones) - LAYOUT NUEVO desde 2026-06-22
 
-### Tipos de Cambio (Data Lake)
+Headers en fila 5, datos desde fila 6. Sin offset (datos comienzan en columna B). ADR-005 ya no aplica a esta hoja.
 
-Cuatro vectores en hoja "Tipos de cambio": TC_ARS (I:J), TC_USD (L:M), TC_AUD (O:P), TC_EUR (R:S)
+| Col | Campo |
+|-----|-------|
+| B | Monto |
+| C | Tipo |
+| D | Cuenta |
+| E | Tipo de Cuenta |
+| F | Medio |
+| G | Moneda |
+| H | Fecha |
+| I | Nota |
+| J | Valor ARS |
+| K | Valor USD |
+| L | Valor AUD |
+| M | Valor EUR |
+
+Hojas legacy ocultas: `Registros_legacy` (layout anterior I:T, header fila 2, ~2879 filas).
+
+### Tipos de Cambio (Data Lake) - LAYOUT NUEVO desde 2026-06-22
+
+Titulos de bloque en fila 5, sub-headers Fecha/Cotizacion en fila 6, datos desde fila 7. Sin offset (bloques arrancan en columna B). ADR-005 ya no aplica a esta hoja.
+
+| Par | Columnas |
+|-----|----------|
+| TC_ARS | B:C |
+| TC_USD | E:F |
+| TC_AUD | H:I |
+| TC_EUR | K:L |
+
+Hoja legacy oculta: `Tipos de cambio_legacy` (bloques I:J/L:M/O:P/R:S, header fila 3).
 
 ### Monedas
 
@@ -77,7 +107,7 @@ No hay tabla de monedas. Son una constante de backend: `MONEDAS_DISPONIBLES = ['
 - **ADR-002**: Moneda por defecto reactiva. Una cuenta = un nombre + moneda frecuente. El usuario puede cambiar moneda por transaccion.
 - **ADR-003**: Monedas como constante de backend, no como tabla en la hoja.
 - **ADR-004**: Data Lake de cotizaciones con carga batch via procesarCargas(). No hay consulta en vivo celda a celda.
-- **ADR-005**: Offset estructural. Las BD comienzan en columna H/I. Las primeras 6-7 columnas son margen UI.
+- **ADR-005**: Offset estructural. EVOLUCIONADO en 2026-06-22: el offset fue eliminado en las hojas de produccion "Registros" (datos desde columna B) y "Tipos de cambio" (bloques desde columna B). Persiste en Plan de Cuentas (columnas I+) y en las hojas legacy ocultas. Ver GUIA_ARQUITECTURA.md.
 - **ADR-006**: Hidden Engines. Hojas ocultas CALCU y ANUAL procesan metricas matriciales. Las vistas publicas solo consumen resultados.
 
 ## Flujo de Datos Principal
@@ -140,9 +170,9 @@ La jerarquia de fuentes de verdad es:
 10. `docs/permanente/FORMULAS_TABLERO.md` - Codigo fuente y logica de las formulas del Tablero
 11. `docs/permanente/PLAN_IMPLEMENTACION.md` - Hoja de ruta Claude Code + Cowork
 
-## Estado Actual del Producto (v0.9.3)
+## Estado Actual del Producto (v0.9.4)
 
-Completado: Core setup, exchange rates, catalogos + CRUD, Design System UI, ABM Plan Cuentas, Hoja de Cargas, batch processing (validacion no bloqueante, proteccion de concurrencia, sort best-effort), utilidad de renombrado de hojas, migracion legacy, DevTools export.
+Completado: Core setup, exchange rates, catalogos + CRUD, Design System UI, ABM Plan Cuentas, Hoja de Cargas, batch processing (validacion no bloqueante, proteccion de concurrencia, sort best-effort), utilidad de renombrado de hojas, migracion legacy, DevTools export, reconciliacion al layout de produccion nuevo sin offset (Registros B:M, TC bloques B/E/H/K), funcion migrarLegacyANuevaProduccion().
 
 Pendiente: Dashboard/Tablero (QUERY formulas), presupuestacion mensual, resumen anual.
 

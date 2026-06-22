@@ -3,7 +3,60 @@
  * REGISTRO DE ACTUALIZACIONES (CHANGELOG)
  * ============================================
  * Historial descendente de cambios sincronizados al entorno Apps Script.
- * (Añadir nuevos registros arriba)
+ * (Anadir nuevos registros arriba)
+ *
+ * [2026-06-22] v0.9.4 - Fix auditoria QA: funciones legacy migradas al layout nuevo (segunda pasada):
+ * - FIX C-1 (99_MigrationLogic.js / migrarBdAntigua):
+ *   appendMassive usaba minRow=2 (legacy). Corregido a RANGES.REGISTROS.dataRow (6).
+ *   Sort posterior usaba getRange(2,9,...) y column:15 (layout I:T viejo). Corregido a
+ *   getRange(dataRow, 2, rowCount, 12) + column:8 (H=Fecha, layout B:M nuevo).
+ *   Sort envuelto en try/catch + SpreadsheetApp.flush() igual que en procesarCargas.
+ *   Orden de columnas verificado: coincide con B:M sin reordenamiento.
+ * - FIX C-2 (99_MigrationLogic.js / recalcularTcRegistros):
+ *   Lectura de fechas: getRange(2,15,...) -> getRange(dataRow,8,...) (H=Fecha, col 8).
+ *   Escritura de TCs: getRange(2,17,...,4) -> getRange(dataRow,10,...,4) (J:M = cols 10-13).
+ *   Comentario actualizado: J=10(ARS), K=11(USD), L=12(AUD), M=13(EUR).
+ *   Calculo de rowCount ajustado: lastRow-(dataRow-1) en lugar de lastRow-1.
+ * - FIX C-3 (15_ExchangeRateApi.js / forzarCargaHistorica):
+ *   clearContent corregido de I4:J/L4:M/O4:P/R4:S (legacy) a B7:C/E7:F/H7:I/K7:L (nuevo).
+ *   appendMassive: minRow=4 corregido a RANGES.TC_*.dataRow (=7) en los cuatro bloques.
+ *   Header JSDoc + contexto de negocio agregados al archivo.
+ * - FIX M-2 (14_EventHandlers.js / handleCargasEdit):
+ *   Guardia row < DATA_START_ROW (=4) corregida a row < 5 con comentario explicito.
+ *   DATA_START_ROW=4 corresponde a Plan de Cuentas; Cargas tiene header fila 4, datos fila 5.
+ *   Header JSDoc + contexto de negocio agregados al archivo.
+ * - FIX Me-1 (00_Config.js / SHEETS.DATA_ENTRY):
+ *   Valor corregido de 'Hoja de Cargas' a 'Cargas' para apuntar a la hoja real.
+ * - FIX Me-2 (15_ExchangeRateApi.js / forzarCargaHistorica):
+ *   fetchArsRate inicial envuelto en try/catch: si la API ARS falla se muestra
+ *   ui.alert con el detalle del error en lugar de lanzar un error crudo.
+ *
+ * ---
+ *
+ * [2026-06-22] v0.9.4 - Reconciliacion al layout de produccion nuevo:
+ * - LAYOUT NUEVO (hojas ex-"Copia de..."): las hojas de produccion "Registros" y
+ *   "Tipos de cambio" migraron a un layout SIN el offset historico de ADR-005.
+ * - 00_Config.js: RANGES refactorizado con headerRow/dataRow por tabla.
+ *   Registros: columnas B:M, headerRow=5, dataRow=6.
+ *   Campos: Monto=B, Tipo=C, Cuenta=D, TipoCuenta=E, Medio=F, Moneda=G, Fecha=H,
+ *   Nota=I, ValorARS=J, ValorUSD=K, ValorAUD=L, ValorEUR=M.
+ *   TC bloques: TC_ARS=B:C, TC_USD=E:F, TC_AUD=H:I, TC_EUR=K:L.
+ *   Titulos fila 5, sub-headers fila 6, datos desde fila 7.
+ * - 03_SheetManager.js: getTableRange / getTableData / appendRow / appendMassive
+ *   ahora leen headerRow y dataRow desde RANGES[tableName] por tabla, en lugar
+ *   de las constantes globales HEADER_ROW / DATA_START_ROW.
+ * - 06_RegistrosService.js: sort de Registros actualizado a columna H (Fecha).
+ *   appendMassive de TCs referenciado a los nuevos bloques B/E/H/K.
+ *   procesarCargas() sigue siendo el punto de entrada del pipeline batch.
+ * - 99_MigrationLogic.js: nueva funcion migrarLegacyANuevaProduccion() que lee
+ *   Registros_legacy (layout I:T, headerFila2) y Tipos_de_cambio_legacy (bloques
+ *   I:J/L:M/O:P/R:S, headerFila3) y los copia al layout nuevo de produccion.
+ *   Idempotente: no duplica registros ya migrados. Nueva entrada de menu
+ *   [Dev] "Migrar Legacy a Nueva Produccion".
+ * - Las hojas legacy (Registros_legacy, Tipos de cambio_legacy) permanecen ocultas
+ *   como backup de solo lectura; ~2879 filas de historial pre-migracion.
+ *
+ * ---
  *
  * [2026-06-21] v0.9.3 - Sort best-effort tambien en appendMassive:
  * - FIX: el auto-sort interno de appendMassive() para las tablas TC_* en "Tipos de cambio"

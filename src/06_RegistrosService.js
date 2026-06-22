@@ -16,9 +16,9 @@
  * @see 03_SheetManager.js (getTableData, appendMassive)
  * @see 15_ExchangeRateApi.js (fetchArsRate, fetchInternationalRates)
  *
- * @version 0.9.3
+ * @version 0.9.4
  * @since 0.1.0
- * @lastModified 2026-06-21
+ * @lastModified 2026-06-22
  */
 
 // ============================================
@@ -112,6 +112,7 @@ function validarFila_(row, ingresosCat, fijosCat, variablesCat) {
  * - tipoCuenta no tiene fallback silencioso a '': solo se procesan filas cuya cuenta existe.
  */
 function procesarCargas() {
+    logInfo('=== procesarCargas INICIO ===');
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const ui = SpreadsheetApp.getUi();
 
@@ -215,6 +216,8 @@ function _procesarCargasCore_(ss, ui) {
 
     const FLOOR_DATE = new Date('2024-01-01T12:00:00Z');
 
+    var pasoActual = 'enriquecimiento de filas';
+
     try {
         validas.forEach(function(entrada) {
             const row = entrada.row;
@@ -269,30 +272,37 @@ function _procesarCargasCore_(ss, ui) {
             filasProcesadasIdx.push(entrada.idx);
         });
 
-        // 5. Escribir nuevos TCs a la hoja "Tipos de Cambio"
-        if (newTcUsdToAppend.length > 0) appendMassive('TC_USD', newTcUsdToAppend, 4);
-        if (newTcAudToAppend.length > 0) appendMassive('TC_AUD', newTcAudToAppend, 4);
-        if (newTcEurToAppend.length > 0) appendMassive('TC_EUR', newTcEurToAppend, 4);
+        // 5. Escribir nuevos TCs a la hoja "Tipos de cambio"
+        pasoActual = 'append cotizaciones TC';
+        if (newTcUsdToAppend.length > 0) appendMassive('TC_USD', newTcUsdToAppend, RANGES.TC_USD.dataRow);
+        if (newTcAudToAppend.length > 0) appendMassive('TC_AUD', newTcAudToAppend, RANGES.TC_AUD.dataRow);
+        if (newTcEurToAppend.length > 0) appendMassive('TC_EUR', newTcEurToAppend, RANGES.TC_EUR.dataRow);
 
-        // 6. Escribir los registros en la BD Registros.
-        // minRow = DATA_START_ROW (4): los datos arrancan debajo del encabezado en HEADER_ROW (3).
-        appendMassive('REGISTROS', registrosToAppend, DATA_START_ROW);
+        // 6. Escribir los registros en el ledger Registros.
+        // minRow = RANGES.REGISTROS.dataRow (6): datos arrancan debajo del header en fila 5.
+        pasoActual = 'append Registros';
+        appendMassive('REGISTROS', registrosToAppend, RANGES.REGISTROS.dataRow);
 
-        // 7. Ordenar la hoja Registros por fecha (columna O = indice absoluto 15), best-effort.
-        // El sort arranca en DATA_START_ROW para NO incluir el encabezado en HEADER_ROW (3).
+        // 7. Ordenar la hoja Registros por fecha (columna H = indice absoluto 8), best-effort.
+        // El sort arranca en RANGES.REGISTROS.dataRow para NO incluir el encabezado.
+        // Layout nuevo: datos en B:M (col 2..13), columna fecha = H (col 8).
         // Si la hoja tiene celdas combinadas que cruzan el rango, Sheets lanza error; en ese
         // caso se loguea y se continua: los registros YA estan escritos, el orden es secundario.
+        pasoActual = 'sort Registros';
         try {
             const lastRowReg = registrosSheet.getLastRow();
-            if (lastRowReg >= DATA_START_ROW) {
-                // El rango base empieza en I (col 9) a T (col 20) = 12 columnas
-                const rowCount = lastRowReg - DATA_START_ROW + 1;
-                const baseFullRange = registrosSheet.getRange(DATA_START_ROW, 9, rowCount, 12);
-                baseFullRange.sort({ column: 15, ascending: false });
+            if (lastRowReg >= RANGES.REGISTROS.dataRow) {
+                // Rango B:M = col 2..13, 12 columnas; ordenar por H = col 8
+                const rowCount = lastRowReg - RANGES.REGISTROS.dataRow + 1;
+                const baseFullRange = registrosSheet.getRange(RANGES.REGISTROS.dataRow, 2, rowCount, 12);
+                baseFullRange.sort({ column: 8, ascending: false });
+                // Forzar flush para capturar aqui un eventual error de celdas combinadas.
+                SpreadsheetApp.flush();
             }
         } catch (sortErr) {
             logError('procesarCargas: sort omitido (posibles celdas combinadas en Registros)', sortErr);
         }
+        pasoActual = 'limpiar grilla';
 
         // 8. Limpiar SOLO las filas procesadas (cols I:O = 9..15). Las omitidas quedan en la grilla.
         filasProcesadasIdx.forEach(function(idx) {
@@ -314,7 +324,7 @@ function _procesarCargasCore_(ss, ui) {
 
     } catch (err) {
         logError('procesarCargas: error durante el pipeline', err);
-        ui.alert('Fallo en el procesamiento: ' + err.message);
+        ui.alert('Fallo en el procesamiento [paso: ' + pasoActual + ']: ' + err.message);
     }
 }
 
@@ -346,14 +356,13 @@ function formatDateISO(dateObj) {
  * @param {string} tableName Identificador en RANGES
  * @param {Array<Array>} data2D Matriz de filas a insertar
  * @param {number} minRow Fila minima donde puede escribir (inclusive).
- *   DEBE ser >= DATA_START_ROW (4). Si se pasa un valor menor y la hoja esta vacia,
- *   se puede sobreescribir el encabezado en HEADER_ROW (3).
- *   Default: DATA_START_ROW.
+ *   DEBE ser >= la dataRow de la tabla. Si se omite, se usa RANGES[tableName].dataRow con
+ *   fallback a DATA_START_ROW. Pasar un valor menor puede sobreescribir el encabezado.
  */
 function appendMassive(tableName, data2D, minRow) {
-    minRow = (minRow !== undefined) ? minRow : DATA_START_ROW;
-    if (data2D.length === 0) return;
     const config = RANGES[tableName];
+    minRow = (minRow !== undefined) ? minRow : (config.dataRow || DATA_START_ROW);
+    if (data2D.length === 0) return;
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(config.sheet);
 
     const startColIdx = columnLetterToIndex(config.start);
@@ -384,7 +393,7 @@ function appendMassive(tableName, data2D, minRow) {
     const range = sheet.getRange(targetRow, startColIdx, paddedData.length, numCols);
     range.setValues(paddedData);
 
-    // Auto-sort para tablas TC_* en la hoja Tipos de Cambio (best-effort).
+    // Auto-sort para tablas TC_* en la hoja Tipos de cambio (best-effort).
     // Los datos ya se escribieron con setValues; el orden es secundario. Si la hoja tiene
     // celdas combinadas que cruzan el rango, Sheets lanza error: se loguea y se continua,
     // para no abortar el pipeline de procesarCargas (los TCs ya quedaron guardados).
@@ -394,6 +403,9 @@ function appendMassive(tableName, data2D, minRow) {
             if (finalBlockRow >= minRow) {
                 const tableRange = sheet.getRange(minRow, startColIdx, finalBlockRow - minRow + 1, numCols);
                 tableRange.sort({ column: startColIdx, ascending: false });
+                // sort() es perezoso: forzar flush aqui para que un eventual error de celdas
+                // combinadas se lance DENTRO de este try y no en una operacion posterior.
+                SpreadsheetApp.flush();
             }
         } catch (sortErr) {
             logError('appendMassive: sort omitido en ' + tableName + ' (posibles celdas combinadas)', sortErr);

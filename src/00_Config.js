@@ -1,11 +1,28 @@
 /**
  * 00_Config.js
- * Configuración global del sistema Tidetrack
+ * Configuracion global del sistema Tidetrack
  * Define constantes, rangos de columnas, y enums
- * 
- * @version 0.2.0
+ *
+ * [CONCEPTO DE NEGOCIO]
+ * Single Source of Truth de toda constante estructural del sistema: nombres de hojas,
+ * rangos de columnas, filas de encabezado/datos y enumeraciones de catalogo. Cualquier
+ * cambio aqui se propaga a toda la logica de acceso a datos via RANGES y SheetManager.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+ * Despues de la migracion 2026-06-22 las hojas de produccion tienen layouts heterogeneos:
+ * Plan de Cuentas sigue el esquema original (header fila 3, datos fila 4), mientras que
+ * Registros (header 5, datos 6) y Tipos de cambio (sub-header 6, datos 7) reflejan el
+ * nuevo diseno limpio. Por eso cada entrada de RANGES declara su propio headerRow/dataRow
+ * en lugar de depender del global HEADER_ROW/DATA_START_ROW.
+ * HEADER_ROW y DATA_START_ROW se mantienen como defaults globales para compatibilidad con
+ * los modulos que aun los usan directamente (Plan de Cuentas, migrarBdAntigua, etc.).
+ *
+ * @see 03_SheetManager.js (usa config.dataRow || DATA_START_ROW en getTableRange)
+ * @see 06_RegistrosService.js (appendMassive usa RANGES.*.dataRow)
+ *
+ * @version 0.9.4
  * @since 0.1.0
- * @lastModified 2026-06-21
+ * @lastModified 2026-06-22
  */
 
 // [AGILE-VALOR] Configuración Core y Central. Define el esqueleto del Plan de Cuentas y Hoja de cargas.
@@ -16,7 +33,7 @@
 
 const SHEETS = {
     PLAN_CUENTAS: 'Plan de Cuentas',
-    DATA_ENTRY: 'Hoja de Cargas',
+    DATA_ENTRY: 'Cargas',
     REGISTROS: 'Registros',
     TIPOS_CAMBIO: 'Tipos de cambio',
     BD_ANTIGUA: 'BD antigua'
@@ -30,65 +47,95 @@ const DATA_START_ROW = 4;
 // ============================================
 
 const RANGES = {
- INGRESOS: {
- sheet: SHEETS.PLAN_CUENTAS,
- start: 'I',
- end: 'J',
- columns: { nombre: 'I', proyecto: 'J' }
- },
+    // --- Plan de Cuentas: layout original (header fila 3, datos fila 4) ---
+    INGRESOS: {
+        sheet: SHEETS.PLAN_CUENTAS,
+        start: 'I',
+        end: 'J',
+        headerRow: 3,
+        dataRow: 4,
+        columns: { nombre: 'I', proyecto: 'J' }
+    },
     GASTOS_FIJOS: {
- sheet: SHEETS.PLAN_CUENTAS,
- start: 'L',
- end: 'M',
- columns: { nombre: 'L', proyecto: 'M' }
- },
+        sheet: SHEETS.PLAN_CUENTAS,
+        start: 'L',
+        end: 'M',
+        headerRow: 3,
+        dataRow: 4,
+        columns: { nombre: 'L', proyecto: 'M' }
+    },
     GASTOS_VARIABLES: {
- sheet: SHEETS.PLAN_CUENTAS,
- start: 'O',
- end: 'P',
- columns: { nombre: 'O', proyecto: 'P' }
- },
- MEDIOS_PAGO: {
- sheet: SHEETS.PLAN_CUENTAS,
- start: 'R',
- end: 'T',
- columns: { nombre: 'R', moneda: 'S', proyecto: 'T' }
- },
+        sheet: SHEETS.PLAN_CUENTAS,
+        start: 'O',
+        end: 'P',
+        headerRow: 3,
+        dataRow: 4,
+        columns: { nombre: 'O', proyecto: 'P' }
+    },
+    MEDIOS_PAGO: {
+        sheet: SHEETS.PLAN_CUENTAS,
+        start: 'R',
+        end: 'T',
+        headerRow: 3,
+        dataRow: 4,
+        columns: { nombre: 'R', moneda: 'S', proyecto: 'T' }
+    },
     PROYECTOS: {
         sheet: SHEETS.PLAN_CUENTAS,
         start: 'V',
         end: 'W',
+        headerRow: 3,
+        dataRow: 4,
         columns: { nombre: 'V', tipo: 'W' }
     },
+
+    // --- Registros: layout nuevo (header fila 5, datos fila 6) ---
     REGISTROS: {
         sheet: SHEETS.REGISTROS,
-        start: 'I',
-        end: 'T',
-        columns: { monto: 'I', tipo: 'J', cuenta: 'K', tipo_cuenta: 'L', medio: 'M', moneda: 'N', fecha: 'O', nota: 'P', tc_ars: 'Q', tc_usd: 'R', tc_aud: 'S', tc_eur: 'T' }
+        start: 'B',
+        end: 'M',
+        headerRow: 5,
+        dataRow: 6,
+        columns: {
+            monto: 'B', tipo: 'C', cuenta: 'D', tipo_cuenta: 'E',
+            medio: 'F', moneda: 'G', fecha: 'H', nota: 'I',
+            tc_ars: 'J', tc_usd: 'K', tc_aud: 'L', tc_eur: 'M'
+        }
     },
+
+    // --- Tipos de cambio: layout nuevo (sub-header fila 6, datos fila 7) ---
+    // Bloques horizontales: ARS=B:C | USD=E:F | AUD=H:I | EUR=K:L
     TC_ARS: {
         sheet: SHEETS.TIPOS_CAMBIO,
-        start: 'I',
-        end: 'J',
-        columns: { fecha: 'I', cotizacion: 'J' }
+        start: 'B',
+        end: 'C',
+        headerRow: 6,
+        dataRow: 7,
+        columns: { fecha: 'B', cotizacion: 'C' }
     },
     TC_USD: {
         sheet: SHEETS.TIPOS_CAMBIO,
-        start: 'L',
-        end: 'M',
-        columns: { fecha: 'L', cotizacion: 'M' }
+        start: 'E',
+        end: 'F',
+        headerRow: 6,
+        dataRow: 7,
+        columns: { fecha: 'E', cotizacion: 'F' }
     },
     TC_AUD: {
         sheet: SHEETS.TIPOS_CAMBIO,
-        start: 'O',
-        end: 'P',
-        columns: { fecha: 'O', cotizacion: 'P' }
+        start: 'H',
+        end: 'I',
+        headerRow: 6,
+        dataRow: 7,
+        columns: { fecha: 'H', cotizacion: 'I' }
     },
     TC_EUR: {
         sheet: SHEETS.TIPOS_CAMBIO,
-        start: 'R',
-        end: 'S',
-        columns: { fecha: 'R', cotizacion: 'S' }
+        start: 'K',
+        end: 'L',
+        headerRow: 6,
+        dataRow: 7,
+        columns: { fecha: 'K', cotizacion: 'L' }
     }
 };
 
@@ -126,7 +173,8 @@ const MENU_CONFIG = {
         { separator: true },
         { name: '🔧 [Dev] On/Off Protección Cuentas', function: 'togglePlanCuentasProtection' },
         { separator: true },
-        { name: '🔧 [Dev] Renombrar Hojas a Producción', function: 'renameProductionSheets' },
+        { name: '🔧 [Dev] Renombrar Hojas a Produccion', function: 'renameProductionSheets' },
+        { name: '🔧 [Dev] Migrar Datos a Produccion Nueva', function: 'migrarLegacyANuevaProduccion' },
         { separator: true },
         { name: '🤖 [DevTools] Exportar Arquitectura', function: 'exportarArquitecturaTotal' }
     ]

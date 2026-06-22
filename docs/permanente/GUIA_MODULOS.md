@@ -2,10 +2,10 @@
 
 Documentación detallada de cada módulo del sistema modular de Tidetrack Finanzas Personales.
 
-**Última actualización**: 2026-06-05 
-**Versión Actual**: v0.8.0
+**Ultima actualizacion**: 2026-06-22
+**Version Actual**: v0.9.4
 
-> Esta guía describe el estado REAL del código en `src/`. La fuente de verdad de la versión es el tope de `src/ZZ_Changelog.js`. El archivo `01_Version.js` contiene metadata histórica que no se mantiene sincronizada con cada release (pendiente de verificación: hoy declara internamente 0.1.0).
+> Esta guia describe el estado REAL del codigo en `src/`. La fuente de verdad de la version es el tope de `src/ZZ_Changelog.js`. A partir de v0.9.4, `01_Version.js` esta sincronizado con la version real del sistema.
 
 ---
 
@@ -78,10 +78,16 @@ Transversal: 98_DevTools_Scanner (auditoría de arquitectura, lee toda la planil
 **Responsabilidades:**
 - `SHEETS`: nombres de las hojas físicas (`Plan de Cuentas`, `Hoja de Cargas`, `Registros`, `Tipos de cambio`, `BD antigua`).
 - `HEADER_ROW` (3) y `DATA_START_ROW` (4): convención de filas de encabezado y datos.
-- `RANGES`: mapa de rangos de columnas fijos por tabla lógica:
-  - Plan de Cuentas: `INGRESOS` (I:J), `GASTOS_FIJOS` (L:M), `GASTOS_VARIABLES` (O:P), `MEDIOS_PAGO` (R:T, incluye moneda), `PROYECTOS` (V:W).
-  - `REGISTROS` (I:T): Data Lake con monto, tipo, cuenta, tipo_cuenta, medio, moneda, fecha, nota y las 4 columnas de TC (TC_ARS, TC_USD, TC_AUD, TC_EUR).
-  - Cachés de Tipos de Cambio: `TC_ARS` (I:J), `TC_USD` (L:M), `TC_AUD` (O:P), `TC_EUR` (R:S).
+- `RANGES`: mapa de rangos de columnas fijos por tabla logica. A partir de v0.9.4,
+  cada entrada incluye `headerRow` y `dataRow` propios (ya no se usan las constantes
+  globales `HEADER_ROW`/`DATA_START_ROW` para Registros y TC):
+  - Plan de Cuentas: `INGRESOS` (I:J), `GASTOS_FIJOS` (L:M), `GASTOS_VARIABLES` (O:P),
+    `MEDIOS_PAGO` (R:T, incluye moneda), `PROYECTOS` (V:W). headerRow=3, dataRow=4.
+  - `REGISTROS` (B:M): layout nuevo sin offset. Monto=B, Tipo=C, Cuenta=D, TipoCuenta=E,
+    Medio=F, Moneda=G, Fecha=H, Nota=I, ValorARS=J, ValorUSD=K, ValorAUD=L, ValorEUR=M.
+    headerRow=5, dataRow=6.
+  - Caches de Tipos de Cambio (layout nuevo): `TC_ARS` (B:C), `TC_USD` (E:F),
+    `TC_AUD` (H:I), `TC_EUR` (K:L). headerRow=6, dataRow=7.
 - `MONEDAS_DISPONIBLES`: catálogo fijo `['ARS', 'USD', 'AUD', 'EUR']` como constante de backend, sin tabla en la planilla (ADR-003).
 - `ERROR_MESSAGES`: mensajes de error centralizados.
 - `MENU_CONFIG`: definición declarativa del menú "Tidetrack" (ítems y separadores).
@@ -158,14 +164,17 @@ Transversal: 98_DevTools_Scanner (auditoría de arquitectura, lee toda la planil
 **Propósito (negocio)**: Transformar el lote de la hoja "Cargas" (entrada manual del usuario) en filas enriquecidas de la hoja "Registros", que funciona como Data Lake inmutable multi-moneda. Es el corazón del flujo de carga de movimientos.
 
 **Funciones clave:**
-- `procesarCargas()`: función maestra invocada desde el menú [Dev].
+- `procesarCargas()`: funcion maestra invocada desde el menu [Dev].
   - Lee el rango `I5:O19` de "Cargas".
-  - Filtra filas con Monto cargado.
-  - Precarga cachés de TC (`TC_USD`, `TC_AUD`, `TC_EUR`) y catálogos de categorías para deducir el "Tipo de Cuenta" (Ingreso / Gasto Fijo / Gasto Variable) cruzando con el Plan de Cuentas.
-  - Fija fecha mínima (`FLOOR_DATE` = 2024-01-01); si falta o es inválida usa la fecha actual.
-  - ARS es base (TC_ARS = 1.0); para fechas sin caché, llama a `fetchArsRate` y `fetchInternationalRates` (módulo 15) y triangula AUD/EUR.
-  - Apendea los nuevos TC a "Tipos de cambio" y los registros a "Registros" vía `appendMassive`.
-  - Ordena "Registros" descendentemente por fecha (columna O) y limpia la grilla de Cargas.
+  - Filtra filas con intencion de carga (Monto, Cuenta, Medio o Moneda no vacios).
+  - Precarga caches de TC (`TC_USD`, `TC_AUD`, `TC_EUR`) y catalogos de categorias para
+    deducir el "Tipo de Cuenta" (Ingreso / Gasto Fijo / Gasto Variable) cruzando con Plan de Cuentas.
+  - Fija fecha minima (`FLOOR_DATE` = 2024-01-01); si falta o es invalida usa fecha actual.
+  - ARS es base (TC_ARS = 1.0); para fechas sin cache llama a `fetchArsRate` y
+    `fetchInternationalRates` (modulo 15) y triangula AUD/EUR.
+  - Apendea los nuevos TC a "Tipos de cambio" (bloques B/E/H/K) y los registros a
+    "Registros" (B:M) via `appendMassive`.
+  - Ordena "Registros" descendentemente por fecha (columna H) y limpia la grilla de Cargas.
 - `formatDateISO(dateObj)`: devuelve 'YYYY-MM-DD' neutral a zona horaria. Helper compartido usado por varios módulos (15 y 99).
 - `appendMassive(tableName, data2D, minRow)`: inserción masiva eficiente. Encuentra el final de la columna sin depender de `getLastRow()` (evita lag asíncrono). Para tablas `TC_*` en la hoja de Tipos de Cambio aplica auto-sort cronológico Z-A in situ (con bypass de casing vía `toLowerCase()`).
 
@@ -278,9 +287,20 @@ Transversal: 98_DevTools_Scanner (auditoría de arquitectura, lee toda la planil
 **Propósito (negocio)**: Utilidades transitorias/dev para importar la base histórica "BD antigua" (2024+) hacia el esquema actual de "Registros".
 
 **Funciones clave:**
-- `analizarBdAntigua()`: detecta cuentas y medios faltantes comparando "BD antigua" contra el Plan de Cuentas; lista las cuentas faltantes en la columna H de "BD antigua" y auto-inserta los medios faltantes en `MEDIOS_PAGO` con moneda ARS por defecto.
-- `migrarBdAntigua()`: migra fila por fila a "Registros" (asume que `forzarCargaHistorica()` ya corrió). Deduce tipo de cuenta, resuelve moneda por medio, interpola TC desde el caché (con fallbacks hardcodeados si falta), apendea masivamente y ordena por fecha. Reporta cuántos registros usaron fallback.
-- `recalcularTcRegistros()`: herramienta [Dev] que reescribe las columnas TC (Q:T) de "Registros" interpolando el caché actual en modo ARS base, para registros migrados antes del parche de base ARS.
+- `analizarBdAntigua()`: detecta cuentas y medios faltantes comparando "BD antigua" contra
+  el Plan de Cuentas; lista las cuentas faltantes en la columna H de "BD antigua" y
+  auto-inserta los medios faltantes en `MEDIOS_PAGO` con moneda ARS por defecto.
+- `migrarBdAntigua()`: migra fila por fila a "Registros" (asume que `forzarCargaHistorica()`
+  ya corrio). Deduce tipo de cuenta, resuelve moneda por medio, interpola TC desde el cache
+  (con fallbacks hardcodeados si falta), apendea masivamente y ordena por fecha.
+  Reporta cuantos registros usaron fallback.
+- `migrarLegacyANuevaProduccion()` (v0.9.4): copia datos de `Registros_legacy` (layout I:T,
+  headerFila2) y `Tipos de cambio_legacy` (bloques I:J/L:M/O:P/R:S, headerFila3) al layout
+  nuevo de produccion (Registros B:M, TC bloques B/E/H/K). Idempotente: no duplica registros
+  ya existentes. Nueva entrada de menu [Dev] "Migrar Legacy a Nueva Produccion".
+- `recalcularTcRegistros()`: herramienta [Dev] que reescribe las columnas TC de "Registros"
+  interpolando el cache actual en modo ARS base, para registros migrados antes del parche
+  de base ARS.
 
 **Estado:** transitorio/dev (uso puntual de migración, no del flujo cotidiano).
 
@@ -374,18 +394,17 @@ Cuando crees un nuevo módulo:
 
 ---
 
-## Deuda y Pendientes de Verificación (snapshot v0.8.0)
+## Deuda y Pendientes de Verificacion (snapshot v0.9.4)
 
-- `01_Version.js` declara internamente 0.1.0; la versión real (ZZ_Changelog) es v0.8.0. Sincronizar.
-- Cabeceras `@version` de 00, 03 y 11 quedaron en versiones viejas.
 - `98_DevTools_Scanner.js` contiene emojis en logs/alertas (viola `no-emojis.md`).
-- `13_NavigationService` llama a `logError`/`logInfo` con firma de dos argumentos que `02_Utils` no implementa así.
-- Autocompletado de "Tipo" por "Cuenta" en `handleCargasEdit` no está activo (la deducción ocurre en backend, módulo 06).
-- Numeración con huecos (04, 05, 07-10 inexistentes) por la refactorización a Plan de Cuentas centralizado.
+- `13_NavigationService` llama a `logError`/`logInfo` con firma de dos argumentos que `02_Utils` no implementa asi.
+- Autocompletado de "Tipo" por "Cuenta" en `handleCargasEdit` no esta activo (la deduccion ocurre en backend, modulo 06).
+- Numeracion con huecos (04, 05, 07-10 inexistentes) por la refactorizacion a Plan de Cuentas centralizado.
+- GIDs de las hojas "Registros" y "Tipos de cambio" de produccion pendientes de re-mapeo (cambiaron con la migracion 2026-06-22).
 
 ---
 
-**Versión de la Guía**: 4.0 
-**Última actualización**: 2026-06-05 
-**Versión del sistema documentada**: v0.8.0 
-**Módulos documentados**: 12 de 12 archivos `.js` existentes + 2 HTML + manifest
+**Version de la Guia**: 5.0
+**Ultima actualizacion**: 2026-06-22
+**Version del sistema documentada**: v0.9.4
+**Modulos documentados**: 12 de 12 archivos `.js` existentes + 2 HTML + manifest

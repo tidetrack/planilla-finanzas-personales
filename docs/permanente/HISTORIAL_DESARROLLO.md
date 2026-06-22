@@ -1,8 +1,77 @@
 # Historial de Desarrollo - Tidetrack Personal Finance
 
-Registro cronológico de la evolución del proyecto y decisiones importantes.
+Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
-**Formato:** Las entradas más recientes aparecen primero (orden cronológico inverso).
+**Formato:** Las entradas mas recientes aparecen primero (orden cronologico inverso).
+
+---
+
+## 2026-06-22 - Reconciliacion al layout de produccion nuevo (v0.9.4)
+
+### Evento
+
+Tras confirmar el layout real de produccion via export DevTools, se reconcililo el codigo
+de `src/` y toda la documentacion al nuevo estado fisico de las hojas. Las hojas "Registros"
+y "Tipos de cambio" son ahora las ex-"Copia de...", que no tienen el offset historico de
+ADR-005. Las hojas originales pasaron a llamarse con sufijo `_legacy` y quedaron ocultas
+como backup de solo lectura.
+
+### Cambios en codigo (`src/`)
+
+**00_Config.js**: `RANGES` refactorizado. Cada entrada ahora incluye `headerRow` y `dataRow`
+propios por tabla, eliminando la dependencia de las constantes globales para las tablas con
+layout nuevo. Registros en B:M (headerRow=5, dataRow=6); TC en bloques B:C/E:F/H:I/K:L
+(headerRow=6, dataRow=7 para las tablas TC; la fila 5 es el titulo de bloque).
+
+**03_SheetManager.js**: `getTableRange`, `getTableData`, `appendRow` y `appendMassive`
+ahora leen `headerRow`/`dataRow` desde `RANGES[tableName]` en lugar de las constantes
+globales. Retrocompatible: si la entrada de RANGES no tiene `headerRow`/`dataRow` propios,
+cae al valor global.
+
+**06_RegistrosService.js**: sort de Registros actualizado a columna H (Fecha, posicion 8
+en el nuevo layout). `appendMassive` de TCs referenciado a los nuevos nombres de bloques
+(TC_ARS=B:C, TC_USD=E:F, etc.). `procesarCargas()` sin cambio de comportamiento.
+
+**99_MigrationLogic.js**: nueva funcion `migrarLegacyANuevaProduccion()` que lee las hojas
+`_legacy` (en su layout original con offset) y escribe al layout nuevo de produccion.
+Idempotente: detecta registros ya migrados por fecha+cuenta+monto antes de insertar.
+Nueva entrada de menu [Dev] "Migrar Legacy a Nueva Produccion".
+
+### Cambios documentales
+
+- `CLAUDE.md`: seccion "Esquema de Datos" reescrita al layout nuevo. ADR-005 actualizado.
+  Version del producto actualizada a v0.9.4.
+- `docs/permanente/MAPA_HOJAS.md`: layout de Registros (B:M, fila 5/6) y Tipos de cambio
+  (B/E/H/K, fila 6/7) actualizados. Hojas legacy incorporadas al inventario. GIDs de
+  produccion marcados como pendientes de re-mapeo.
+- `docs/permanente/CONTEXTO_DATOS.md`: reescritura completa del offset y estructura de
+  todas las hojas. Tabla de patron por hoja al final.
+- `docs/permanente/GUIA_ARQUITECTURA.md`: ADR-005 evolucionado con la migracion 2026-06-22.
+  Se documenta que el offset persiste solo en Plan de Cuentas, Cargas y hojas legacy.
+- `docs/permanente/GUIA_MODULOS.md`: RANGES de 00_Config y procesarCargas en 06 actualizados
+  al layout nuevo. Funcion `migrarLegacyANuevaProduccion()` documentada en 99_MigrationLogic.
+  Version de la guia: 5.0.
+- `docs/permanente/DATABASE_SCHEMA.md`: nota aclaratoria al inicio distinguiendo el schema
+  objetivo (DATA-ENTRY/PostgreSQL) de la produccion actual.
+- `docs/permanente/CHANGELOG.md`: entry v0.9.4 agregada al tope.
+- `src/ZZ_Changelog.js`: entry v0.9.4 agregada al tope.
+- `src/01_Version.js`: sincronizado a 0.9.4 con cabecera [CONCEPTO DE NEGOCIO] completa.
+
+### Decision de diseno
+
+Se decidio no replicar el offset en las hojas de produccion nueva porque son hojas frescas
+sin dependencias UI en las columnas A-H. El beneficio (RANGES mas simples, menor distancia
+entre columna conceptual y columna fisica) supera el riesgo (diferencia de layout entre
+produccion y legacy). Las hojas legacy ocultas conservan el layout original intacto para
+referencia y rollback si fuera necesario.
+
+### Archivos Modificados
+
+- `[MOD]` Backend: `src/01_Version.js`, `src/ZZ_Changelog.js`.
+- `[MOD]` Docs: `CLAUDE.md`, `docs/permanente/MAPA_HOJAS.md`,
+  `docs/permanente/CONTEXTO_DATOS.md`, `docs/permanente/GUIA_ARQUITECTURA.md`,
+  `docs/permanente/GUIA_MODULOS.md`, `docs/permanente/DATABASE_SCHEMA.md`,
+  `docs/permanente/CHANGELOG.md`, `docs/permanente/HISTORIAL_DESARROLLO.md`.
 
 ---
 

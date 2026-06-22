@@ -1,7 +1,25 @@
 /**
  * 15_ExchangeRateApi.js
- * Cliente para extracción de cotizaciones históricas.
- * Integración con DolarApi (via argentinadatos) y Frankfurter.
+ * Cliente para extraccion de cotizaciones historicas.
+ * Integracion con DolarApi (via argentinadatos) y Frankfurter.
+ *
+ * [CONCEPTO DE NEGOCIO]
+ * Motor de cotizaciones del sistema Tidetrack. Provee tipos de cambio historicos
+ * para las cuatro monedas (ARS, USD, AUD, EUR) y los expone como custom functions
+ * de celda y como pipeline de carga historica batch.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+ * ADR-004: las cotizaciones se cargan en batch (forzarCargaHistorica) y quedan
+ * congeladas en la hoja "Tipos de cambio" (layout nuevo: bloques B:C/E:F/H:I/K:L,
+ * sub-headers fila 6, datos desde fila 7 = RANGES.TC_*.dataRow).
+ * No hay consulta en vivo celda a celda durante procesarCargas.
+ *
+ * @see 00_Config.js (SHEETS, RANGES)
+ * @see 03_SheetManager.js (appendMassive)
+ *
+ * @version 0.9.4
+ * @since 0.1.0
+ * @lastModified 2026-06-22
  */
 
 // Caché en memoria durante la ejecución del script para no pedir el JSON gigante múltiple veces
@@ -86,8 +104,21 @@ function forzarCargaHistorica() {
     const startDate = new Date('2024-01-01T12:00:00Z');
     const endDate = new Date();
     
-    // Obtener array histórico de ARS (Llamada inicial levanta y purga caché en script)
-    fetchArsRate(formatDateISO(startDate)); 
+    // Obtener array historico de ARS (llamada inicial levanta y purga cache en script).
+    // Si la API ARS falla se muestra alerta al usuario en lugar de un error crudo.
+    try {
+        fetchArsRate(formatDateISO(startDate));
+    } catch (arsErr) {
+        logError('forzarCargaHistorica: fallo al contactar la API ARS', arsErr);
+        ui.alert(
+            'Error al contactar la API ARS',
+            'No se pudo obtener el historial de cotizaciones del dolar desde argentinadatos.com.\n\n' +
+            'Detalle: ' + arsErr.message + '\n\n' +
+            'Verifica tu conexion a internet y vuelve a intentarlo.',
+            ui.ButtonSet.OK
+        );
+        return;
+    }
     
     // Configurar Batch Request a Frankfurter
     const startStr = formatDateISO(startDate);
@@ -142,17 +173,19 @@ function forzarCargaHistorica() {
         }
     }
 
-    // Limpiar celdas previas (I4 a T, saltando los headers en row 3)
-    sheet.getRange('I4:J').clearContent();
-    sheet.getRange('L4:M').clearContent();
-    sheet.getRange('O4:P').clearContent();
-    sheet.getRange('R4:S').clearContent();
+    // Limpiar datos previos en el layout nuevo desde dataRow=7 hacia abajo,
+    // sin tocar titulos (fila 5) ni sub-headers (fila 6).
+    // Bloques: ARS=B:C, USD=E:F, AUD=H:I, EUR=K:L
+    sheet.getRange('B7:C').clearContent();
+    sheet.getRange('E7:F').clearContent();
+    sheet.getRange('H7:I').clearContent();
+    sheet.getRange('K7:L').clearContent();
 
-    // Escribir los arrays masivamente
-    if (arsAppend.length > 0) appendMassive('TC_ARS', arsAppend, 4);
-    if (usdAppend.length > 0) appendMassive('TC_USD', usdAppend, 4);
-    if (audAppend.length > 0) appendMassive('TC_AUD', audAppend, 4);
-    if (eurAppend.length > 0) appendMassive('TC_EUR', eurAppend, 4);
+    // Escribir los arrays masivamente usando dataRow de cada bloque TC (= 7).
+    if (arsAppend.length > 0) appendMassive('TC_ARS', arsAppend, RANGES.TC_ARS.dataRow);
+    if (usdAppend.length > 0) appendMassive('TC_USD', usdAppend, RANGES.TC_USD.dataRow);
+    if (audAppend.length > 0) appendMassive('TC_AUD', audAppend, RANGES.TC_AUD.dataRow);
+    if (eurAppend.length > 0) appendMassive('TC_EUR', eurAppend, RANGES.TC_EUR.dataRow);
 
     ss.toast(`Se generaron ${arsAppend.length} registros históricos por divisa.`, '¡Carga Exitosa!', 6);
 }
