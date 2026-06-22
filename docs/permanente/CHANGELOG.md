@@ -4,6 +4,44 @@ Historial de versiones y cambios significativos del proyecto.
 
 **Formato:** Las versiones más recientes aparecen primero (orden cronológico inverso).
 
+> Nota: este documento quedó desfasado entre v0.6.0 y v0.9.0. El historial canónico y completo
+> (incluyendo v0.7.x, v0.8.0 y v0.9.0) vive en `src/ZZ_Changelog.js`.
+
+---
+
+## v0.9.2 - Procesamiento resiliente de cargas (2026-06-21)
+
+### Changed
+
+- **`procesarCargas()` dejó de abortar el lote completo ante filas incompletas.** Ahora procesa las filas válidas, **saltea** las incompletas (quedan en la grilla para corregirse) e informa al final cuántas se omitieron y por qué. La carga ya no se frena por datos faltantes.
+- Solo se limpian de la grilla las filas efectivamente procesadas (antes se limpiaba todo `I5:O19`).
+
+### Fixed
+
+- **Bug de sort con celdas combinadas**: el ordenamiento de "Registros" lanzaba *"Las combinaciones deben estar completamente en el rango que se desea ordenar"* y frenaba el guardado. Ahora el sort es **best-effort** (`try/catch`): si falla por merges, se loguea y se continúa — los registros ya quedaron escritos.
+
+### Notas
+
+- La **Nota** nunca fue un campo obligatorio.
+
+---
+
+## v0.9.1 - Fix sort de encabezado + utilidad de renombrado de hojas (2026-06-21)
+
+### Fixed
+
+- **Bug crítico de sort en `procesarCargas()`**: el ordenamiento arrancaba en la fila 2 e incluía el encabezado en `HEADER_ROW` (3), desplazándolo al ordenar por fecha descendente. Corregido para arrancar en `DATA_START_ROW` (4).
+- **`appendMassive` para REGISTROS** usaba `minRow=2`; corregido a `DATA_START_ROW` para evitar escritura antes del encabezado en hoja vacía. JSDoc de `minRow` actualizado.
+
+### Added
+
+- **`renameProductionSheets()`**: utilidad de ejecución única para completar la migración de hojas de producción (`Copia de Registros` → `Registros`, `Copia de Tipos de Cambio` → `Tipos de cambio`; las originales reciben sufijo `_legacy`). Idempotente.
+- Entrada de menú **[Dev] "Renombrar Hojas a Producción"**.
+
+### Notas
+
+- Los nombres de producción siguen siendo `Registros` y `Tipos de cambio`: las constantes `SHEETS` en `00_Config.js` y las fórmulas del Tablero/CALCU/ANUAL no cambian.
+
 ---
 
 ## v0.6.0 - Simplificación de Arquitectura de Monedas (2026-02-13) RELEASED

@@ -6,6 +6,61 @@ Registro cronológico de la evolución del proyecto y decisiones importantes.
 
 ---
 
+## 2026-06-21 - Robustez del pipeline de carga batch (v0.9.0)
+
+### Evento
+
+Iteracion de robustez sobre `src/06_RegistrosService.js` para cerrar los Gaps 2 y 3 identificados durante la auditoria de Fase 1 (entrada 2026-06-05): ausencia de validacion contra el Plan de Cuentas antes de escribir al ledger, y la posibilidad de que `tipoCuenta` quedara vacio de forma silenciosa. Se aprovecho la misma sesion para agregar proteccion de concurrencia y mejorar la claridad estructural del modulo.
+
+### Cambios implementados
+
+**1. Deteccion de intencion de carga**
+
+La logica de filtrado inicial solo excluia filas con Monto vacio (`row[0]`). A partir de esta version, una fila se considera "con intencion de carga" si cualquiera de los campos Monto, Cuenta, Medio o Moneda contiene un valor no vacio. Esto garantiza que filas parcialmente completas sean capturadas y evaluadas (y en su caso rechazadas con mensaje) antes de que el usuario las pierda.
+
+**2. Funcion validarFila_() - validacion estricta previa al pipeline**
+
+Se introdujo la funcion privada `validarFila_()` que verifica cuatro condiciones antes de que el lote avance:
+- Monto numerico mayor a cero.
+- Cuenta presente en alguno de los tres catalogos (INGRESOS, GASTOS_FIJOS, GASTOS_VARIABLES).
+- Medio de pago no vacio.
+- Moneda dentro de `MONEDAS_DISPONIBLES` (ARS, USD, AUD, EUR).
+
+Si cualquier fila del lote falla al menos una condicion, el lote completo se aborta sin escribir nada en el ledger. El rechazo es total: no se escribe ninguna fila parcialmente valida.
+
+**3. Eliminacion del fallback silencioso de tipoCuenta**
+
+Anteriormente, si la cuenta no matcheaba ningun catalogo, `tipoCuenta` quedaba como cadena vacia y la fila se escribia igual en Registros. Este vector de corrupcion silenciosa queda cerrado: la validacion previa garantiza que toda cuenta que llegue al pipeline ya existe en algun catalogo, por lo que `tipoCuenta` nunca puede quedar vacio. Cierra el Gap 2 identificado en auditoria.
+
+**4. Comportamiento ante rechazo: alerta sin limpiar grilla**
+
+Cuando el lote es rechazado, la grilla de Cargas NO se limpia. El usuario recibe un `ui.alert()` con la lista de filas rechazadas y sus motivos especificos (por ejemplo, "Fila 3: Monto no es un numero valido", "Fila 5: Cuenta no encontrada en ningun catalogo"). Esto permite al usuario corregir los datos directamente sin necesidad de re-ingresarlos.
+
+**5. Proteccion de concurrencia con LockService**
+
+Se envuelve el cuerpo de `procesarCargas()` con `LockService.getDocumentLock()` usando `tryLock(100ms)`. Si el lock no puede adquirirse (ejecucion concurrente), el usuario recibe un aviso y la funcion retorna inmediatamente sin ejecutar. Protege contra doble-clic o ejecuciones simultaneas desde distintos clientes.
+
+**6. Refactor estructural: extraccion de _procesarCargasCore_()**
+
+El nucleo del pipeline (validacion, deduplicacion, fetch de cotizaciones, escritura al ledger) se movio a la funcion privada `_procesarCargasCore_()`. `procesarCargas()` queda como orquestador del lock con un bloque `try/finally` limpio. El comportamiento del happy-path (lote valido) es funcionalmente identico al anterior.
+
+### Impacto en calidad del dato
+
+Los Gaps 2 y 3 de la auditoria de Fase 1 quedan cerrados con esta iteracion:
+- **Gap 2 cerrado**: nunca mas puede escribirse un registro con `tipo_cuenta=''` al ledger.
+- **Gap 3 parcialmente mitigado**: `validarFila_()` garantiza `monto > 0` del lado del input del usuario; la validacion de `tc > 0` sobre la respuesta de API queda como deuda menor pendiente.
+
+### Decision de diseno
+
+Se evaluo si rechazar solo las filas invalidas y procesar el resto (rechazo parcial). Se decidio mantener rechazo total del lote para preservar la atomicidad del batch: o todo el lote entra, o ninguna fila entra. Esto evita estados intermedios en el ledger cuando el usuario tiene un lote mixto con errores de tipeo.
+
+### Archivos Modificados
+
+- **`[MOD]` Backend**: `src/06_RegistrosService.js`.
+- **`[MOD]` Docs**: `src/ZZ_Changelog.js` (v0.9.0), `docs/permanente/HISTORIAL_DESARROLLO.md`.
+
+---
+
 ## 2026-06-05 - Cierre Fase 1: auditoría de módulos deprecados y gap de validación
 
 ### Evento

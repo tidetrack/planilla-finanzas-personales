@@ -5,6 +5,43 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-06-21] v0.9.2 - Procesamiento resiliente de cargas:
+ * - CAMBIO DE COMPORTAMIENTO: procesarCargas() ya no aborta el lote completo ante filas
+ *   incompletas. Procesa las filas validas, SALTEA las incompletas (quedan en la grilla
+ *   para corregirse) y reporta cuantas se omitieron y por que motivo.
+ * - Solo se limpian de la grilla las filas efectivamente procesadas (antes se limpiaba todo I5:O19).
+ * - FIX: el sort de Registros lanzaba "Las combinaciones deben estar completamente en el rango"
+ *   ante celdas combinadas y frenaba el guardado. Ahora es best-effort (try/catch): si el sort
+ *   falla se loguea y se continua; los registros ya estan escritos antes del sort.
+ * - Reafirmado: la Nota nunca fue un campo obligatorio.
+ *
+ * ---
+ *
+ * [2026-06-21] v0.9.1 - Fix sort de encabezado + utilidad de renombrado de hojas:
+ * - FIX CRITICO: el sort en procesarCargas() arrancaba en fila 2 e incluia HEADER_ROW (3),
+ *   desplazando el encabezado de Registros al ordenar por fecha descendente. Corregido a DATA_START_ROW (4).
+ * - FIX: appendMassive para REGISTROS usaba minRow=2; corregido a DATA_START_ROW para evitar
+ *   escritura antes del encabezado en hoja vacia. JSDoc de minRow actualizado.
+ * - NUEVO: renameProductionSheets() - utilidad de ejecucion unica para completar la migracion de hojas
+ *   de produccion (Copia de Registros -> Registros, Copia de Tipos de Cambio -> Tipos de cambio;
+ *   las originales reciben sufijo _legacy). Idempotente.
+ * - NUEVO: entrada de menu [Dev] "Renombrar Hojas a Produccion".
+ *
+ * ---
+ *
+ * [2026-06-21] v0.9.0 - Validacion estricta y concurrencia en procesarCargas:
+ * - Implementada deteccion de filas con "intencion de carga" basada en Monto/Cuenta/Medio/Moneda
+ *   (no solo Monto), para capturar filas parcialmente incompletas.
+ * - Validacion previa al append: monto numerico > 0, cuenta en catalogo, medio presente,
+ *   moneda en MONEDAS_DISPONIBLES. Cualquier fila invalida aborta el lote completo.
+ * - El fallback silencioso de tipoCuenta a '' fue eliminado; la validacion previa lo garantiza.
+ * - La grilla de Cargas NO se limpia ante un lote con errores; el usuario puede corregir.
+ * - El usuario recibe un alert con el numero de fila (relativo a la grilla) y el motivo de cada rechazo.
+ * - Proteccion contra doble-click/concurrencia via LockService.getDocumentLock() con timeout 100ms.
+ * - Nucleo refactorizado a _procesarCargasCore_() para mantener el bloque finally del lock limpio.
+ *
+ * ---
+ *
  * [2026-06-05] v0.8.0 (mantenimiento) - Sync de metadata y limpieza documental:
  * - Sincronizado `01_Version.js` de 0.1.0 (Sprint 0) a v0.8.0; el changelog embebido ahora apunta a este archivo como fuente de verdad.
  * - Eliminado `docs/permanente/TABLERO_ARQUITECTURA.md` (placeholder vacío de 0 bytes); se recreará al construir el Tablero.

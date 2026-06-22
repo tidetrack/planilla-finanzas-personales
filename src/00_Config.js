@@ -3,9 +3,9 @@
  * Configuración global del sistema Tidetrack
  * Define constantes, rangos de columnas, y enums
  * 
- * @version 0.1.0
+ * @version 0.2.0
  * @since 0.1.0
- * @lastModified 2026-01-17
+ * @lastModified 2026-06-21
  */
 
 // [AGILE-VALOR] Configuración Core y Central. Define el esqueleto del Plan de Cuentas y Hoja de cargas.
@@ -125,6 +125,8 @@ const MENU_CONFIG = {
         { name: '🔧 [Dev] Recalcular TC en Registros', function: 'recalcularTcRegistros' },
         { separator: true },
         { name: '🔧 [Dev] On/Off Protección Cuentas', function: 'togglePlanCuentasProtection' },
+        { separator: true },
+        { name: '🔧 [Dev] Renombrar Hojas a Producción', function: 'renameProductionSheets' },
         { separator: true },
         { name: '🤖 [DevTools] Exportar Arquitectura', function: 'exportarArquitecturaTotal' }
     ]

@@ -140,9 +140,9 @@ La jerarquia de fuentes de verdad es:
 10. `docs/permanente/FORMULAS_TABLERO.md` - Codigo fuente y logica de las formulas del Tablero
 11. `docs/permanente/PLAN_IMPLEMENTACION.md` - Hoja de ruta Claude Code + Cowork
 
-## Estado Actual del Producto (v0.8.0)
+## Estado Actual del Producto (v0.9.2)
 
-Completado: Core setup, exchange rates, catalogos + CRUD, Design System UI, ABM Plan Cuentas, Hoja de Cargas, batch processing, migracion legacy, DevTools export.
+Completado: Core setup, exchange rates, catalogos + CRUD, Design System UI, ABM Plan Cuentas, Hoja de Cargas, batch processing (validacion no bloqueante, proteccion de concurrencia, sort best-effort), utilidad de renombrado de hojas, migracion legacy, DevTools export.
 
 Pendiente: Dashboard/Tablero (QUERY formulas), presupuestacion mensual, resumen anual.
 
