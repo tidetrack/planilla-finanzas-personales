@@ -9,6 +9,14 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.9.3 - Sort best-effort también en appendMassive (2026-06-21)
+
+### Fixed
+
+- **El error de celdas combinadas seguía abortando `procesarCargas()`**: la v0.9.2 envolvió el sort de "Registros" (paso 7) pero **no** el auto-sort interno de `appendMassive()` para las tablas de cotizaciones (`TC_*` en "Tipos de cambio"). Ese sort sin proteger era el que lanzaba *"Las combinaciones deben estar completamente en el rango"* y frenaba todo vía el `catch` externo. Ahora también está en `try/catch` (best-effort). Los TCs se escriben con `setValues` antes del sort, así que quedan guardados aunque el orden falle.
+
+---
+
 ## v0.9.2 - Procesamiento resiliente de cargas (2026-06-21)
 
 ### Changed

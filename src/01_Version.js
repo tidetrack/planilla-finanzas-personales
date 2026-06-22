@@ -3,7 +3,7 @@
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
  * 
- * @version 0.9.2
+ * @version 0.9.3
  * @since 0.1.0
  * @lastModified 2026-06-21
  */
@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 9,
- patch: 2,
+ patch: 3,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-06-21',
- releaseName: 'v0.9.2 - Procesamiento resiliente de cargas',
+ releaseName: 'v0.9.3 - Sort best-effort tambien en appendMassive (TC)',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,10 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.9.3 (2026-06-21) - Sort best-effort tambien en appendMassive
+- Fix: el auto-sort interno de appendMassive (tablas TC en "Tipos de cambio") seguía lanzando el error de celdas combinadas y abortaba procesarCargas. Ahora también está en try/catch. Era el sort que 0.9.2 no había cubierto.
+
 v0.9.2 (2026-06-21) - Procesamiento resiliente de cargas
-* procesarCargas() ya no aborta el lote por filas incompletas: procesa las válidas, saltea las incompletas (quedan en la grilla) y las reporta.
-* Solo se limpian de la grilla las filas efectivamente procesadas.
-- Fix: el sort de Registros lanzaba error ante celdas combinadas y frenaba todo. Ahora es best-effort (try/catch): si falla, los registros igual se guardan.
+* procesarCargas() ya no aborta el lote por filas incompletas: procesa las válidas, saltea las incompletas y las reporta.
+- Sort de Registros (paso 7) ahora best-effort.
 
 Historial completo y canónico en: src/ZZ_Changelog.js
  `

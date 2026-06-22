@@ -16,7 +16,7 @@
  * @see 03_SheetManager.js (getTableData, appendMassive)
  * @see 15_ExchangeRateApi.js (fetchArsRate, fetchInternationalRates)
  *
- * @version 0.9.2
+ * @version 0.9.3
  * @since 0.1.0
  * @lastModified 2026-06-21
  */
@@ -384,12 +384,19 @@ function appendMassive(tableName, data2D, minRow) {
     const range = sheet.getRange(targetRow, startColIdx, paddedData.length, numCols);
     range.setValues(paddedData);
 
-    // Auto-sort para tablas TC_* en la hoja Tipos de Cambio
+    // Auto-sort para tablas TC_* en la hoja Tipos de Cambio (best-effort).
+    // Los datos ya se escribieron con setValues; el orden es secundario. Si la hoja tiene
+    // celdas combinadas que cruzan el rango, Sheets lanza error: se loguea y se continua,
+    // para no abortar el pipeline de procesarCargas (los TCs ya quedaron guardados).
     if (tableName.indexOf('TC_') === 0 && sheet.getName().toLowerCase() === SHEETS.TIPOS_CAMBIO.toLowerCase()) {
-        const finalBlockRow = targetRow + paddedData.length - 1;
-        if (finalBlockRow >= minRow) {
-            const tableRange = sheet.getRange(minRow, startColIdx, finalBlockRow - minRow + 1, numCols);
-            tableRange.sort({ column: startColIdx, ascending: false });
+        try {
+            const finalBlockRow = targetRow + paddedData.length - 1;
+            if (finalBlockRow >= minRow) {
+                const tableRange = sheet.getRange(minRow, startColIdx, finalBlockRow - minRow + 1, numCols);
+                tableRange.sort({ column: startColIdx, ascending: false });
+            }
+        } catch (sortErr) {
+            logError('appendMassive: sort omitido en ' + tableName + ' (posibles celdas combinadas)', sortErr);
         }
     }
 }

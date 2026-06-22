@@ -5,6 +5,15 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-06-21] v0.9.3 - Sort best-effort tambien en appendMassive:
+ * - FIX: el auto-sort interno de appendMassive() para las tablas TC_* en "Tipos de cambio"
+ *   seguia lanzando "Las combinaciones deben estar completamente en el rango" y, al no estar
+ *   protegido, abortaba procesarCargas via el outer catch. Era el sort que la v0.9.2 no cubrio
+ *   (solo habia envuelto el sort del paso 7 sobre Registros). Ahora tambien esta en try/catch.
+ * - Los TCs se escriben con setValues antes del sort, asi que quedan guardados aunque el orden falle.
+ *
+ * ---
+ *
  * [2026-06-21] v0.9.2 - Procesamiento resiliente de cargas:
  * - CAMBIO DE COMPORTAMIENTO: procesarCargas() ya no aborta el lote completo ante filas
  *   incompletas. Procesa las filas validas, SALTEA las incompletas (quedan en la grilla
