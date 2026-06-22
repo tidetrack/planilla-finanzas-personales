@@ -1,8 +1,7 @@
 {
   "name": "planilla-finanzas-personales",
-  "version": "1.0.0",
-  "description": "> **\"Paz financiera, todos los días\"**",
-  "main": "index.js",
+  "version": "0.8.0",
+  "description": "Tidetrack - Sistema de finanzas personales sobre Google Sheets + Apps Script. Paz financiera, todos los dias.",
   "directories": {
     "doc": "docs"
   },
@@ -15,8 +14,13 @@
     "type": "git",
     "url": "git+https://github.com/tidetrack/planilla-finanzas-personales.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "finanzas-personales",
+    "google-apps-script",
+    "google-sheets",
+    "tidetrack"
+  ],
+  "author": "Franco Diaz Pizarro",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
