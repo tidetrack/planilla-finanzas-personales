@@ -2,10 +2,10 @@
  * 01_Version.js
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
- * 
- * @version 0.8.0
+ *
+ * @version 0.8.2
  * @since 0.1.0
- * @lastModified 2026-06-05
+ * @lastModified 2026-06-22
  */
 
 // [AGILE-VALOR] Control de versiones esencial para el mantenimiento del entorno.
@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 8,
- patch: 0,
+ patch: 2,
 
  /**
  * Retorna la versión como string
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-03-23',
- releaseName: 'v0.8.0 - Herramientas de Escrutinio Arquitectónico',
+ releaseDate: '2026-06-22',
+ releaseName: 'v0.8.2 - Módulo Mirada Interanual',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,10 +36,9 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
-v0.8.0 (2026-03-23) - Herramientas de Escrutinio Arquitectónico
-+ Módulo DevTools (98_DevTools_Scanner.js): exporta el 100% de la arquitectura a un snapshot JSON.
-+ Custom Functions de cotización en tiempo real (TIDETRACK_USD/EUR/AUD).
-* Permisos de Drive actualizados en appsscript.json.
+v0.8.2 (2026-06-22) - Módulo Mirada Interanual
++ 07_MiradaInteranual.js: inicializarMiradaInteranual() setea las fórmulas LET/SUMPRODUCT en G10:R14.
++ Entrada de menú [Dev] "Inicializar Mirada Interanual".
 
 Historial completo y canónico en: src/ZZ_Changelog.js
  `

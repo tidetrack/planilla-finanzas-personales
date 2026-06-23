@@ -5,6 +5,17 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-06-22] v0.8.2 - Módulo Mirada Interanual:
+ * - NUEVO: `07_MiradaInteranual.js`. `inicializarMiradaInteranual()` setea las fórmulas LET/SUMPRODUCT
+ *   en G10:R14 de la hoja "Mirada Interanual" (Ingresos/Gastos Fijos/Gastos Variables por mes + Resultado).
+ * - Lógica: offset mensual vía `COLUMN()-COLUMN($K$10)`, navegación cross-year vía `EDATE`,
+ *   conversión multi-moneda vía `tc_tx/tc_sel` (ambas relativas a ARS=1).
+ * - Rangos de Registros desde fila 3 (header real en fila 2, datos desde fila 3, auditado sobre la planilla).
+ * - NUEVO: entrada de menú [Dev] → "Inicializar Mirada Interanual" en `00_Config.js`.
+ * - Nota: v0.8.1 queda reservada para el track de `06_RegistrosService.js` (prompt separado).
+ *
+ * ---
+ *
  * [2026-06-05] v0.8.0 (mantenimiento) - Sync de metadata y limpieza documental:
  * - Sincronizado `01_Version.js` de 0.1.0 (Sprint 0) a v0.8.0; el changelog embebido ahora apunta a este archivo como fuente de verdad.
  * - Eliminado `docs/permanente/TABLERO_ARQUITECTURA.md` (placeholder vacío de 0 bytes); se recreará al construir el Tablero.

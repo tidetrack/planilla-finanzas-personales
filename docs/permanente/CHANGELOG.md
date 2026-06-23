@@ -6,6 +6,24 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.8.2 - Módulo Mirada Interanual (2026-06-22) RELEASED
+
+### Added
+
+- **`src/07_MiradaInteranual.js`** - Nuevo módulo. `inicializarMiradaInteranual()` setea programáticamente las fórmulas `LET`/`SUMPRODUCT` en el rango G10:R14 de la hoja "Mirada Interanual":
+ - G10:R10 Ingresos por mes, G11:R11 Gastos Fijos, G12:R12 Gastos Variables, G14:R14 Resultado.
+ - Offset mensual vía `COLUMN()-COLUMN($K$10)`, navegación cross-year vía `EDATE`.
+ - Conversión multi-moneda vía `tc_tx/tc_sel` (ambas relativas a ARS=1; `monto * TC = ARS`).
+ - Rangos de `Registros` desde la fila 3 (encabezados reales en fila 2, datos desde fila 3, auditado sobre la planilla).
+- **Entrada de menú** `[Dev] Inicializar Mirada Interanual` en `00_Config.js` (`MENU_CONFIG.ITEMS`).
+
+### Notas
+
+- `v0.8.1` queda reservada para el track de `06_RegistrosService.js` (prompt separado).
+- `CHANGELOG.md` estaba desactualizado (última entrada previa: v0.6.0). El historial canónico in-code vive en `src/ZZ_Changelog.js`.
+
+---
+
 ## v0.6.0 - Simplificación de Arquitectura de Monedas (2026-02-13) RELEASED
 
 ### Resumen del Sprint
