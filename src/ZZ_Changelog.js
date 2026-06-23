@@ -11,6 +11,12 @@
  * - Lógica: offset mensual vía `COLUMN()-COLUMN($K$10)`, navegación cross-year vía `EDATE`,
  *   conversión multi-moneda vía `tc_tx/tc_sel` (ambas relativas a ARS=1).
  * - Rangos de Registros desde fila 3 (header real en fila 2, datos desde fila 3, auditado sobre la planilla).
+ * - FIX locale: el lookup del mes usa `SPLIT("ENERO,...,DICIEMBRE";",")` en vez de array literal `{...}`.
+ *   El array literal con comas rompía con "Error de análisis de fórmula" en locale español (separador ";", arrays "\").
+ *   Se replica el patrón ya usado en las fórmulas del Tablero.
+ * - NUEVO: `diagnosticarMiradaInteranual()` + menú [Dev] "Diagnosticar Mirada Interanual": escribe una hoja
+ *   "DEBUG Mirada" con micro-tests (separadores, array literal, SPLIT, lectura de Registros, fórmula completa)
+ *   para aislar fallas sin adivinar.
  * - NUEVO: entrada de menú [Dev] → "Inicializar Mirada Interanual" en `00_Config.js`.
  * - Nota: v0.8.1 queda reservada para el track de `06_RegistrosService.js` (prompt separado).
  *

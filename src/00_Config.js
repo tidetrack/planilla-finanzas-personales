@@ -127,6 +127,7 @@ const MENU_CONFIG = {
         { name: '🔧 [Dev] On/Off Protección Cuentas', function: 'togglePlanCuentasProtection' },
         { separator: true },
         { name: '🔧 [Dev] Inicializar Mirada Interanual', function: 'inicializarMiradaInteranual' },
+        { name: '🔧 [Dev] Diagnosticar Mirada Interanual', function: 'diagnosticarMiradaInteranual' },
         { separator: true },
         { name: '🤖 [DevTools] Exportar Arquitectura', function: 'exportarArquitecturaTotal' }
     ]
