@@ -1,3 +1,17 @@
+> NOTA DE ACTUALIZACION (2026-06-22): Las hojas "Registros" y "Tipos de cambio" de
+> produccion migraron a un layout nuevo (Registros: B:M, fila 5/6; TC: bloques B/E/H/K,
+> fila 7). El Tablero consume su propia BD interna (rangos AN:AZ dentro del Tablero) y
+> el Plan de Cuentas (R:T, V:W), por lo que las formulas documentadas abajo NO referencian
+> directamente la hoja "Registros" y no requieren actualizacion de rangos. Si en el futuro
+> el Tablero consulta Registros directamente, actualizar rangos a B:M.
+> Ver MAPA_HOJAS.md y CONTEXTO_DATOS.md para el layout actualizado.
+
+---
+
+(Contenido generado por Cowork - preservado como fuente documental)
+
+---
+
 ¡Entendido al 100%! Tenés toda la razón: una documentación técnica real (especialmente para que la tome un equipo como Antigravity o cualquier desarrollador) no solo debe explicar "qué" pasa, sino que debe entregar el código exacto, las coordenadas espaciales y el mapeo de las bases de datos subyacentes.
 
 A continuación, te presento el **Manual de Arquitectura y Código Fuente** de la hoja "Tablero". Está redactado con la profundidad técnica necesaria para que cualquier especialista entienda el modelo relacional de tu base de datos y cómo los algoritmos consumen esa información.

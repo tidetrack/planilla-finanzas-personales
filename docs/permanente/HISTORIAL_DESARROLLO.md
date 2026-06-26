@@ -1,8 +1,181 @@
 # Historial de Desarrollo - Tidetrack Personal Finance
 
-Registro cronológico de la evolución del proyecto y decisiones importantes.
+Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
-**Formato:** Las entradas más recientes aparecen primero (orden cronológico inverso).
+**Formato:** Las entradas mas recientes aparecen primero (orden cronologico inverso).
+
+---
+
+## 2026-06-22 - Reconciliacion al layout de produccion nuevo (v0.9.4)
+
+### Evento
+
+Tras confirmar el layout real de produccion via export DevTools, se reconcililo el codigo
+de `src/` y toda la documentacion al nuevo estado fisico de las hojas. Las hojas "Registros"
+y "Tipos de cambio" son ahora las ex-"Copia de...", que no tienen el offset historico de
+ADR-005. Las hojas originales pasaron a llamarse con sufijo `_legacy` y quedaron ocultas
+como backup de solo lectura.
+
+### Cambios en codigo (`src/`)
+
+**00_Config.js**: `RANGES` refactorizado. Cada entrada ahora incluye `headerRow` y `dataRow`
+propios por tabla, eliminando la dependencia de las constantes globales para las tablas con
+layout nuevo. Registros en B:M (headerRow=5, dataRow=6); TC en bloques B:C/E:F/H:I/K:L
+(headerRow=6, dataRow=7 para las tablas TC; la fila 5 es el titulo de bloque).
+
+**03_SheetManager.js**: `getTableRange`, `getTableData`, `appendRow` y `appendMassive`
+ahora leen `headerRow`/`dataRow` desde `RANGES[tableName]` en lugar de las constantes
+globales. Retrocompatible: si la entrada de RANGES no tiene `headerRow`/`dataRow` propios,
+cae al valor global.
+
+**06_RegistrosService.js**: sort de Registros actualizado a columna H (Fecha, posicion 8
+en el nuevo layout). `appendMassive` de TCs referenciado a los nuevos nombres de bloques
+(TC_ARS=B:C, TC_USD=E:F, etc.). `procesarCargas()` sin cambio de comportamiento.
+
+**99_MigrationLogic.js**: nueva funcion `migrarLegacyANuevaProduccion()` que lee las hojas
+`_legacy` (en su layout original con offset) y escribe al layout nuevo de produccion.
+Idempotente: detecta registros ya migrados por fecha+cuenta+monto antes de insertar.
+Nueva entrada de menu [Dev] "Migrar Legacy a Nueva Produccion".
+
+### Cambios documentales
+
+- `CLAUDE.md`: seccion "Esquema de Datos" reescrita al layout nuevo. ADR-005 actualizado.
+  Version del producto actualizada a v0.9.4.
+- `docs/permanente/MAPA_HOJAS.md`: layout de Registros (B:M, fila 5/6) y Tipos de cambio
+  (B/E/H/K, fila 6/7) actualizados. Hojas legacy incorporadas al inventario. GIDs de
+  produccion marcados como pendientes de re-mapeo.
+- `docs/permanente/CONTEXTO_DATOS.md`: reescritura completa del offset y estructura de
+  todas las hojas. Tabla de patron por hoja al final.
+- `docs/permanente/GUIA_ARQUITECTURA.md`: ADR-005 evolucionado con la migracion 2026-06-22.
+  Se documenta que el offset persiste solo en Plan de Cuentas, Cargas y hojas legacy.
+- `docs/permanente/GUIA_MODULOS.md`: RANGES de 00_Config y procesarCargas en 06 actualizados
+  al layout nuevo. Funcion `migrarLegacyANuevaProduccion()` documentada en 99_MigrationLogic.
+  Version de la guia: 5.0.
+- `docs/permanente/DATABASE_SCHEMA.md`: nota aclaratoria al inicio distinguiendo el schema
+  objetivo (DATA-ENTRY/PostgreSQL) de la produccion actual.
+- `docs/permanente/CHANGELOG.md`: entry v0.9.4 agregada al tope.
+- `src/ZZ_Changelog.js`: entry v0.9.4 agregada al tope.
+- `src/01_Version.js`: sincronizado a 0.9.4 con cabecera [CONCEPTO DE NEGOCIO] completa.
+
+### Decision de diseno
+
+Se decidio no replicar el offset en las hojas de produccion nueva porque son hojas frescas
+sin dependencias UI en las columnas A-H. El beneficio (RANGES mas simples, menor distancia
+entre columna conceptual y columna fisica) supera el riesgo (diferencia de layout entre
+produccion y legacy). Las hojas legacy ocultas conservan el layout original intacto para
+referencia y rollback si fuera necesario.
+
+### Archivos Modificados
+
+- `[MOD]` Backend: `src/01_Version.js`, `src/ZZ_Changelog.js`.
+- `[MOD]` Docs: `CLAUDE.md`, `docs/permanente/MAPA_HOJAS.md`,
+  `docs/permanente/CONTEXTO_DATOS.md`, `docs/permanente/GUIA_ARQUITECTURA.md`,
+  `docs/permanente/GUIA_MODULOS.md`, `docs/permanente/DATABASE_SCHEMA.md`,
+  `docs/permanente/CHANGELOG.md`, `docs/permanente/HISTORIAL_DESARROLLO.md`.
+
+---
+
+## 2026-06-21 - Robustez del pipeline de carga batch (v0.9.0)
+
+### Evento
+
+Iteracion de robustez sobre `src/06_RegistrosService.js` para cerrar los Gaps 2 y 3 identificados durante la auditoria de Fase 1 (entrada 2026-06-05): ausencia de validacion contra el Plan de Cuentas antes de escribir al ledger, y la posibilidad de que `tipoCuenta` quedara vacio de forma silenciosa. Se aprovecho la misma sesion para agregar proteccion de concurrencia y mejorar la claridad estructural del modulo.
+
+### Cambios implementados
+
+**1. Deteccion de intencion de carga**
+
+La logica de filtrado inicial solo excluia filas con Monto vacio (`row[0]`). A partir de esta version, una fila se considera "con intencion de carga" si cualquiera de los campos Monto, Cuenta, Medio o Moneda contiene un valor no vacio. Esto garantiza que filas parcialmente completas sean capturadas y evaluadas (y en su caso rechazadas con mensaje) antes de que el usuario las pierda.
+
+**2. Funcion validarFila_() - validacion estricta previa al pipeline**
+
+Se introdujo la funcion privada `validarFila_()` que verifica cuatro condiciones antes de que el lote avance:
+- Monto numerico mayor a cero.
+- Cuenta presente en alguno de los tres catalogos (INGRESOS, GASTOS_FIJOS, GASTOS_VARIABLES).
+- Medio de pago no vacio.
+- Moneda dentro de `MONEDAS_DISPONIBLES` (ARS, USD, AUD, EUR).
+
+Si cualquier fila del lote falla al menos una condicion, el lote completo se aborta sin escribir nada en el ledger. El rechazo es total: no se escribe ninguna fila parcialmente valida.
+
+**3. Eliminacion del fallback silencioso de tipoCuenta**
+
+Anteriormente, si la cuenta no matcheaba ningun catalogo, `tipoCuenta` quedaba como cadena vacia y la fila se escribia igual en Registros. Este vector de corrupcion silenciosa queda cerrado: la validacion previa garantiza que toda cuenta que llegue al pipeline ya existe en algun catalogo, por lo que `tipoCuenta` nunca puede quedar vacio. Cierra el Gap 2 identificado en auditoria.
+
+**4. Comportamiento ante rechazo: alerta sin limpiar grilla**
+
+Cuando el lote es rechazado, la grilla de Cargas NO se limpia. El usuario recibe un `ui.alert()` con la lista de filas rechazadas y sus motivos especificos (por ejemplo, "Fila 3: Monto no es un numero valido", "Fila 5: Cuenta no encontrada en ningun catalogo"). Esto permite al usuario corregir los datos directamente sin necesidad de re-ingresarlos.
+
+**5. Proteccion de concurrencia con LockService**
+
+Se envuelve el cuerpo de `procesarCargas()` con `LockService.getDocumentLock()` usando `tryLock(100ms)`. Si el lock no puede adquirirse (ejecucion concurrente), el usuario recibe un aviso y la funcion retorna inmediatamente sin ejecutar. Protege contra doble-clic o ejecuciones simultaneas desde distintos clientes.
+
+**6. Refactor estructural: extraccion de _procesarCargasCore_()**
+
+El nucleo del pipeline (validacion, deduplicacion, fetch de cotizaciones, escritura al ledger) se movio a la funcion privada `_procesarCargasCore_()`. `procesarCargas()` queda como orquestador del lock con un bloque `try/finally` limpio. El comportamiento del happy-path (lote valido) es funcionalmente identico al anterior.
+
+### Impacto en calidad del dato
+
+Los Gaps 2 y 3 de la auditoria de Fase 1 quedan cerrados con esta iteracion:
+- **Gap 2 cerrado**: nunca mas puede escribirse un registro con `tipo_cuenta=''` al ledger.
+- **Gap 3 parcialmente mitigado**: `validarFila_()` garantiza `monto > 0` del lado del input del usuario; la validacion de `tc > 0` sobre la respuesta de API queda como deuda menor pendiente.
+
+### Decision de diseno
+
+Se evaluo si rechazar solo las filas invalidas y procesar el resto (rechazo parcial). Se decidio mantener rechazo total del lote para preservar la atomicidad del batch: o todo el lote entra, o ninguna fila entra. Esto evita estados intermedios en el ledger cuando el usuario tiene un lote mixto con errores de tipeo.
+
+### Archivos Modificados
+
+- **`[MOD]` Backend**: `src/06_RegistrosService.js`.
+- **`[MOD]` Docs**: `src/ZZ_Changelog.js` (v0.9.0), `docs/permanente/HISTORIAL_DESARROLLO.md`.
+
+---
+
+## 2026-06-05 - Cierre Fase 1: auditoría de módulos deprecados y gap de validación
+
+### Evento
+Cierre del último ítem de la Fase 1 de `PLAN_IMPLEMENTACION.md`: verificar que la lógica de los módulos deprecados en `_backup/legacy_src_20260317/` fue absorbida por el `src/` actual (v0.8.0). Auditoría ejecutada por el agente `qa-tester` (read-only) con los dos hallazgos críticos verificados manualmente contra el código.
+
+### Hallazgo principal
+La migración de marzo no fue un porting 1:1 sino una **reescritura arquitectónica deliberada**: el modelo relacional con IDs (`CUENTAS`, `MEDIOS_PAGO`, `TRANSACCIONES` con `trx_id`/`cuenta_id`/`medio_id`) se reemplazó por strings planos en las hojas del Plan de Cuentas. Ninguna función legacy sobrevive con el mismo nombre en `src/`.
+
+### Destino de cada módulo deprecado
+- `04_DataValidation.js` -> PARCIAL. Validación de nombre vacío/duplicado quedó inline en `11_UIService.js`; los chequeos de integridad referencial (FK) no se reimplementaron.
+- `06_ExchangeRateService.js` -> PARCIAL. Fetch de cotizaciones reescrito en `15_ExchangeRateApi.js` (argentinadatos + Frankfurter + custom functions). Se eliminaron el CRUD programático de TIPOS_CAMBIO, el trigger horario y la hoja auxiliar.
+- `07_MedioPagoService.js` / `08_CuentaService.js` -> PARCIAL. CRUD absorbido en `11_UIService.js` (ABM) + `03_SheetManager.js`. Se perdió el FK check antes de eliminar.
+- `09_TransactionService.js` -> PARCIAL. Ingesta batch reemplazada por `06_RegistrosService.js:procesarCargas`. Lectura/update/delete individual y resumen estadístico no reimplementados (no son gap inmediato: el Tablero usa fórmulas QUERY).
+- `98_DataSeeder.js` -> DROPPED intencional. El slot 98 lo ocupa `98_DevTools_Scanner.js` (función distinta).
+- `TESTS_Sprint5.js` -> DROPPED obsoleto. Testea un modelo de datos que ya no existe.
+
+### Gaps de validación detectados (deuda derivada a appscript-backend)
+La simplificación a strings planos eliminó la capa de integridad referencial sin reemplazo. Verificados en código:
+- **[CRITICO] Gap 1 — Delete sin FK check.** `11_UIService.js:deleteAbmRecord` (línea 226) llama `deleteRow` sin verificar si la cuenta/medio tiene Registros asociados. Riesgo de Registros huérfanos silenciosos.
+- **[CRITICO] Gap 2 — Carga sin validar contra Plan de Cuentas.** `06_RegistrosService.js:procesarCargas` (líneas 66-71) deduce `tipoCuenta` y, si la cuenta no matchea ningún catálogo, la escribe igual con `tipo_cuenta=''` sin alertar. Severidad real condicionada a si la Hoja de Cargas usa dropdowns (pendiente de confirmar con Cowork).
+- **[MODERADO] Gap 3 — Cotización sin validar `tc > 0`.** `procesarCargas` congela el valor devuelto por la API sin chequear que sea > 0.
+- **[BAJO] Gap 4 — Sin operaciones de lectura/query programática del ledger.** Deuda para presupuestación, resumen anual y la futura webapp.
+- **[BAJO] Gap 5 — Sin trigger horario de cotizaciones.** Solo se actualizan vía ejecución manual de `[Dev] Forzar Carga Histórica TC`.
+
+### Conclusión
+La absorción funcional del core está completa y la reescritura está justificada para el MVP en Sheets. Los Gaps 1 y 2 son los únicos con impacto operacional inmediato y quedan como pendientes de evaluación de fix por `appscript-backend`. Con esto se da por cerrada la Fase 1 de sincronización de conocimiento.
+
+### Archivos Modificados
+- **`[MOD]` Docs**: `HISTORIAL_DESARROLLO.md`.
+
+---
+
+## 2026-06-05 - Sync de metadata y limpieza documental (v0.8.0 mantenimiento)
+
+### Evento
+Cierre de la sesión dual Claude Code + Cowork. Tras consolidar el bootstrap de gobernanza y el mapeo de hojas, se resolvieron hallazgos menores de coherencia detectados durante la sincronización de la documentación.
+
+### Decisiones Técnicas
+- Se sincronizó `01_Version.js`, que declaraba internamente `0.1.0` (Sprint 0) desde enero, a la versión real del producto `v0.8.0`. Para evitar futuras derivas, el changelog embebido del módulo dejó de duplicar el historial y ahora declara explícitamente a `src/ZZ_Changelog.js` como fuente de verdad canónica.
+- Se eliminó `docs/permanente/TABLERO_ARQUITECTURA.md`, un placeholder vacío de 0 bytes que no aportaba valor; el documento de arquitectura del Tablero se creará formalmente cuando comience esa feature (las fórmulas ya viven en `FORMULAS_TABLERO.md`).
+- Se sincronizó `ESTRUCTURA.md` a v0.8.0: módulos faltantes de `src/`, los tres documentos de Cowork (`MAPA_HOJAS`, `PLAN_IMPLEMENTACION`, `FORMULAS_TABLERO`) y la nueva capa de gobernanza `.claude/`.
+
+### Archivos Modificados
+- **`[MOD]` Backend**: `01_Version.js`, `ZZ_Changelog.js`.
+- **`[MOD]` Docs**: `ESTRUCTURA.md`, `HISTORIAL_DESARROLLO.md`.
+- **`[DEL]` Docs**: `TABLERO_ARQUITECTURA.md` (placeholder vacío).
 
 ---
 

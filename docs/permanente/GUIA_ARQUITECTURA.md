@@ -128,19 +128,52 @@ Implementación:
 **Negativas:**
 - ️ Impide tener la data "viva" de las tablas convertidas instantes de la carga; requiere apretar "Cargar Lote".
 
-### ADR-005: Estructura de Bloques Analíticos y Margen de UI (Offset)
+### ADR-005: Estructura de Bloques Analiticos y Margen de UI (Offset)
 
-**Fecha**: 2026-03-23
+**Fecha original**: 2026-03-23
+**Actualizado**: 2026-06-22 (evolucion parcial del offset)
 
-#### Contexto
-A través del escrutinio profundo del JSON de arquitectura, se detectó un patrón de diseño universal no documentado previamente: la convivencia entre "Frontends" y "Backends" en Google Sheets requiere de manipulación visual del DOM de la grilla.
+#### Contexto original
+A traves del escrutinio profundo del JSON de arquitectura, se detecto un patron de diseno
+universal no documentado previamente: la convivencia entre "Frontends" y "Backends" en
+Google Sheets requiere manipulacion visual del DOM de la grilla.
 
-#### Decisión
-**Implementar un "Offset" estructural en las Bases de Datos y "Frozen Columns" en los Tableros.**
+#### Decision original (2026-03-23)
+Implementar un "Offset" estructural en las Bases de Datos y "Frozen Columns" en los Tableros.
 
-Implementación:
-- **Tableros / UI**: Hojas como `Inicio`, `Tablero` y `Cargas` tienen congeladas exactamente 6 columnas a la izquierda. Esto genera un "Sidebar" permanente mientras el escrutinio horizontal fluye a la derecha.
-- **Bases de Datos (Data Lakes)**: Hojas como `Registros` y `Plan de Cuentas` comienzan su verdadero header en la columna `H` o `I` (ej: `"Registros."`). Las primeras 7 columnas quedan vacías/inútiles a nivel backend para reservar el espacio físico en caso de que un usuario scrollee o para alojar metadatos ocultos.
+Implementacion:
+- **Tableros / UI**: hojas como `Inicio`, `Tablero` y `Cargas` tienen congeladas exactamente
+  6 columnas a la izquierda. Genera un "Sidebar" permanente mientras el escrutinio horizontal
+  fluye a la derecha.
+- **Bases de Datos (Data Lakes)**: hojas como `Registros` y `Plan de Cuentas` comenzaban su
+  header en la columna H o I. Las primeras 7 columnas quedaban vacias para reservar espacio
+  de margen UI.
+
+#### Evolucion (2026-06-22): eliminacion del offset en Registros y Tipos de cambio
+
+Durante la migracion a layout de produccion nuevo (hojas ex-"Copia de..."), se elimino el
+offset en las hojas de datos transaccionales:
+
+- **"Registros" (produccion)**: datos ahora en B:M. Header en fila 5, datos desde fila 6.
+  Sin columnas vacias de margen a la izquierda.
+- **"Tipos de cambio" (produccion)**: bloques de TC ahora en B:C / E:F / H:I / K:L.
+  Titulos fila 5, sub-headers fila 6, datos desde fila 7. Sin margen.
+
+**El offset PERSISTE en**:
+- `Plan de Cuentas`: columnas I+ (header fila 3, datos fila 4). Sin cambios.
+- `Cargas`: columnas I+ (header fila 4, datos fila 5). Sin cambios.
+- Hojas legacy ocultas (`Registros_legacy`, `Tipos de cambio_legacy`): conservan el
+  layout original con offset como backup de solo lectura.
+
+#### Racional de la evolucion
+Las hojas de produccion nueva son hojas frescas ("Copia de...") sin el margen UI
+heredado. Se decidio no replicar el offset en las copias para simplificar las
+referencias de RANGES en 00_Config.js y alinearse con un modelo mas cercano al
+schema objetivo (PostgreSQL), donde las columnas arrancan en posicion 1.
+
+#### Estado
+Vigente con alcance reducido: aplica a Plan de Cuentas, Cargas y hojas legacy.
+No aplica a Registros ni Tipos de cambio de produccion.
 
 ### ADR-006: Motores Singulares de Cálculo (Hidden Engines)
 

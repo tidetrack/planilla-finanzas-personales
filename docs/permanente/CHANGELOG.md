@@ -2,7 +2,86 @@
 
 Historial de versiones y cambios significativos del proyecto.
 
-**Formato:** Las versiones más recientes aparecen primero (orden cronológico inverso).
+**Formato:** Las versiones mas recientes aparecen primero (orden cronologico inverso).
+
+> Nota: el historial canonico y completo vive en `src/ZZ_Changelog.js`.
+> Este archivo refleja los releases principales para lectura humana rapida.
+
+---
+
+## v0.9.4 - Reconciliacion al layout de produccion nuevo (2026-06-22)
+
+### Changed
+
+- **Layout de produccion nuevo sin offset**: las hojas "Registros" y "Tipos de cambio"
+  (ex "Copia de...") migraron a un layout sin el offset historico de ADR-005.
+  Registros ahora en columnas B:M (headerRow=5, dataRow=6). Tipos de cambio con
+  bloques B:C / E:F / H:I / K:L (titulos fila 5, sub-headers fila 6, datos fila 7).
+- **`00_Config.js`**: `RANGES` refactorizado con `headerRow` y `dataRow` por tabla,
+  eliminando la dependencia de las constantes globales `HEADER_ROW` / `DATA_START_ROW`
+  para Registros y TC.
+- **`03_SheetManager.js`**: `getTableRange`, `getTableData`, `appendRow` y
+  `appendMassive` ahora leen `headerRow`/`dataRow` desde `RANGES[tableName]`.
+- **`06_RegistrosService.js`**: sort de Registros actualizado a columna H (Fecha).
+  `appendMassive` de TCs referenciado a los nuevos bloques B/E/H/K.
+
+### Added
+
+- **`99_MigrationLogic.js`**: nueva funcion `migrarLegacyANuevaProduccion()` que copia
+  datos de `Registros_legacy` (layout I:T, headerFila2) y `Tipos de cambio_legacy`
+  (bloques I:J/L:M/O:P/R:S) al layout nuevo de produccion. Idempotente.
+  Nueva entrada de menu [Dev] "Migrar Legacy a Nueva Produccion".
+- Hojas `Registros_legacy` y `Tipos de cambio_legacy` ocultas como backup (~2879 filas).
+
+### Notes
+
+- Plan de Cuentas y Cargas NO cambiaron: mantienen su layout historico (header fila 3,
+  datos fila 4; columnas I+ con offset).
+- ADR-005 actualizado en `GUIA_ARQUITECTURA.md`: el offset se elimino en Registros y
+  Tipos de cambio; persiste en Plan de Cuentas y hojas legacy.
+
+---
+
+## v0.9.3 - Sort best-effort tambien en appendMassive (2026-06-21)
+
+### Fixed
+
+- **El error de celdas combinadas seguía abortando `procesarCargas()`**: la v0.9.2 envolvió el sort de "Registros" (paso 7) pero **no** el auto-sort interno de `appendMassive()` para las tablas de cotizaciones (`TC_*` en "Tipos de cambio"). Ese sort sin proteger era el que lanzaba *"Las combinaciones deben estar completamente en el rango"* y frenaba todo vía el `catch` externo. Ahora también está en `try/catch` (best-effort). Los TCs se escriben con `setValues` antes del sort, así que quedan guardados aunque el orden falle.
+
+---
+
+## v0.9.2 - Procesamiento resiliente de cargas (2026-06-21)
+
+### Changed
+
+- **`procesarCargas()` dejó de abortar el lote completo ante filas incompletas.** Ahora procesa las filas válidas, **saltea** las incompletas (quedan en la grilla para corregirse) e informa al final cuántas se omitieron y por qué. La carga ya no se frena por datos faltantes.
+- Solo se limpian de la grilla las filas efectivamente procesadas (antes se limpiaba todo `I5:O19`).
+
+### Fixed
+
+- **Bug de sort con celdas combinadas**: el ordenamiento de "Registros" lanzaba *"Las combinaciones deben estar completamente en el rango que se desea ordenar"* y frenaba el guardado. Ahora el sort es **best-effort** (`try/catch`): si falla por merges, se loguea y se continúa — los registros ya quedaron escritos.
+
+### Notas
+
+- La **Nota** nunca fue un campo obligatorio.
+
+---
+
+## v0.9.1 - Fix sort de encabezado + utilidad de renombrado de hojas (2026-06-21)
+
+### Fixed
+
+- **Bug crítico de sort en `procesarCargas()`**: el ordenamiento arrancaba en la fila 2 e incluía el encabezado en `HEADER_ROW` (3), desplazándolo al ordenar por fecha descendente. Corregido para arrancar en `DATA_START_ROW` (4).
+- **`appendMassive` para REGISTROS** usaba `minRow=2`; corregido a `DATA_START_ROW` para evitar escritura antes del encabezado en hoja vacía. JSDoc de `minRow` actualizado.
+
+### Added
+
+- **`renameProductionSheets()`**: utilidad de ejecución única para completar la migración de hojas de producción (`Copia de Registros` → `Registros`, `Copia de Tipos de Cambio` → `Tipos de cambio`; las originales reciben sufijo `_legacy`). Idempotente.
+- Entrada de menú **[Dev] "Renombrar Hojas a Producción"**.
+
+### Notas
+
+- Los nombres de producción siguen siendo `Registros` y `Tipos de cambio`: las constantes `SHEETS` en `00_Config.js` y las fórmulas del Tablero/CALCU/ANUAL no cambian.
 
 ---
 

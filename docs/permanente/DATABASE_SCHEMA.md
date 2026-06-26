@@ -4,7 +4,20 @@ Esquema de base de datos implementado en **Google Sheets** con disciplina relaci
 
 ---
 
-## ️ Arquitectura General
+> **IMPORTANTE (2026-06-22): este documento describe el schema OBJETIVO de migracion
+> a la hoja DATA-ENTRY y eventualmente a PostgreSQL. NO es el layout de produccion actual.**
+>
+> La produccion hoy corre en:
+> - Plan de Cuentas (5 tablas: I:J, L:M, O:P, R:T, V:W; header fila 3, datos fila 4)
+> - Registros (B:M; header fila 5, datos fila 6) - layout nuevo sin offset desde 2026-06-22
+> - Tipos de cambio (bloques B:C/E:F/H:I/K:L; datos fila 7) - layout nuevo sin offset
+>
+> Para el layout real de produccion ver `docs/permanente/MAPA_HOJAS.md` y
+> `docs/permanente/CONTEXTO_DATOS.md`.
+
+---
+
+## Arquitectura General
 
 ### Backend: Google Sheets como Base de Datos
 

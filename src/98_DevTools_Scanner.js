@@ -49,10 +49,13 @@ function exportarArquitecturaTotal() {
     const fontWeights = rango.getFontWeights();
     const fontSizes = rango.getFontSizes();
 
+    // Ventana de captura de valores: primeras 12 filas (headers + algunas filas de datos
+    // de muestra). Suficiente para reconciliar layout sin inflar el JSON con todo el ledger.
+    const FILAS_MUESTRA = 12;
     for (let r = 0; r < lastRow; r++) {
       for (let c = 0; c < lastCol; c++) {
-        // Mapeamos todo header y todas las formulas para no llenar el JSON de strings vacios
-        if (formulas[r][c] || (values[r][c] !== "" && r < 5)) { 
+        // Mapeamos todo header/muestra y todas las formulas para no llenar el JSON de strings vacios
+        if (formulas[r][c] || (values[r][c] !== "" && r < FILAS_MUESTRA)) {
            let ref = hoja.getRange(r + 1, c + 1).getA1Notation();
            
            arquitectura.hojas[nombre].mapa_celdas[ref] = {
