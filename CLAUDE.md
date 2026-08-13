@@ -8,7 +8,8 @@
 > gemelo digital por JSON, scanner vivo por n8n, gobernanza, contratos de motores,
 > verificacion adversarial y la metodologia del plan de cuentas. Se ejecuta por
 > fases, en orden. Estado: **Fase 0 (reconciliacion de drift) COMPLETADA el
-> 2026-08-12**; **Fase 1 (Gobernanza) EN CURSO**. Las fases siguientes se ejecutan
+> 2026-08-12**; **Fase 1 (Gobernanza) COMPLETADA el 2026-08-12** (v0.8.3
+> desplegada, drift-check posterior sin drift). Las fases siguientes se ejecutan
 > en orden, cada una cierra con verificacion + commit + changelog dual.
 
 ## 1. Que es este proyecto
@@ -298,10 +299,8 @@ La jerarquia de fuentes de verdad es:
 
 ## Estado Actual del Producto
 
-**Version productiva: v0.8.2** (baseline adoptado verbatim en Fase 0, 2026-08-12). Los commits v0.9.2-v0.9.4 quedaron en la historia de git sin desplegar (ver seccion 4).
+**Version productiva: v0.8.3** (desplegada el 2026-08-12 via `sync_targets.command`; drift-check posterior: sin drift). Los commits v0.9.2-v0.9.4 quedaron en la historia de git sin desplegar (ver seccion 4).
 
-Completado: Core setup, exchange rates, catalogos + CRUD, Design System UI, ABM Plan Cuentas, Hoja de Cargas, batch processing (procesarCargas con cache TC y persistencia batch), migracion de BD Antigua, Mirada Interanual (formulas por codigo + diagnostico), DevTools export, Fase 0 del arnes (reconciliacion de drift, targets.yaml con identidades confirmadas).
-
-En curso: Fase 1 del arnes (gobernanza: este contrato, resolver de alias, sync_targets.command, changelog dual).
+Completado: Core setup, exchange rates, catalogos + CRUD, Design System UI, ABM Plan Cuentas, Hoja de Cargas, batch processing (procesarCargas con cache TC y persistencia batch), migracion de BD Antigua, Mirada Interanual (formulas por codigo + diagnostico), DevTools export, Fase 0 del arnes (reconciliacion de drift, targets.yaml con identidades confirmadas), Fase 1 del arnes (este contrato, resolver de alias, sync_targets.command, changelog dual; v0.8.3 desplegada).
 
 Pendiente: Fases 2-6 del arnes (gemelo digital, n8n, contratos de motores, centro de operaciones, plan de cuentas), destino de v0.9.x (decision de Franco), Dashboard/Tablero (QUERY formulas), presupuestacion mensual, resumen anual.

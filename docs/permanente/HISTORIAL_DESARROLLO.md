@@ -57,6 +57,15 @@ menores}), segun ARNES_TIDETRACK.md seccion 9.
 - Nadie ejecuto v0.8.3 contra Sheets todavia al momento del commit; el humo real es
   el deploy controlado por sync_targets.command.
 
+### Cierre de fase (mismo dia)
+
+v0.8.3 desplegada a produccion via `sync_targets.command` (drift-check previo
+mostro exactamente el delta esperado; confirmacion "pisar" por protocolo del
+script; 17 archivos pusheados; trap restauro `.clasp.json`). Dry-run posterior:
+**sin drift** — repo == planilla en v0.8.3. `targets.yaml` actualizado a
+`version_desplegada: "0.8.3"`. Queda pendiente el humo funcional de Franco en la
+planilla (menu sin emojis visible, procesar una carga, forzar TC).
+
 ---
 
 ## 2026-08-12 - Fase 0 del arnes Tidetrack: reconciliacion de drift
