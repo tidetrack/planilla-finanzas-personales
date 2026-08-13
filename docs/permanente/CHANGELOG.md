@@ -9,6 +9,41 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## Fase 0 del arnes - Reconciliacion de drift (2026-08-12)
+
+> No es un release de codigo: es la adopcion del estado productivo real como baseline
+> del repo, segun `ARNES_TIDETRACK.md` seccion 2. El HEAD de `src/` pasa a reflejar
+> la produccion (v0.8.2), no la ultima version documentada (v0.9.4).
+
+### Hallazgo del drift-check (clasp pull a directorio temporal)
+
+- La produccion declara **v0.8.2** e incluye `07_MiradaInteranual.js` (2026-06-23),
+  modulo que el repo no conocia. Un `clasp push` ciego lo habria destruido.
+- Los cambios **v0.9.2 - v0.9.4** del repo (layout nuevo B:M, batch resiliente)
+  **nunca se desplegaron**: el `ZZ_Changelog.js` de produccion termina en v0.8.2.
+- Consecuencia: v0.9.x describe un layout que la produccion aun no tiene. Queda
+  integro en la historia de git (commit `82d5759` y anteriores) para re-aplicarse
+  como cambio nuevo sobre este baseline, con drift-check y deploy controlado.
+
+### Changed
+
+- `src/` completo sincronizado verbatim desde el script productivo (10 archivos:
+  9 modificados + `07_MiradaInteranual.js` nuevo). `node --check` OK en los 14 .js.
+- `ZZ_Changelog.js` vuelve al contenido productivo (tope v0.8.2) y no se edita en
+  esta fase: mantenerlo identico a produccion es parte del baseline verbatim.
+- WIP local del clon principal preservado en rama `wip/pre-arnes` (commit `6426b93`):
+  `MAPA_HOJAS.md` modificado, 2 prompts y `notas fran.md`. `main` local
+  fast-forwardeado a `origin/main`.
+
+### Added
+
+- **`targets.yaml`** en raiz: fuente unica de targets de deploy. `script_id` (de
+  `.clasp.json`) y `sheet_id` confirmado por triple fuente (MAPA_HOJAS.md, JSON del
+  scanner, metadata de Drive): planilla "PLANILLA FINANZAS_v4 .WIP | Personal",
+  owner start.tidetrack@gmail.com. Cierra el pendiente-confirmar del vault.
+
+---
+
 ## v0.9.4 - Reconciliacion al layout de produccion nuevo (2026-06-22)
 
 ### Changed

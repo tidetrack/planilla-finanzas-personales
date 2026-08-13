@@ -3,104 +3,22 @@
  * REGISTRO DE ACTUALIZACIONES (CHANGELOG)
  * ============================================
  * Historial descendente de cambios sincronizados al entorno Apps Script.
- * (Anadir nuevos registros arriba)
+ * (Añadir nuevos registros arriba)
  *
- * [2026-06-22] v0.9.4 - Fix auditoria QA: funciones legacy migradas al layout nuevo (segunda pasada):
- * - FIX C-1 (99_MigrationLogic.js / migrarBdAntigua):
- *   appendMassive usaba minRow=2 (legacy). Corregido a RANGES.REGISTROS.dataRow (6).
- *   Sort posterior usaba getRange(2,9,...) y column:15 (layout I:T viejo). Corregido a
- *   getRange(dataRow, 2, rowCount, 12) + column:8 (H=Fecha, layout B:M nuevo).
- *   Sort envuelto en try/catch + SpreadsheetApp.flush() igual que en procesarCargas.
- *   Orden de columnas verificado: coincide con B:M sin reordenamiento.
- * - FIX C-2 (99_MigrationLogic.js / recalcularTcRegistros):
- *   Lectura de fechas: getRange(2,15,...) -> getRange(dataRow,8,...) (H=Fecha, col 8).
- *   Escritura de TCs: getRange(2,17,...,4) -> getRange(dataRow,10,...,4) (J:M = cols 10-13).
- *   Comentario actualizado: J=10(ARS), K=11(USD), L=12(AUD), M=13(EUR).
- *   Calculo de rowCount ajustado: lastRow-(dataRow-1) en lugar de lastRow-1.
- * - FIX C-3 (15_ExchangeRateApi.js / forzarCargaHistorica):
- *   clearContent corregido de I4:J/L4:M/O4:P/R4:S (legacy) a B7:C/E7:F/H7:I/K7:L (nuevo).
- *   appendMassive: minRow=4 corregido a RANGES.TC_*.dataRow (=7) en los cuatro bloques.
- *   Header JSDoc + contexto de negocio agregados al archivo.
- * - FIX M-2 (14_EventHandlers.js / handleCargasEdit):
- *   Guardia row < DATA_START_ROW (=4) corregida a row < 5 con comentario explicito.
- *   DATA_START_ROW=4 corresponde a Plan de Cuentas; Cargas tiene header fila 4, datos fila 5.
- *   Header JSDoc + contexto de negocio agregados al archivo.
- * - FIX Me-1 (00_Config.js / SHEETS.DATA_ENTRY):
- *   Valor corregido de 'Hoja de Cargas' a 'Cargas' para apuntar a la hoja real.
- * - FIX Me-2 (15_ExchangeRateApi.js / forzarCargaHistorica):
- *   fetchArsRate inicial envuelto en try/catch: si la API ARS falla se muestra
- *   ui.alert con el detalle del error en lugar de lanzar un error crudo.
- *
- * ---
- *
- * [2026-06-22] v0.9.4 - Reconciliacion al layout de produccion nuevo:
- * - LAYOUT NUEVO (hojas ex-"Copia de..."): las hojas de produccion "Registros" y
- *   "Tipos de cambio" migraron a un layout SIN el offset historico de ADR-005.
- * - 00_Config.js: RANGES refactorizado con headerRow/dataRow por tabla.
- *   Registros: columnas B:M, headerRow=5, dataRow=6.
- *   Campos: Monto=B, Tipo=C, Cuenta=D, TipoCuenta=E, Medio=F, Moneda=G, Fecha=H,
- *   Nota=I, ValorARS=J, ValorUSD=K, ValorAUD=L, ValorEUR=M.
- *   TC bloques: TC_ARS=B:C, TC_USD=E:F, TC_AUD=H:I, TC_EUR=K:L.
- *   Titulos fila 5, sub-headers fila 6, datos desde fila 7.
- * - 03_SheetManager.js: getTableRange / getTableData / appendRow / appendMassive
- *   ahora leen headerRow y dataRow desde RANGES[tableName] por tabla, en lugar
- *   de las constantes globales HEADER_ROW / DATA_START_ROW.
- * - 06_RegistrosService.js: sort de Registros actualizado a columna H (Fecha).
- *   appendMassive de TCs referenciado a los nuevos bloques B/E/H/K.
- *   procesarCargas() sigue siendo el punto de entrada del pipeline batch.
- * - 99_MigrationLogic.js: nueva funcion migrarLegacyANuevaProduccion() que lee
- *   Registros_legacy (layout I:T, headerFila2) y Tipos_de_cambio_legacy (bloques
- *   I:J/L:M/O:P/R:S, headerFila3) y los copia al layout nuevo de produccion.
- *   Idempotente: no duplica registros ya migrados. Nueva entrada de menu
- *   [Dev] "Migrar Legacy a Nueva Produccion".
- * - Las hojas legacy (Registros_legacy, Tipos de cambio_legacy) permanecen ocultas
- *   como backup de solo lectura; ~2879 filas de historial pre-migracion.
- *
- * ---
- *
- * [2026-06-21] v0.9.3 - Sort best-effort tambien en appendMassive:
- * - FIX: el auto-sort interno de appendMassive() para las tablas TC_* en "Tipos de cambio"
- *   seguia lanzando "Las combinaciones deben estar completamente en el rango" y, al no estar
- *   protegido, abortaba procesarCargas via el outer catch. Era el sort que la v0.9.2 no cubrio
- *   (solo habia envuelto el sort del paso 7 sobre Registros). Ahora tambien esta en try/catch.
- * - Los TCs se escriben con setValues antes del sort, asi que quedan guardados aunque el orden falle.
- *
- * ---
- *
- * [2026-06-21] v0.9.2 - Procesamiento resiliente de cargas:
- * - CAMBIO DE COMPORTAMIENTO: procesarCargas() ya no aborta el lote completo ante filas
- *   incompletas. Procesa las filas validas, SALTEA las incompletas (quedan en la grilla
- *   para corregirse) y reporta cuantas se omitieron y por que motivo.
- * - Solo se limpian de la grilla las filas efectivamente procesadas (antes se limpiaba todo I5:O19).
- * - FIX: el sort de Registros lanzaba "Las combinaciones deben estar completamente en el rango"
- *   ante celdas combinadas y frenaba el guardado. Ahora es best-effort (try/catch): si el sort
- *   falla se loguea y se continua; los registros ya estan escritos antes del sort.
- * - Reafirmado: la Nota nunca fue un campo obligatorio.
- *
- * ---
- *
- * [2026-06-21] v0.9.1 - Fix sort de encabezado + utilidad de renombrado de hojas:
- * - FIX CRITICO: el sort en procesarCargas() arrancaba en fila 2 e incluia HEADER_ROW (3),
- *   desplazando el encabezado de Registros al ordenar por fecha descendente. Corregido a DATA_START_ROW (4).
- * - FIX: appendMassive para REGISTROS usaba minRow=2; corregido a DATA_START_ROW para evitar
- *   escritura antes del encabezado en hoja vacia. JSDoc de minRow actualizado.
- * - NUEVO: renameProductionSheets() - utilidad de ejecucion unica para completar la migracion de hojas
- *   de produccion (Copia de Registros -> Registros, Copia de Tipos de Cambio -> Tipos de cambio;
- *   las originales reciben sufijo _legacy). Idempotente.
- * - NUEVO: entrada de menu [Dev] "Renombrar Hojas a Produccion".
- *
- * ---
- *
- * [2026-06-21] v0.9.0 - Validacion estricta y concurrencia en procesarCargas:
- * - Implementada deteccion de filas con "intencion de carga" basada en Monto/Cuenta/Medio/Moneda
- *   (no solo Monto), para capturar filas parcialmente incompletas.
- * - Validacion previa al append: monto numerico > 0, cuenta en catalogo, medio presente,
- *   moneda en MONEDAS_DISPONIBLES. Cualquier fila invalida aborta el lote completo.
- * - El fallback silencioso de tipoCuenta a '' fue eliminado; la validacion previa lo garantiza.
- * - La grilla de Cargas NO se limpia ante un lote con errores; el usuario puede corregir.
- * - El usuario recibe un alert con el numero de fila (relativo a la grilla) y el motivo de cada rechazo.
- * - Proteccion contra doble-click/concurrencia via LockService.getDocumentLock() con timeout 100ms.
- * - Nucleo refactorizado a _procesarCargasCore_() para mantener el bloque finally del lock limpio.
+ * [2026-06-22] v0.8.2 - Módulo Mirada Interanual:
+ * - NUEVO: `07_MiradaInteranual.js`. `inicializarMiradaInteranual()` setea las fórmulas LET/SUMPRODUCT
+ *   en G10:R14 de la hoja "Mirada Interanual" (Ingresos/Gastos Fijos/Gastos Variables por mes + Resultado).
+ * - Lógica: offset mensual vía `COLUMN()-COLUMN($K$10)`, navegación cross-year vía `EDATE`,
+ *   conversión multi-moneda vía `tc_tx/tc_sel` (ambas relativas a ARS=1).
+ * - Rangos de Registros desde fila 3 (header real en fila 2, datos desde fila 3, auditado sobre la planilla).
+ * - FIX locale: el lookup del mes usa `SPLIT("ENERO,...,DICIEMBRE";",")` en vez de array literal `{...}`.
+ *   El array literal con comas rompía con "Error de análisis de fórmula" en locale español (separador ";", arrays "\").
+ *   Se replica el patrón ya usado en las fórmulas del Tablero.
+ * - NUEVO: `diagnosticarMiradaInteranual()` + menú [Dev] "Diagnosticar Mirada Interanual": escribe una hoja
+ *   "DEBUG Mirada" con micro-tests (separadores, array literal, SPLIT, lectura de Registros, fórmula completa)
+ *   para aislar fallas sin adivinar.
+ * - NUEVO: entrada de menú [Dev] → "Inicializar Mirada Interanual" en `00_Config.js`.
+ * - Nota: v0.8.1 queda reservada para el track de `06_RegistrosService.js` (prompt separado).
  *
  * ---
  *

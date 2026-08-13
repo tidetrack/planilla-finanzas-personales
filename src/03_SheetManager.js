@@ -1,25 +1,14 @@
 /**
  * 03_SheetManager.js
- * Gestor de acceso a datos sobre las hojas del sistema
- * Abstraccion de operaciones CRUD sobre rangos fijos
- *
- * [CONCEPTO DE NEGOCIO]
- * Capa unica de acceso a datos del sistema. Ningun servicio lee o escribe rangos de Sheets
- * directamente: siempre delega en estas funciones, que resuelven coordenadas desde RANGES.
- *
- * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
- * Tras la migracion 2026-06-22 las hojas tienen layouts heterogeneos: cada entrada de RANGES
- * declara su propio dataRow. getTableRange() y appendRow() leen config.dataRow con fallback a
- * DATA_START_ROW para mantener compatibilidad con llamadas existentes (Plan de Cuentas, etc.).
- *
- * @see 00_Config.js (RANGES, DATA_START_ROW)
- *
- * @version 0.9.4
+ * Gestor de acceso a hoja DATA-ENTRY
+ * Abstracción de operaciones CRUD sobre rangos fijos
+ * 
+ * @version 0.1.0
  * @since 0.1.0
- * @lastModified 2026-06-22
+ * @lastModified 2026-01-17
  */
 
-// [AGILE-VALOR] Gestor de BD centralizado basado en ranges dinamicos desde Config. Complejidad minima.
+// [AGILE-VALOR] Gestor de BD centralizado basado en ranges dinámicos desde Config. Complejidad mínima.
 
 // ============================================
 // ACCESO A HOJA
@@ -52,28 +41,24 @@ function getSheet(sheetName) {
  * @returns {GoogleAppsScript.Spreadsheet.Range} Rango de la tabla
  */
 function getTableRange(tableName) {
-    const config = RANGES[tableName];
+ const config = RANGES[tableName];
 
-    if (!config) {
-        throw new Error('Tabla no configurada: ' + tableName);
-    }
+ if (!config) {
+ throw new Error(`Tabla no configurada: ${tableName}`);
+ }
 
-    const sheet = getSheet(config.sheet);
-    const lastRow = sheet.getLastRow();
+ const sheet = getSheet(config.sheet);
+ const lastRow = sheet.getLastRow();
+ 
+ // Evitar errores si la hoja está vacía al inicio
+ const maxRow = lastRow < DATA_START_ROW ? DATA_START_ROW : lastRow;
+ 
+ const startColIdx = columnLetterToIndex(config.start);
+ const endColIdx = columnLetterToIndex(config.end);
+ const numCols = endColIdx - startColIdx + 1;
+ const numRows = maxRow - DATA_START_ROW + 1;
 
-    // Cada tabla declara su propia fila de inicio de datos; fallback al global para
-    // compatibilidad con cualquier tabla que no tenga dataRow explicito.
-    const dataStart = config.dataRow || DATA_START_ROW;
-
-    // Evitar errores si la hoja esta vacia al inicio
-    const maxRow = lastRow < dataStart ? dataStart : lastRow;
-
-    const startColIdx = columnLetterToIndex(config.start);
-    const endColIdx = columnLetterToIndex(config.end);
-    const numCols = endColIdx - startColIdx + 1;
-    const numRows = maxRow - dataStart + 1;
-
-    return sheet.getRange(dataStart, startColIdx, numRows, numCols);
+ return sheet.getRange(DATA_START_ROW, startColIdx, numRows, numCols);
 }
 
 /**
@@ -110,45 +95,44 @@ function countTableRows(tableName) {
  * @returns {number} Índice de la fila agregada
  */
 function appendRow(tableName, rowData) {
-    const config = RANGES[tableName];
-    const sheet = getSheet(config.sheet);
+ const config = RANGES[tableName];
+ const sheet = getSheet(config.sheet);
 
-    const dataStart = config.dataRow || DATA_START_ROW;
-    const startColIdx = columnLetterToIndex(config.start);
-    const endColIdx = columnLetterToIndex(config.end);
-    const numCols = endColIdx - startColIdx + 1;
+ const startColIdx = columnLetterToIndex(config.start);
+ const endColIdx = columnLetterToIndex(config.end);
+ const numCols = endColIdx - startColIdx + 1;
 
-    // Buscar la ultima fila con datos usando la primera columna de la tabla especifica
-    const lastSheetRow = sheet.getLastRow();
-    var newRow = dataStart;
+ // Buscar la última fila con datos usando la primera columna de la tabla específica
+ const lastSheetRow = sheet.getLastRow();
+ let newRow = DATA_START_ROW;
+ 
+ if (lastSheetRow >= DATA_START_ROW) {
+ // Leer רק la primera columna de la tabla para ser hiper-rápido
+ const values = sheet.getRange(DATA_START_ROW, startColIdx, lastSheetRow - DATA_START_ROW + 1, 1).getValues();
+ 
+ let lastDataIndex = -1;
+ // Búsqueda inversa (bottom-up) es más eficiente asumiendo que las filas vacías están al fondo
+ for (let i = values.length - 1; i >= 0; i--) {
+ if (values[i][0] !== '') {
+ lastDataIndex = i;
+ break;
+ }
+ }
+ newRow = lastDataIndex >= 0 ? DATA_START_ROW + lastDataIndex + 1 : DATA_START_ROW;
+ }
 
-    if (lastSheetRow >= dataStart) {
-        // Leer solo la primera columna de la tabla para ser eficiente
-        const values = sheet.getRange(dataStart, startColIdx, lastSheetRow - dataStart + 1, 1).getValues();
+ const range = sheet.getRange(newRow, startColIdx, 1, numCols);
+ 
+ // Asegurarse de que rowData tenga el largo exacto de columnas para el setValues
+ const paddedRowData = [...rowData];
+ while(paddedRowData.length < numCols) {
+ paddedRowData.push('');
+ }
 
-        var lastDataIndex = -1;
-        // Busqueda inversa (bottom-up): mas eficiente asumiendo filas vacias al fondo
-        for (var i = values.length - 1; i >= 0; i--) {
-            if (values[i][0] !== '') {
-                lastDataIndex = i;
-                break;
-            }
-        }
-        newRow = lastDataIndex >= 0 ? dataStart + lastDataIndex + 1 : dataStart;
-    }
+ range.setValues([paddedRowData]);
+ logSuccess(`Fila agregada a ${tableName} en fila ${newRow}`);
 
-    const range = sheet.getRange(newRow, startColIdx, 1, numCols);
-
-    // Asegurarse de que rowData tenga el largo exacto de columnas para el setValues
-    const paddedRowData = rowData.slice();
-    while (paddedRowData.length < numCols) {
-        paddedRowData.push('');
-    }
-
-    range.setValues([paddedRowData]);
-    logSuccess('Fila agregada a ' + tableName + ' en fila ' + newRow);
-
-    return newRow;
+ return newRow;
 }
 
 /**
@@ -158,15 +142,16 @@ function appendRow(tableName, rowData) {
  * @param {Array} rowData Nuevos datos
  */
 function updateRow(tableName, rowIndex, rowData) {
-    const config = RANGES[tableName];
-    const sheet = getSheet(config.sheet);
-    const dataStart = config.dataRow || DATA_START_ROW;
-    const actualRow = dataStart + rowIndex;
+ const config = RANGES[tableName];
+ const sheet = getSheet(config.sheet);
+ const actualRow = DATA_START_ROW + rowIndex;
 
-    const range = sheet.getRange(config.start + actualRow + ':' + config.end + actualRow);
+ const range = sheet.getRange(
+ `${config.start}${actualRow}:${config.end}${actualRow}`
+ );
 
-    range.setValues([rowData]);
-    logSuccess('Fila ' + rowIndex + ' actualizada en ' + tableName);
+ range.setValues([rowData]);
+ logSuccess(`Fila ${rowIndex} actualizada en ${tableName}`);
 }
 
 /**
@@ -175,35 +160,34 @@ function updateRow(tableName, rowIndex, rowData) {
  * @param {number} rowIndex Índice de fila (relativo a DATA_START_ROW)
  */
 function deleteRow(tableName, rowIndex) {
-    const data = getTableData(tableName);
-    if (rowIndex < 0 || rowIndex >= data.length) return;
-
-    // Quitar la fila especifica
-    data.splice(rowIndex, 1);
-
-    const config = RANGES[tableName];
-    const sheet = getSheet(config.sheet);
-    const dataStart = config.dataRow || DATA_START_ROW;
-    const startColIdx = columnLetterToIndex(config.start);
-    const endColIdx = columnLetterToIndex(config.end);
-    const numCols = endColIdx - startColIdx + 1;
-
-    // Obtener todo el rango actual para limpiarlo primero
-    const maxRow = sheet.getLastRow();
-    const rowsToClear = maxRow >= dataStart ? (maxRow - dataStart + 1) : 1;
-    sheet.getRange(dataStart, startColIdx, rowsToClear, numCols).clearContent();
-
-    // Reescribir la tabla si quedaron datos
-    if (data.length > 0) {
-        const paddedData = data.map(function(row) {
-            const arr = row.slice();
-            while (arr.length < numCols) arr.push('');
-            return arr;
-        });
-        sheet.getRange(dataStart, startColIdx, paddedData.length, numCols).setValues(paddedData);
-    }
-
-    logSuccess('Registro ' + rowIndex + ' eliminado aisladamente de ' + tableName);
+ const data = getTableData(tableName);
+ if (rowIndex < 0 || rowIndex >= data.length) return;
+ 
+ // Quitar la fila específica
+ data.splice(rowIndex, 1);
+ 
+ const config = RANGES[tableName];
+ const sheet = getSheet(config.sheet);
+ const startColIdx = columnLetterToIndex(config.start);
+ const endColIdx = columnLetterToIndex(config.end);
+ const numCols = endColIdx - startColIdx + 1;
+ 
+ // Obtener todo el rango actual para limpiarlo primero
+ const maxRow = sheet.getLastRow();
+ const rowsToClear = maxRow >= DATA_START_ROW ? (maxRow - DATA_START_ROW + 1) : 1;
+ sheet.getRange(DATA_START_ROW, startColIdx, rowsToClear, numCols).clearContent();
+ 
+ // Reescribir la tabla si quedaron datos
+ if (data.length > 0) {
+ const paddedData = data.map(row => {
+ const arr = [...row];
+ while (arr.length < numCols) arr.push('');
+ return arr;
+ });
+ sheet.getRange(DATA_START_ROW, startColIdx, paddedData.length, numCols).setValues(paddedData);
+ }
+ 
+ logSuccess(`Registro ${rowIndex} eliminado aislamientamente de ${tableName}`);
 }
 
 
