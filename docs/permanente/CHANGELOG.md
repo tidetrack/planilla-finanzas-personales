@@ -9,6 +9,51 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.8.3 - Gobernanza Fase 1 del arnes (2026-08-12)
+
+Primera version sobre el baseline productivo v0.8.2. Cambios de gobernanza sin
+tocar logica de negocio (pipeline, FX y migraciones intactos).
+
+### Added
+
+- **`_resolverNombreHoja(alias)` + `invalidarCacheNombresHojas()`** en `00_Config.js`
+  (portadas de planilla-pymes): resolucion de nombres de hoja con alias y cache por
+  ejecucion. Politica ante ambiguedad: gana el alias historico (el que tiene los
+  datos), con log del estado ambiguo.
+- **`SHEETS.DATA_ENTRY` / `TIPOS_CAMBIO` / `BD_ANTIGUA` como getters con alias**:
+  corrigen las tres discrepancias config-planilla detectadas en Fase 1
+  ('Hoja de Cargas' vs 'Cargas'; 'Tipos de cambio' vs 'Tipos de Cambio';
+  'BD antigua' vs 'BD Antigua' — getSheetByName es case-sensitive). `RANGES.TC_*`
+  pasa `sheet` a getter para preservar la resolucion perezosa.
+- **`SHEETS.MIRADA_INTERANUAL` y `SHEETS.DEBUG_MIRADA`**: `07_MiradaInteranual.js`
+  deja de hardcodear nombres de hoja (regla SSOT).
+- **`sync_targets.command`** (raiz): deploy oficial. Lee `targets.yaml`, drift-check
+  integrado por target (clasp pull a temporal + diff, nunca sobre `src/`),
+  confirmacion explicita, confirmacion adicional "pisar" ante drift, `--dry-run`
+  con exit 3 para CI, trap de restauracion de `.clasp.json`. Excepcion
+  `!sync_targets.command` agregada a `.gitignore`.
+- **CLAUDE.md reescrito como contrato operativo** (molde pymes): esquema de datos
+  corregido al layout REAL de produccion (Registros I:T, datos desde fila 3; TC en
+  bloques con offset), advertencia del layout v0.9.x no desplegado, seccion de
+  Gobernanza (changelog dual, decisiones inline, cabeceras de contexto, cero emojis,
+  deploy solo por script, regla anti-drift) y seccion "Cuando NO actuar".
+
+### Changed
+
+- **`MENU_CONFIG` sin emojis** (regla cero emojis del arnes).
+- `01_Version.js` a 0.8.3.
+
+### Metodologia
+
+Piezas construidas y verificadas con el patron adversarial del arnes (seccion 9):
+constructores independientes + 2 refutadores por pieza con schema de veredicto
+`{refuted, bloqueantes[], menores[]}`. La ronda 1 refuto 2 de las 3 piezas
+(3 bloqueantes: comando `npm run pull` inexistente y peligroso documentado en el
+contrato; afirmacion de identidad repo==produccion ya falsa; script de deploy
+gitignoreado por `*.command`); todos corregidos antes del commit.
+
+---
+
 ## Fase 0 del arnes - Reconciliacion de drift (2026-08-12)
 
 > No es un release de codigo: es la adopcion del estado productivo real como baseline
