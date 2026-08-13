@@ -244,30 +244,84 @@ const ERROR_MESSAGES = {
 // ============================================
 
 // decision Franco 2026-08-12: cero emojis tambien en el menu (Fase 1 arnes).
+//
+// decision Franco 2026-08-13: DOS menus top-level, calcado del patron de planilla-pymes.
+// El menu unico mezclaba la operacion cotidiana con herramientas de desarrollo, y la funcion
+// que mas se usa -- Procesar Cargas -- estaba rotulada "[Dev]" como si fuera peligrosa.
+//   - "Tidetrack": lo que el usuario hace todos los dias. Nada que pueda romper la planilla.
+//   - "Tidetrack Dev": migraciones, fixes, diagnosticos y devtools. Todo lo que escribe
+//     estructura o formulas vive aca, agrupado por dominio y con el orden de ejecucion
+//     explicito en el nombre cuando importa (las migraciones se corren 1 -> 2 -> 3).
+//
+// Gramatica de items soportada por 12_MenuService.js:
+//   { name, function }            item normal
+//   { separator: true }           linea divisoria
+//   { seccion: 'TEXTO' }          rotulo inerte (Apps Script no tiene encabezados de menu)
+//   { submenu: 'Nombre', items }  submenu anidado
 const MENU_CONFIG = {
     MAIN_MENU: 'Tidetrack',
+    DEV_MENU: 'Tidetrack Dev',
+
+    // --- Menu de uso diario ---
     ITEMS: [
-        { name: 'Gestor: Plan de Cuentas', function: 'showAbmPlanCuentas' },
+        { seccion: 'REGISTRAR' },
+        { name: 'Procesar Cargas', function: 'procesarCargas' },
         { separator: true },
-        { name: '[Dev] Procesar Cargas', function: 'procesarCargas' },
-        { name: '[Dev] Forzar Carga Historica TC', function: 'forzarCargaHistorica' },
+        { seccion: 'ADMINISTRAR' },
+        { name: 'Plan de Cuentas', function: 'showAbmPlanCuentas' },
         { separator: true },
-        { name: '[Dev] Analizar BD Antigua', function: 'analizarBdAntigua' },
-        { name: '[Dev] Migrar BD Antigua', function: 'migrarBdAntigua' },
-        { name: '[Dev] Recalcular TC en Registros', function: 'recalcularTcRegistros' },
+        {
+            submenu: 'Ir a la hoja', items: [
+                // Solo hojas confirmadas existentes en el escaneo del 2026-08-13.
+                // 'Espacio blanco 1' y 'Espacio blanco 3' quedaron fuera: no existen.
+                { name: 'Inicio', function: 'navigateToInicio' },
+                { name: 'Tablero', function: 'navigateToTablero' },
+                { name: 'Cargas', function: 'navigateToCargas' }
+            ]
+        }
+    ],
+
+    // --- Menu de desarrollo, fixes y migraciones ---
+    DEV_ITEMS: [
+        {
+            // Se corren EN ESTE ORDEN: primero el estado (solo lectura), despues aplicar.
+            // Revertir usa el respaldo congelado. @see MIGRACION_v0.9.5_LayoutNuevo.js
+            submenu: 'Migracion v0.9.5 (layout nuevo)', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoMigracionV095' },
+                { name: '2. Aplicar', function: 'aplicarMigracionV095' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirMigracionV095' }
+            ]
+        },
         { separator: true },
-        { name: '[Dev] On/Off Proteccion Cuentas', function: 'togglePlanCuentasProtection' },
+        { seccion: 'FORMULAS Y VISTAS' },
+        {
+            submenu: 'Mirada Interanual', items: [
+                { name: '1. Verificar precondiciones', function: 'verificarPrecondicionesMirada' },
+                { name: '2. Inicializar formulas', function: 'inicializarMiradaInteranual' },
+                { separator: true },
+                { name: 'Diagnosticar (hoja DEBUG)', function: 'diagnosticarMiradaInteranual' },
+                { name: 'Auditar balanceo de la formula', function: 'auditarBalanceFormulaMirada' }
+            ]
+        },
         { separator: true },
-        { name: '[Dev] Inicializar Mirada Interanual', function: 'inicializarMiradaInteranual' },
-        { name: '[Dev] Diagnosticar Mirada Interanual', function: 'diagnosticarMiradaInteranual' },
+        { seccion: 'DATOS' },
+        {
+            submenu: 'Tipos de cambio', items: [
+                { name: 'Forzar carga historica', function: 'forzarCargaHistorica' },
+                { name: 'Recalcular TC en Registros', function: 'recalcularTcRegistros' }
+            ]
+        },
+        {
+            submenu: 'BD Antigua (migracion legacy)', items: [
+                { name: '1. Analizar', function: 'analizarBdAntigua' },
+                { name: '2. Migrar', function: 'migrarBdAntigua' }
+            ]
+        },
         { separator: true },
-        // Migracion v0.9.5 al layout nuevo. Se corren EN ESTE ORDEN: primero el estado (solo
-        // lectura), despues aplicar. Revertir usa el respaldo congelado. @see MIGRACION_v0.9.5_LayoutNuevo.js
-        { name: '[Migracion v0.9.5] 1. Ver estado (no escribe)', function: 'estadoMigracionV095' },
-        { name: '[Migracion v0.9.5] 2. Aplicar', function: 'aplicarMigracionV095' },
-        { name: '[Migracion v0.9.5] 3. Revertir', function: 'revertirMigracionV095' },
-        { separator: true },
-        { name: '[DevTools] Exportar Arquitectura', function: 'exportarArquitecturaTotal' }
+        { seccion: 'MANTENIMIENTO' },
+        { name: 'On/Off proteccion del Plan de Cuentas', function: 'togglePlanCuentasProtection' },
+        { name: 'Exportar arquitectura (gemelo digital)', function: 'exportarArquitecturaTotal' }
     ]
 };
 

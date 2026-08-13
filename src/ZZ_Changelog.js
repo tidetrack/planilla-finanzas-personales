@@ -5,6 +5,24 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-13] v0.9.6 - Menus separados: "Tidetrack" (uso diario) y "Tidetrack Dev" (desarrollo):
+ * - Calcado del patron de planilla-pymes. El menu unico mezclaba la operacion cotidiana con
+ *   herramientas que escriben estructura, y "Procesar Cargas" -- la funcion que mas se usa --
+ *   estaba rotulada "[Dev]" como si fuera peligrosa.
+ * - "Tidetrack": REGISTRAR (Procesar Cargas) + ADMINISTRAR (Plan de Cuentas) + submenu "Ir a
+ *   la hoja" (solo hojas confirmadas por el escaneo: Inicio, Tablero, Cargas; quedaron fuera
+ *   'Espacio blanco 1' y 'Espacio blanco 3', que ya no existen).
+ * - "Tidetrack Dev": migracion v0.9.5, Mirada Interanual, Tipos de cambio, BD Antigua y
+ *   mantenimiento, agrupados en submenus por dominio y numerados donde el orden importa.
+ * - 00_Config.js: MENU_CONFIG soporta ahora secciones ({seccion}) y submenus ({submenu, items}),
+ *   ademas de items y separadores. 12_MenuService.js los arma recursivamente.
+ * - NUEVO _menuSeccion(): los rotulos de seccion son items inertes que avisan por toast que son
+ *   un titulo (Apps Script no soporta encabezados de menu, y un item que no hace nada se lee
+ *   como una falla).
+ * - Cada menu se construye en su propio try/catch: si uno rompiera, el otro igual aparece.
+ *
+ * ---
+ *
  * [2026-08-13] v0.9.5 - Adaptacion al layout REAL de la planilla (el pipeline vuelve a poder escribir):
  * - CONTEXTO: la planilla migro a B:M en junio pero el codigo nunca acompanio, asi que
  *   procesarCargas pedia Registros!I:T (col 9-20) sobre una hoja de 14 columnas y tiraba

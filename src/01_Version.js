@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 9,
- patch: 5,
+ patch: 6,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-13',
- releaseName: 'v0.9.5 - Adaptacion al layout real de la planilla',
+ releaseName: 'v0.9.6 - Menus separados: Tidetrack y Tidetrack Dev',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

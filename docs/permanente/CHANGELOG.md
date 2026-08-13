@@ -9,6 +9,37 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.9.6 - Menus separados (2026-08-13)
+
+Pedido de Franco: replicar el patron de planilla-pymes, que tiene dos menus top-level.
+
+### Changed
+
+- **"Tidetrack"** queda como el menu de uso diario: `REGISTRAR` (Procesar Cargas),
+  `ADMINISTRAR` (Plan de Cuentas) y un submenu "Ir a la hoja" con las tres hojas
+  confirmadas por el escaneo (Inicio, Tablero, Cargas). Quedaron fuera las entradas de
+  navegacion a `Espacio blanco 1` y `Espacio blanco 3`: esas hojas ya no existen.
+  **"Procesar Cargas" deja de estar rotulada `[Dev]`** — es la operacion cotidiana.
+- **"Tidetrack Dev"** concentra todo lo que escribe estructura o formulas, en submenus por
+  dominio: migracion v0.9.5, Mirada Interanual, Tipos de cambio, BD Antigua y mantenimiento.
+  Numerados donde el orden de ejecucion importa.
+- `MENU_CONFIG` soporta ahora `{seccion}` y `{submenu, items}` ademas de items y separadores;
+  `12_MenuService.js` los arma recursivamente y construye cada menu en su propio try/catch
+  (si uno fallara, el otro igual aparece: quedarse sin menu deja la planilla inoperable).
+
+### Added
+
+- `_menuSeccion()`: los rotulos de seccion son items inertes que avisan por toast que son un
+  titulo. Apps Script no soporta encabezados de menu, y un item que no hace nada se lee como
+  una falla (portado de pymes).
+
+### Verificacion
+
+Las 18 entradas con funcion se cruzaron contra las funciones realmente definidas en `src/`:
+todas existen. Un nombre mal escrito en `addItem` recien falla al clickear.
+
+---
+
 ## v0.9.5 - Adaptacion al layout real de la planilla (2026-08-13)
 
 El release que devuelve al pipeline la capacidad de escribir. **Pendiente de deploy y de
