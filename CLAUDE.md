@@ -2,6 +2,13 @@
 
 > Leer este archivo completo antes de ejecutar cualquier tarea. Tiene prioridad sobre cualquier suposicion.
 
+> **ARNES TIDETRACK (2026-08-12):** antes de cualquier trabajo estructural en este
+> repo, leer `docs/permanente/ARNES_TIDETRACK.md` — el paquete de arranque con todo
+> el arnes de gestion destilado de `planilla-pymes` (campana Castellino v1.9-v1.47):
+> gemelo digital por JSON, scanner vivo por n8n, gobernanza, contratos de motores,
+> verificacion adversarial y la metodologia del plan de cuentas. Se ejecuta por
+> fases, en orden, empezando por la Fase 0 (reconciliacion de drift).
+
 ## Que es este proyecto
 
 **Tidetrack Personal Finance Tracker** - sistema de finanzas personales construido sobre Google Sheets + Google Apps Script (GAS). Filosofia *Principles First*: friccion minima, habito cotidiano, legibilidad directa en la hoja. La promesa del producto es "paz financiera, todos los dias". No es una app de contabilidad ni un broker: es una herramienta de habito financiero con estetica limpia y multi-moneda nativa.
