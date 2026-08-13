@@ -3,9 +3,9 @@
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
  *
- * @version 0.8.2
+ * @version 0.8.3
  * @since 0.1.0
- * @lastModified 2026-06-22
+ * @lastModified 2026-08-12
  */
 
 // [AGILE-VALOR] Control de versiones esencial para el mantenimiento del entorno.
@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 8,
- patch: 2,
+ patch: 3,
 
  /**
  * Retorna la versión como string
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-06-22',
- releaseName: 'v0.8.2 - Módulo Mirada Interanual',
+ releaseDate: '2026-08-12',
+ releaseName: 'v0.8.3 - Gobernanza Fase 1 (arnes)',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,9 +36,10 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
-v0.8.2 (2026-06-22) - Módulo Mirada Interanual
-+ 07_MiradaInteranual.js: inicializarMiradaInteranual() setea las fórmulas LET/SUMPRODUCT en G10:R14.
-+ Entrada de menú [Dev] "Inicializar Mirada Interanual".
+v0.8.3 (2026-08-12) - Gobernanza Fase 1 (arnes)
++ 00_Config.js: _resolverNombreHoja(alias) + invalidarCacheNombresHojas(); SHEETS.DATA_ENTRY/TIPOS_CAMBIO/BD_ANTIGUA como getters con alias.
++ SHEETS.MIRADA_INTERANUAL y SHEETS.DEBUG_MIRADA; 07_MiradaInteranual.js deja de hardcodear nombres de hoja.
+* MENU_CONFIG sin emojis; RANGES TC_* con sheet como getter (resolucion perezosa).
 
 Historial completo y canónico en: src/ZZ_Changelog.js
  `
