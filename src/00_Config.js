@@ -290,7 +290,10 @@ const MENU_CONFIG = {
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoMigracionV095' },
                 { name: '2. Aplicar', function: 'aplicarMigracionV095' },
                 { separator: true },
-                { name: '3. Revertir (usa el respaldo)', function: 'revertirMigracionV095' }
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirMigracionV095' },
+                { separator: true },
+                { name: 'Reparar formato de cotizaciones', function: 'repararFormatoCotizacionesV095' },
+                { name: 'Ver respaldos (cuales sirven)', function: 'estadoRespaldosV095' }
             ]
         },
         { separator: true },

@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 9,
- patch: 8,
+ patch: 9,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-13',
- releaseName: 'v0.9.8 - Respaldo de formulas como texto literal',
+ releaseName: 'v0.9.9 - Reparacion de formato de cotizaciones y auditoria de respaldos',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

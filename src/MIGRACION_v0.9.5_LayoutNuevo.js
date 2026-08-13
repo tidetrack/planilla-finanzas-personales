@@ -1965,3 +1965,151 @@ function _celdasRegistradasV095(ss, estado, props, nombres) {
     });
     return salida;
 }
+
+// ============================================
+// REPARACIONES POSTERIORES A LA MIGRACION
+// ============================================
+
+/**
+ * Repara el formato de numero de las columnas de Cotizacion de "Tipos de cambio".
+ *
+ * [CONCEPTO DE NEGOCIO] Una cotizacion que se muestra como fecha es ilegible para el
+ * operador aunque el numero guardado sea correcto: el Data Lake deja de poder leerse.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO] El backfill de la v0.9.5 escribio ~819 filas nuevas
+ * por par con setValues, que NO propaga formato: las celdas nuevas heredaron el formato que
+ * tenia el grid recien ampliado. En el bloque EUR eso resulto en formato de fecha, y 791 de
+ * 820 filas de la columna L pasaron a mostrar "25/8/1904" en vez de "$1.699,34" (verificado
+ * en vivo el 2026-08-13 contra el respaldo previo, que tiene esas celdas bien formateadas).
+ *
+ * decision Franco 2026-08-13: se corrige SOLO el formato, nunca los valores. El formato de
+ * referencia se toma de la PRIMERA fila de datos de cada bloque, que es anterior al backfill
+ * y por lo tanto la que el operador ya validaba como correcta. Si esa fila estuviera vacia el
+ * bloque se saltea con aviso: inventar un formato seria peor que dejarlo como esta.
+ *
+ * @see docs/permanente/MAPA_ARQUITECTURA_PLANILLA.md
+ * @param {boolean} [yaConLock] true si el llamador ya tomo el DocumentLock
+ * @returns {{ok: boolean, detalle?: string, error?: string}}
+ */
+function repararFormatoCotizacionesV095(yaConLock) {
+    return _informarResultadoV095('Reparar formato de cotizaciones', _conLockV095(yaConLock, function () {
+        try {
+            var ss = SpreadsheetApp.getActiveSpreadsheet();
+            var nombreTc = SHEETS.TIPOS_CAMBIO;
+            var hoja = ss.getSheetByName(nombreTc);
+            if (!hoja) {
+                return { ok: false, error: 'No se encontro la hoja "' + nombreTc + '". No se toco nada.' };
+            }
+
+            var filaDatos = V095_NUE_TC_FILA_DATOS;
+            var ultima = hoja.getMaxRows();
+            var alto = ultima - filaDatos + 1;
+            if (alto <= 1) {
+                return { ok: true, detalle: 'La hoja no tiene filas de datos suficientes: nada que reparar.' };
+            }
+
+            var lineas = [];
+            var corregidos = 0;
+            V095_BLOQUES_TC.forEach(function (b) {
+                var colCotizacion = b.nuevaCol + 1;   // la Cotizacion va inmediatamente a la derecha de la Fecha
+                var refFormato = hoja.getRange(filaDatos, colCotizacion).getNumberFormat();
+                var refValor = hoja.getRange(filaDatos, colCotizacion).getValue();
+                if (refValor === '' || refValor === null) {
+                    lineas.push(b.par + ': la primera fila de datos esta vacia, no hay formato de referencia. Se saltea.');
+                    return;
+                }
+
+                var rango = hoja.getRange(filaDatos, colCotizacion, alto, 1);
+                var formatosAntes = rango.getNumberFormats();
+                var distintos = 0;
+                for (var i = 0; i < formatosAntes.length; i++) {
+                    if (formatosAntes[i][0] !== refFormato) distintos++;
+                }
+
+                if (distintos === 0) {
+                    lineas.push(b.par + ': ya estaba uniforme (' + refFormato + '). Sin cambios.');
+                    return;
+                }
+
+                rango.setNumberFormat(refFormato);
+                corregidos += distintos;
+                lineas.push(b.par + ': ' + distintos + ' celda(s) reformateadas a "' + refFormato + '".');
+            });
+
+            SpreadsheetApp.flush();
+            var detalle = 'Formato de cotizaciones en "' + nombreTc + '"\n\n' + lineas.join('\n') +
+                          '\n\nTotal de celdas reformateadas: ' + corregidos +
+                          '.\nNo se modifico NINGUN valor: solo el formato de presentacion.';
+            logSuccess('repararFormatoCotizacionesV095: ' + corregidos + ' celda(s) reformateadas.');
+            return { ok: true, detalle: detalle };
+        } catch (err) {
+            logError('repararFormatoCotizacionesV095: fallo', err);
+            var traza = err && err.stack ? String(err.stack).split('\n').slice(0, 5).join('\n') : '(sin stack)';
+            return {
+                ok: false,
+                error: 'No se pudo reparar el formato: ' + err.message,
+                detalle: 'DETALLE TECNICO:\n' + traza
+            };
+        }
+    }));
+}
+
+/**
+ * Lista los respaldos de la migracion y marca cuales NO sirven como punto de retorno.
+ *
+ * [CONCEPTO DE NEGOCIO] Un respaldo que no se puede usar es peor que no tenerlo: invita a
+ * confiar en el. Esta herramienta los distingue y deja la decision de borrar en el operador.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO] El primer intento de aplicar la v0.9.5 (2026-08-13,
+ * sello _1721) abortó al verificar su respaldo de formulas, y dejo el par de hojas creado.
+ * Ese RESP_FORMULAS guarda las formulas como FORMULA VIVA -- el defecto que corrigio la
+ * v0.9.8 --, asi que se recalcula y no conserva el texto original: no sirve para revertir.
+ * NO se borra nada automaticamente: borrar hojas es irreversible y la decision es de Franco.
+ *
+ * @returns {{ok: boolean, detalle?: string, error?: string}}
+ */
+function estadoRespaldosV095() {
+    return _informarResultadoV095('Respaldos de la migracion v' + V095_VERSION, (function () {
+        try {
+            var ss = SpreadsheetApp.getActiveSpreadsheet();
+            var estado = _leerEstadoV095() || {};
+            var vigentes = [estado.respaldoTc, estado.respaldoFormulas].filter(Boolean);
+            var lineas = [];
+
+            ss.getSheets().forEach(function (h) {
+                var n = h.getName();
+                if (n.indexOf('RESP_TC_v095_') !== 0 && n.indexOf('RESP_FORMULAS_v095_') !== 0) return;
+
+                var marca = vigentes.indexOf(n) >= 0 ? 'VIGENTE (lo usa revertir)' : 'huerfano';
+                var nota = '';
+
+                if (n.indexOf('RESP_FORMULAS_v095_') === 0) {
+                    // El unico criterio que importa en un respaldo de formulas: que sean TEXTO.
+                    var alto = Math.max(h.getLastRow() - 1, 0);
+                    if (alto > 0) {
+                        var formulas = h.getRange(2, 3, alto, 1).getFormulas();
+                        var vivas = formulas.filter(function (f) { return f[0] !== ''; }).length;
+                        nota = vivas > 0
+                            ? ' -- INSERVIBLE: ' + vivas + ' formula(s) quedaron VIVAS en vez de texto.'
+                            : ' -- ok: las formulas estan como texto.';
+                    }
+                }
+                lineas.push(n + ' [' + marca + ']' + nota);
+            });
+
+            if (!lineas.length) {
+                return { ok: true, detalle: 'No hay hojas de respaldo de la migracion v' + V095_VERSION + '.' };
+            }
+            return {
+                ok: true,
+                detalle: 'Respaldos encontrados:\n\n' + lineas.join('\n') +
+                         '\n\nLos marcados INSERVIBLE no pueden usarse para revertir. Los huerfanos ' +
+                         'son de intentos previos. Borralos a mano si querés: esta herramienta no ' +
+                         'elimina hojas (borrar es irreversible y la decision es tuya).'
+            };
+        } catch (err) {
+            logError('estadoRespaldosV095: fallo', err);
+            return { ok: false, error: 'No se pudo listar los respaldos: ' + err.message };
+        }
+    })());
+}

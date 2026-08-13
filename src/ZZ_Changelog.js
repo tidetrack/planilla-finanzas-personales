@@ -5,6 +5,25 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-13] v0.9.9 - Reparacion del formato de cotizaciones + auditoria de respaldos:
+ * - HALLAZGO (verificacion post-migracion en vivo): el backfill de la v0.9.5 dejo 791 de 820
+ *   filas de la columna Cotizacion de EUR mostrando FECHAS en vez de montos ("25/8/1904" en
+ *   lugar de "$1.699,34"). Los valores guardados son correctos: es formato de celda. Causa:
+ *   setValues no propaga formato y las filas nuevas heredaron el del grid recien ampliado.
+ * - NUEVO repararFormatoCotizacionesV095(): toma como referencia el formato de la PRIMERA fila
+ *   de datos de cada bloque (anterior al backfill, ya validada) y lo aplica al resto. Corrige
+ *   SOLO formato, nunca valores, y saltea con aviso cualquier bloque sin fila de referencia.
+ * - NUEVO estadoRespaldosV095(): lista las hojas de respaldo y marca cuales NO sirven. El
+ *   primer intento de aplicar (sello _1721) dejo un RESP_FORMULAS con las formulas VIVAS -- el
+ *   defecto que corrigio la v0.9.8 -- que no puede usarse para revertir. No borra nada: borrar
+ *   hojas es irreversible y la decision es del operador.
+ * - Verificacion independiente de la migracion (por Sheets API, no por el propio modulo): grid
+ *   2200 OK; ARS 810 sin duplicados y en orden; las 4 formulas re-apuntadas son CIRUGIA PURA
+ *   (unica diferencia contra el respaldo: la referencia de hoja) y sus indices ColN alinean con
+ *   el header real; Registros_legacy intacta.
+ *
+ * ---
+ *
  * [2026-08-13] v0.9.8 - El respaldo de formulas se guarda como TEXTO, no como formula viva:
  * - SINTOMA: aplicarMigracionV095() abortaba con "El respaldo de formulas no quedo verificado
  *   en: Tablero!AN4 ... columna 3". Aborto ANTES de mutar, o sea el contrato todo-o-nada
