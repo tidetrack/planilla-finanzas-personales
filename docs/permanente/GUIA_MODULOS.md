@@ -269,16 +269,37 @@ Transversal: 98_DevTools_Scanner (auditoría de arquitectura, lee toda la planil
 
 ---
 
-### 98_DevTools_Scanner.js - Scanner de Arquitectura Total
+### 98_DevTools_Scanner.js - Scanner de Arquitectura Total (gemelo digital)
 
-**Propósito (negocio)**: Auditoría interna. Exporta el 100% de la arquitectura de la planilla (metadatos, encabezados, fórmulas, estilos, offsets) a un JSON ("Infrastructure as Code") para documentarla con IA.
+**Propósito (negocio)**: Auditoría interna. Produce el "gemelo digital" de la planilla: un JSON con el 100% de las celdas que tienen valor o fórmula, más la metadata estructural de cada hoja, para que cualquier sesión (humana o IA) sepa qué hay en cada celda sin abrir la planilla. Es la pieza 1 de la Fase 2 del arnés ("Infrastructure as Code": el estado vivo se congela en un artefacto versionable y todo cambio posterior se prueba por diff celda por celda).
 
 **Funciones clave:**
-- `exportarArquitecturaTotal()`: recorre todas las hojas, captura meta (filas/columnas totales, congeladas, oculta, reglas condicionales), encabezados y un `mapa_celdas` con valor, fórmula y estilo (fondo, color de texto, negrita, tamaño) priorizando fórmulas y primeras filas. Serializa a `TIDETRACK_ARQUITECTURA_ESTRICTA.json`, borra versiones previas y crea el archivo en la raíz de Drive.
+- `exportarArquitecturaTotal()`: itera `ss.getSheets()` — no hardcodea nombres de hoja, así que descubre hojas nuevas, renombradas u ocultas por sí mismo. Por cada hoja hace **siete extracciones masivas** (`getFormulas`, `getValues`, `getDisplayValues`, `getBackgrounds`, `getFontColors`, `getFontWeights`, `getFontSizes`), nunca una llamada por celda, y arma `meta` + `encabezados` + `mapa_celdas`. Serializa a `TIDETRACK_ARQUITECTURA_ESTRICTA.json`, manda a la papelera las versiones previas y crea el archivo en la raíz de Drive; loguea ID de Drive, URL, peso, cantidad de celdas y duración.
+- `_refA1(fila, col)`: notación A1 calculada en memoria. Reemplaza a `getRange(r, c).getA1Notation()`, que costaba un round-trip por celda y hacía inviable la cobertura total.
+- `_toastScanner(ss, mensaje, segundos)`: toast defensivo (el scanner también corre desde el editor, donde no hay UI).
 
-**Dependencias:** `SpreadsheetApp`, `DriveApp`. Requiere scope de Drive (ver `appsscript.json`).
+**Cobertura (v0.8.4)**: total. Se mapea **toda** celda con valor o fórmula, sin el filtro histórico de "fórmulas y primeras 5 filas" que dejaba ciegas a las BDs (del ledger de Registros, ~2879 filas, el snapshot de 2026-03-23 trajo 44 celdas). Para compensar el tamaño: el estilo se serializa solo cuando difiere del default de Sheets, y la notación A1 se calcula en memoria. Queda **fuera** del alcance de "total" la celda que solo tiene estilo y ningún contenido (la hoja PALETAS es literalmente eso).
 
-> Nota: este módulo contiene caracteres emoji en logs/alertas internos (checkmarks). Contradice la regla `no-emojis.md`; queda registrado como pendiente de limpieza (no se modifica en esta sincronización documental).
+**Contrato de celda (v0.8.4)** — lo que asume todo consumidor del JSON:
+
+| Campo | Contenido |
+|---|---|
+| `valor` | Valor crudo si la celda NO tiene fórmula; `null` si la tiene. |
+| `formula` | String de la fórmula, o `null`. |
+| `valor_mostrado` | Texto tal como se ve en pantalla. **Siempre** en celdas con fórmula (incluso vacío); en celdas sin fórmula, solo cuando difiere del valor crudo, es decir cuando el formato aporta algo (fecha localizada, moneda, porcentaje). Es el único lugar donde viven los errores de runtime: `#REF!`, `#N/A`, `#DIV/0!`, `#VALUE!`. |
+| `estilo` | Opcional: `fondo`, `texto`, `negrita`, `tamano`, solo si difieren del default. |
+
+**Meta por hoja**: `gid` (identidad estable ante renombres, `getSheetId()`), `indice`, `filas_totales`, `columnas_totales`, `filas_congeladas`, `columnas_congeladas`, `es_oculta`, `reglas_condicionales_qty`, `celdas_con_dato`. El `gid` es lo que permite al diff distinguir "hoja renombrada" de "hoja borrada + hoja nueva", y salda el "GID pendiente de re-mapeo" de `MAPA_HOJAS.md`. `encabezados` es la fila 1 cruda: **no** es el header semántico (en esta planilla los headers reales viven más abajo — Registros fila 2, Plan de Cuentas fila 3, Cargas fila 4) y lo declara `00_Config.js`, no el scanner.
+
+**Compatibilidad hacia atrás**: el snapshot de marzo 2026 fue generado por el scanner viejo y **no tiene** `valor_mostrado` ni `gid`. Todo consumidor (generadores de TSV, diff de no-daño) debe degradar limpiamente cuando esos campos faltan, nunca asumirlos presentes.
+
+**Limitaciones conocidas**: el volcado no trae las validaciones de datos (habría que sumar `getDataValidations` como dimensión masiva propia); no trae el **tipado** del error (el `#N/A` llega como texto en `valor_mostrado`, no como `errorValue`, así que el análisis es por cadena y no distingue un error real de una celda que contiene ese texto); y las celdas de spill de `ARRAYFORMULA` se serializan como valores literales, porque `getFormulas()` devuelve `''` en ellas (afecta al bloque "Categorias" de Plan de Cuentas).
+
+**Contrato de nombre**: `MENU_CONFIG` (`00_Config.js`) invoca la función por su nombre exacto (`[DevTools] Exportar Arquitectura` -> `exportarArquitecturaTotal`). No renombrarla sin actualizar `MENU_CONFIG` en el mismo commit.
+
+**Riesgo de tiempo de ejecución**: Apps Script corta a los 6 minutos. La estimación es que entra (siete llamadas masivas por hoja, el resto CPU en memoria, sobre ~275.000 celdas de grilla según el snapshot de marzo 2026), pero **está sin verificar contra Sheets**: la primera corrida real es la que decide. Si se corta, el log de progreso por hoja dice hasta dónde llegó.
+
+**Dependencias:** `SpreadsheetApp`, `DriveApp`. Requiere scope de Drive (ver `appsscript.json`). Loguea con `console.log` en vez de `logInfo`/`logSuccess` de `02_Utils.js`: desvío deliberado y comentado inline, porque esos helpers arrastran un carácter no-ASCII huérfano (variation selector en `02_Utils.js`) y este módulo debe quedar 100% ASCII. Se vuelve a la convención cuando `02_Utils.js` se limpie en su propia pieza.
 
 ---
 
@@ -394,17 +415,20 @@ Cuando crees un nuevo módulo:
 
 ---
 
-## Deuda y Pendientes de Verificacion (snapshot v0.9.4)
+## Deuda y Pendientes de Verificacion
 
-- `98_DevTools_Scanner.js` contiene emojis en logs/alertas (viola `no-emojis.md`).
+- `02_Utils.js` arrastra un caracter no-ASCII huerfano (variation selector en `logInfo`, mas el espacio suelto en `logError`/`logSuccess`). Por eso `98_DevTools_Scanner.js` loguea con `console.log`. Limpieza pendiente en pieza propia; ahi se vuelve a la convencion.
 - `13_NavigationService` llama a `logError`/`logInfo` con firma de dos argumentos que `02_Utils` no implementa asi.
 - Autocompletado de "Tipo" por "Cuenta" en `handleCargasEdit` no esta activo (la deduccion ocurre en backend, modulo 06).
 - Numeracion con huecos (04, 05, 07-10 inexistentes) por la refactorizacion a Plan de Cuentas centralizado.
-- GIDs de las hojas "Registros" y "Tipos de cambio" de produccion pendientes de re-mapeo (cambiaron con la migracion 2026-06-22).
+- GIDs de las hojas de produccion pendientes de re-mapeo en `MAPA_HOJAS.md`: desde v0.8.4 el scanner los captura (`meta.gid`), asi que la deuda se salda con la primera corrida completa sobre la planilla viva.
+- El scanner no fue corrido todavia contra Sheets: peso del artefacto y duracion siguen estimados, no medidos.
+
+> Nota: el `98_DevTools_Scanner.js` ya no contiene emojis (limpieza hecha en la Fase 2 del arnes).
 
 ---
 
-**Version de la Guia**: 5.0
-**Ultima actualizacion**: 2026-06-22
-**Version del sistema documentada**: v0.9.4
+**Version de la Guia**: 5.1
+**Ultima actualizacion**: 2026-08-13
+**Version del sistema documentada**: v0.9.4 (solo en la historia de git, nunca desplegada). La entrada de `98_DevTools_Scanner.js` esta actualizada a v0.8.4 (Fase 2 del arnes); el resto de las entradas todavia describe el estado de 2026-06-22 y queda pendiente de re-sincronizacion contra el codigo productivo.
 **Modulos documentados**: 12 de 12 archivos `.js` existentes + 2 HTML + manifest

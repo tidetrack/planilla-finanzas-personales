@@ -2,7 +2,7 @@
 
 > Propósito: Fuente de verdad sobre la organización del repositorio. Toda nueva carpeta o archivo debe registrarse aquí antes de crearse. Los agentes de IA usan este documento como referencia canónica.
 
-Versión: v0.8.3 (gobernanza Fase 1 del arnés sobre el baseline productivo v0.8.2) | Última actualización: 2026-08-12
+Versión: v0.8.4 (gemelo digital Fase 2 del arnés: scanner de cobertura total, generadores en `devtools/` y capa semántica) | Última actualización: 2026-08-13
 
 ---
 
@@ -23,7 +23,7 @@ planilla-finanzas-personales/
 │ ├── 13_NavigationService.js # Navegación entre hojas con toast
 │ ├── 14_EventHandlers.js # Triggers: appOnEdit (protección Plan Cuentas, autocomplete Cargas)
 │ ├── 15_ExchangeRateApi.js # Fetch cotizaciones + custom functions TIDETRACK_USD/EUR/AUD
-│ ├── 98_DevTools_Scanner.js # Exportar JSON de arquitectura completa
+│ ├── 98_DevTools_Scanner.js # Scanner de cobertura total: exporta el gemelo digital (JSON) a Drive
 │ ├── 99_MigrationLogic.js # Migración desde BD antigua (legacy)
 │ ├── UI_SharedStyles.html # Design System CSS compartido (neumorphic, League Spartan)
 │ ├── UI_AbmPlanCuentas.html # ABM multi-entidad Plan de Cuentas
@@ -33,6 +33,7 @@ planilla-finanzas-personales/
 ├── docs/ # Documentación del proyecto
 │ ├── permanente/ # Documentos vivos (actualización continua)
 │ │ ├── ARQUITECTURA_AGENTICA.md # Sistema multi-agente de desarrollo (legacy Antigravity)
+│ │ ├── celdas.tsv # GEMELO (capa mecánica): volcado plano hoja/celda/fórmula/valor para auditar con grep+awk. GENERADO, no editar
 │ │ ├── CHANGELOG.md # Historial completo de versiones
 │ │ ├── CONTEXTO_DATOS.md # Diccionario 100% fiel de Backend (offsets, reglas)
 │ │ ├── CONTEXTO_NEGOCIO.md # Círculo de oro, modelo de negocio
@@ -43,6 +44,8 @@ planilla-finanzas-personales/
 │ │ ├── GUIA_ARQUITECTURA.md # ADRs y decisiones técnicas formales
 │ │ ├── GUIA_MODULOS.md # Documentación técnica de módulos .js
 │ │ ├── HISTORIAL_DESARROLLO.md # Bitácora cronológica del proyecto
+│ │ ├── INVENTARIO_CELDAS.md # GEMELO (capa mecánica): inventario exhaustivo del JSON (patrones, QUERYs, dependencias). GENERADO, no editar
+│ │ ├── MAPA_ARQUITECTURA_PLANILLA.md # GEMELO (capa semántica): rol de cada hoja, celdas de control, recetas y protocolo. CURADO A MANO
 │ │ ├── MAPA_HOJAS.md # GIDs, layout y dependencias de todas las hojas (incl. ocultas)
 │ │ ├── PLAN_IMPLEMENTACION.md # Hoja de ruta dual Claude Code + Cowork
 │ │ ├── planilla-reinversión.md # Documento fundacional del pivote
@@ -50,7 +53,7 @@ planilla-finanzas-personales/
 │ │ ├── PROMPT_MAESTRO.md # Prompts de referencia para el ecosistema agéntico
 │ │ ├── RESUMEN_PROYECTO.md # Visión general de Tidetrack
 │ │ ├── ROADMAP_PRODUCTO.md # Etapas y prioridades del producto
-│ │ ├── TIDETRACK_ARQUITECTURA_ESTRICTA.json # JSON crudo generado por DevTools (para NotebookLM)
+│ │ ├── TIDETRACK_ARQUITECTURA_ESTRICTA.json # GEMELO (capa cruda): snapshot celda por celda que produce el scanner. GENERADO, no editar
 │ │ └── database_er_diagram.png # Diagrama ER de relaciones
 │ ├── sesiones/ # Notas de sesiones de trabajo específicas
 │ │ ├── 2026-02-13_v0.6.0_Simplificacion-Monedas.md # Sesión simplificación de monedas
@@ -66,8 +69,9 @@ planilla-finanzas-personales/
 │ └── README.md # Índice de documentación
 │
 ├── .claude/ # Capa de gobernanza Claude Code (manda cuando se trabaja desde Claude Code)
-│ ├── agents/ # Subagentes especializados (7 agentes activos)
+│ ├── agents/ # Subagentes especializados (8 agentes activos)
 │ │ ├── tidetrack-pm.md # Dispatcher y orquestador central
+│ │ ├── gemelo-digital.md # Duenio del gemelo digital: scanner, snapshot JSON, inventario, TSV, MAPA semantico, diff de no-danio (Fase 2 del arnes)
 │ │ ├── appscript-backend.md # Experto en lógica Apps Script (src/*.js, pipelines, deploy)
 │ │ ├── appscript-ui.md # Especialista en HtmlService y UI embebida
 │ │ ├── docs-keeper.md # Coherencia documental (changelog, ADRs, estructura)
@@ -105,6 +109,11 @@ planilla-finanzas-personales/
 │ │ └── no-emojis.md # Regla estricta de tono profesional
 │ └── workflows/ # Flujos de trabajo reutilizables
 │
+├── devtools/ # Herramientas locales del gemelo digital (Python 3, sin dependencias externas)
+│ ├── generar_inventario_planilla.py # JSON -> docs/permanente/INVENTARIO_CELDAS.md (capa mecánica)
+│ ├── generar_tsv_celdas.py # JSON -> docs/permanente/celdas.tsv (auditoría con grep/awk)
+│ └── diff_snapshots.py # Diff celda por celda entre dos snapshots (prueba de no-daño)
+│
 ├── scripts/ # Herramientas de automatización local
 │ └── auto-sync.js # Watcher: commit + push automático
 │
@@ -137,6 +146,33 @@ Estas reglas son definidas en `.agent/rules/estructura-obligatoria.md` y aplicad
 
 ---
 
+## Decisiones de Estructura Registradas
+
+### 2026-08-13 — Creación de `devtools/` en la raíz (Fase 2 del arnés)
+
+La Regla Estricta 2 prohíbe crear carpetas en raíz sin registrarlas primero acá.
+Se crea `devtools/` como excepción explícita y documentada, por tres razones:
+
+1. **El arnés la declara destino canónico.** `docs/permanente/ARNES_TIDETRACK.md`
+   sección 11 (correspondencia archivo a archivo pymes -> personales) mapea
+   `legacy/devtools/generar_inventario_planilla.py` a `devtools/generar_inventario_planilla.py`
+   y `legacy/devtools/verificar_modales.py` a `devtools/verificar_modales.py` (este
+   último sólo si la Fase 5 trae fragmentos HTML). La ruta no es una elección de
+   esta sesión: viene del repo de referencia.
+2. **No es código de la planilla.** Son scripts Python que corren en la máquina de
+   Franco sobre artefactos del repo. `src/` es exclusivamente Apps Script (Regla
+   Estricta 3) y todo lo que se pushea a GAS; un `.py` ahí rompería el push.
+3. **No es automatización de repo.** `scripts/` es el watcher de git (`auto-sync.js`).
+   Mezclar el tooling del gemelo digital con el de sincronización volvería ambiguo
+   qué corre solo y qué corre a demanda.
+
+Regla de uso: `devtools/` contiene únicamente herramientas de análisis y
+verificación que se ejecutan a mano, sin dependencias externas (Python 3 estándar),
+y que nunca escriben en la planilla. Cualquier script nuevo se registra en el árbol
+de arriba antes de crearse.
+
+---
+
 ## Workflow de Cierre de Feature
 
 El pipeline estándar para cerrar cualquier feature:
@@ -165,7 +201,7 @@ El pipeline estándar para cerrar cualquier feature:
 | `13_NavigationService.js` | Activo | v0.4.0 |
 | `14_EventHandlers.js` | Activo - appOnEdit con autocomplete y protección | v0.5.0 |
 | `15_ExchangeRateApi.js` | Activo - cotizaciones + custom functions GAS | v0.6.0 |
-| `98_DevTools_Scanner.js` | Activo - exporta JSON de arquitectura completa | v0.8.0 |
+| `98_DevTools_Scanner.js` | Activo - scanner de cobertura total (gemelo digital), reescrito en la Fase 2 del arnés | v0.8.0 |
 | `99_MigrationLogic.js` | Activo - migración desde BD antigua (legacy) | v0.5.0 |
 | `UI_SharedStyles.html` | Activo - Design System institucional (neumorphic) | v0.4.3 |
 | `UI_AbmPlanCuentas.html` | Activo - ABM multi-entidad Plan de Cuentas | v0.4.1 |
@@ -174,4 +210,17 @@ El pipeline estándar para cerrar cualquier feature:
 
 ---
 
-*Tidetrack - ESTRUCTURA.md - v0.8.0 - 2026-06-05*
+## Herramientas Locales en `/devtools/`
+
+| Archivo | Estado | Entrada | Salida |
+|---|---|---|---|
+| `generar_inventario_planilla.py` | Activo - Fase 2 del arnés | `docs/permanente/TIDETRACK_ARQUITECTURA_ESTRICTA.json` | `docs/permanente/INVENTARIO_CELDAS.md` |
+| `generar_tsv_celdas.py` | Activo - Fase 2 del arnés | ídem | `docs/permanente/celdas.tsv` |
+| `diff_snapshots.py` | Activo - Fase 2 del arnés | dos snapshots JSON | reporte por consola (prueba de no-daño) |
+
+El protocolo de ejecución de las tres (cuándo correrlas, en qué orden y qué se
+commitea junto) está en `docs/permanente/MAPA_ARQUITECTURA_PLANILLA.md`, sección 7.
+
+---
+
+*Tidetrack - ESTRUCTURA.md - v0.8.4 - 2026-08-13*

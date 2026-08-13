@@ -183,20 +183,64 @@ La pieza que pidió Franco explícitamente: "vía JSON y n8n para estar siempre
 actualizado a los cambios". El gemelo estático envejece; el workflow lo
 refresca solo.
 
-1. **Instancia**: usar el **n8n interno del Cluster** — NO la instancia de
-   clientes `n8n-clientes.tidetrack.com.ar` (esa es exclusiva de clientes
-   Tidetrack como Castellino; regla de la casa: no mezclar).
+1. **Instancia**: **decisión Franco 2026-08-13 — se usa la instancia de CLIENTES
+   Tidetrack**, no el n8n interno del Cluster. Esto REVIERTE la indicación
+   original de este documento ("no mezclar"), y la razón es de mantenimiento: hay
+   automatizaciones de varios repos y proyectos, y sostener dos instancias cuesta
+   más que el aislamiento que compraba la separación. Consecuencias operativas
+   que la decisión trae consigo, y que son obligatorias:
+   - **Etiquetado de TODO workflow**: la instancia es self-hosted community y no
+     tiene carpetas, así que los tags son el único eje de organización. Ningún
+     workflow nuevo se crea sin sus tags (taxonomía en la tabla de abajo).
+   - **Convivencia con producción de un cliente**: en esa instancia corren los
+     cinco workflows activos de Castellino (EBA -> Socios). Nada de lo que se
+     haga por finanzas personales puede tocarlos.
+   - **Trampa conocida (skill `cluster-os:n8n-cluster`, punto 6):** un PUT a un
+     workflow ACTIVO des-registra su cron aunque la UI lo siga mostrando activo.
+     Retro-etiquetar los workflows de Castellino por API exige ciclar
+     `deactivate` -> `activate` después de cada PUT, o hacerlo desde la UI.
+   - Ventaja no prevista: el workflow patrón a clonar (`q8eV9R3omEu9R6GI`) y la
+     credencial de Google Sheets ya viven ahí, así que no hay que replicarlas.
+
+   **Host confirmado:** `n8n-clientes.tidetrack.com.ar` (leído de la Production
+   URL de los webhooks de Castellino, 2026-08-13).
+
+   **Taxonomía de tags — convención de la instancia (decisión Franco 2026-08-13).**
+   Tres ejes OBLIGATORIOS en todo workflow, más uno opcional. Sigue el patrón
+   `eje:valor` ya maduro en la instancia de UMOH, así la convención es una sola
+   en todo el Cluster:
+
+   | Eje | Obligatorio | Valores | Para qué |
+   |---|---|---|---|
+   | `proy:<slug>` | sí | `proy:finanzas-personales`, `proy:castellino` | Reemplaza a la carpeta que la instancia no tiene: de qué proyecto/repo es |
+   | `impacto:<a>` | sí | `impacto:cliente`, `impacto:interno` | Si su caída afecta a un cliente o solo a nosotros |
+   | `fuente:<sistema>` | sí | `fuente:sheets`, `fuente:drive` | Sistema de origen del dato |
+   | `estado:lab` | no | solo sondas descartables | Marca lo que no es producción |
+
+   Estado al 2026-08-13: los 7 workflows de Castellino quedaron retro-etiquetados
+   (5 activos + 2 inactivos), la instancia pasó de 0 a 4 tags.
+
+   **Etiquetar NO rompe triggers (verificado, no asumido):** la operación
+   `addTags` del MCP oficial no genera versión nueva — `versionId` y
+   `activeVersionId` quedaron idénticos antes y después, igual que `webhookId`;
+   solo cambia `updatedAt`. Por eso NO hace falta el ciclo
+   `deactivate` -> `activate`: la trampa 6 de la skill `cluster-os:n8n-cluster`
+   aplica al PUT del workflow COMPLETO, no a esta operación granular.
 2. **Workflow "Scanner literal — Finanzas Personales"**: clonar el patrón del
-   workflow `q8eV9R3omEu9R6GI` ("Scanner literal — Castellino (EBA + Socios)")
-   de la instancia de clientes: nodos Google Sheets que leen cada hoja de la
+   workflow `q8eV9R3omEu9R6GI` ("Scanner literal — Castellino (EBA + Socios)"),
+   que vive en la MISMA instancia: nodos Google Sheets que leen cada hoja de la
    planilla (valores + fórmulas) y arman el volcado literal → JSON al staging
    (Drive o directo al repo vía commit). Programado (cron semanal o a demanda
-   vía webhook).
-3. **Credencial**: Google Sheets OAuth propia para la cuenta dueña de la
-   planilla personal. LECCION CRITICA de Castellino: si la app OAuth del
-   proyecto está en modo *Testing*, el refresh token caduca cada 7 días y el
-   workflow muere solo — verificar que esté **En producción** antes de
-   depender de él.
+   vía webhook). Se clona, no se modifica el original de Castellino.
+3. **Credencial**: **decisión Franco 2026-08-13 — se REUTILIZAN las credenciales
+   existentes de la instancia** siempre que la cuenta sea la misma. Verificación
+   obligatoria antes de darlo por hecho: la planilla personal pertenece a
+   `start.tidetrack@gmail.com` (ver `targets.yaml`), así que la credencial de
+   Google Sheets a reutilizar tiene que ser de esa cuenta o tener la planilla
+   compartida. Si no lo es, se crea una credencial propia en la misma instancia.
+   LECCION CRITICA de Castellino que sigue vigente: si la app OAuth del proyecto
+   está en modo *Testing*, el refresh token caduca cada 7 días y el workflow
+   muere solo — verificar que esté **En producción** antes de depender de él.
 4. **Consumo**: la sesión de Claude Code lee el último snapshot (JSON/TSV) en
    vez de pedirle a Franco que escanee a mano. El scanner de Apps Script (Fase
    2) queda como método manual de respaldo y para el diff de no-daño.

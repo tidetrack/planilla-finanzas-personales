@@ -9,6 +9,69 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.8.4 - Gemelo digital Fase 2 del arnes (2026-08-13)
+
+Las herramientas del gemelo digital y el hallazgo que destaparon: la planilla
+productiva esta migrada al layout v0.9.x y el codigo desplegado no.
+
+### Added
+
+- **`src/98_DevTools_Scanner.js` reescrito con cobertura total**: toda celda con
+  valor o formula (el scanner viejo filtraba `r < 5` y por eso el unico snapshot
+  existente tenia 44 celdas de una hoja Registros de 2879 filas). Serializa
+  `valor_mostrado` via `getDisplayValues()` — unico lugar donde viven los errores
+  de runtime (#N/A, #DIV/0!) — y el `gid` de cada hoja, sin el cual un renombre es
+  indistinguible de borrado + alta y el diff de no-danio da falsos positivos
+  masivos. Estilo solo si difiere del default; notacion A1 en memoria.
+- **`devtools/` (carpeta nueva, declarada en el arnes seccion 11)**:
+  - `generar_inventario_planilla.py`: capa MECANICA auto-generada (formulas
+    deduplicadas por patron, QUERYs con su staging, dependencias entre hojas,
+    referencias rotas).
+  - `generar_tsv_celdas.py`: volcado aplanado a `celdas.tsv` para auditar con
+    awk/grep sin que el JSON entre nunca al contexto de una sesion.
+  - `diff_snapshots.py`: la PRUEBA DE NO-DANIO. Criterio del arnes: cero formulas
+    modificadas fuera de lo esperado y las celdas que desaparecieron son
+    exactamente las esperadas, sin resto. Exit code distinto de cero ante danio.
+- **`docs/permanente/MAPA_ARQUITECTURA_PLANILLA.md`**: capa SEMANTICA curada (rol
+  de cada hoja, celdas de control, recetas de auditoria, protocolo de
+  actualizacion, limitaciones declaradas). Es el unico artefacto del gemelo que se
+  edita a mano.
+- **`.claude/agents/gemelo-digital.md`**: agente duenio de esta arquitectura, con
+  el contrato de celda, el protocolo y las trampas ya pagadas.
+
+### Hallazgo critico (2026-08-13)
+
+La primera consulta en vivo a la planilla (via n8n, Sheets API) probo que
+**`Registros` y `Tipos de cambio` YA ESTAN en el layout v0.9.x** (B:M, headers fila
+5, datos fila 6; TC en bloques B:C/E:F/H:I/K:L), mientras `Plan de Cuentas` y
+`Cargas` siguen en el viejo. La conclusion de la Fase 0 ("v0.9.x nunca se
+desplego") era cierta para el CODIGO pero falsa para los DATOS: la migracion se
+ejecuto. Consecuencias medidas:
+
+- `procesarCargas()` pide `Registros!I:T` (col 9-20) sobre una hoja de 14 columnas:
+  excepcion, y no limpia la grilla (hay una carga varada del 2026-06-21).
+- Ultimo registro del ledger: **2026-03-29**.
+- Auditoria de integridad: `Registros` **no perdio ni una fila** (2903 en ambas
+  hojas, suma de montos con delta 0). `Tipos de cambio` perdio **3.151 de 3.267
+  cotizaciones (96,4 %)**, recuperables desde `Tipos de cambio_legacy`, que es
+  superconjunto puro. Los TC congelados del ledger estan intactos (2903/2903).
+- Las vistas `Tablero!AN4`, `Inicio!Y4`, `Inicio!AM4` y `Cargas!R5` leen
+  `Registros_legacy`, no la hoja viva.
+
+**Decision Franco 2026-08-13:** adaptar el codigo al layout nuevo (no revertir la
+planilla) y recuperar las cotizaciones por backfill desde la legacy.
+
+### Metodologia
+
+Cuatro piezas construidas y auditadas con el patron adversarial del arnes: la ronda
+1 refuto las cuatro con 19 bloqueantes (entre ellos: el scanner perdia el valor
+calculado de toda celda con formula; el diff reportaba exito con una hoja entera
+destruida; el inventario afirmaba un mapeo de columnas que la formula no
+respaldaba). La ronda 2, sobre las correcciones, dejo scanner y diff sin
+bloqueantes; los tres defectos restantes se corrigieron a mano.
+
+---
+
 ## v0.8.3 - Gobernanza Fase 1 del arnes (2026-08-12)
 
 Primera version sobre el baseline productivo v0.8.2. Cambios de gobernanza sin

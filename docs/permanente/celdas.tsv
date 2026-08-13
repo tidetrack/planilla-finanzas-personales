@@ -1,0 +1,1711 @@
+hoja	celda	formula	valor
+Inicio	D692	=IF(#REF!<0,5; "#a9bca1"; IF(#REF!<=0,8; "#db9940"; "#da8b7b"))\n	
+Inicio	D693	=IF(#REF!<0,5; "#a9bca1"; IF(#REF!<=0,8; "#db9940"; "#da8b7b"))\n	
+Inicio	D694	=IF(#REF!<0,5; "#da8b7b"; IF(#REF!<=0,8; "#db9940"; "#a9bca1"))\n	
+Inicio	I2		Bienvenido de nuevo.
+Inicio	I3		Aquí tienes un resumen de tu situación financiera actual.
+Inicio	I5		Saldo Actual.
+Inicio	I6	=I10-L10	
+Inicio	I10	=SUMIFS(AK4:AK; Z4:Z; "Ingreso"; AA4:AA; "<>Traspaso")	
+Inicio	I12	=LET(\n  tc_index; SWITCH(P9; "ARS"; 9; "USD"; 10; "AUD"; 11; "EUR"; 12; 9);\n  tc_col; CHOOSECOLS(AM4:AX; tc_index);\n  ingresos_prev; IFERROR(SUM(FILTER(IFERROR(AM4:AM / tc_col; 0); AN4:AN = "Ingreso")); 0);\n  variacion; IFERROR((I11 - ingresos_prev) / ingresos_prev; 0);\n  TEXT(variacion; "+0%;-0%;0%") & " respecto mes anterior"\n)	
+Inicio	L5		Riqueza Acumulada.
+Inicio	L6	=L10-O10	
+Inicio	L10	=SUMIFS(AK4:AK; Z4:Z; "Egreso"; AA4:AA; "<>Traspaso")	
+Inicio	L12	=LET(\n  tc_index; SWITCH(P9; "ARS"; 9; "USD"; 10; "AUD"; 11; "EUR"; 12; 9);\n  tc_col; CHOOSECOLS(AM4:AX; tc_index);\n  egresos_prev; IFERROR(SUM(FILTER(IFERROR(AM4:AM / tc_col; 0); AN4:AN = "Egreso")); 0);\n  variacion; IFERROR((L11 - egresos_prev) / egresos_prev; 0);\n  TEXT(variacion; "+0%;-0%;0%") & " respecto mes anterior"\n)	
+Inicio	P3		Período de Análisis
+Inicio	P4		Marzo
+Inicio	P13	=SEQUENCE(6; 7; DATEVALUE(P4 & " 1 " & P6) - WEEKDAY(DATEVALUE(P4 & " 1 " & P6); 1) + 1)	
+Inicio	Y1		Registros del Mes.
+Inicio	Y3		Monto
+Inicio	Y4	=LET(\n  mes_num; MATCH(P4; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  fecha_inicio; TEXT(DATE(P6; mes_num; 1); "yyyy-mm-dd");\n  fecha_fin; TEXT(EOMONTH(DATE(P6; mes_num; 1); 0); "yyyy-mm-dd");\n  QUERY(\n    Registros!I2:T;\n    "SELECT * WHERE Col7 >= date '" & fecha_inicio & "' AND Col7 <= date '" & fecha_fin & "'";\n    0\n  )\n)	
+Inicio	Y5		567974
+Inicio	Z3		Tipo
+Inicio	Z4		Ingreso
+Inicio	Z5		Ingreso
+Inicio	AA3		Cuenta
+Inicio	AA4		Ingreso Viejo
+Inicio	AA5		Traspaso
+Inicio	AB3		Tipo de Cuenta
+Inicio	AB4		Ingreso
+Inicio	AC3		Medio
+Inicio	AC4		NaranjaX
+Inicio	AC5		Frascos Nx - Préstamo
+Inicio	AD3		Moneda
+Inicio	AD4		ARS
+Inicio	AD5		ARS
+Inicio	AE3		Fecha
+Inicio	AE4		2026-03-19T03:00:00.000Z
+Inicio	AE5		2026-03-19T03:00:00.000Z
+Inicio	AF3		Nota
+Inicio	AF5		Vence 20/04 | Frasco Fijo
+Inicio	AG3		Ars
+Inicio	AG4		1
+Inicio	AG5		1
+Inicio	AH3		Usd
+Inicio	AH4		1415
+Inicio	AH5		1415
+Inicio	AI3		Aud
+Inicio	AI4		998.5181003457766
+Inicio	AI5		998.5181003457766
+Inicio	AJ3		Eur
+Inicio	AJ4		1628.8144763044904
+Inicio	AJ5		1628.8144763044904
+Inicio	AK3	="Valor en " & P9	
+Inicio	AK4	=ARRAYFORMULA(\n  IF(Y4:Y=""; "";\n    LET(\n      tasa_origen; IF(AA4:AA="ARS"; AG4:AG; IF(AA4:AA="USD"; AH4:AH; IF(AA4:AA="AUD"; AI4:AI; IF(AA4:AA="EUR"; AJ4:AJ; 1))));\n      tasa_destino; IF(P9="ARS"; AG4:AG; IF(P9="USD"; AH4:AH; IF(P9="AUD"; AI4:AI; IF(P9="EUR"; AJ4:AJ; 1))));\n      IFERROR((Y4:Y * tasa_origen) / tasa_destino; 0)\n    )\n  )\n)	
+Inicio	AK5		567974
+Inicio	AM1		Registros del mes Anterior.
+Inicio	AM3		Monto
+Inicio	AM4	=LET(\n  mes_num; MATCH(P4; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  fecha_inicio; TEXT(DATE(P6; mes_num - 1; 1); "yyyy-mm-dd");\n  fecha_fin; TEXT(EOMONTH(DATE(P6; mes_num - 1; 1); 0); "yyyy-mm-dd");\n  QUERY(\n    Registros!I2:T;\n    "SELECT * WHERE Col7 >= date '" & fecha_inicio & "' AND Col7 <= date '" & fecha_fin & "'";\n    0\n  )\n)	
+Inicio	AM5		16200
+Inicio	AN3		Tipo
+Inicio	AN4		Ingreso
+Inicio	AN5		Ingreso
+Inicio	AO3		Cuenta
+Inicio	AO4		Intereses bancos
+Inicio	AO5		Salidas
+Inicio	AP3		Tipo de Cuenta
+Inicio	AP4		Ingreso
+Inicio	AP5		Gasto Variable
+Inicio	AQ3		Medio
+Inicio	AQ4		NaranjaX
+Inicio	AQ5		Efectivo
+Inicio	AR3		Moneda
+Inicio	AR4		ARS
+Inicio	AR5		ARS
+Inicio	AS3		Fecha
+Inicio	AS4		2026-02-28T03:00:00.000Z
+Inicio	AS5		2026-02-28T03:00:00.000Z
+Inicio	AT3		Nota
+Inicio	AU3		Ars
+Inicio	AU4		1
+Inicio	AU5		1
+Inicio	AV3		Usd
+Inicio	AV4		1420
+Inicio	AV5		1420
+Inicio	AW3		Aud
+Inicio	AW4		1006.235827664399
+Inicio	AW5		1006.235827664399
+Inicio	AX3		Eur
+Inicio	AX4		1674.60729279683
+Inicio	AX5		1674.60729279683
+Tablero	D706	=IF(#REF!<0,5; "#a9bca1"; IF(#REF!<=0,8; "#db9940"; "#da8b7b"))\n	
+Tablero	D707	=IF(#REF!<0,5; "#a9bca1"; IF(#REF!<=0,8; "#db9940"; "#da8b7b"))\n	
+Tablero	D708	=IF(AH43<0,5; "#da8b7b"; IF(AH43<=0,8; "#db9940"; "#a9bca1"))\n	
+Tablero	I2		Período de Análisis
+Tablero	I4		Marzo
+Tablero	I13	=SEQUENCE(6; 7; DATEVALUE(I4 & " 1 " & I6) - WEEKDAY(DATEVALUE(I4 & " 1 " & I6); 1) + 1)	
+Tablero	I21	=LET(\n  ingresos_traspaso; SUMIFS(AZ4:AZ; AP4:AP; "Traspaso"; AO4:AO; "Ingreso");\n  egresos_traspaso; SUMIFS(AZ4:AZ; AP4:AP; "Traspaso"; AO4:AO; "Egreso");\n  diferencia; ROUND(ingresos_traspaso - egresos_traspaso; 2);\n  \n  IF(diferencia = 0;\n    "Traspasos balanceados";\n    "Descuadre en Traspasos por " & TEXT(diferencia; "$ #.##0,00")\n  )\n)	
+Tablero	Q2		Saldos Actuales.
+Tablero	Q3		Moneda
+Tablero	Q4		ARS
+Tablero	Q5		USD
+Tablero	S3		Liquidez
+Tablero	S4	=SUM(IFERROR(FILTER(ARRAYFORMULA(IF(AO4:AO="Egreso"; -AN4:AN; AN4:AN)); AS4:AS="ARS"; ARRAYFORMULA(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""))="Medio Cotidiano"); 0))	
+Tablero	S5	=SUM(IFERROR(FILTER(ARRAYFORMULA(IF(AO4:AO="Egreso"; -AN4:AN; AN4:AN)); AS4:AS="USD"; ARRAYFORMULA(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""))="Medio Cotidiano"); 0))	
+Tablero	S6	=SUM(IFERROR(FILTER(ARRAYFORMULA(IF(AO4:AO="Egreso"; -AN4:AN; AN4:AN)); AS4:AS="AUD"; ARRAYFORMULA(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""))="Medio Cotidiano"); 0))	
+Tablero	S7	=SUM(IFERROR(FILTER(ARRAYFORMULA(IF(AO4:AO="Egreso"; -AN4:AN; AN4:AN)); AS4:AS="EUR"; ARRAYFORMULA(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""))="Medio Cotidiano"); 0))	
+Tablero	S13	=X2*1,3	
+Tablero	S14	=AA2*2	
+Tablero	S15	=AD2	
+Tablero	S17	=S13-S14-S15	
+Tablero	S22	=IFERROR(U17 / (S13 - S14 - S15); 0)	
+Tablero	S23	=IFERROR(U14 / S14; 0)	
+Tablero	S24	=IFERROR(U15 / S15; 0)	
+Tablero	T22	=LET(\n  liquidez_ars; S4 + (S5 * $AL$4) + (S6 * $AL$5) + (S7 * $AL$6);\n  tasa_cambio; IFERROR(SWITCH($I$9; "ARS"; 1; "USD"; $AL$4; "AUD"; $AL$5; "EUR"; $AL$6); 1);\n  liquidez_moneda; liquidez_ars / tasa_cambio;\n  \n  rem_ahorro; MAX(0; ($S$13-$S$14-$S$15) - ($U$13-$U$14-$U$15));\n  rem_fijos; MAX(0; $S$14 - $U$14);\n  rem_var; MAX(0; $S$15 - $U$15);\n  suma_rem; rem_ahorro + rem_fijos + rem_var;\n  \n  IF(suma_rem > 0; liquidez_moneda * (rem_ahorro / suma_rem); liquidez_moneda)\n)	
+Tablero	T23	=LET(\n  liquidez_ars; S4 + (S5 * $AL$4) + (S6 * $AL$5) + (S7 * $AL$6);\n  tasa_cambio; IFERROR(SWITCH($I$9; "ARS"; 1; "USD"; $AL$4; "AUD"; $AL$5; "EUR"; $AL$6); 1);\n  liquidez_moneda; liquidez_ars / tasa_cambio;\n  \n  rem_ahorro; MAX(0; ($S$13-$S$14-$S$15) - ($U$13-$U$14-$U$15));\n  rem_fijos; MAX(0; $S$14 - $U$14);\n  rem_var; MAX(0; $S$15 - $U$15);\n  suma_rem; rem_ahorro + rem_fijos + rem_var;\n  \n  IF(suma_rem > 0; liquidez_moneda * (rem_fijos / suma_rem); 0)\n)	
+Tablero	T24	=LET(\n  liquidez_ars; S4 + (S5 * $AL$4) + (S6 * $AL$5) + (S7 * $AL$6);\n  tasa_cambio; IFERROR(SWITCH($I$9; "ARS"; 1; "USD"; $AL$4; "AUD"; $AL$5; "EUR"; $AL$6); 1);\n  liquidez_moneda; liquidez_ars / tasa_cambio;\n  \n  rem_ahorro; MAX(0; ($S$13-$S$14-$S$15) - ($U$13-$U$14-$U$15));\n  rem_fijos; MAX(0; $S$14 - $U$14);\n  rem_var; MAX(0; $S$15 - $U$15);\n  suma_rem; rem_ahorro + rem_fijos + rem_var;\n  \n  IF(suma_rem > 0; liquidez_moneda * (rem_var / suma_rem); 0)\n)	
+Tablero	U3		Riqueza
+Tablero	U4	=LET(\n  monto_neto; ARRAYFORMULA(IF(AO4:AO="Egreso"; -AN4:AN; AN4:AN));\n  proyectos; ARRAYFORMULA(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""));\n  tipos_proy; ARRAYFORMULA(IFERROR(VLOOKUP(proyectos; 'Plan de Cuentas'!V:W; 2; 0); ""));\n  cond_riqueza; ARRAYFORMULA((tipos_proy<>"Liquidez") * (tipos_proy<>"") > 0);\n  \n  SUM(IFERROR(FILTER(monto_neto; AS4:AS="ARS"; cond_riqueza); 0))\n)	
+Tablero	U5	=LET(\n  monto_neto; ARRAYFORMULA(IF(AO4:AO="Egreso"; -AN4:AN; AN4:AN));\n  proyectos; ARRAYFORMULA(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""));\n  tipos_proy; ARRAYFORMULA(IFERROR(VLOOKUP(proyectos; 'Plan de Cuentas'!V:W; 2; 0); ""));\n  cond_riqueza; ARRAYFORMULA((tipos_proy<>"Liquidez") * (tipos_proy<>"") > 0);\n  \n  SUM(IFERROR(FILTER(monto_neto; AS4:AS="USD"; cond_riqueza); 0))\n)	
+Tablero	U6	=LET(\n  monto_neto; ARRAYFORMULA(IF(AO4:AO="Egreso"; -AN4:AN; AN4:AN));\n  proyectos; ARRAYFORMULA(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""));\n  tipos_proy; ARRAYFORMULA(IFERROR(VLOOKUP(proyectos; 'Plan de Cuentas'!V:W; 2; 0); ""));\n  cond_riqueza; ARRAYFORMULA((tipos_proy<>"Liquidez") * (tipos_proy<>"") > 0);\n  \n  SUM(IFERROR(FILTER(monto_neto; AS4:AS="AUD"; cond_riqueza); 0))\n)	
+Tablero	U7	=LET(\n  monto_neto; ARRAYFORMULA(IF(AO4:AO="Egreso"; -AN4:AN; AN4:AN));\n  proyectos; ARRAYFORMULA(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""));\n  tipos_proy; ARRAYFORMULA(IFERROR(VLOOKUP(proyectos; 'Plan de Cuentas'!V:W; 2; 0); ""));\n  cond_riqueza; ARRAYFORMULA((tipos_proy<>"Liquidez") * (tipos_proy<>"") > 0);\n  \n  SUM(IFERROR(FILTER(monto_neto; AS4:AS="EUR"; cond_riqueza); 0))\n)	
+Tablero	U13	=X2	
+Tablero	U14	=AA2	
+Tablero	U15	=AD2	
+Tablero	U17	=LET(\n  monto_neto; ARRAYFORMULA(IF(AO4:AO="Egreso"; -AN4:AN; AN4:AN));\n  cond_inicio; ARRAYFORMULA(AP4:AP<>"Inicio Mes");\n  \n  proyectos; ARRAYFORMULA(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""));\n  tipos_proy; ARRAYFORMULA(IFERROR(VLOOKUP(proyectos; 'Plan de Cuentas'!V:W; 2; 0); ""));\n  \n  cond_ahorro; ARRAYFORMULA((tipos_proy<>"Liquidez") * (tipos_proy<>"") > 0);\n  \n  suma_ars; SUM(IFERROR(FILTER(monto_neto; AS4:AS="ARS"; cond_inicio; cond_ahorro); 0));\n  suma_usd; SUM(IFERROR(FILTER(monto_neto; AS4:AS="USD"; cond_inicio; cond_ahorro); 0));\n  suma_aud; SUM(IFERROR(FILTER(monto_neto; AS4:AS="AUD"; cond_inicio; cond_ahorro); 0));\n  suma_eur; SUM(IFERROR(FILTER(monto_neto; AS4:AS="EUR"; cond_inicio; cond_ahorro); 0));\n  \n  total_ars; suma_ars + (suma_usd * $AL$4) + (suma_aud * $AL$5) + (suma_eur * $AL$6);\n  \n  tasa_cambio; IFERROR(SWITCH($I$9; "ARS"; 1; "USD"; $AL$4; "AUD"; $AL$5; "EUR"; $AL$6); 1);\n  \n  total_ars / tasa_cambio\n)	
+Tablero	W2		Ingresos. 
+Tablero	W3		Cuenta
+Tablero	W4	=IFERROR(QUERY(\n  ARRAYFORMULA({\n    AP4:AP \\ \n    IF(AO4:AO="Egreso"; -AZ4:AZ; AZ4:AZ) \\ \n    AQ4:AQ \\ \n    IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); "") \\\n    IFERROR(VLOOKUP(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""); 'Plan de Cuentas'!V:W; 2; 0); "")\n  });\n  "SELECT Col1, SUM(Col2) \n   WHERE Col3 = 'Ingreso' \n   AND Col1 != 'Traspaso' \n   AND Col1 IS NOT NULL \n   AND (Col1 != 'Inicio Mes' OR Col5 = 'Liquidez') \n   GROUP BY Col1 \n   ORDER BY SUM(Col2) DESC \n   LABEL Col1 '', SUM(Col2) ''";\n  0\n); {"" \\ ""})	
+Tablero	W5		Ingreso Viejo
+Tablero	X2	=SUM(X4:X22)	
+Tablero	X3		Monto
+Tablero	X4		1999910.23
+Tablero	X5		567974
+Tablero	Z2		Gastos Fijos.
+Tablero	Z3		Cuenta
+Tablero	Z4	=IFERROR(QUERY(\n  ARRAYFORMULA({\n    AP4:AP \\ \n    IF(AO4:AO="Ingreso"; -AZ4:AZ; AZ4:AZ) \\ \n    AQ4:AQ \\ \n    IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); "") \\\n    IFERROR(VLOOKUP(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""); 'Plan de Cuentas'!V:W; 2; 0); "")\n  });\n  "SELECT Col1, SUM(Col2) \n   WHERE Col3 = 'Gasto Fijo' \n   AND Col1 != 'Traspaso' \n   AND Col1 IS NOT NULL \n   AND (Col1 != 'Inicio Mes' OR Col5 = 'Liquidez') \n   GROUP BY Col1 \n   ORDER BY SUM(Col2) DESC \n   LABEL Col1 '', SUM(Col2) ''";\n  0\n); {"" \\ ""})	
+Tablero	Z5		MONOTRIBUTO
+Tablero	AA2	=SUM(AA4:AA22)	
+Tablero	AA3		Monto
+Tablero	AA4		98375.45
+Tablero	AA5		54562.74
+Tablero	AC2		Gastos Variables.
+Tablero	AC3		Cuenta
+Tablero	AC4	=IFERROR(QUERY(\n  ARRAYFORMULA({\n    AP4:AP \\ \n    IF(AO4:AO="Ingreso"; -AZ4:AZ; AZ4:AZ) \\ \n    AQ4:AQ \\ \n    IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); "") \\\n    IFERROR(VLOOKUP(IFERROR(VLOOKUP(AR4:AR; 'Plan de Cuentas'!R:T; 3; 0); ""); 'Plan de Cuentas'!V:W; 2; 0); "")\n  });\n  "SELECT Col1, SUM(Col2) \n   WHERE Col3 = 'Gasto Variable' \n   AND Col1 != 'Traspaso' \n   AND Col1 IS NOT NULL \n   AND (Col1 != 'Inicio Mes' OR Col5 = 'Liquidez') \n   GROUP BY Col1 \n   ORDER BY SUM(Col2) DESC \n   LABEL Col1 '', SUM(Col2) ''";\n  0\n); {"" \\ ""})	
+Tablero	AC5		Juntadas
+Tablero	AD2	=SUM(AD4:AD22)	
+Tablero	AD3		Monto
+Tablero	AD4		2752443.3
+Tablero	AD5		56600
+Tablero	AF2		Medios Bancarios.
+Tablero	AF3		Medio
+Tablero	AF4	=IFERROR(QUERY(\n  ARRAYFORMULA({AR4:AR \\ AS4:AS \\ IF(AO4:AO="Egreso"; -AN4:AN; AN4:AN)});\n  "SELECT Col1, Col2, SUM(Col3) \n   WHERE Col1 IS NOT NULL AND Col1 <> '' \n   GROUP BY Col1, Col2 \n   ORDER BY SUM(Col3) DESC \n   LABEL Col1 '', Col2 '', SUM(Col3) ''";\n  0\n); {"" \\ "" \\ ""})	
+Tablero	AF5		NaranjaX
+Tablero	AG3		Moneda
+Tablero	AG4		ARS
+Tablero	AG5		ARS
+Tablero	AH3		Monto
+Tablero	AH4		567974
+Tablero	AH5		215037.43
+Tablero	AJ2		Cotizaciones Monedas.
+Tablero	AJ3		Moneda
+Tablero	AJ4		USD
+Tablero	AJ5		AUD
+Tablero	AJ10	=LET(\n  medio; AR4:AR;\n  moneda; AS4:AS;\n  \n  monto_neto; ARRAYFORMULA(IF(AN4:AN=""; 0; IF(AO4:AO="Egreso"; -AN4:AN; AN4:AN)));\n  \n  proyecto; ARRAYFORMULA(IFERROR(VLOOKUP(medio; 'Plan de Cuentas'!R:T; 3; 0); ""));\n  tipo_proy; ARRAYFORMULA(IFERROR(VLOOKUP(proyecto; 'Plan de Cuentas'!V:W; 2; 0); ""));\n  \n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; $AL$4; IF(moneda="AUD"; $AL$5; IF(moneda="EUR"; $AL$6; 1))));\n  tasa_destino; IFERROR(SWITCH($I$9; "ARS"; 1; "USD"; $AL$4; "AUD"; $AL$5; "EUR"; $AL$6); 1);\n  \n  monto_convertido; ARRAYFORMULA(IFERROR((monto_neto * tasa_origen) / tasa_destino; 0));\n  \n  condicion; ARRAYFORMULA((proyecto<>"") * (tipo_proy<>"Liquidez") > 0);\n  \n  proy_filtrado; FILTER(proyecto; condicion);\n  monto_filtrado; FILTER(monto_convertido; condicion);\n  \n  resultado_query; IFERROR(QUERY(\n    {proy_filtrado \\ monto_filtrado};\n    "SELECT Col1, SUM(Col2) \n     GROUP BY Col1 \n     ORDER BY SUM(Col2) DESC \n     LABEL Col1 '', SUM(Col2) ''";\n    0\n  ); {"" \\ ""});\n  \n  columna_aj; INDEX(resultado_query; 0; 1);\n  columna_al; INDEX(resultado_query; 0; 2);\n  columna_ak_vacia; ARRAYFORMULA(IF(columna_aj<>""; ""; ""));\n  \n  {columna_aj \\ columna_ak_vacia \\ columna_al}\n)	
+Tablero	AL3		Cotización
+Tablero	AL4	=tidetrack_usd()	
+Tablero	AL5	=tidetrack_AUD()	
+Tablero	AL6	=tidetrack_EUR()	
+Tablero	AN1		Registros del Mes.
+Tablero	AN3		Monto
+Tablero	AN4	=LET(\n  mes_num; MATCH(I4; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  fecha_inicio; TEXT(DATE(I6; mes_num; 1); "yyyy-mm-dd");\n  fecha_fin; TEXT(EOMONTH(DATE(I6; mes_num; 1); 0); "yyyy-mm-dd");\n  QUERY(\n    Registros!I2:T;\n    "SELECT * WHERE Col7 >= date '" & fecha_inicio & "' AND Col7 <= date '" & fecha_fin & "'";\n    0\n  )\n)	
+Tablero	AN5		567974
+Tablero	AO3		Tipo
+Tablero	AO4		Ingreso
+Tablero	AO5		Ingreso
+Tablero	AP3		Cuenta
+Tablero	AP4		Ingreso Viejo
+Tablero	AP5		Traspaso
+Tablero	AQ3		Tipo de Cuenta
+Tablero	AQ4		Ingreso
+Tablero	AR3		Medio
+Tablero	AR4		NaranjaX
+Tablero	AR5		Frascos Nx - Préstamo
+Tablero	AS3		Moneda
+Tablero	AS4		ARS
+Tablero	AS5		ARS
+Tablero	AT3		Fecha
+Tablero	AT4		2026-03-19T03:00:00.000Z
+Tablero	AT5		2026-03-19T03:00:00.000Z
+Tablero	AU3		Nota
+Tablero	AU5		Vence 20/04 | Frasco Fijo
+Tablero	AV3		Ars
+Tablero	AV4		1
+Tablero	AV5		1
+Tablero	AW3		Usd
+Tablero	AW4		1415
+Tablero	AW5		1415
+Tablero	AX3		Aud
+Tablero	AX4		998.5181003457766
+Tablero	AX5		998.5181003457766
+Tablero	AY3		Eur
+Tablero	AY4		1628.8144763044904
+Tablero	AY5		1628.8144763044904
+Tablero	AZ3	="Valor en " & I9	
+Tablero	AZ4	=ARRAYFORMULA(\n  IF(AN4:AN=""; "";\n    LET(\n      tasa_origen; IF(AS4:AS="ARS"; AV4:AV; IF(AS4:AS="USD"; AW4:AW; IF(AS4:AS="AUD"; AX4:AX; IF(AS4:AS="EUR"; AY4:AY; 1))));\n      tasa_destino; IF(I9="ARS"; AV4:AV; IF(I9="USD"; AW4:AW; IF(I9="AUD"; AX4:AX; IF(I9="EUR"; AY4:AY; 1))));\n      IFERROR((AN4:AN * tasa_origen) / tasa_destino; 0)\n    )\n  )\n)	
+Tablero	AZ5		567974
+Cargas	D706	=IF(I17<0,5; "#a9bca1"; IF(I17<=0,8; "#db9940"; "#da8b7b"))\n	
+Cargas	D707	=IF(I18<0,5; "#a9bca1"; IF(I18<=0,8; "#db9940"; "#da8b7b"))\n	
+Cargas	D708	=IF(#REF!<0,5; "#da8b7b"; IF(#REF!<=0,8; "#db9940"; "#a9bca1"))\n	
+Cargas	H5		1
+Cargas	I2		Movimientos.
+Cargas	I4		Monto
+Cargas	J4		Tipo
+Cargas	K4		Cuenta
+Cargas	L4		Medio
+Cargas	M4		Moneda
+Cargas	N4		Fecha
+Cargas	O4		Nota
+Cargas	R2		Últimos 15 movimientos.
+Cargas	R4		Monto
+Cargas	R5	=IFERROR(QUERY(\n  {Registros!I2:T};\n  "SELECT Col1, Col2, Col3, Col5, Col6, Col7, Col8 WHERE Col1 IS NOT NULL ORDER BY Col7 DESC LIMIT 15";\n  0\n); "")	
+Cargas	S4		Tipo
+Cargas	S5		Ingreso
+Cargas	T4		Cuenta
+Cargas	T5		Ingreso Viejo
+Cargas	U4		Medio
+Cargas	U5		NaranjaX
+Cargas	V4		Moneda
+Cargas	V5		ARS
+Cargas	W4		Fecha
+Cargas	W5		2026-03-19T03:00:00.000Z
+Cargas	X4		Nota
+Plan de Cuentas	D706	=IF(J17<0,5; "#a9bca1"; IF(J17<=0,8; "#db9940"; "#da8b7b"))\n	
+Plan de Cuentas	D707	=IF(J18<0,5; "#a9bca1"; IF(J18<=0,8; "#db9940"; "#da8b7b"))\n	
+Plan de Cuentas	D708	=IF(J19<0,5; "#da8b7b"; IF(J19<=0,8; "#db9940"; "#a9bca1"))\n	
+Plan de Cuentas	H1		Plan de Cuentas.
+Plan de Cuentas	I2		Ingresos. 
+Plan de Cuentas	I3		Cuenta
+Plan de Cuentas	I4		Tidetrack
+Plan de Cuentas	I5		Umoh
+Plan de Cuentas	J3		Proyecto
+Plan de Cuentas	L2		Gastos Fijos.
+Plan de Cuentas	L3		Cuenta
+Plan de Cuentas	L4		Auto
+Plan de Cuentas	L5		Gatos
+Plan de Cuentas	M3		Proyecto
+Plan de Cuentas	O2		Gastos Variables.
+Plan de Cuentas	O3		Cuenta
+Plan de Cuentas	O4		Comidas
+Plan de Cuentas	O5		Computación
+Plan de Cuentas	P3		Proyecto
+Plan de Cuentas	R2		Medios Bancarios.
+Plan de Cuentas	R3		Medio
+Plan de Cuentas	R4		YPF
+Plan de Cuentas	R5		Ualá
+Plan de Cuentas	S3		Moneda
+Plan de Cuentas	S4		ARS
+Plan de Cuentas	S5		ARS
+Plan de Cuentas	T3		Proyecto
+Plan de Cuentas	T4		Medio Cotidiano
+Plan de Cuentas	T5		Medio Cotidiano
+Plan de Cuentas	V2		Proyectos.
+Plan de Cuentas	V3		Proyecto
+Plan de Cuentas	V4		Ahorros
+Plan de Cuentas	V5		Tarjeta de Crédito
+Plan de Cuentas	W3		Tipo
+Plan de Cuentas	W4		Ahorro
+Plan de Cuentas	W5		Financiación
+Plan de Cuentas	Y2		Categorias.
+Plan de Cuentas	Y3		Cuenta
+Plan de Cuentas	Y4	=ARRAYFORMULA(QUERY(FLATTEN({I4:I;L4:L;O4:O;R4:R}); \n"select * where Col1 is not null"))	
+Plan de Cuentas	Y5		Umoh
+Tipos de Cambio	D706	=IF(J17<0,5; "#a9bca1"; IF(J17<=0,8; "#db9940"; "#da8b7b"))\n	
+Tipos de Cambio	D707	=IF(J18<0,5; "#a9bca1"; IF(J18<=0,8; "#db9940"; "#da8b7b"))\n	
+Tipos de Cambio	D708	=IF(J19<0,5; "#da8b7b"; IF(J19<=0,8; "#db9940"; "#a9bca1"))\n	
+Tipos de Cambio	H1		Monedas.
+Tipos de Cambio	I2		Peso Argentino.
+Tipos de Cambio	I3		Fecha
+Tipos de Cambio	I4		2026-03-20T12:00:00.000Z
+Tipos de Cambio	I5		2026-03-19T12:00:00.000Z
+Tipos de Cambio	J3		Cotización
+Tipos de Cambio	J4		1
+Tipos de Cambio	J5		1
+Tipos de Cambio	L2		Dólar Estaudonidense.
+Tipos de Cambio	L3		Fecha
+Tipos de Cambio	L4		2026-03-20T12:00:00.000Z
+Tipos de Cambio	L5		2026-03-19T12:00:00.000Z
+Tipos de Cambio	M3		Cotización
+Tipos de Cambio	M4		1410
+Tipos de Cambio	M5		1415
+Tipos de Cambio	O2		Dólar Australiano.
+Tipos de Cambio	O3		Fecha
+Tipos de Cambio	O4		2026-03-20T12:00:00.000Z
+Tipos de Cambio	O5		2026-03-19T12:00:00.000Z
+Tipos de Cambio	P3		Cotización
+Tipos de Cambio	P4		994.9897678357208
+Tipos de Cambio	P5		998.5181003457766
+Tipos de Cambio	R2		Euro.
+Tipos de Cambio	R3		Fecha
+Tipos de Cambio	R4		2026-03-20T12:00:00.000Z
+Tipos de Cambio	R5		2026-03-19T12:00:00.000Z
+Tipos de Cambio	S3		Cotización
+Tipos de Cambio	S4		1623.058948119669
+Tipos de Cambio	S5		1628.8144763044904
+Registros	D2667	=IF(J17<0,5; "#a9bca1"; IF(J17<=0,8; "#db9940"; "#da8b7b"))\n	
+Registros	D2668	=IF(J18<0,5; "#a9bca1"; IF(J18<=0,8; "#db9940"; "#da8b7b"))\n	
+Registros	D2669	=IF(J19<0,5; "#da8b7b"; IF(J19<=0,8; "#db9940"; "#a9bca1"))\n	
+Registros	H1		Registros.
+Registros	I2		Monto
+Registros	I3		567974
+Registros	I4		567974
+Registros	I5		567974
+Registros	J2		Tipo
+Registros	J3		Ingreso
+Registros	J4		Ingreso
+Registros	J5		Egreso
+Registros	K2		Cuenta
+Registros	K3		Ingreso Viejo
+Registros	K4		Traspaso
+Registros	K5		Traspaso
+Registros	L2		Tipo de Cuenta
+Registros	L3		Ingreso
+Registros	M2		Medio
+Registros	M3		NaranjaX
+Registros	M4		Frascos Nx - Préstamo
+Registros	M5		NaranjaX
+Registros	N2		Moneda
+Registros	N3		ARS
+Registros	N4		ARS
+Registros	N5		ARS
+Registros	O2		Fecha
+Registros	O3		2026-03-19T03:00:00.000Z
+Registros	O4		2026-03-19T03:00:00.000Z
+Registros	O5		2026-03-19T03:00:00.000Z
+Registros	P2		Nota
+Registros	P4		Vence 20/04 | Frasco Fijo
+Registros	Q3		1
+Registros	Q4		1
+Registros	Q5		1
+Registros	R3		1415
+Registros	R4		1415
+Registros	R5		1415
+Registros	S3		998.5181003457766
+Registros	S4		998.5181003457766
+Registros	S5		998.5181003457766
+Registros	T3		1628.8144763044904
+Registros	T4		1628.8144763044904
+Registros	T5		1628.8144763044904
+BD Antigua	A1		Fecha
+BD Antigua	A2		2024-01-01T03:00:00.000Z
+BD Antigua	A3		2024-01-01T03:00:00.000Z
+BD Antigua	A4		2024-01-01T03:00:00.000Z
+BD Antigua	A5		2024-01-01T03:00:00.000Z
+BD Antigua	B1		Ingreso
+BD Antigua	B2		6100
+BD Antigua	B3		0
+BD Antigua	B4		0
+BD Antigua	B5		0
+BD Antigua	C1		Egreso
+BD Antigua	D1		Detalle
+BD Antigua	D2		Inicio Mes
+BD Antigua	D3		Inicio Mes
+BD Antigua	D4		Inicio Mes
+BD Antigua	D5		Inicio Mes
+BD Antigua	E1		Medio
+BD Antigua	E2		Efectivo
+BD Antigua	E3		Santander
+BD Antigua	E4		Patagonia
+BD Antigua	E5		Brubank
+BD Antigua	F1		Tipo
+BD Antigua	G1		Observacion
+BD Antigua	H1		Cuentas Faltantes
+Bocetos	D706	=IF(J17<0,5; "#a9bca1"; IF(J17<=0,8; "#db9940"; "#da8b7b"))\n	
+Bocetos	D707	=IF(J18<0,5; "#a9bca1"; IF(J18<=0,8; "#db9940"; "#da8b7b"))\n	
+Bocetos	D708	=IF(J19<0,5; "#da8b7b"; IF(J19<=0,8; "#db9940"; "#a9bca1"))\n	
+Bocetos	H2		Bienvenido de nuevo.
+Bocetos	H3		Aquí tienes un resumen de tu situación financiera actual.
+Bocetos	H5		40000
+Bocetos	N2		mes
+Bocetos	O2		año
+Bocetos	R3		#34475d
+Bocetos	R4		#6e7f8d
+Bocetos	R5		#b5bfc6
+Bocetos	AH2	=IF(B3="enero";\n     "SELECT * WHERE A >= date'"&#REF!&"-01-01' AND A < date'"&#REF!&"-02-01'";\n IF(B3="febrero";\n     "SELECT * WHERE A >= date'"&#REF!&"-02-01' AND A < date'"&#REF!&"-03-01'";\n IF(B3="marzo";\n     "SELECT * WHERE A >= date'"&#REF!&"-03-01' AND A < date'"&#REF!&"-04-01'";\n IF(B3="abril";\n     "SELECT * WHERE A >= date'"&#REF!&"-04-01' AND A < date'"&#REF!&"-05-01'";\n IF(B3="mayo";\n     "SELECT * WHERE A >= date'"&#REF!&"-05-01' AND A < date'"&#REF!&"-06-01'";\n IF(B3="junio";\n     "SELECT * WHERE A >= date'"&#REF!&"-06-01' AND A < date'"&#REF!&"-07-01'";\n IF(B3="julio";\n     "SELECT * WHERE A >= date'"&#REF!&"-07-01' AND A < date'"&#REF!&"-08-01'";\n IF(B3="agosto";\n     "SELECT * WHERE A >= date'"&#REF!&"-08-01' AND A < date'"&#REF!&"-09-01'";\n IF(B3="septiembre";\n     "SELECT * WHERE A >= date'"&#REF!&"-09-01' AND A < date'"&#REF!&"-10-01'";\n IF(B3="octubre";\n     "SELECT * WHERE A >= date'"&#REF!&"-10-01' AND A < date'"&#REF!&"-11-01'";\n IF(B3="noviembre";\n     "SELECT * WHERE A >= date'"&#REF!&"-11-01' AND A < date'"&#REF!&"-12-01'";\n IF(B3="diciembre";\n     "SELECT * WHERE A >= date'"&#REF!&"-12-01' AND A < date'"&(#REF!+1)&"-01-01'";\n ""))))))))))))\n	
+Bocetos	AH3	=QUERY('R CAR'!A:G;AH2)	
+Espacio blanco 1	D706	=IF(J17<0,5; "#a9bca1"; IF(J17<=0,8; "#db9940"; "#da8b7b"))\n	
+Espacio blanco 1	D707	=IF(J18<0,5; "#a9bca1"; IF(J18<=0,8; "#db9940"; "#da8b7b"))\n	
+Espacio blanco 1	D708	=IF(J19<0,5; "#da8b7b"; IF(J19<=0,8; "#db9940"; "#a9bca1"))\n	
+Espacio blanco 2	D706	=IF(J17<0,5; "#a9bca1"; IF(J17<=0,8; "#db9940"; "#da8b7b"))\n	
+Espacio blanco 2	D707	=IF(J18<0,5; "#a9bca1"; IF(J18<=0,8; "#db9940"; "#da8b7b"))\n	
+Espacio blanco 2	D708	=IF(J19<0,5; "#da8b7b"; IF(J19<=0,8; "#db9940"; "#a9bca1"))\n	
+DATA-ENTRY	B2		DB_MONEDAS
+DATA-ENTRY	B3		moneda_id
+DATA-ENTRY	B4		MON-001
+DATA-ENTRY	B5		MON-002
+DATA-ENTRY	C3		nombre_,moneda
+DATA-ENTRY	C4		Peso argentino
+DATA-ENTRY	C5		Dólar estadounidense
+DATA-ENTRY	D3		simbolo
+DATA-ENTRY	D4		$
+DATA-ENTRY	D5		US$
+DATA-ENTRY	E3		iso_code
+DATA-ENTRY	E4		ARS
+DATA-ENTRY	E5		USD
+DATA-ENTRY	G2		DB_TIPOS_CAMBIO
+DATA-ENTRY	G3		fx_id
+DATA-ENTRY	G4		FX-00001
+DATA-ENTRY	G5		FX-00002
+DATA-ENTRY	H3		fecha
+DATA-ENTRY	H4		2026-02-11T00:00:00.000Z
+DATA-ENTRY	H5		2026-02-11T00:00:00.000Z
+DATA-ENTRY	I3		base_moneda_id
+DATA-ENTRY	I4		MON-001
+DATA-ENTRY	I5		MON-003
+DATA-ENTRY	J3		quote_moneda_id
+DATA-ENTRY	J4		MON-002
+DATA-ENTRY	J5		MON-002
+DATA-ENTRY	K3		tc
+DATA-ENTRY	K4		1452.25
+DATA-ENTRY	K5		0.841
+DATA-ENTRY	L3		fuente
+DATA-ENTRY	L4		oficial
+DATA-ENTRY	L5		oficial
+DATA-ENTRY	M3		provider
+DATA-ENTRY	M4		exchangerate-api.com
+DATA-ENTRY	M5		exchangerate-api.com
+DATA-ENTRY	N3		api_endpoint
+DATA-ENTRY	N4		https://api.exchangerate-api.com/v4/latest/USD
+DATA-ENTRY	N5		https://api.exchangerate-api.com/v4/latest/USD
+DATA-ENTRY	O3		request_params
+DATA-ENTRY	O4		{"base":"USD"}
+DATA-ENTRY	O5		{"base":"USD"}
+DATA-ENTRY	P3		fetched_at
+DATA-ENTRY	P4		2026-02-11T22:16:35.000Z
+DATA-ENTRY	P5		2026-02-11T22:16:35.000Z
+DATA-ENTRY	Q3		status
+DATA-ENTRY	Q4		ok
+DATA-ENTRY	Q5		ok
+DATA-ENTRY	R3		raw_payload
+DATA-ENTRY	R4		{"provider":"https://www.exchangerate-api.com","WARNING_UPGRADE_TO_V6":"https://www.exchangerate-api.com/docs/free","terms":"https://www.exchangerate-api.com/terms","base":"USD","date":"2026-02-11","time_last_updated":1770768001,"rates":{"USD":1,"AED":3.67,"AFN":65,"ALL":81.04,"AMD":377.9,"ANG":1.79,"AOA":922.22,"ARS":1452.25,"AUD":1.41,"AWG":1.79,"AZN":1.7,"BAM":1.64,"BBD":2,"BDT":122.27,"BGN":1.59,"BHD":0.376,"BIF":2969.24,"BMD":1,"BND":1.27,"BOB":6.92,"BRL":5.2,"BSD":1,"BTN":90.59,"BWP":13.44,"BYN":2.86,"BZD":2,"CAD":1.36,"CDF":2237.91,"CHF":0.768,"CLF":0.0216,"CLP":853.1,"CNH":6.91,"CNY":6.92,"COP":3678.94,"CRC":495.2,"CUP":24,"CVE":92.7,"CZK":20.39,"DJF":177.72,"DKK":6.27,"DOP":62.79,"DZD":129.57,"EGP":46.83,"ERN":15,"ETB":154.66,"EUR":0.841,"FJD":2.19,"FKP":0.732,"FOK":6.27,"GBP":0.732,"GEL":2.68,"GGP":0.732,"GHS":11.02,"GIP":0.732,"GMD":74.11,"GNF":8754.04,"GTQ":7.67,"GYD":209.3,"HKD":7.82,"HNL":26.47,"HRK":6.33,"HTG":131.16,"HUF":317.63,"IDR":16769.53,"ILS":3.08,"IMP":0.732,"IN
+DATA-ENTRY	R5		{"provider":"https://www.exchangerate-api.com","WARNING_UPGRADE_TO_V6":"https://www.exchangerate-api.com/docs/free","terms":"https://www.exchangerate-api.com/terms","base":"USD","date":"2026-02-11","time_last_updated":1770768001,"rates":{"USD":1,"AED":3.67,"AFN":65,"ALL":81.04,"AMD":377.9,"ANG":1.79,"AOA":922.22,"ARS":1452.25,"AUD":1.41,"AWG":1.79,"AZN":1.7,"BAM":1.64,"BBD":2,"BDT":122.27,"BGN":1.59,"BHD":0.376,"BIF":2969.24,"BMD":1,"BND":1.27,"BOB":6.92,"BRL":5.2,"BSD":1,"BTN":90.59,"BWP":13.44,"BYN":2.86,"BZD":2,"CAD":1.36,"CDF":2237.91,"CHF":0.768,"CLF":0.0216,"CLP":853.1,"CNH":6.91,"CNY":6.92,"COP":3678.94,"CRC":495.2,"CUP":24,"CVE":92.7,"CZK":20.39,"DJF":177.72,"DKK":6.27,"DOP":62.79,"DZD":129.57,"EGP":46.83,"ERN":15,"ETB":154.66,"EUR":0.841,"FJD":2.19,"FKP":0.732,"FOK":6.27,"GBP":0.732,"GEL":2.68,"GGP":0.732,"GHS":11.02,"GIP":0.732,"GMD":74.11,"GNF":8754.04,"GTQ":7.67,"GYD":209.3,"HKD":7.82,"HNL":26.47,"HRK":6.33,"HTG":131.16,"HUF":317.63,"IDR":16769.53,"ILS":3.08,"IMP":0.732,"IN
+DATA-ENTRY	T2		DB_MEDIOS_PAGO
+DATA-ENTRY	T3		medio_id
+DATA-ENTRY	T4		MED-001
+DATA-ENTRY	T5		MED-002
+DATA-ENTRY	U3		nombre_medio
+DATA-ENTRY	U4		Efectivo
+DATA-ENTRY	U5		Tarjeta Visa débito
+DATA-ENTRY	V3		tipo
+DATA-ENTRY	V4		efectivo
+DATA-ENTRY	V5		débito
+DATA-ENTRY	W3		moneda_id
+DATA-ENTRY	W4		MON-001
+DATA-ENTRY	W5		MON-001
+DATA-ENTRY	X3		uso_principal
+DATA-ENTRY	Z2		DB_CUENTAS
+DATA-ENTRY	Z3		cuenta_id
+DATA-ENTRY	Z4		CTA-001
+DATA-ENTRY	Z5		CTA-002
+DATA-ENTRY	AA3		nombre_cuentas
+DATA-ENTRY	AA4		Sueldo
+DATA-ENTRY	AA5		Freelance
+DATA-ENTRY	AB3		macro_tipo
+DATA-ENTRY	AB4		Ahorro
+DATA-ENTRY	AB5		Ingreso
+DATA-ENTRY	AC3		es_recurrente
+DATA-ENTRY	AC4		TRUE
+DATA-ENTRY	AE2		DB_TRANSACCIONES
+DATA-ENTRY	AE3		trx_id
+DATA-ENTRY	AE4		TRX-000001
+DATA-ENTRY	AE5		TRX-000002
+DATA-ENTRY	AF3		fecha
+DATA-ENTRY	AF4		2026-01-23T03:00:00.000Z
+DATA-ENTRY	AF5		2026-01-16T03:00:00.000Z
+DATA-ENTRY	AG3		monto
+DATA-ENTRY	AG4		34921
+DATA-ENTRY	AG5		34688
+DATA-ENTRY	AH3		moneda_id
+DATA-ENTRY	AH4		MON-001
+DATA-ENTRY	AH5		MON-001
+DATA-ENTRY	AI3		sentido
+DATA-ENTRY	AI4		Egreso
+DATA-ENTRY	AI5		Egreso
+DATA-ENTRY	AJ3		cuenta_id
+DATA-ENTRY	AJ4		CTA-007
+DATA-ENTRY	AJ5		CTA-008
+DATA-ENTRY	AK3		medio_id
+DATA-ENTRY	AK4		MED-001
+DATA-ENTRY	AK5		MED-003
+DATA-ENTRY	AL3		nota
+DATA-ENTRY	AL4		Zapatillas Nike
+DATA-ENTRY	AL5		Ropa H&M
+DATA-ENTRY	AM3		fx_id
+DATA-ENTRY	AN3		monto_base
+DATA-ENTRY	AN4		34921
+DATA-ENTRY	AN5		34688
+DATA-ENTRY	AO3		nombre_cuentas
+DATA-ENTRY	AO4		Entretenimiento
+DATA-ENTRY	AO5		Salud y medicina
+DATA-ENTRY	AP3		nombre_medio
+DATA-ENTRY	AP4		Efectivo
+DATA-ENTRY	AP5		Tarjeta Amex crédito
+DATA-ENTRY	AR2		DB_CONFIG
+DATA-ENTRY	AR3		config_id
+DATA-ENTRY	AR4		CFG-001
+DATA-ENTRY	AS3		base_moneda_id
+DATA-ENTRY	AS4		MON-001
+DATA-ENTRY	AT3		fuente_tc_preferida
+DATA-ENTRY	AT4		oficial
+DATA-ENTRY	AV2		AUX_COTIZACIONES
+DATA-ENTRY	AV3		Moneda
+DATA-ENTRY	AV4		USD
+DATA-ENTRY	AV5		EUR
+DATA-ENTRY	AW3		Cotización Compra
+DATA-ENTRY	AW4		1452.25
+DATA-ENTRY	AW5		1724.7624703087886
+DATA-ENTRY	AX3		Cotización Venta
+DATA-ENTRY	AX4		1452.25
+DATA-ENTRY	AX5		1724.7624703087886
+DATA-ENTRY	AY3		Última Actualización
+DATA-ENTRY	AY4		2026-02-13T17:46:41.000Z
+DATA-ENTRY	AY5		2026-02-13T17:46:41.000Z
+DATA-ENTRY	AZ3		Fuente
+DATA-ENTRY	AZ4		oficial
+DATA-ENTRY	AZ5		oficial (triangular)
+CARGAS (Forest.)	A1		<
+CARGAS (Forest.)	B2		{"valueType":"IMAGE"}
+CARGAS (Forest.)	I2		Movimientos.
+CARGAS (Forest.)	I4		Fecha
+CARGAS (Forest.)	J4		Monto
+CARGAS (Forest.)	K4		Moneda
+CARGAS (Forest.)	L4		Tipo
+CARGAS (Forest.)	M4		Cuenta/Categoria
+CARGAS (Forest.)	N4		Medio
+CARGAS (Forest.)	O4		Nota
+CARGAS (Forest.)	T2		Historial.
+CARGAS (Forest.)	T4	=QUERY('R CAR'!A:G;TABLERO!AH2)	
+CALCU	B2		           CALENDARIO
+CALCU	B3		ENERO
+CALCU	B4		D
+CALCU	B5	=SEQUENCE( 6;7;H2-WEEKDAY(H2;1)+1)	
+CALCU	C4		L
+CALCU	C5		2025-12-29T03:00:00.000Z
+CALCU	D4		M
+CALCU	D5		2025-12-30T03:00:00.000Z
+CALCU	E4		M
+CALCU	E5		2025-12-31T03:00:00.000Z
+CALCU	E16	=IFERROR(F16/$F$14;0)	
+CALCU	E17	=IFERROR(F17/$F$14;0)	
+CALCU	E18	=IFERROR(F18/$F$14;0)	
+CALCU	E24	=IFERROR(F24/$F$22;0)	
+CALCU	E25	=IFERROR(F25/$F$22;0)	
+CALCU	E26	=IFERROR(F26/$F$22;0)	
+CALCU	F4		J
+CALCU	F5		2026-01-01T03:00:00.000Z
+CALCU	F14	=M2	
+CALCU	F16	=R2	
+CALCU	F17	=W2	
+CALCU	F18	=F14-F16-F17	
+CALCU	F22	=N2	
+CALCU	F24	=S2	
+CALCU	F25	=X2	
+CALCU	F26	=F22-F24-F25	
+CALCU	G3		2026
+CALCU	G4		V
+CALCU	G5		2026-01-02T03:00:00.000Z
+CALCU	H2	=DATEVALUE(B3&" 1 "&G3)	
+CALCU	H4		S
+CALCU	H5		2026-01-03T03:00:00.000Z
+CALCU	K2		INGRESOS
+CALCU	L3		FALSE
+CALCU	L4		FALSE
+CALCU	L5		FALSE
+CALCU	M2	=SUM(M3:M12)	
+CALCU	M3	=SUMIFS($AC:$AC;$AE:$AE;K3)-SUMIFS($AD:$AD;$AE:$AE;K3)	
+CALCU	M4	=SUMIFS($AC:$AC;$AE:$AE;K4)-SUMIFS($AD:$AD;$AE:$AE;K4)	
+CALCU	M5	=SUMIFS($AC:$AC;$AE:$AE;K5)-SUMIFS($AD:$AD;$AE:$AE;K5)	
+CALCU	M6	=SUMIFS($AC:$AC;$AE:$AE;K6)-SUMIFS($AD:$AD;$AE:$AE;K6)	
+CALCU	M7	=SUMIFS($AC:$AC;$AE:$AE;K7)-SUMIFS($AD:$AD;$AE:$AE;K7)	
+CALCU	M8	=SUMIFS($AC:$AC;$AE:$AE;K8)-SUMIFS($AD:$AD;$AE:$AE;K8)	
+CALCU	M9	=SUMIFS($AC:$AC;$AE:$AE;K9)-SUMIFS($AD:$AD;$AE:$AE;K9)	
+CALCU	M10	=SUMIFS($AC:$AC;$AE:$AE;K10)-SUMIFS($AD:$AD;$AE:$AE;K10)	
+CALCU	M11	=SUMIFS($AC:$AC;$AE:$AE;K11)-SUMIFS($AD:$AD;$AE:$AE;K11)	
+CALCU	M12	=SUMIFS(AC:AC;AG:AG;K12)	
+CALCU	M13	=SUMIFS(AC:AC;AG:AG;K13)	
+CALCU	M14	=SUMIFS(AC:AC;AG:AG;K14)	
+CALCU	M15	=SUMIFS(AC:AC;AG:AG;K15)	
+CALCU	M16	=SUMIFS(AC:AC;AG:AG;K16)	
+CALCU	M17	=SUMIFS(AC:AC;AG:AG;K17)	
+CALCU	M18	=SUMIFS(AC:AC;AG:AG;K18)	
+CALCU	M19	=SUMIFS(AC:AC;AG:AG;K19)	
+CALCU	M20	=SUMIFS(AC:AC;AG:AG;K20)	
+CALCU	M21	=SUMIFS(AC:AC;AG:AG;K21)	
+CALCU	M22	=SUMIFS(AC:AC;AG:AG;K22)	
+CALCU	M23	=SUMIFS(AC:AC;AG:AG;K23)	
+CALCU	M24	=SUMIFS(AC:AC;AG:AG;K24)	
+CALCU	M25	=SUMIFS(AC:AC;AG:AG;K25)	
+CALCU	M26	=SUMIFS(AC:AC;AG:AG;K26)	
+CALCU	M27	=SUMIFS(AC:AC;AG:AG;K27)	
+CALCU	M28	=SUMIFS(AC:AC;AG:AG;K28)	
+CALCU	M29	=SUMIFS(AC:AC;AG:AG;K29)	
+CALCU	M30	=SUMIFS(AC:AC;AG:AG;K30)	
+CALCU	M31	=SUMIFS(AC:AC;AG:AG;K31)	
+CALCU	M32	=SUMIFS(AC:AC;AG:AG;K32)	
+CALCU	N2	=SUM(N3:N12)	
+CALCU	P2		GASTOS FIJOS 
+CALCU	Q3		FALSE
+CALCU	Q4		FALSE
+CALCU	Q5		FALSE
+CALCU	R2	=SUM(R3:R32)	
+CALCU	R3	=SUMIFS($AD:$AD;$AE:$AE;P3) - SUMIFS($AC:$AC;$AE:$AE;P3)	
+CALCU	R4	=SUMIFS($AD:$AD;$AE:$AE;P4) - SUMIFS($AC:$AC;$AE:$AE;P4)	
+CALCU	R5	=SUMIFS($AD:$AD;$AE:$AE;P5) - SUMIFS($AC:$AC;$AE:$AE;P5)	
+CALCU	R6	=SUMIFS($AD:$AD;$AE:$AE;P6) - SUMIFS($AC:$AC;$AE:$AE;P6)	
+CALCU	R7	=SUMIFS($AD:$AD;$AE:$AE;P7) - SUMIFS($AC:$AC;$AE:$AE;P7)	
+CALCU	R8	=SUMIFS($AD:$AD;$AE:$AE;P8) - SUMIFS($AC:$AC;$AE:$AE;P8)	
+CALCU	R9	=SUMIFS($AD:$AD;$AE:$AE;P9) - SUMIFS($AC:$AC;$AE:$AE;P9)	
+CALCU	R10	=SUMIFS($AD:$AD;$AE:$AE;P10) - SUMIFS($AC:$AC;$AE:$AE;P10)	
+CALCU	R11	=SUMIFS($AD:$AD;$AE:$AE;P11) - SUMIFS($AC:$AC;$AE:$AE;P11)	
+CALCU	R12	=SUMIFS($AD:$AD;$AE:$AE;P12) - SUMIFS($AC:$AC;$AE:$AE;P12)	
+CALCU	R13	=SUMIFS($AD:$AD;$AE:$AE;P13) - SUMIFS($AC:$AC;$AE:$AE;P13)	
+CALCU	R14	=SUMIFS($AD:$AD;$AE:$AE;P14) - SUMIFS($AC:$AC;$AE:$AE;P14)	
+CALCU	R15	=SUMIFS($AD:$AD;$AE:$AE;P15) - SUMIFS($AC:$AC;$AE:$AE;P15)	
+CALCU	R16	=SUMIFS($AD:$AD;$AE:$AE;P16) - SUMIFS($AC:$AC;$AE:$AE;P16)	
+CALCU	R17	=SUMIFS($AD:$AD;$AE:$AE;P17) - SUMIFS($AC:$AC;$AE:$AE;P17)	
+CALCU	R18	=SUMIFS($AD:$AD;$AE:$AE;P18) - SUMIFS($AC:$AC;$AE:$AE;P18)	
+CALCU	R19	=SUMIFS($AD:$AD;$AE:$AE;P19) - SUMIFS($AC:$AC;$AE:$AE;P19)	
+CALCU	R20	=SUMIFS($AD:$AD;$AE:$AE;P20) - SUMIFS($AC:$AC;$AE:$AE;P20)	
+CALCU	R21	=SUMIFS($AD:$AD;$AE:$AE;P21) - SUMIFS($AC:$AC;$AE:$AE;P21)	
+CALCU	R22	=SUMIFS($AD:$AD;$AE:$AE;P22) - SUMIFS($AC:$AC;$AE:$AE;P22)	
+CALCU	R23	=SUMIFS($AD:$AD;$AE:$AE;P23) - SUMIFS($AC:$AC;$AE:$AE;P23)	
+CALCU	R24	=SUMIFS($AD:$AD;$AE:$AE;P24) - SUMIFS($AC:$AC;$AE:$AE;P24)	
+CALCU	R25	=SUMIFS($AD:$AD;$AE:$AE;P25) - SUMIFS($AC:$AC;$AE:$AE;P25)	
+CALCU	R26	=SUMIFS($AD:$AD;$AE:$AE;P26) - SUMIFS($AC:$AC;$AE:$AE;P26)	
+CALCU	R27	=SUMIFS($AD:$AD;$AE:$AE;P27) - SUMIFS($AC:$AC;$AE:$AE;P27)	
+CALCU	R28	=SUMIFS($AD:$AD;$AE:$AE;P28) - SUMIFS($AC:$AC;$AE:$AE;P28)	
+CALCU	R29	=SUMIFS($AD:$AD;$AE:$AE;P29) - SUMIFS($AC:$AC;$AE:$AE;P29)	
+CALCU	R30	=SUMIFS($AD:$AD;$AE:$AE;P30) - SUMIFS($AC:$AC;$AE:$AE;P30)	
+CALCU	R31	=SUMIFS($AD:$AD;$AE:$AE;P31) - SUMIFS($AC:$AC;$AE:$AE;P31)	
+CALCU	R32	=SUMIFS($AD:$AD;$AE:$AE;P32) - SUMIFS($AC:$AC;$AE:$AE;P32)	
+CALCU	S2	=SUM(S3:S20)	
+CALCU	U2		GASTOS VARIABLES
+CALCU	V3		FALSE
+CALCU	V4		FALSE
+CALCU	V5		FALSE
+CALCU	W2	=SUM(W3:W32)	
+CALCU	W3	=SUMIFS($AD:$AD;$AE:$AE;U3) - SUMIFS($AC:$AC;$AE:$AE;U3)	
+CALCU	W4	=SUMIFS($AD:$AD;$AE:$AE;U4) - SUMIFS($AC:$AC;$AE:$AE;U4)	
+CALCU	W5	=SUMIFS($AD:$AD;$AE:$AE;U5) - SUMIFS($AC:$AC;$AE:$AE;U5)	
+CALCU	W6	=SUMIFS($AD:$AD;$AE:$AE;U6) - SUMIFS($AC:$AC;$AE:$AE;U6)	
+CALCU	W7	=SUMIFS($AD:$AD;$AE:$AE;U7) - SUMIFS($AC:$AC;$AE:$AE;U7)	
+CALCU	W8	=SUMIFS($AD:$AD;$AE:$AE;U8) - SUMIFS($AC:$AC;$AE:$AE;U8)	
+CALCU	W9	=SUMIFS($AD:$AD;$AE:$AE;U9) - SUMIFS($AC:$AC;$AE:$AE;U9)	
+CALCU	W10	=SUMIFS($AD:$AD;$AE:$AE;U10) - SUMIFS($AC:$AC;$AE:$AE;U10)	
+CALCU	W11	=SUMIFS($AD:$AD;$AE:$AE;U11) - SUMIFS($AC:$AC;$AE:$AE;U11)	
+CALCU	W12	=SUMIFS($AD:$AD;$AE:$AE;U12) - SUMIFS($AC:$AC;$AE:$AE;U12)	
+CALCU	W13	=SUMIFS($AD:$AD;$AE:$AE;U13) - SUMIFS($AC:$AC;$AE:$AE;U13)	
+CALCU	W14	=SUMIFS($AD:$AD;$AE:$AE;U14) - SUMIFS($AC:$AC;$AE:$AE;U14)	
+CALCU	W15	=SUMIFS($AD:$AD;$AE:$AE;U15) - SUMIFS($AC:$AC;$AE:$AE;U15)	
+CALCU	W16	=SUMIFS($AD:$AD;$AE:$AE;U16) - SUMIFS($AC:$AC;$AE:$AE;U16)	
+CALCU	W17	=SUMIFS($AD:$AD;$AE:$AE;U17) - SUMIFS($AC:$AC;$AE:$AE;U17)	
+CALCU	W18	=SUMIFS($AD:$AD;$AE:$AE;U18) - SUMIFS($AC:$AC;$AE:$AE;U18)	
+CALCU	W19	=SUMIFS($AD:$AD;$AE:$AE;U19) - SUMIFS($AC:$AC;$AE:$AE;U19)	
+CALCU	W20	=SUMIFS($AD:$AD;$AE:$AE;U20) - SUMIFS($AC:$AC;$AE:$AE;U20)	
+CALCU	W21	=SUMIFS($AD:$AD;$AE:$AE;U21) - SUMIFS($AC:$AC;$AE:$AE;U21)	
+CALCU	W22	=SUMIFS($AD:$AD;$AE:$AE;U22) - SUMIFS($AC:$AC;$AE:$AE;U22)	
+CALCU	W23	=SUMIFS($AD:$AD;$AE:$AE;U23) - SUMIFS($AC:$AC;$AE:$AE;U23)	
+CALCU	W24	=SUMIFS($AD:$AD;$AE:$AE;U24) - SUMIFS($AC:$AC;$AE:$AE;U24)	
+CALCU	W25	=SUMIFS($AD:$AD;$AE:$AE;U25) - SUMIFS($AC:$AC;$AE:$AE;U25)	
+CALCU	W26	=SUMIFS($AD:$AD;$AE:$AE;U26) - SUMIFS($AC:$AC;$AE:$AE;U26)	
+CALCU	W27	=SUMIFS($AD:$AD;$AE:$AE;U27) - SUMIFS($AC:$AC;$AE:$AE;U27)	
+CALCU	W28	=SUMIFS($AD:$AD;$AE:$AE;U28) - SUMIFS($AC:$AC;$AE:$AE;U28)	
+CALCU	W29	=SUMIFS($AD:$AD;$AE:$AE;U29) - SUMIFS($AC:$AC;$AE:$AE;U29)	
+CALCU	W30	=SUMIFS($AD:$AD;$AE:$AE;U30) - SUMIFS($AC:$AC;$AE:$AE;U30)	
+CALCU	W31	=SUMIFS($AD:$AD;$AE:$AE;U31) - SUMIFS($AC:$AC;$AE:$AE;U31)	
+CALCU	W32	=SUMIFS($AD:$AD;$AE:$AE;U32) - SUMIFS($AC:$AC;$AE:$AE;U32)	
+CALCU	X2	=SUM(X3:X20)	
+CALCU	AB2	=IF(B3="enero";\n     "SELECT * WHERE A >= date'"&G3&"-01-01' AND A < date'"&G3&"-02-01'";\n IF(B3="febrero";\n     "SELECT * WHERE A >= date'"&G3&"-02-01' AND A < date'"&G3&"-03-01'";\n IF(B3="marzo";\n     "SELECT * WHERE A >= date'"&G3&"-03-01' AND A < date'"&G3&"-04-01'";\n IF(B3="abril";\n     "SELECT * WHERE A >= date'"&G3&"-04-01' AND A < date'"&G3&"-05-01'";\n IF(B3="mayo";\n     "SELECT * WHERE A >= date'"&G3&"-05-01' AND A < date'"&G3&"-06-01'";\n IF(B3="junio";\n     "SELECT * WHERE A >= date'"&G3&"-06-01' AND A < date'"&G3&"-07-01'";\n IF(B3="julio";\n     "SELECT * WHERE A >= date'"&G3&"-07-01' AND A < date'"&G3&"-08-01'";\n IF(B3="agosto";\n     "SELECT * WHERE A >= date'"&G3&"-08-01' AND A < date'"&G3&"-09-01'";\n IF(B3="septiembre";\n     "SELECT * WHERE A >= date'"&G3&"-09-01' AND A < date'"&G3&"-10-01'";\n IF(B3="octubre";\n     "SELECT * WHERE A >= date'"&G3&"-10-01' AND A < date'"&G3&"-11-01'";\n IF(B3="noviembre";\n     "SELECT * WHERE A >= date'"&G3&"-11-01' AND A < date'"&G3&"-12-01'";\n IF(B3="diciembre";\n     "SELECT * WHERE A >= date'"&G3&"-12-01' AND A < date'"&(G3+1)&"-01-01'";\n ""))))))))))))\n	
+CALCU	AB3	=QUERY('R CAR'!A:H;AB2)	
+ANUAL	A1		2026
+ANUAL	A2		RESUMEN ANUAL RESULTADOS
+ANUAL	A3		Ingresos
+ANUAL	A4		Gastos Fijos
+ANUAL	A22	=LISTAS!F2	
+ANUAL	A23	=LISTAS!F3	
+ANUAL	A24	=LISTAS!F4	
+ANUAL	A25	=LISTAS!F5	
+ANUAL	A26	=LISTAS!F6	
+ANUAL	A27	=LISTAS!F7	
+ANUAL	A28	=LISTAS!F8	
+ANUAL	A29	=LISTAS!F9	
+ANUAL	A30	=LISTAS!F10	
+ANUAL	A31	=LISTAS!F11	
+ANUAL	A35	=LISTAS!H2	
+ANUAL	A36	=LISTAS!H3	
+ANUAL	A37	=LISTAS!H4	
+ANUAL	A38	=LISTAS!H5	
+ANUAL	A39	=LISTAS!H6	
+ANUAL	A40	=LISTAS!H7	
+ANUAL	A41	=LISTAS!H8	
+ANUAL	A42	=LISTAS!H9	
+ANUAL	A43	=LISTAS!H10	
+ANUAL	A44	=LISTAS!H11	
+ANUAL	A45	=LISTAS!H12	
+ANUAL	A46	=LISTAS!H13	
+ANUAL	A47	=LISTAS!H14	
+ANUAL	A48	=LISTAS!H15	
+ANUAL	A49	=LISTAS!H16	
+ANUAL	A50	=LISTAS!H17	
+ANUAL	A51	=LISTAS!H18	
+ANUAL	A52	=LISTAS!H19	
+ANUAL	A53	=LISTAS!H20	
+ANUAL	A54	=LISTAS!H21	
+ANUAL	A55	=LISTAS!H22	
+ANUAL	A56	=LISTAS!H23	
+ANUAL	A57	=LISTAS!H24	
+ANUAL	A58	=LISTAS!H25	
+ANUAL	A59	=LISTAS!H26	
+ANUAL	A60	=LISTAS!H27	
+ANUAL	A61	=LISTAS!H28	
+ANUAL	A62	=LISTAS!H29	
+ANUAL	A63	=LISTAS!H30	
+ANUAL	A64	=LISTAS!H31	
+ANUAL	A68	=LISTAS!N2	
+ANUAL	A69	=LISTAS!N3	
+ANUAL	A70	=LISTAS!N4	
+ANUAL	A71	=LISTAS!N5	
+ANUAL	A72	=LISTAS!N6	
+ANUAL	A73	=LISTAS!N7	
+ANUAL	A74	=LISTAS!N8	
+ANUAL	A75	=LISTAS!N9	
+ANUAL	A76	=LISTAS!N10	
+ANUAL	A77	=LISTAS!N11	
+ANUAL	A78	=LISTAS!N12	
+ANUAL	A79	=LISTAS!N13	
+ANUAL	A80	=LISTAS!N14	
+ANUAL	A81	=LISTAS!N15	
+ANUAL	A82	=LISTAS!N16	
+ANUAL	A83	=LISTAS!N17	
+ANUAL	A84	=LISTAS!N18	
+ANUAL	A85	=LISTAS!N19	
+ANUAL	A86	=LISTAS!N20	
+ANUAL	A87	=LISTAS!N21	
+ANUAL	A88	=LISTAS!N22	
+ANUAL	A89	=LISTAS!N23	
+ANUAL	A90	=LISTAS!N24	
+ANUAL	A91	=LISTAS!N25	
+ANUAL	A92	=LISTAS!N26	
+ANUAL	A93	=LISTAS!N27	
+ANUAL	A94	=LISTAS!N28	
+ANUAL	A95	=LISTAS!N29	
+ANUAL	A96	=LISTAS!N30	
+ANUAL	A97	=LISTAS!N31	
+ANUAL	B1		ENERO
+ANUAL	B3	=B32	
+ANUAL	B4	=B65 *-1	
+ANUAL	B6	=B3-B4	
+ANUAL	B8	=B98 *-1	
+ANUAL	B10	=B6-B8	
+ANUAL	B15	=1/3	
+ANUAL	B16	=1/3	
+ANUAL	B17	=1/3	
+ANUAL	B22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B31	=SUMIFS($Q:$Q;U:U;A31;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B32	=SUM(B22:B31)	
+ANUAL	B35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B65	=SUM(B35:B64)	
+ANUAL	B68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;1;1);$P:$P;"<="&DATE($A$1;1;31))\n	
+ANUAL	B98	=SUM(B68:B97)	
+ANUAL	C1		FEBRERO
+ANUAL	C3	=C32	
+ANUAL	C4	=C65 *-1	
+ANUAL	C6	=C3-C4	
+ANUAL	C8	=C98 *-1	
+ANUAL	C10	=C6-C8	
+ANUAL	C22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C31	=SUMIFS($Q:$Q;$U:$U;A31;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C32	=SUM(C22:C31)	
+ANUAL	C35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C65	=SUM(C35:C64)	
+ANUAL	C68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;2;1);$P:$P;"<="&DATE($A$1;2;29))\n	
+ANUAL	C98	=SUM(C68:C97)	
+ANUAL	D1		MARZO
+ANUAL	D3	=D32	
+ANUAL	D4	=D65 *-1	
+ANUAL	D6	=D3-D4	
+ANUAL	D8	=D98 *-1	
+ANUAL	D10	=D6-D8	
+ANUAL	D22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D31	=SUMIFS($Q:$Q;$U:$U;A31;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D32	=SUM(D22:D31)	
+ANUAL	D35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D65	=SUM(D35:D64)	
+ANUAL	D68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;3;1);$P:$P;"<="&DATE($A$1;3;31))\n	
+ANUAL	D98	=SUM(D68:D97)	
+ANUAL	E1		ABRIL
+ANUAL	E3	=E32	
+ANUAL	E4	=E65 *-1	
+ANUAL	E6	=E3-E4	
+ANUAL	E8	=E98 *-1	
+ANUAL	E10	=E6-E8	
+ANUAL	E22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E31	=SUMIFS($Q:$Q;$U:$U;A31;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E32	=SUM(E22:E31)	
+ANUAL	E35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E65	=SUM(E35:E64)	
+ANUAL	E68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;4;1);$P:$P;"<="&DATE($A$1;4;30))\n	
+ANUAL	E98	=SUM(E68:E97)	
+ANUAL	F1		MAYO
+ANUAL	F3	=F32	
+ANUAL	F4	=F65 *-1	
+ANUAL	F6	=F3-F4	
+ANUAL	F8	=F98 *-1	
+ANUAL	F10	=F6-F8	
+ANUAL	F22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F31	=SUMIFS($Q:$Q;$U:$U;A31;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F32	=SUM(F22:F31)	
+ANUAL	F35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F65	=SUM(F35:F64)	
+ANUAL	F68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;5;1);$P:$P;"<="&DATE($A$1;5;31))\n	
+ANUAL	F98	=SUM(F68:F97)	
+ANUAL	G1		JUNIO
+ANUAL	G3	=G32	
+ANUAL	G4	=G65 *-1	
+ANUAL	G6	=G3-G4	
+ANUAL	G8	=G98 *-1	
+ANUAL	G10	=G6-G8	
+ANUAL	G22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G31	=SUMIFS($Q:$Q;$U:$U;A31;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G32	=SUM(G22:G31)	
+ANUAL	G35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G65	=SUM(G35:G64)	
+ANUAL	G68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;6;1);$P:$P;"<="&DATE($A$1;6;30))\n	
+ANUAL	G98	=SUM(G68:G97)	
+ANUAL	H1		JULIO
+ANUAL	H3	=H32	
+ANUAL	H4	=H65 *-1	
+ANUAL	H6	=H3-H4	
+ANUAL	H8	=H98 *-1	
+ANUAL	H10	=H6-H8	
+ANUAL	H22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H31	=SUMIFS($Q:$Q;$U:$U;A31;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H32	=SUM(H22:H31)	
+ANUAL	H35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H65	=SUM(H35:H64)	
+ANUAL	H68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;7;1);$P:$P;"<="&DATE($A$1;7;31))\n	
+ANUAL	H98	=SUM(H68:H97)	
+ANUAL	I1		AGOSTO
+ANUAL	I3	=I32	
+ANUAL	I4	=I65 *-1	
+ANUAL	I6	=I3-I4	
+ANUAL	I8	=I98 *-1	
+ANUAL	I10	=I6-I8	
+ANUAL	I22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I31	=SUMIFS($Q:$Q;$U:$U;A31;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I32	=SUM(I22:I31)	
+ANUAL	I35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I65	=SUM(I35:I64)	
+ANUAL	I68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;8;1);$P:$P;"<="&DATE($A$1;8;31))\n	
+ANUAL	I98	=SUM(I68:I97)	
+ANUAL	J1		SEPTIEMBRE
+ANUAL	J3	=J32	
+ANUAL	J4	=J65 *-1	
+ANUAL	J6	=J3-J4	
+ANUAL	J8	=J98 *-1	
+ANUAL	J10	=J6-J8	
+ANUAL	J22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J31	=SUMIFS($Q:$Q;$U:$U;A31;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J32	=SUM(J22:J31)	
+ANUAL	J35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J65	=SUM(J35:J64)	
+ANUAL	J68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;9;1);$P:$P;"<="&DATE($A$1;9;30))\r\n	
+ANUAL	J98	=SUM(J68:J97)	
+ANUAL	K1		OCTUBRE
+ANUAL	K3	=K32	
+ANUAL	K4	=K65 *-1	
+ANUAL	K6	=K3-K4	
+ANUAL	K8	=K98 *-1	
+ANUAL	K10	=K6-K8	
+ANUAL	K22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K31	=SUMIFS($Q:$Q;$U:$U;A31;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K32	=SUM(K22:K31)	
+ANUAL	K35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K65	=SUM(K35:K64)	
+ANUAL	K68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;10;1);$P:$P;"<="&DATE($A$1;10;31))\n	
+ANUAL	K98	=SUM(K68:K97)	
+ANUAL	L1		NOVIEMBRE
+ANUAL	L3	=L32	
+ANUAL	L4	=L65 *-1	
+ANUAL	L6	=L3-L4	
+ANUAL	L8	=L98 *-1	
+ANUAL	L10	=L6-L8	
+ANUAL	L22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L31	=SUMIFS($Q:$Q;$U:$U;A31;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L32	=SUM(L22:L31)	
+ANUAL	L35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L65	=SUM(L35:L64)	
+ANUAL	L68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;11;1);$P:$P;"<="&DATE($A$1;11;30))\n	
+ANUAL	L98	=SUM(L68:L97)	
+ANUAL	M1		DICIEMBRE
+ANUAL	M3	=M32	
+ANUAL	M4	=M65 *-1	
+ANUAL	M6	=M3-M4	
+ANUAL	M8	=M98 *-1	
+ANUAL	M10	=M6-M8	
+ANUAL	M22	=SUMIFS($Q:$Q;$S:$S;A22;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A22;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M23	=SUMIFS($Q:$Q;$S:$S;A23;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A23;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M24	=SUMIFS($Q:$Q;$S:$S;A24;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A24;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M25	=SUMIFS($Q:$Q;$S:$S;A25;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A25;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M26	=SUMIFS($Q:$Q;$S:$S;A26;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A26;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M27	=SUMIFS($Q:$Q;$S:$S;A27;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A27;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M28	=SUMIFS($Q:$Q;$S:$S;A28;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A28;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M29	=SUMIFS($Q:$Q;$S:$S;A29;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A29;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M30	=SUMIFS($Q:$Q;$S:$S;A30;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A30;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M31	=SUMIFS($Q:$Q;$U:$U;A31;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$U:$U;A31;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M32	=SUM(M22:M31)	
+ANUAL	M35	=SUMIFS($Q:$Q;$S:$S;A35;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A35;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M36	=SUMIFS($Q:$Q;$S:$S;A36;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A36;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M37	=SUMIFS($Q:$Q;$S:$S;A37;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A37;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M38	=SUMIFS($Q:$Q;$S:$S;A38;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A38;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M39	=SUMIFS($Q:$Q;$S:$S;A39;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A39;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M40	=SUMIFS($Q:$Q;$S:$S;A40;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A40;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M41	=SUMIFS($Q:$Q;$S:$S;A41;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A41;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M42	=SUMIFS($Q:$Q;$S:$S;A42;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A42;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M43	=SUMIFS($Q:$Q;$S:$S;A43;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A43;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M44	=SUMIFS($Q:$Q;$S:$S;A44;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A44;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M45	=SUMIFS($Q:$Q;$S:$S;A45;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A45;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M46	=SUMIFS($Q:$Q;$S:$S;A46;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A46;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M47	=SUMIFS($Q:$Q;$S:$S;A47;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A47;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M48	=SUMIFS($Q:$Q;$S:$S;A48;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A48;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M49	=SUMIFS($Q:$Q;$S:$S;A49;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A49;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M50	=SUMIFS($Q:$Q;$S:$S;A50;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A50;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M51	=SUMIFS($Q:$Q;$S:$S;A51;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A51;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M52	=SUMIFS($Q:$Q;$S:$S;A52;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A52;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M53	=SUMIFS($Q:$Q;$S:$S;A53;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A53;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M54	=SUMIFS($Q:$Q;$S:$S;A54;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A54;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M55	=SUMIFS($Q:$Q;$S:$S;A55;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A55;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M56	=SUMIFS($Q:$Q;$S:$S;A56;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A56;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M57	=SUMIFS($Q:$Q;$S:$S;A57;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A57;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M58	=SUMIFS($Q:$Q;$S:$S;A58;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A58;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M59	=SUMIFS($Q:$Q;$S:$S;A59;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A59;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M60	=SUMIFS($Q:$Q;$S:$S;A60;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A60;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M61	=SUMIFS($Q:$Q;$S:$S;A61;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A61;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M62	=SUMIFS($Q:$Q;$S:$S;A62;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A62;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M63	=SUMIFS($Q:$Q;$S:$S;A63;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A63;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M64	=SUMIFS($Q:$Q;$S:$S;A64;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A64;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M65	=SUM(M35:M64)	
+ANUAL	M68	=SUMIFS($Q:$Q;$S:$S;A68;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A68;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M69	=SUMIFS($Q:$Q;$S:$S;A69;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A69;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M70	=SUMIFS($Q:$Q;$S:$S;A70;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A70;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M71	=SUMIFS($Q:$Q;$S:$S;A71;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A71;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M72	=SUMIFS($Q:$Q;$S:$S;A72;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A72;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M73	=SUMIFS($Q:$Q;$S:$S;A73;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A73;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M74	=SUMIFS($Q:$Q;$S:$S;A74;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A74;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M75	=SUMIFS($Q:$Q;$S:$S;A75;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A75;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M76	=SUMIFS($Q:$Q;$S:$S;A76;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A76;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M77	=SUMIFS($Q:$Q;$S:$S;A77;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A77;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M78	=SUMIFS($Q:$Q;$S:$S;A78;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A78;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M79	=SUMIFS($Q:$Q;$S:$S;A79;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A79;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M80	=SUMIFS($Q:$Q;$S:$S;A80;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A80;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M81	=SUMIFS($Q:$Q;$S:$S;A81;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A81;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M82	=SUMIFS($Q:$Q;$S:$S;A82;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A82;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M83	=SUMIFS($Q:$Q;$S:$S;A83;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A83;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M84	=SUMIFS($Q:$Q;$S:$S;A84;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A84;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M85	=SUMIFS($Q:$Q;$S:$S;A85;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A85;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M86	=SUMIFS($Q:$Q;$S:$S;A86;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A86;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M87	=SUMIFS($Q:$Q;$S:$S;A87;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A87;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M88	=SUMIFS($Q:$Q;$S:$S;A88;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A88;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M89	=SUMIFS($Q:$Q;$S:$S;A89;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A89;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M90	=SUMIFS($Q:$Q;$S:$S;A90;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A90;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M91	=SUMIFS($Q:$Q;$S:$S;A91;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A91;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M92	=SUMIFS($Q:$Q;$S:$S;A92;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A92;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M93	=SUMIFS($Q:$Q;$S:$S;A93;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A93;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M94	=SUMIFS($Q:$Q;$S:$S;A94;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A94;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M95	=SUMIFS($Q:$Q;$S:$S;A95;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A95;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M96	=SUMIFS($Q:$Q;$S:$S;A96;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A96;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M97	=SUMIFS($Q:$Q;$S:$S;A97;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31)) - SUMIFS($R:$R;$S:$S;A97;$P:$P;">="&DATE($A$1;12;1);$P:$P;"<="&DATE($A$1;12;31))\n	
+ANUAL	M98	=SUM(M68:M97)	
+ANUAL	P1	=QUERY('R CAR'!A:G)	
+PALETAS	I3		El Sistema Light: "Liquidity & Flow" (Caribe)
+PALETAS	I4		Jerarquía
+PALETAS	I5		text
+PALETAS	J4		Código HEX
+PALETAS	J5		#0a0f10
+PALETAS	K4		Paleta

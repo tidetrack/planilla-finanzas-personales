@@ -236,6 +236,7 @@ Este repo se opera tanto desde Google Antigravity (Gemini) como desde Claude Cod
 
 | Si la tarea es... | Invocar |
 |---|---|
+| Estado real de la planilla: que hay en una celda, de donde sale un numero, probar que un cambio no rompio nada, refrescar el snapshot, workflow n8n del scanner | `gemelo-digital` |
 | Logica Apps Script en `src/*.js`, `00_Config.js`, pipeline de carga, cotizaciones, migraciones, deploy clasp | `appscript-backend` |
 | UI embebida `.html` (HtmlService), Design System neumorfico, endpoints `google.script.run`, menus | `appscript-ui` |
 | Changelog dual, ADRs, `ESTRUCTURA.md`, esquema de datos, `CLAUDE.md` | `docs-keeper` |

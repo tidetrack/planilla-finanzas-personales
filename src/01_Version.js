@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 8,
- patch: 3,
+ patch: 4,
 
  /**
  * Retorna la versión como string
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-08-12',
- releaseName: 'v0.8.3 - Gobernanza Fase 1 (arnes)',
+ releaseDate: '2026-08-13',
+ releaseName: 'v0.8.4 - Gemelo digital Fase 2 (arnes)',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

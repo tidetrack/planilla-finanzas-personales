@@ -5,6 +5,21 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-13] v0.8.4 - Gemelo digital Fase 2 (arnes): scanner de cobertura total:
+ * - 98_DevTools_Scanner.js reescrito: mapea TODA celda con valor o formula. El filtro r < 5
+ *   de la version anterior dejaba ciegas a las BDs (44 celdas de una hoja Registros de 2879 filas).
+ * - NUEVO: valor_mostrado via getDisplayValues() - unico lugar donde viven los errores de
+ *   runtime (#N/A, #DIV/0!, #REF!), que el campo valor nunca traia para celdas con formula.
+ * - NUEVO: gid (getSheetId()) por hoja en meta. Sin el, un renombre es indistinguible de
+ *   borrado + alta y el diff de no-danio reporta destruccion masiva falsa.
+ * - Estilo serializado solo si difiere del default; notacion A1 calculada en memoria.
+ * - Sin cambios en logica de negocio. Herramientas de soporte fuera de src/: devtools/
+ *   (inventario, TSV de auditoria, diff de no-danio) y MAPA_ARQUITECTURA_PLANILLA.md.
+ * - HALLAZGO: el primer escaneo en vivo probo que Registros y Tipos de cambio YA ESTAN en el
+ *   layout v0.9.x mientras el codigo desplegado asume el viejo. Ver CHANGELOG.md.
+ *
+ * ---
+ *
  * [2026-08-12] v0.8.3 - Gobernanza Fase 1 (arnes): resolver de nombres de hoja + menu sin emojis:
  * - NUEVO: _resolverNombreHoja(alias) + invalidarCacheNombresHojas() en 00_Config.js (portado de pymes).
  *   SHEETS.DATA_ENTRY / TIPOS_CAMBIO / BD_ANTIGUA pasan a getters con alias: corrigen las tres

@@ -11,6 +11,9 @@ package-lock.json
 
 .DS_Store
 .vscode/
+# Bytecode de las herramientas Python de devtools/ (Fase 2 del arnes)
+__pycache__/
+*.pyc
 _backup/
 .impeccable/
 
