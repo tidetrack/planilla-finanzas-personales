@@ -54,6 +54,28 @@ backfill. Eso es la v0.9.5.
 - **Sin verificar hasta el deploy**: si las formulas generadas evaluan bien en Sheets. El parse
   error de Mirada Interanual entra en esa categoria.
 
+### Cierre del incidente (mismo dia, ya con la planilla delante)
+
+El deploy destapo dos defectos que ningun mock habia atrapado, y los dos fallaron **del lado
+seguro**:
+
+1. `estadoMigracionV095()` reventaba con `TypeError ... reading 'getMaxRows'`, un mensaje que
+   no dice que hoja falta. Se agregaron guards de argumento en `_contarBloquesTcV095` (cinco
+   llamadores) y `_validarRespaldoTcV095`, y el catch pasa a devolver el stack (**v0.9.7**).
+2. `aplicarMigracionV095()` abortaba al verificar su propio respaldo de formulas. La causa era
+   real y grave: `setNumberFormat('@')` afecta la visualizacion, no el parseo, asi que
+   `setValues` con un string que arranca en `=` lo guardaba como **formula viva** — un respaldo
+   que se recalcula solo contra la hoja que la migracion esta por cambiar (cicatriz 4 del
+   arnes). Se corrigio con el apostrofo de Sheets y la verificacion pasa a exigir que ninguna
+   celda del respaldo haya quedado como formula (**v0.9.8**). El aborto fue correcto: ocurrio
+   ANTES de mutar y ninguna celda viva se toco.
+
+Con eso, la migracion se aplico: grid de 41 a 2200 filas, **3.151 cotizaciones restauradas**
+(ARS 810, USD/AUD/EUR 819 cada uno) y las cuatro vistas re-apuntadas a la hoja viva.
+
+**Y el objetivo de fondo se cumplio: Franco confirmo que `procesarCargas()` volvio a funcionar.**
+El ledger, detenido desde el 2026-03-29, vuelve a aceptar movimientos.
+
 ---
 
 ## 2026-08-12 - Fase 1 del arnes Tidetrack: gobernanza (v0.8.3)

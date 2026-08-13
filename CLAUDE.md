@@ -145,7 +145,7 @@ Hoja de 13 columnas (A:M), gid `779567597`. Titulos de bloque en fila 5, headers
 | TC_AUD | H:I |
 | TC_EUR | K:L |
 
-**CAPACIDAD — CRITICO:** el grid tiene solo 41 filas y el ultimo dato esta en la 35: **6 filas libres**. Toda escritura masiva de cotizaciones debe verificar capacidad y ampliar el grid antes de escribir. La migracion ademas trunco el Data Lake de 3.267 a 116 cotizaciones (la serie completa sobrevive en `Tipos de cambio_legacy`); el backfill es parte de la v0.9.5.
+**CAPACIDAD:** el grid tenia 41 filas (6 libres) y la migracion v0.9.5 lo amplio a **2200**. Toda escritura masiva de cotizaciones debe seguir verificando capacidad antes de escribir: `asegurarCapacidadFilas` (03_SheetManager) es el unico lugar del sistema que amplia grids. El Data Lake, que la migracion de junio habia truncado de 3.267 a 116 cotizaciones, se restauro por backfill desde `Tipos de cambio_legacy` el 2026-08-13: **810 cotizaciones ARS y 819 de USD/AUD/EUR**, serie diaria desde 2024-01-01.
 
 ### Cargas (data entry)
 
@@ -174,11 +174,15 @@ Discrepancias config vs planilla detectadas (`getSheetByName` es case-sensitive)
 
 Respaldos que dejo la migracion, **ocultas, solo lectura**: `Registros_legacy` (gid 709656625, layout I:T, headers fila 2, datos fila 3, 2903 filas identicas a las vivas) y `Tipos de cambio_legacy` (gid 42932214, bloques I:J/L:M/O:P/R:S, headers fila 3, datos fila 4, serie diaria completa desde 2024-01-01).
 
-**Vistas que todavia leen el legacy** (pendiente de re-apuntar en la v0.9.5): `Tablero!AN4`, `Inicio!Y4`, `Inicio!AM4` y `Cargas!R5` contienen `QUERY(Registros_legacy!I2:T; ...)`. Ademas hay `#REF!` literales preexistentes en `Tablero!D706:D707` e `Inicio!D692:D694` (deuda anterior, fuera de alcance).
+**Vistas re-apuntadas a la hoja viva (migracion v0.9.5 aplicada el 2026-08-13):** `Tablero!AN4`, `Inicio!Y4`, `Inicio!AM4` y `Cargas!R5` leian `QUERY(Registros_legacy!I2:T; ...)` y pasaron a `Registros!B5:M` por cirugia sobre la formula (solo la referencia; el SELECT/WHERE quedo intacto). El orden semantico de las 12 columnas es identico entre los dos layouts, asi que los indices `ColN` del QUERY no cambian. Siguen pendientes los `#REF!` literales preexistentes de `Tablero!D706:D707` e `Inicio!D692:D694` (deuda anterior, fuera de alcance).
 
-### Estado del desfasaje codigo-planilla (v0.9.5 en curso)
+### Desfasaje codigo-planilla: RESUELTO el 2026-08-13
 
-El codigo desplegado (v0.8.3/v0.8.4) asume el layout viejo, asi que `procesarCargas()` no puede escribir: pide `Registros!I:T` (columnas 9 a 20) sobre una hoja de 14 columnas. Sintomas verificados: el ultimo registro del ledger es del **2026-03-29**, hay una carga varada del 2026-06-21 en la grilla de `Cargas` (el pipeline falla y por eso no la limpia), y el bloque G10:R14 de `Mirada Interanual` muestra `#ERROR!` en sus 48 celdas. **Decision Franco 2026-08-13: se adapta el CODIGO al layout nuevo** (no se revierte la planilla) y se recuperan las cotizaciones por backfill. Eso es la v0.9.5.
+Entre junio y agosto de 2026 el codigo desplegado asumia el layout viejo y `procesarCargas()` no podia escribir (pedia `Registros!I:T`, columnas 9 a 20, sobre una hoja de 14). Sintomas de esa etapa: ledger detenido en el **2026-03-29**, una carga varada del 2026-06-21 en la grilla, y `Mirada Interanual` con `#ERROR!` en sus 48 celdas.
+
+Se resolvio adaptando el codigo al layout nuevo (decision Franco 2026-08-13, en vez de revertir la planilla): **v0.9.5** llevo `RANGES` y todos sus consumidores al layout real, y su migracion —aplicada el mismo dia— amplio el grid de TC, restauro las 3.151 cotizaciones y re-apunto las cuatro vistas. Quedan como respaldo las hojas ocultas `RESP_TC_v095_*` y `RESP_FORMULAS_v095_*`, y `revertirMigracionV095()` como camino de vuelta.
+
+**Pendiente de comprobacion funcional:** un lote real por `procesarCargas()` y el estado de las formulas de `Mirada Interanual` (su `#ERROR!` es un parse error de sintaxis, independiente del layout).
 
 ## 5. Logica critica (no tocar sin entender)
 
