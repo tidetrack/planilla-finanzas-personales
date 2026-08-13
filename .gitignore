@@ -2,6 +2,9 @@ node_modules/
 .clasp/
 .claspignore
 *.command
+# Excepcion: el script de deploy oficial SI se versiona (Fase 1 del arnes).
+# *.command protege launchers locales (ej. iniciar_autosync.command).
+!sync_targets.command
 package-lock.json
 # Apps Script metadata if desired to ignore local ones
 # .clasp.json
