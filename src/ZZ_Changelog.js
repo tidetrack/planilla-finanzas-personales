@@ -5,6 +5,38 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-13] v0.9.5 - Adaptacion al layout REAL de la planilla (el pipeline vuelve a poder escribir):
+ * - CONTEXTO: la planilla migro a B:M en junio pero el codigo nunca acompanio, asi que
+ *   procesarCargas pedia Registros!I:T (col 9-20) sobre una hoja de 14 columnas y tiraba
+ *   excepcion. Ultimo registro del ledger: 2026-03-29. Decision Franco 2026-08-13: se adapta
+ *   el codigo al layout nuevo, no se revierte la planilla.
+ * - 00_Config.js: RANGES.REGISTROS -> B:M (headerRow 5, dataRow 6); RANGES.TC_* -> B:C / E:F /
+ *   H:I / K:L (headerRow 6, dataRow 7). Plan de Cuentas y Cargas SIN cambios (no migraron):
+ *   sus entradas no declaran headerRow/dataRow y siguen cayendo a los globales 3/4.
+ * - 03_SheetManager.js: getTableRange/getTableData/appendRow/appendMassive leen headerRow y
+ *   dataRow por tabla, con fallback a los globales. 06_RegistrosService.js: append y sort por
+ *   la columna de Fecha del layout nuevo (H). 99_MigrationLogic.js: lecturas y escrituras al
+ *   layout nuevo (fecha H=8, valores de moneda J:M=10..13).
+ * - 07_MiradaInteranual.js: formulas remapeadas (fecha O->H, monto I->B, tipo de cuenta L->E,
+ *   moneda N->G, TC R/S/T->K/L/M) y filas 3 -> 6. Ahora verifica precondiciones antes de
+ *   escribir (rotulos C10:C12 y selectores E4/F4/R4), protege setFormula, y NO declara exito
+ *   si la celda queda en cualquier valor de error (antes solo miraba #ERROR!, asi que un #REF!
+ *   se replicaba a las 36 celdas cantando exito). Nuevo guard que verifica que cada fila
+ *   replicada interrogue SU rotulo: hoy las filas 11 y 12 apuntan a $C10 y calcularian todas
+ *   Ingresos, tapado por el #ERROR!.
+ * - 15_ExchangeRateApi.js: forzarCargaHistorica verifica capacidad Y cobertura ANTES del primer
+ *   clearContent (contrato todo-o-nada). Aborta si un bloque viene vacio, si trae menos filas
+ *   que las que la hoja ya tiene, o si queda muy por debajo de los demas. fetchArsRate loguea
+ *   sus fallbacks (Regla Estricta 9) y deja de devolver el hardcode 1000 como si fuera
+ *   cotizacion: lanza, porque un TC inventado se congela en cada registro.
+ * - NUEVO MIGRACION_v0.9.5_LayoutNuevo.js: estado/aplicar/revertir con respaldo congelado y
+ *   VERIFICADO antes de mutar, respaldo original inmutable ante reintentos, DocumentLock y
+ *   contrato {ok, detalle, error}. Amplia el grid de Tipos de cambio (tenia 6 filas libres),
+ *   hace backfill idempotente de las 3.151 cotizaciones perdidas desde la hoja legacy, y
+ *   re-apunta por cirugia las formulas de Tablero/Inicio/Cargas que aun leen Registros_legacy.
+ *
+ * ---
+ *
  * [2026-08-13] v0.8.4 - Gemelo digital Fase 2 (arnes): scanner de cobertura total:
  * - 98_DevTools_Scanner.js reescrito: mapea TODA celda con valor o formula. El filtro r < 5
  *   de la version anterior dejaba ciegas a las BDs (44 celdas de una hoja Registros de 2879 filas).

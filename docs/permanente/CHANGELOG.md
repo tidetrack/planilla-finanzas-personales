@@ -9,6 +9,62 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.9.5 - Adaptacion al layout real de la planilla (2026-08-13)
+
+El release que devuelve al pipeline la capacidad de escribir. **Pendiente de deploy y de
+la ejecucion de la migracion.**
+
+### Contexto
+
+La planilla migro a B:M en junio de 2026 y el codigo nunca acompanio. `procesarCargas()`
+pedia `Registros!I:T` (columnas 9 a 20) sobre una hoja de 14 columnas: excepcion en cada
+intento. Sintomas: ultimo registro del ledger 2026-03-29, carga varada del 2026-06-21 sin
+procesar, y las 48 celdas de Mirada Interanual en `#ERROR!`.
+**Decision Franco 2026-08-13:** adaptar el codigo (no revertir la planilla) y recuperar por
+backfill las cotizaciones perdidas.
+
+### Changed
+
+- **`00_Config.js`**: `RANGES.REGISTROS` a B:M (`headerRow: 5`, `dataRow: 6`); `RANGES.TC_*`
+  a B:C / E:F / H:I / K:L (`headerRow: 6`, `dataRow: 7`). Plan de Cuentas y Cargas sin
+  cambios: no migraron, y al no declarar `headerRow`/`dataRow` siguen cayendo a los globales
+  3/4 (verificado, es lo que mantiene vivo el ABM).
+- **`03_SheetManager.js`**: la capa de datos lee `headerRow`/`dataRow` por tabla con fallback.
+- **`06_RegistrosService.js`** y **`99_MigrationLogic.js`**: append, sort y recalculo de TC
+  contra el layout nuevo.
+- **`07_MiradaInteranual.js`**: formulas remapeadas (fecha O->H, monto I->B, tipo de cuenta
+  L->E, moneda N->G, TC R/S/T->K/L/M; filas 3 -> 6). Suma precondiciones antes de escribir,
+  protege `setFormula`, y deja de declarar exito ante `#REF!`/`#N/A` (antes solo miraba
+  `#ERROR!`). Nuevo guard: verifica que cada fila replicada interrogue SU rotulo — hoy las
+  filas 11 y 12 apuntan a `$C10` y calcularian todas Ingresos, defecto tapado por el `#ERROR!`.
+- **`15_ExchangeRateApi.js`**: `forzarCargaHistorica` valida capacidad Y cobertura antes del
+  primer `clearContent`. `fetchArsRate` loguea sus fallbacks (Regla Estricta 9) y deja de
+  devolver el hardcode 1000 como cotizacion: lanza, porque un TC inventado se congela en cada
+  registro y es irreversible sin recalcular.
+
+### Added
+
+- **`src/MIGRACION_v0.9.5_LayoutNuevo.js`**: `estadoMigracionV095()` (no escribe nada),
+  `aplicarMigracionV095()` y `revertirMigracionV095()`. Respaldo congelado a valores y
+  VERIFICADO antes de mutar; el respaldo original es inmutable ante reintentos; aborta si
+  detecta respaldos huerfanos de una corrida previa; DocumentLock; contrato `{ok, detalle,
+  error}`. Hace tres cosas: amplia el grid de Tipos de cambio (tenia 6 filas libres), backfill
+  idempotente de las 3.151 cotizaciones desde la hoja legacy, y re-apunta por cirugia las
+  formulas de `Tablero`/`Inicio`/`Cargas` que todavia leen `Registros_legacy`.
+
+### Verificacion
+
+Dos rondas adversariales. La ronda 1 refuto las tres piezas con 10 bloqueantes, casi todos de
+la familia "reportar exito sin haber hecho el trabajo" (cicatriz 5 del arnes): el guard de
+cotizaciones que limpiaba los cuatro bloques y destruia AUD/EUR cantando exito; la aceptacion
+de formula que dejaba pasar `#REF!`; el reintento de la migracion que pisaba el respaldo
+original y hacia que `revertir` devolviera `ok:true` sobre una planilla a medio migrar. La
+ronda 2 dejo Mirada Interanual sin bloqueantes; los 3 restantes se corrigieron a mano.
+**Nadie ejecuto este codigo contra Sheets todavia**: la validez de las formulas generadas solo
+se comprueba en el deploy.
+
+---
+
 ## v0.8.4 - Gemelo digital Fase 2 del arnes (2026-08-13)
 
 Las herramientas del gemelo digital y el hallazgo que destaparon: la planilla

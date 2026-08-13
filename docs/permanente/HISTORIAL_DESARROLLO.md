@@ -6,6 +6,56 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-13 - El gemelo digital destapa el desfasaje, y v0.9.5 lo cierra
+
+### Evento
+
+La Fase 2 (gemelo digital) entrego sus herramientas y, en su primera consulta en vivo a la
+planilla, encontro lo que dos fases de drift-check no habian visto: **la planilla estaba
+migrada al layout v0.9.x y el codigo no.** El pipeline de carga llevaba meses sin poder
+escribir.
+
+### Por que no se habia detectado
+
+La Fase 0 comparo el codigo del repo contra el codigo del script (`clasp pull`) y concluyo,
+correctamente, que v0.9.x nunca se habia desplegado. Lo que nunca se comparo fue el codigo
+contra los DATOS. El arnes lo advierte en su seccion 9 ("auditar contra el estado vivo, no
+contra el repo") y la Fase 2 existe justamente para eso: cerro el hueco en su primera corrida.
+
+### Diagnostico verificado
+
+- `Registros` (gid 1546296548): B:M, headers fila 5, datos fila 6, 14 columnas. El codigo pedia
+  I:T, o sea las columnas 9 a 20: fuera de grilla.
+- `Tipos de cambio` (gid 779567597): bloques B:C/E:F/H:I/K:L, y solo 41 filas de grid con 6
+  libres.
+- `Plan de Cuentas` y `Cargas` NO migraron: su codigo era y sigue siendo correcto.
+- Sintomas: ultimo registro del ledger 2026-03-29; carga varada del 2026-06-21 en la grilla
+  (el pipeline falla y por eso no la limpia); 48 celdas de Mirada Interanual en `#ERROR!`.
+- **Integridad**: `Registros` no perdio ni una fila (2903 en ambas hojas, suma de montos con
+  delta 0 recalculado con Decimal). `Tipos de cambio` perdio 3.151 de 3.267 cotizaciones,
+  recuperables desde la legacy, que es superconjunto puro. Los TC congelados de los registros
+  estan intactos (2903/2903).
+- Hallazgo colateral: `Tablero!AN4`, `Inicio!Y4`, `Inicio!AM4` y `Cargas!R5` leen
+  `Registros_legacy`, no la hoja viva.
+
+### Decision de Franco (2026-08-13)
+
+Adaptar el codigo al layout nuevo, no revertir la planilla; y recuperar las cotizaciones por
+backfill. Eso es la v0.9.5.
+
+### Deuda saldada y deuda declarada
+
+- `CLAUDE.md` seccion 4 y ADR-005 corregidos contra el estado real (ADR-005 pasa a
+  "parcialmente superado": rige en Plan de Cuentas y Cargas, ya no en Registros ni TC).
+- Verificada en vivo la geometria de `Mirada Interanual`, la unica hoja cuya descripcion salia
+  del JSDoc del propio modulo (evidencia circular): gid 199868006, selectores y rotulos
+  confirmados. Ahi aparecio que las filas 11 y 12 apuntan a `$C10`, o sea que las tres filas
+  calcularian Ingresos; queda cubierto por un guard nuevo.
+- **Sin verificar hasta el deploy**: si las formulas generadas evaluan bien en Sheets. El parse
+  error de Mirada Interanual entra en esa categoria.
+
+---
+
 ## 2026-08-12 - Fase 1 del arnes Tidetrack: gobernanza (v0.8.3)
 
 ### Evento

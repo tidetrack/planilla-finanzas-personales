@@ -63,10 +63,35 @@ limpia la grilla de `Cargas` — hay una carga varada del 2026-06-21 que lo evid
 formulas de `07_MiradaInteranual.js` (G10:R14) muestran `#ERROR!`: apuntan a siete
 columnas que ya no existen. El ultimo registro del ledger es del **2026-03-29**.
 
-**Decision pendiente de Franco:** desplegar el codigo v0.9.x que ya calza con los datos,
-o revertir la migracion desde las hojas `_legacy`. Hasta que se resuelva, ningun rango
-nuevo sobre esas dos hojas se escribe contra el layout I:T, y toda afirmacion de layout
-se verifica contra la planilla viva, no contra este mapa ni contra el snapshot de marzo.
+**Decision Franco 2026-08-13 (resuelta):** se adapta el CODIGO al layout nuevo (no se
+revierte la planilla) y se recuperan por backfill las 3.151 cotizaciones perdidas desde
+`Tipos de cambio_legacy`. Eso es la entrega **v0.9.5**. Hasta que esta desplegada, ningun
+rango nuevo sobre esas dos hojas se escribe contra el layout I:T, y toda afirmacion de
+layout se verifica contra la planilla viva, no contra este mapa ni contra el snapshot de
+marzo.
+
+### Geometria de `Mirada Interanual` (verificada en vivo el 2026-08-13)
+
+Era la unica hoja de la release cuya geometria nadie habia confirmado: el snapshot de
+marzo no la tiene (nacio en junio) y su descripcion salia del JSDoc del propio modulo,
+o sea evidencia circular. Confirmado por lectura directa:
+
+- gid **`199868006`**, 1002 filas x 27 columnas (A:AA), visible, `frozenRowCount: 6`.
+  Existe ademas `Mirada Interanual backup` (gid `1045164083`, 999x32, **oculta**).
+- Selectores: **`E4` = mes** (hoy `MAYO`), **`F4` = anio** (hoy `2026`), **`R4` = moneda**
+  (hoy `ARS`). Hay ademas un selector `N4` = Proyecto (hoy `Todos`) que **el modulo no usa**.
+- Rotulos de tipo: `C10` = `Ingresos`, `C11` = `Gastos Fijos`, `C12` = `Gastos Variables`
+  (literales exactos, sin espacios ni tildes distintas). `C14` = `Resultados`.
+- Fila 9 = indices de mes `1..12` en G9:R9 (no nombres de mes). El modulo no la lee: deriva
+  el mes por aritmetica de columna contra `$K$10`.
+- Fila 13: vacia (el modulo la saltea, correcto). Fila 14: las 12 formulas de Resultado,
+  patron `=G10-G11-G12`.
+- Estado actual de G10:R14: las 48 celdas tienen formula y las 48 muestran `#ERROR!`.
+
+**Defecto detectado en las formulas vivas:** las de las filas 11 y 12 referencian `$C10`,
+no `$C11`/`$C12`. Como el `IF` clasifica el tipo contra esa celda, las tres filas
+calcularian *Ingresos*. Hoy esta tapado por el `#ERROR!`; al arreglar el parse error
+apareceria como tres filas identicas. Se corrige en la v0.9.5.
 
 ---
 

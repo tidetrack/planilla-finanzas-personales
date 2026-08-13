@@ -3,13 +3,26 @@
  * Configuración global del sistema Tidetrack
  * Define constantes, rangos de columnas, y enums
  *
- * @version 0.8.3
+ * @version 0.9.5
  * @since 0.1.0
- * @lastModified 2026-08-12
+ * @lastModified 2026-08-13
  */
 
 // [CONCEPTO DE NEGOCIO] Single Source of Truth de nombres de hoja y rangos; ningun modulo hardcodea posiciones.
 // [FUNDAMENTO TEORICO / ADMINISTRATIVO] La resolucion de alias tolera renombres de pestanas sin ventana de rotura; ante ambiguedad gana la hoja historica con datos. @see docs/permanente/ARNES_TIDETRACK.md
+//
+// [FUNDAMENTO TEORICO / ADMINISTRATIVO - LAYOUTS HETEROGENEOS]
+// Desde la migracion de la planilla productiva (verificada en vivo el 2026-08-13) las hojas
+// NO comparten un unico layout:
+//   - Plan de Cuentas: sin migrar. Header fila 3, datos fila 4, offset I+ (ADR-005).
+//   - Cargas: sin migrar. Header fila 4, datos fila 5, grilla fija I5:O19.
+//   - Registros: migrada. Titulo B2, header fila 5, datos fila 6, columnas B:M.
+//   - Tipos de cambio: migrada. Titulo B2, titulos de bloque fila 5, header fila 6,
+//     datos fila 7, bloques B:C / E:F / H:I / K:L.
+// Por eso cada entrada de RANGES puede declarar su propio headerRow/dataRow. HEADER_ROW y
+// DATA_START_ROW quedan como DEFAULT GLOBAL de las tablas que no los declaran (las cinco del
+// Plan de Cuentas), no como verdad universal.
+// @see docs/permanente/ARNES_TIDETRACK.md (Fase 2 - gemelo digital)
 
 // [AGILE-VALOR] Configuración Core y Central. Define el esqueleto del Plan de Cuentas y Hoja de cargas.
 
@@ -86,14 +99,33 @@ const SHEETS = {
     DEBUG_MIRADA: 'DEBUG Mirada'  // antes hardcodeada en 07_MiradaInteranual.js (regla SSOT)
 };
 
+// DEFAULT GLOBAL, no verdad universal: corresponden al layout del Plan de Cuentas, la unica
+// hoja cuyas tablas no declaran headerRow/dataRow propios. Toda tabla con layout distinto lo
+// declara en su entrada de RANGES y gana sobre estos valores.
 const HEADER_ROW = 3;
 const DATA_START_ROW = 4;
+
+// ============================================
+// CAPACIDAD DE GRID (FILAS FISICAS DE LA HOJA)
+// ============================================
+
+// decision Franco 2026-08-13: ante grid insuficiente se AMPLIA con insertRowsAfter, no se aborta.
+// Motivo: la hoja "Tipos de cambio" quedo con 41 filas fisicas tras la migracion (29 cotizaciones
+// por par, datos 7:35, apenas 6 filas libres). El backfill de las 3.151 cotizaciones perdidas y
+// cualquier forzarCargaHistorica necesitan ~830 filas por bloque: abortar dejaria el sistema
+// permanentemente bloqueado y obligaria a un paso manual. La ampliacion se hace SIEMPRE al pie
+// del grid (insertRowsAfter(getMaxRows(), n)) para no desplazar datos, formulas ni formatos
+// existentes, y SIEMPRE antes de la primera escritura, para no fallar a medias.
+const GRID_COLCHON_FILAS = 200;   // margen extra al ampliar: evita una ampliacion por lote
+const GRID_MAX_FILAS = 50000;     // tope duro de seguridad; superarlo lanza error explicito
 
 // ============================================
 // RANGOS DE COLUMNAS (FIJOS - NO MODIFICAR)
 // ============================================
 
 const RANGES = {
+ // --- Plan de Cuentas: layout historico sin migrar (header fila 3, datos fila 4) ---
+ // Sin headerRow/dataRow propios a proposito: usan el default global HEADER_ROW/DATA_START_ROW.
  INGRESOS: {
  sheet: SHEETS.PLAN_CUENTAS,
  start: 'I',
@@ -124,35 +156,70 @@ const RANGES = {
         end: 'W',
         columns: { nombre: 'V', tipo: 'W' }
     },
+    // --- Cargas: layout historico sin migrar (header fila 4, datos fila 5) ---
+    // decision Franco 2026-08-13: la geometria de la grilla de carga entra a Config como SSOT.
+    // Antes vivia como literal 'I5:O19' en 06_RegistrosService y como numeros magicos (9, 12,
+    // 13, 14) en 14_EventHandlers, que ademas usaba DATA_START_ROW (=4) como fila de datos: eso
+    // dejaba la fila de encabezado dentro del area "editable" del autocompletado.
+    CARGAS: {
+        get sheet() { return SHEETS.DATA_ENTRY; },  // getter: preserva la resolucion perezosa del alias
+        start: 'I',
+        end: 'O',
+        headerRow: 4,
+        dataRow: 5,
+        filas: 15,   // grilla de altura fija I5:O19; no crece, se limpia despues de cada lote
+        columns: { monto: 'I', tipo: 'J', cuenta: 'K', medio: 'L', moneda: 'M', fecha: 'N', nota: 'O' }
+    },
+
+    // --- Registros: layout migrado (titulo B2, header fila 5, datos fila 6, cols B:M) ---
+    // decision Franco 2026-08-13: se adapta el CODIGO al layout nuevo de la planilla, no al reves.
+    // Verificado celda por celda sobre la planilla productiva el 2026-08-13.
     REGISTROS: {
         sheet: SHEETS.REGISTROS,
-        start: 'I',
-        end: 'T',
-        columns: { monto: 'I', tipo: 'J', cuenta: 'K', tipo_cuenta: 'L', medio: 'M', moneda: 'N', fecha: 'O', nota: 'P', tc_ars: 'Q', tc_usd: 'R', tc_aud: 'S', tc_eur: 'T' }
+        start: 'B',
+        end: 'M',
+        headerRow: 5,
+        dataRow: 6,
+        columns: {
+            monto: 'B', tipo: 'C', cuenta: 'D', tipo_cuenta: 'E',
+            medio: 'F', moneda: 'G', fecha: 'H', nota: 'I',
+            tc_ars: 'J', tc_usd: 'K', tc_aud: 'L', tc_eur: 'M'
+        }
     },
+
+    // --- Tipos de cambio: layout migrado (titulos de bloque fila 5, header fila 6, datos fila 7) ---
+    // Bloques horizontales: ARS=B:C | USD=E:F | AUD=H:I | EUR=K:L
     TC_ARS: {
         get sheet() { return SHEETS.TIPOS_CAMBIO; },  // getter: preserva la resolucion perezosa del alias
-        start: 'I',
-        end: 'J',
-        columns: { fecha: 'I', cotizacion: 'J' }
+        start: 'B',
+        end: 'C',
+        headerRow: 6,
+        dataRow: 7,
+        columns: { fecha: 'B', cotizacion: 'C' }
     },
     TC_USD: {
         get sheet() { return SHEETS.TIPOS_CAMBIO; },  // getter: preserva la resolucion perezosa del alias
-        start: 'L',
-        end: 'M',
-        columns: { fecha: 'L', cotizacion: 'M' }
+        start: 'E',
+        end: 'F',
+        headerRow: 6,
+        dataRow: 7,
+        columns: { fecha: 'E', cotizacion: 'F' }
     },
     TC_AUD: {
         get sheet() { return SHEETS.TIPOS_CAMBIO; },  // getter: preserva la resolucion perezosa del alias
-        start: 'O',
-        end: 'P',
-        columns: { fecha: 'O', cotizacion: 'P' }
+        start: 'H',
+        end: 'I',
+        headerRow: 6,
+        dataRow: 7,
+        columns: { fecha: 'H', cotizacion: 'I' }
     },
     TC_EUR: {
         get sheet() { return SHEETS.TIPOS_CAMBIO; },  // getter: preserva la resolucion perezosa del alias
-        start: 'R',
-        end: 'S',
-        columns: { fecha: 'R', cotizacion: 'S' }
+        start: 'K',
+        end: 'L',
+        headerRow: 6,
+        dataRow: 7,
+        columns: { fecha: 'K', cotizacion: 'L' }
     }
 };
 
@@ -193,6 +260,12 @@ const MENU_CONFIG = {
         { separator: true },
         { name: '[Dev] Inicializar Mirada Interanual', function: 'inicializarMiradaInteranual' },
         { name: '[Dev] Diagnosticar Mirada Interanual', function: 'diagnosticarMiradaInteranual' },
+        { separator: true },
+        // Migracion v0.9.5 al layout nuevo. Se corren EN ESTE ORDEN: primero el estado (solo
+        // lectura), despues aplicar. Revertir usa el respaldo congelado. @see MIGRACION_v0.9.5_LayoutNuevo.js
+        { name: '[Migracion v0.9.5] 1. Ver estado (no escribe)', function: 'estadoMigracionV095' },
+        { name: '[Migracion v0.9.5] 2. Aplicar', function: 'aplicarMigracionV095' },
+        { name: '[Migracion v0.9.5] 3. Revertir', function: 'revertirMigracionV095' },
         { separator: true },
         { name: '[DevTools] Exportar Arquitectura', function: 'exportarArquitecturaTotal' }
     ]

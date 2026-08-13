@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 8,
- patch: 4,
+ minor: 9,
+ patch: 5,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-13',
- releaseName: 'v0.8.4 - Gemelo digital Fase 2 (arnes)',
+ releaseName: 'v0.9.5 - Adaptacion al layout real de la planilla',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

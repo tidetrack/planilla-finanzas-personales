@@ -93,13 +93,17 @@ Modulos de `src/` (17 archivos):
 | `ZZ_Changelog.js` | Historial de versiones in-code. OBLIGATORIO al final de cada cambio |
 | `appsscript.json` | Manifiesto OAuth |
 
-## 4. Esquema de datos (layout REAL de produccion, v0.8.2)
+## 4. Esquema de datos (layout REAL, verificado en vivo el 2026-08-13)
 
-Las tablas viven en Google Sheets. **Este es el layout que describe `RANGES` en el `00_Config.js` actual y el que existe en la planilla productiva.** NUNCA cambiar la estructura de columnas sin actualizar `00_Config.js` primero.
+Las tablas viven en Google Sheets. NUNCA cambiar la estructura de columnas sin actualizar `00_Config.js` primero.
 
-> **ADVERTENCIA:** `docs/permanente/CONTEXTO_DATOS.md` y versiones anteriores de este
-> CLAUDE.md describen un layout B:M "nuevo" para Registros y Tipos de cambio. Ese
-> layout es codigo v0.9.x NO desplegado (ver subseccion al final). No asumirlo.
+> **CORRECCION IMPORTANTE (2026-08-13).** Hasta esta fecha este contrato afirmaba que
+> el layout de produccion era el legacy I:T y que el layout B:M "nunca se desplego".
+> Eso era cierto del CODIGO y **falso de los DATOS**: la migracion SI se ejecuto sobre
+> la planilla. Se descubrio con la primera consulta en vivo del gemelo digital (Fase 2),
+> verificada celda por celda por tres agentes independientes. La leccion, que el arnes
+> ya advertia: **auditar contra el estado vivo, no contra el repo.** El drift-check de
+> la Fase 0 comparaba codigo contra codigo y por eso no lo vio.
 
 ### Plan de Cuentas (5 tablas)
 
@@ -115,29 +119,33 @@ Headers en fila 3, datos desde fila 4. Offset horizontal de 6-8 columnas (ADR-00
 
 Ademas: bloque "Categorias" en columna Y (Y2 titulo, Y3 header, Y4 formula ARRAYFORMULA/QUERY/FLATTEN consolidadora).
 
-### Registros (ledger de transacciones) — columnas I:T
+### Registros (ledger de transacciones) — columnas B:M — MIGRADA
+
+Hoja de 14 columnas (A:N), gid `1546296548`. **Headers en fila 5, datos desde la fila 6.** Orden descendente por fecha. 2903 filas con datos (hasta la 2908), 1940 filas de grid libres.
 
 | Col | Campo | | Col | Campo |
 |-----|-------|-|-----|-------|
-| I | Monto | | O | Fecha |
-| J | Tipo | | P | Nota |
-| K | Cuenta | | Q | TC ARS |
-| L | Tipo de Cuenta | | R | TC USD |
-| M | Medio | | S | TC AUD |
-| N | Moneda | | T | TC EUR |
+| B | Monto | | H | Fecha |
+| C | Tipo | | I | Nota |
+| D | Cuenta | | J | Valor ARS |
+| E | Tipo de Cuenta | | K | Valor USD |
+| F | Medio | | L | Valor AUD |
+| G | Moneda | | M | Valor EUR |
 
-**Disputa de filas — CRITICO:** el codigo declara `HEADER_ROW = 3` / `DATA_START_ROW = 4` como globales, pero la evidencia real (scanner DevTools 2026-03: I2=Monto, I3=primer dato; auditoria del modulo Mirada Interanual 2026-06-23, que lee `Registros!$O$3:$O$5000`) ubica el **header en fila 2 y los datos desde fila 3**. Coherente con eso, `procesarCargas()` appendea con `minRow=2` y ordena desde la fila 2. Regla operativa: **toda formula o rango nuevo sobre Registros arranca en fila 3**. El gemelo digital de la Fase 2 cierra esta disputa de forma definitiva.
+La disputa de filas que este contrato documentaba (header fila 2 / datos fila 3) describia el layout PREVIO, que hoy vive en la hoja oculta `Registros_legacy` (I:T, headers fila 2, datos fila 3). Quedo cerrada por el gemelo digital.
 
-### Tipos de cambio (Data Lake) — bloques con offset
+### Tipos de cambio (Data Lake) — bloques B/E/H/K — MIGRADA
 
-Header fila 3, datos desde fila 4 (globales de Config; `appendMassive` usa `minRow=4`).
+Hoja de 13 columnas (A:M), gid `779567597`. Titulos de bloque en fila 5, headers en fila 6, **datos desde la fila 7**.
 
 | Par | Columnas |
 |-----|----------|
-| TC_ARS | I:J |
-| TC_USD | L:M |
-| TC_AUD | O:P |
-| TC_EUR | R:S |
+| TC_ARS | B:C |
+| TC_USD | E:F |
+| TC_AUD | H:I |
+| TC_EUR | K:L |
+
+**CAPACIDAD — CRITICO:** el grid tiene solo 41 filas y el ultimo dato esta en la 35: **6 filas libres**. Toda escritura masiva de cotizaciones debe verificar capacidad y ampliar el grid antes de escribir. La migracion ademas trunco el Data Lake de 3.267 a 116 cotizaciones (la serie completa sobrevive en `Tipos de cambio_legacy`); el backfill es parte de la v0.9.5.
 
 ### Cargas (data entry)
 
@@ -160,9 +168,17 @@ Discrepancias config vs planilla detectadas (`getSheetByName` es case-sensitive)
 | `SHEETS.BD_ANTIGUA` | `'BD antigua'` | `BD Antigua` |
 | `NAV_CONFIG.SHEETS.ESPACIO_BLANCO_3` | `'Espacio blanco 3'` | no existe en el scanner (sin resolver: solo navegacion) |
 
-### Layout v0.9.x NO desplegado
+### Hojas que NO migraron, y las de respaldo
 
-Los commits v0.9.2-v0.9.4 (2026-06-22) movieron Registros a B:M (header fila 5, datos fila 6) y los TC a bloques B:C/E:F/H:I/K:L, con `headerRow`/`dataRow` por tabla en RANGES y hojas `_legacy` de backup. **Ese codigo jamas llego a la planilla**: el ZZ_Changelog productivo termina en v0.8.2. Existe solo en la historia de git, para re-aplicarse (o descartarse — decision de Franco, probablemente en Fase 4) con deploy controlado y migracion de datos. Hasta entonces, ningun modulo ni formula nueva debe asumir el layout B:M.
+`Plan de Cuentas` y `Cargas` siguen en el layout descripto arriba (offset historico, headers fila 3 y 4 respectivamente). Su codigo es correcto y el ABM funciona.
+
+Respaldos que dejo la migracion, **ocultas, solo lectura**: `Registros_legacy` (gid 709656625, layout I:T, headers fila 2, datos fila 3, 2903 filas identicas a las vivas) y `Tipos de cambio_legacy` (gid 42932214, bloques I:J/L:M/O:P/R:S, headers fila 3, datos fila 4, serie diaria completa desde 2024-01-01).
+
+**Vistas que todavia leen el legacy** (pendiente de re-apuntar en la v0.9.5): `Tablero!AN4`, `Inicio!Y4`, `Inicio!AM4` y `Cargas!R5` contienen `QUERY(Registros_legacy!I2:T; ...)`. Ademas hay `#REF!` literales preexistentes en `Tablero!D706:D707` e `Inicio!D692:D694` (deuda anterior, fuera de alcance).
+
+### Estado del desfasaje codigo-planilla (v0.9.5 en curso)
+
+El codigo desplegado (v0.8.3/v0.8.4) asume el layout viejo, asi que `procesarCargas()` no puede escribir: pide `Registros!I:T` (columnas 9 a 20) sobre una hoja de 14 columnas. Sintomas verificados: el ultimo registro del ledger es del **2026-03-29**, hay una carga varada del 2026-06-21 en la grilla de `Cargas` (el pipeline falla y por eso no la limpia), y el bloque G10:R14 de `Mirada Interanual` muestra `#ERROR!` en sus 48 celdas. **Decision Franco 2026-08-13: se adapta el CODIGO al layout nuevo** (no se revierte la planilla) y se recuperan las cotizaciones por backfill. Eso es la v0.9.5.
 
 ## 5. Logica critica (no tocar sin entender)
 
@@ -184,7 +200,7 @@ Los commits v0.9.2-v0.9.4 (2026-06-22) movieron Registros a B:M (header fila 5, 
 - **ADR-002**: Moneda por defecto reactiva. Una cuenta = un nombre + moneda frecuente. El usuario puede cambiar moneda por transaccion.
 - **ADR-003**: Monedas como constante de backend, no como tabla en la hoja.
 - **ADR-004**: Data Lake de cotizaciones con carga batch via procesarCargas(). No hay consulta en vivo celda a celda.
-- **ADR-005**: Offset estructural. **VIGENTE EN PRODUCCION en todas las hojas** (Plan de Cuentas I+, Registros I:T, Tipos de cambio I:J..R:S). La eliminacion del offset en Registros/TC (2026-06-22) fue codigo v0.9.x que nunca se desplego; la evolucion queda pendiente de decision y deploy controlado (ver seccion 4). Ver GUIA_ARQUITECTURA.md.
+- **ADR-005**: Offset estructural. **PARCIALMENTE SUPERADO desde la migracion de 2026-06**: rige en `Plan de Cuentas` (I+) y `Cargas` (I5:O19), y ya NO en `Registros` (B:M) ni `Tipos de cambio` (bloques desde B), que perdieron el offset al migrar. Ver seccion 4 y GUIA_ARQUITECTURA.md.
 - **ADR-006**: Hidden Engines. Hojas ocultas CALCU y ANUAL procesan metricas matriciales. Las vistas publicas solo consumen resultados.
 
 ## Convenciones de Codigo
