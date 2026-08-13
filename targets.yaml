@@ -1,0 +1,15 @@
+# Fuente única de targets de deploy (equivalente a clients/*.yaml de planilla-pymes).
+# Creado en la Fase 0 del arnés (docs/permanente/ARNES_TIDETRACK.md, sección 2, paso 4).
+# Regla: todo deploy a Apps Script parte de este archivo; nunca clasp push a ciegas.
+# El sheet_id fue confirmado por triple fuente el 2026-08-12:
+#   1. docs/permanente/MAPA_HOJAS.md (URL de la planilla)
+#   2. docs/permanente/TIDETRACK_ARQUITECTURA_ESTRICTA.json (campo id_planilla del scanner)
+#   3. Google Drive API (metadata del archivo: titulo y owner verificados)
+targets:
+  - nombre: personal
+    estado: activo
+    script_id: "1LaZJcIVLlxWsOOuN3VCBGlb-VyAnshMlTuY3iTdQ_gBjzcD3hSjIldeX"
+    sheet_id: "1YXnN-9X1itjpuxOBBwGwH3LSMqeGBtyCrUcFK4xCcUI"
+    sheet_titulo: "PLANILLA FINANZAS_v4 .WIP | Personal"
+    sheet_owner: "start.tidetrack@gmail.com"
+    version_desplegada: "0.8.2"

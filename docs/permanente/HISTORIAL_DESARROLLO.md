@@ -6,6 +6,50 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-12 - Fase 0 del arnes Tidetrack: reconciliacion de drift
+
+### Evento
+
+Primera fase del arnes de gestion (`ARNES_TIDETRACK.md`, destilado de planilla-pymes).
+Objetivo: repo == origin == planilla, identidades registradas. Se ejecuto completa:
+
+1. **Checkpoint del WIP local**: el clon principal estaba en `0dfacea` (v0.8.0), 9
+   commits detras de origin, con trabajo sin commitear. Se preservo todo en la rama
+   `wip/pre-arnes` (commit `6426b93`: MAPA_HOJAS.md modificado + 2 prompts +
+   notas fran.md) y `main` local se fast-forwardeo a `origin/main` (`1405758`).
+2. **Drift-check contra la planilla**: `clasp pull` a directorio temporal (nunca
+   sobre `src/`) y diff archivo por archivo. Resultado: **fork bidireccional**.
+   - Produccion adelante: v0.8.2 con `07_MiradaInteranual.js` (2026-06-23), modulo
+     desconocido por el repo. Un push ciego lo destruia (cicatriz 1 de pymes, calcada).
+   - Repo adelante: v0.9.2-v0.9.4 (layout nuevo B:M) jamas desplegados; el
+     ZZ_Changelog productivo termina en v0.8.2.
+3. **Adopcion del baseline**: produccion adoptada verbatim en `src/` (commit
+   `chore(sync)`). La planilla productiva es la unica verdad del estado. v0.9.x queda
+   en la historia de git para re-aplicarse con deploy controlado.
+4. **Identidades**: creado `targets.yaml` (raiz) con `script_id` y `sheet_id`
+   confirmado por triple fuente (MAPA_HOJAS.md + JSON del scanner + metadata Drive).
+   Se cerro el `sheets_id: pendiente-confirmar` de la pagina de producto del vault.
+
+### Implicancia critica para el codigo
+
+El HEAD de `src/` vuelve a describir la produccion real: **layout legacy** (Registros
+con datos desde fila 3, header fila 2 segun auditoria del modulo Mirada Interanual;
+Config con DATA_START_ROW global). La migracion al layout B:M documentada en CLAUDE.md
+y CONTEXTO_DATOS.md es codigo v0.9.x NO desplegado: hasta que una fase posterior lo
+re-aplique y despliegue con drift-check, toda formula o modulo nuevo debe validarse
+contra el estado vivo de la planilla (gemelo digital, Fase 2), no contra los docs.
+
+### Pendientes que esta fase deja planteados
+
+- Resolver el destino de v0.9.x (re-deploy con migracion de layout, o descarte
+  parcial): decision de Franco, probablemente en Fase 4 (contratos de motores).
+- CLAUDE.md y CONTEXTO_DATOS.md describen el layout nuevo como vigente; la Fase 1
+  (CLAUDE.md contrato) debe reescribirlos contra el estado real.
+- Revisar la rama `wip/pre-arnes`: el MAPA_HOJAS.md modificado documentaba las hojas
+  ocultas (CALCU, ANUAL); evaluar merge tras la Fase 1.
+
+---
+
 ## 2026-06-22 - Reconciliacion al layout de produccion nuevo (v0.9.4)
 
 ### Evento

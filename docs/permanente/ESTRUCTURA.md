@@ -2,7 +2,7 @@
 
 > Propósito: Fuente de verdad sobre la organización del repositorio. Toda nueva carpeta o archivo debe registrarse aquí antes de crearse. Los agentes de IA usan este documento como referencia canónica.
 
-Versión: v0.8.0 | Última actualización: 2026-06-05
+Versión: v0.8.2 (baseline sincronizado desde producción, Fase 0 del arnés) | Última actualización: 2026-08-12
 
 ---
 
@@ -17,6 +17,7 @@ planilla-finanzas-personales/
 │ ├── 02_Utils.js # Utilidades generales y logging (logError/logInfo/logSuccess)
 │ ├── 03_SheetManager.js # Layer de acceso a datos (getTableData, appendRow, updateRow, deleteRow)
 │ ├── 06_RegistrosService.js # Pipeline batch procesarCargas(): validación, deducción, cotizaciones
+│ ├── 07_MiradaInteranual.js # Fórmulas LET/SUMPRODUCT de la hoja "Mirada Interanual" + diagnóstico (adoptado de producción v0.8.2)
 │ ├── 11_UIService.js # Endpoints para google.script.run (ABM forms)
 │ ├── 12_MenuService.js # Menú personalizado "Tidetrack"
 │ ├── 13_NavigationService.js # Navegación entre hojas con toast
@@ -110,6 +111,7 @@ planilla-finanzas-personales/
 ├── _backup/ # Archivos históricos (NO editar)
 │
 ├── README.md # Indice maestro. INICIO AQUI.
+├── targets.yaml # Fuente única de targets de deploy: script_id + sheet_id por planilla (Fase 0 del arnés)
 ├── .clasp.json # Config de Clasp (deploy a Apps Script)
 ├── .claspignore # Archivos excluidos del push a GAS
 ├── .gitignore # Archivos excluidos de Git
