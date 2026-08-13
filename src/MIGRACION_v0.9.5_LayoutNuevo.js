@@ -1038,6 +1038,22 @@ function _respaldarTiposCambioV095(ss, hojaTc, sello) {
  * @returns {{nombre: ?string, celdas: number}|null} null si no habia ninguna formula que respaldar
  * @throws {Error} si el registro no queda verificado (el llamador aborta ANTES de mutar)
  */
+/**
+ * Devuelve el valor listo para escribirse como TEXTO LITERAL en una celda.
+ *
+ * Sheets parsea todo string que arranque con "=", "+", "-", "@" o "'". En un respaldo eso es
+ * inaceptable: la formula respaldada quedaria viva y se recalcularia contra la hoja que la
+ * migracion esta por cambiar. El apostrofo inicial es la marca de texto de Sheets y NO forma
+ * parte del valor almacenado: getValue() devuelve el string sin el.
+ *
+ * @param {*} v
+ * @returns {string}
+ */
+function _textoLiteralV095(v) {
+    var s = (v === null || v === undefined) ? '' : String(v);
+    return /^[=+\-@']/.test(s) ? "'" + s : s;
+}
+
 function _respaldarFormulasV095(ss, plan, sello, hojaExistente, soloProps) {
     var props = PropertiesService.getDocumentProperties();
     var encabezado = ['hoja', 'celda', 'formula original', 'valor mostrado antes', 'sello'];
@@ -1085,12 +1101,33 @@ function _respaldarFormulasV095(ss, plan, sello, hojaExistente, soloProps) {
     asegurarCapacidadFilas(destino, primeraFila + bloque.length - 1);
 
     var rango = destino.getRange(primeraFila, 1, bloque.length, 5);
-    rango.setNumberFormat('@');   // texto plano: sin esto Sheets evaluaria las formulas respaldadas
-    rango.setValues(bloque);
+    rango.setNumberFormat('@');   // texto plano para la VISUALIZACION
+    // decision Franco 2026-08-13: el formato '@' NO alcanza. setValues con un string que
+    // arranca en "=" lo hace parsear como FORMULA igual, asi que la celda quedaba con la
+    // formula VIVA (recalculandose contra Registros_legacy: un respaldo que se corrompe solo,
+    // cicatriz 4 del arnes) y la relectura devolvia el resultado evaluado en vez del texto.
+    // Ese fue el fallo real del primer intento de aplicar: "no quedo verificado ... columna 3".
+    // El apostrofo fuerza texto y NO forma parte del valor -- getValue() lo devuelve sin el --,
+    // asi que la verificacion sigue comparando contra el string original sin traducciones.
+    rango.setValues(bloque.map(function (fila) {
+        return fila.map(_textoLiteralV095);
+    }));
 
-    // Verificacion de la copia auditable: se relee lo escrito, celda por celda.
+    // Verificacion de la copia auditable: se relee lo escrito, celda por celda, y se exige
+    // ademas que NINGUNA celda haya quedado como formula viva.
     SpreadsheetApp.flush();
-    var releido = destino.getRange(primeraFila, 1, bloque.length, 5).getValues();
+    var rangoReleido = destino.getRange(primeraFila, 1, bloque.length, 5);
+    var releido = rangoReleido.getValues();
+    var formulasVivas = rangoReleido.getFormulas();
+    bloque.forEach(function (fila, i) {
+        for (var cf = 0; cf < 5; cf++) {
+            if (formulasVivas[i][cf]) {
+                malas.push(fila[0] + '!' + fila[1] + ' (hoja "' + nombre + '", columna ' + (cf + 1) +
+                           ': quedo como FORMULA VIVA, no como texto)');
+                return;
+            }
+        }
+    });
     bloque.forEach(function (fila, i) {
         for (var c = 0; c < 3; c++) {
             if (String(releido[i][c]) !== String(fila[c])) {
@@ -1460,15 +1497,34 @@ function _cuerpoAplicarV095(progreso, conducida) {
                 .filter(function (n) { return n.indexOf('RESP_TC_v095_') === 0; })
                 .sort();
             if (huerfanas.length > 0) {
-                return {
-                    ok: false,
-                    error: 'Hay respaldos de una corrida anterior sin registro asociado: ' +
-                           huerfanas.join(', ') + '. No se congela un respaldo nuevo porque seria ' +
-                           'la foto de un estado posiblemente ya migrado. El punto de retorno ' +
-                           'candidato es el MAS ANTIGUO: "' + huerfanas[0] + '". Restaura desde ahi ' +
-                           'o elimina esos respaldos a mano si ya verificaste que la planilla esta ' +
-                           'en su estado original.'
-                };
+                // decision Franco 2026-08-13: un respaldo huerfano NO siempre significa una
+                // planilla a medio migrar. Un intento que aborto ANTES de mutar (por ejemplo el
+                // del 2026-08-13, que fallo al verificar el respaldo de formulas) tambien deja
+                // uno, y en ese caso la planilla esta intacta y bloquear seria fricción sin
+                // motivo. La evidencia que distingue los dos casos esta en los datos: si el
+                // respaldo huerfano contiene lo MISMO que la hoja viva, no hubo mutacion.
+                var vivoAhora = _contarBloquesTcV095(plan.hojas.tiposCambio);
+                var sospechosas = huerfanas.filter(function (n) {
+                    var h = ss.getSheetByName(n);
+                    if (!h) return false;
+                    var c = _contarBloquesTcV095(h);
+                    return V095_BLOQUES_TC.some(function (b) {
+                        return c.porPar[b.par] !== vivoAhora.porPar[b.par];
+                    });
+                });
+                if (sospechosas.length > 0) {
+                    return {
+                        ok: false,
+                        error: 'Hay respaldos de una corrida anterior sin registro asociado cuyo ' +
+                               'contenido DIFIERE de la hoja viva: ' + sospechosas.join(', ') + '. ' +
+                               'Eso indica que una migracion quedo a medio aplicar. No se congela un ' +
+                               'respaldo nuevo porque seria la foto de ese estado roto. El punto de ' +
+                               'retorno candidato es el MAS ANTIGUO: "' + sospechosas[0] + '".'
+                    };
+                }
+                logInfo('aplicarMigracionV095: hay ' + huerfanas.length + ' respaldo(s) huerfano(s) ' +
+                        '(' + huerfanas.join(', ') + ') con el MISMO contenido que la hoja viva: son ' +
+                        'de un intento que aborto sin mutar. No bloquean; se pueden borrar a mano.');
             }
             var resTc = _respaldarTiposCambioV095(ss, plan.hojas.tiposCambio, sello);
             respaldoTc = resTc.nombre;

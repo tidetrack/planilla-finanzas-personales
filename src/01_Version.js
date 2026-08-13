@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 9,
- patch: 7,
+ patch: 8,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-13',
- releaseName: 'v0.9.7 - Guards de hoja y stack en el informe de estado',
+ releaseName: 'v0.9.8 - Respaldo de formulas como texto literal',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

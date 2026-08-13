@@ -5,6 +5,34 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-13] v0.9.8 - El respaldo de formulas se guarda como TEXTO, no como formula viva:
+ * - SINTOMA: aplicarMigracionV095() abortaba con "El respaldo de formulas no quedo verificado
+ *   en: Tablero!AN4 ... columna 3". Aborto ANTES de mutar, o sea el contrato todo-o-nada
+ *   funciono: ninguna celda de las hojas vivas se toco.
+ * - CAUSA: setNumberFormat('@') afecta la visualizacion, NO el parseo. setValues con un string
+ *   que arranca en "=" lo guarda igual como FORMULA. La celda del respaldo quedaba con la
+ *   formula VIVA recalculandose contra Registros_legacy (un respaldo que se corrompe solo:
+ *   cicatriz 4 del arnes) y la relectura devolvia el resultado evaluado en vez del texto.
+ * - FIX: nuevo _textoLiteralV095() antepone el apostrofo de Sheets a todo valor que empiece
+ *   con = + - @ o '. El apostrofo NO forma parte del valor (getValue lo devuelve sin el), asi
+ *   que la verificacion sigue comparando contra el string original.
+ * - La verificacion ahora exige ademas que NINGUNA celda del respaldo haya quedado como formula
+ *   viva (getFormulas sobre las cinco columnas), que es la condicion que de verdad importa.
+ * - El guard de respaldos huerfanos deja de bloquear a ciegas: compara el contenido del respaldo
+ *   contra la hoja viva. Si coinciden, el respaldo es de un intento que aborto sin mutar y no
+ *   bloquea; solo aborta si DIFIEREN, que es la firma de una migracion a medio aplicar.
+ *
+ * ---
+ *
+ * [2026-08-13] v0.9.7 - Guards de hoja invalida y stack en el informe de estado:
+ * - estadoMigracionV095() fallaba con "TypeError: Cannot read properties of undefined
+ *   (reading 'getMaxRows')", un mensaje que no dice que hoja falta.
+ * - _contarBloquesTcV095 (cinco llamadores) y _validarRespaldoTcV095 validan su argumento y
+ *   fallan nombrando el problema en vez de reventar sobre undefined.
+ * - El catch de estadoMigracionV095 devuelve ademas las primeras lineas del stack.
+ *
+ * ---
+ *
  * [2026-08-13] v0.9.6 - Menus separados: "Tidetrack" (uso diario) y "Tidetrack Dev" (desarrollo):
  * - Calcado del patron de planilla-pymes. El menu unico mezclaba la operacion cotidiana con
  *   herramientas que escriben estructura, y "Procesar Cargas" -- la funcion que mas se usa --
