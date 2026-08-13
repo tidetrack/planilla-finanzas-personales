@@ -17,10 +17,18 @@ Registro canónico de todas las hojas de la planilla con sus GIDs, propósito y 
 | Cargas | 1889618311 | Formulario batch de carga de transacciones | Produccion |
 | Mirada Interanual | — | Resumen historico anual (consume ANUAL) | WIP |
 | Plan de Cuentas | 738279722 | Catalogo maestro de 5 tablas relacionales | Produccion |
-| Tipos de Cambio | — | Data lake historico de cotizaciones (4 vectores) | Produccion |
-| Registros | 709656625 | Ledger transaccional append-only | Produccion |
+| Tipos de cambio | 779567597 | Data lake historico de cotizaciones (4 vectores) | Produccion |
+| Registros | 1546296548 | Ledger transaccional append-only | Produccion |
 | Bocetos | — | Prototipado visual de pantallas nuevas | Dev |
 | Espacio blanco 2 | — | Espacio libre de trabajo | Dev |
+
+> **Nota (2026-06-21):** Las hojas originales fueron duplicadas y las copias renombradas para tomar los nombres de produccion.
+> Los GIDs cambiaron: "Registros" pasó de gid=709656625 a gid=1546296548, "Tipos de cambio" de gid=42932214 a gid=779567597.
+> Las hojas viejas quedaron renombradas como legacy (ver seccion mas abajo).
+> Los SHEETS en 00_Config.js y las formulas del Tablero/CALCU/ANUAL **no requirieron cambios** — los nombres de produccion son los mismos.
+
+> **UX (2026-06-21):** La barra de herramientas de la planilla fue movida a posicion de header (toolbar superior).
+> Este cambio es visual y no afecta la estructura de datos ni los rangos de las BDs.
 
 ## Hojas Ocultas (Motores y Archivo)
 
@@ -59,9 +67,12 @@ Formula consolidadora en columna de validacion:
 ```
 Esta formula aplana las 4 tablas de cuentas en una lista plana para los dropdowns de validacion de datos en Cargas.
 
-### Registros (gid=709656625)
+### Registros (gid=1546296548) — PRODUCCION
 
-Ledger append-only. ~2879 filas x 20 columnas (al momento del mapeo).
+> Renombrada desde "Copia de Registros" el 2026-06-21. GID previo de produccion era 709656625 (ahora legacy).
+> Estructura: HEADER_ROW=3, DATA_START_ROW=4, offset horizontal ADR-005.
+
+Ledger append-only. ~2879+ filas x 20 columnas.
 
 | Col | Campo | Notas |
 |-----|-------|-------|
@@ -78,7 +89,10 @@ Ledger append-only. ~2879 filas x 20 columnas (al momento del mapeo).
 | S | tc_aud | Tipo de cambio AUD congelado |
 | T | tc_eur | Tipo de cambio EUR congelado |
 
-### Tipos de Cambio
+### Tipos de cambio (gid=779567597) — PRODUCCION
+
+> Renombrada desde "Copia de Tipos de Cambio" el 2026-06-21. GID previo de produccion era 42932214 (ahora legacy).
+> Estructura: HEADER_ROW=3, DATA_START_ROW=4, offset horizontal ADR-005.
 
 4 vectores de cotizaciones historicas, mismo offset que el resto:
 
@@ -126,6 +140,17 @@ Ver FORMULAS_TABLERO.md para codigo completo de cada modulo.
 
 ---
 
+## Hojas Legacy / Deprecated
+
+| Nombre | GID | Motivo | Estado |
+|--------|-----|--------|--------|
+| Registros_legacy (o nombre asignado al renombrar) | 709656625 | Hoja original reemplazada por nueva copia renombrada (gid=1546296548) el 2026-06-21 | Legacy |
+| Tipos de cambio_legacy (o nombre asignado al renombrar) | 42932214 | Hoja original reemplazada por nueva copia renombrada (gid=779567597) el 2026-06-21 | Legacy |
+
+> Estas hojas no deben usarse en produccion. Mantenerlas como respaldo hasta confirmar estabilidad de las nuevas.
+
+---
+
 ## Motores Ocultos (ADR-006)
 
 ### CALCU (gid=367882887)
@@ -149,3 +174,4 @@ Contiene el nuevo schema relacional normalizado (ver DATABASE_SCHEMA.md v1.0). A
 | Fecha | Accion | Autor |
 |-------|--------|-------|
 | 2026-06-05 | Primer mapeo completo de GIDs via inspeccion DOM + Chrome | Cowork |
+| 2026-06-21 | Registro de duplicacion de hojas: "Copia de Registros" (gid=1546296548) y "Copia de Tipos de Cambio" (gid=779567597) como produccion activa. Hojas originales marcadas como legacy. Nota de cambio UX (toolbar a header). | Cowork |
