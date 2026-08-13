@@ -857,6 +857,17 @@ function _huellaCeldaV095(valor) {
  *           total: number, columnasSuficientes: boolean, maxFilas: number}}
  */
 function _contarBloquesTcV095(hoja) {
+    // decision Franco 2026-08-13: guard de argumento. Esta funcion tiene cinco llamadores y
+    // recibe hojas que salen de getSheetByName (null si no existe) o de variables que pueden
+    // quedar sin asignar. Sin este guard el sintoma es un
+    // "TypeError: Cannot read properties of undefined (reading 'getMaxRows')" que no dice
+    // NADA de que hoja falta -- fue exactamente lo que vio Franco al correr el estado.
+    if (!hoja || typeof hoja.getMaxRows !== 'function') {
+        throw new Error('_contarBloquesTcV095 recibio una hoja invalida (' +
+                        (hoja === null ? 'null' : typeof hoja) + '). ' +
+                        'Suele significar que la hoja de tipos de cambio o su respaldo no existe ' +
+                        'con el nombre esperado.');
+    }
     var maxFilas = hoja.getMaxRows();
     var maxCols = hoja.getMaxColumns();
     var salida = {
@@ -903,6 +914,15 @@ function _contarBloquesTcV095(hoja) {
 function _validarRespaldoTcV095(hojaResp, conteoRegistrado) {
     var problemas = [];
     var avisos = [];
+    if (!hojaResp || typeof hojaResp.getMaxRows !== 'function') {
+        return {
+            ok: false,
+            problemas: ['la hoja de respaldo referenciada en el registro no existe en la planilla ' +
+                        '(pudo renombrarse o eliminarse a mano). No hay punto de retorno verificable.'],
+            avisos: avisos,
+            conteo: { porPar: {}, muestra: {}, ultimaFila: 0, total: 0, columnasSuficientes: false, maxFilas: 0 }
+        };
+    }
     var conteo = _contarBloquesTcV095(hojaResp);
 
     if (!conteo.columnasSuficientes) {
@@ -1244,8 +1264,17 @@ function estadoMigracionV095(yaConLock) {
             }
             return { ok: true, detalle: informe };
         } catch (err) {
+            // decision Franco 2026-08-13: el error viaja con su STACK al usuario, no solo el
+            // message. Un "TypeError: ... reading 'getMaxRows'" sin linea ni funcion obliga a
+            // adivinar desde afuera; con el stack, el diagnostico es inmediato. Es una funcion
+            // de solo lectura y de uso interno: no hay nada sensible que exponer.
             logError('estadoMigracionV095: fallo la lectura del estado', err);
-            return { ok: false, error: 'No se pudo leer el estado: ' + err.message + '. No se escribio nada.' };
+            var traza = err && err.stack ? String(err.stack).split('\n').slice(0, 6).join('\n') : '(sin stack)';
+            return {
+                ok: false,
+                error: 'No se pudo leer el estado: ' + err.message + '. No se escribio nada.',
+                detalle: 'DETALLE TECNICO (copiar y pasar a la sesion de trabajo):\n' + traza
+            };
         }
     }));
 }
