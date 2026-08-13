@@ -2,7 +2,7 @@
 
 > Propósito: Fuente de verdad sobre la organización del repositorio. Toda nueva carpeta o archivo debe registrarse aquí antes de crearse. Los agentes de IA usan este documento como referencia canónica.
 
-Versión: v0.8.2 (baseline sincronizado desde producción, Fase 0 del arnés) | Última actualización: 2026-08-12
+Versión: v0.8.3 (gobernanza Fase 1 del arnés sobre el baseline productivo v0.8.2) | Última actualización: 2026-08-12
 
 ---
 
@@ -112,6 +112,7 @@ planilla-finanzas-personales/
 │
 ├── README.md # Indice maestro. INICIO AQUI.
 ├── targets.yaml # Fuente única de targets de deploy: script_id + sheet_id por planilla (Fase 0 del arnés)
+├── sync_targets.command # Deploy oficial: drift-check + confirmación + push por target con restauración de .clasp.json (Fase 1; excepción a *.command en .gitignore)
 ├── .clasp.json # Config de Clasp (deploy a Apps Script)
 ├── .claspignore # Archivos excluidos del push a GAS
 ├── .gitignore # Archivos excluidos de Git

@@ -6,6 +6,68 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-12 - Fase 1 del arnes Tidetrack: gobernanza (v0.8.3)
+
+### Evento
+
+Segunda fase del arnes, ejecutada sobre el baseline v0.8.2 de la Fase 0. Tres piezas
+construidas en paralelo por agentes constructores y auditadas por refutadores
+adversariales independientes (2 lentes por pieza, schema {refuted, bloqueantes,
+menores}), segun ARNES_TIDETRACK.md seccion 9.
+
+1. **CLAUDE.md contrato**: reescrito con el molde de pymes (que vive aca / comandos /
+   jurisdiccion / modelo de datos / logica critica / gobernanza / reglas / cuando NO
+   actuar). El esquema de datos vuelve a describir el layout REAL de produccion
+   (Registros I:T con datos desde fila 3 — la disputa de filas quedo documentada como
+   CRITICO —, TC en bloques con offset, ADR-005 vigente) y el layout B:M queda
+   marcado como codigo v0.9.x no desplegado.
+2. **sync_targets.command**: port de sync_clients.command de pymes con mejora local:
+   drift-check integrado por target ANTES de confirmar (pull a temporal + diff;
+   un pull fallido se trata como drift, nunca como exito), confirmacion "pisar"
+   por target divergente, --dry-run con exit code para CI, trap de restauracion.
+   Probado en seco contra produccion: detecto correctamente el delta v0.8.3 local
+   vs v0.8.2 remoto, y un refutador verifico ademas que el remoto sigue identico
+   al baseline de Fase 0 byte a byte.
+3. **Injerto v0.8.3 en src/**: _resolverNombreHoja + getters con alias en SHEETS
+   (tres discrepancias config-planilla corregidas), RANGES.TC_* con sheet perezoso,
+   SSOT para Mirada Interanual, menu sin emojis. Sin cambios de logica de negocio.
+   Verificado con node --check y simulacion de carga GAS en node (mocks).
+
+### Hallazgos de la verificacion adversarial (ronda 1)
+
+- CLAUDE.md documentaba `npm run pull` — script inexistente en package.json y ademas
+  peligroso (un clasp pull en la raiz pisa src/). Corregido: la inspeccion remota es
+  `sync_targets.command --dry-run` o pull manual a temporal.
+- CLAUDE.md afirmaba en presente "src/ == produccion v0.8.2", falso desde el propio
+  commit de la fase (v0.8.3 pendiente de deploy). Corregido: baseline anclado a la
+  Fase 0 como hecho historico; la version desplegada vive en targets.yaml.
+- sync_targets.command estaba gitignoreado (`*.command`): el commit lo habria
+  excluido en silencio. Corregido con la excepcion `!sync_targets.command`.
+
+### Deuda declarada
+
+- `NAV_CONFIG.SHEETS` duplica 'Cargas' (el pipeline llega a la hoja por ahi, no por
+  SHEETS.DATA_ENTRY); consolidacion pendiente para una fase posterior.
+- Semantica latente del alias de DATA_ENTRY: si algun dia coexistieran las hojas
+  'Cargas' y 'Hoja de Cargas', la politica "gana el ultimo alias" elegiria
+  'Hoja de Cargas' (que nunca existio como hoja con datos). Escenario hipotetico
+  sin consumidores hoy; revisar el orden si DATA_ENTRY gana consumidores (Fase 2/4).
+- Emojis en entradas HISTORICAS de ZZ_Changelog.js (baseline productivo verbatim):
+  la regla cero emojis aplica a lo nuevo; no se reescribe historia.
+- Nadie ejecuto v0.8.3 contra Sheets todavia al momento del commit; el humo real es
+  el deploy controlado por sync_targets.command.
+
+### Cierre de fase (mismo dia)
+
+v0.8.3 desplegada a produccion via `sync_targets.command` (drift-check previo
+mostro exactamente el delta esperado; confirmacion "pisar" por protocolo del
+script; 17 archivos pusheados; trap restauro `.clasp.json`). Dry-run posterior:
+**sin drift** — repo == planilla en v0.8.3. `targets.yaml` actualizado a
+`version_desplegada: "0.8.3"`. Queda pendiente el humo funcional de Franco en la
+planilla (menu sin emojis visible, procesar una carga, forzar TC).
+
+---
+
 ## 2026-08-12 - Fase 0 del arnes Tidetrack: reconciliacion de drift
 
 ### Evento

@@ -3,9 +3,9 @@
  * Inicializa y diagnostica las fórmulas del módulo Mirada Interanual (G10:R14).
  * Invocable desde el menú Tidetrack → [Dev].
  *
- * @version 0.2.0
+ * @version 0.3.0
  * @since 0.8.2
- * @lastModified 2026-06-23
+ * @lastModified 2026-08-12
  */
 
 /**
@@ -62,7 +62,7 @@ function construirFormulaMirada(c10Expr, offsetExpr, selPrefix) {
  */
 function inicializarMiradaInteranual() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName('Mirada Interanual');
+    const sheet = ss.getSheetByName(SHEETS.MIRADA_INTERANUAL);
 
     if (!sheet) {
         SpreadsheetApp.getUi().alert('Hoja "Mirada Interanual" no encontrada.');
@@ -104,9 +104,9 @@ function inicializarMiradaInteranual() {
  */
 function diagnosticarMiradaInteranual() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const mi = ss.getSheetByName('Mirada Interanual');
-    let dbg = ss.getSheetByName('DEBUG Mirada');
-    if (!dbg) dbg = ss.insertSheet('DEBUG Mirada');
+    const mi = ss.getSheetByName(SHEETS.MIRADA_INTERANUAL);
+    let dbg = ss.getSheetByName(SHEETS.DEBUG_MIRADA);
+    if (!dbg) dbg = ss.insertSheet(SHEETS.DEBUG_MIRADA);
     dbg.clear();
 
     dbg.getRange('A1:C1')

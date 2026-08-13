@@ -5,6 +5,20 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-12] v0.8.3 - Gobernanza Fase 1 (arnes): resolver de nombres de hoja + menu sin emojis:
+ * - NUEVO: _resolverNombreHoja(alias) + invalidarCacheNombresHojas() en 00_Config.js (portado de pymes).
+ *   SHEETS.DATA_ENTRY / TIPOS_CAMBIO / BD_ANTIGUA pasan a getters con alias: corrigen las tres
+ *   discrepancias config-planilla detectadas ('Hoja de Cargas' vs 'Cargas'; 'Tipos de cambio' vs
+ *   'Tipos de Cambio'; 'BD antigua' vs 'BD Antigua') sin ventana de rotura ante renombres.
+ *   Politica: ante ambiguedad gana el alias historico (el que tiene los datos), con log.
+ * - RANGES TC_*: sheet pasa a getter para preservar la resolucion perezosa.
+ * - NUEVO: SHEETS.MIRADA_INTERANUAL y SHEETS.DEBUG_MIRADA; 07_MiradaInteranual.js deja de
+ *   hardcodear nombres de hoja (regla SSOT).
+ * - MENU_CONFIG sin emojis (regla cero emojis del arnes, Fase 1).
+ * - Sin cambios de logica de negocio: pipeline, FX y migraciones intactos.
+ *
+ * ---
+ *
  * [2026-06-22] v0.8.2 - Módulo Mirada Interanual:
  * - NUEVO: `07_MiradaInteranual.js`. `inicializarMiradaInteranual()` setea las fórmulas LET/SUMPRODUCT
  *   en G10:R14 de la hoja "Mirada Interanual" (Ingresos/Gastos Fijos/Gastos Variables por mes + Resultado).
