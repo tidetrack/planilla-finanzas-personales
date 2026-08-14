@@ -57,9 +57,7 @@ function procesarCargas() {
     const tcEurData = getTableData('TC_EUR');
 
     // 2.1 Precargar categorías para deducción de Tipo de Cuenta
-    const ingresosCat = getTableData('INGRESOS').map(r => r[0]);
-    const fijosCat = getTableData('GASTOS_FIJOS').map(r => r[0]);
-    const variablesCat = getTableData('GASTOS_VARIABLES').map(r => r[0]);
+    const catalogos = leerCatalogosPlanCuentas();
 
     const cacheMap = { USD: {}, AUD: {}, EUR: {} };
     tcUsdData.forEach(r => { if (r[0]) cacheMap.USD[formatDateISO(r[0])] = r[1] });
@@ -85,12 +83,9 @@ function procesarCargas() {
 
             const dateStr = formatDateISO(dateObj);
 
-            // Deducir Tipo de Cuenta (Ingreso, Gasto Fijo, Gasto Variable)
-            let tipoCuenta = '';
-            const cuentaName = row[2];
-            if (ingresosCat.includes(cuentaName)) tipoCuenta = 'Ingreso';
-            else if (fijosCat.includes(cuentaName)) tipoCuenta = 'Gasto Fijo';
-            else if (variablesCat.includes(cuentaName)) tipoCuenta = 'Gasto Variable';
+            // Deducir Tipo de Cuenta (Ingreso, Gasto Fijo, Gasto Variable).
+            // Sin opciones: comportamiento identico al historico (ver deducirTipoCuenta).
+            const tipoCuenta = deducirTipoCuenta(row[2], catalogos);
 
             // ARS Base
             const tcArs = 1.0;
@@ -162,6 +157,85 @@ function procesarCargas() {
         logError("Error al procesar Registros Batch", err);
         SpreadsheetApp.getUi().alert(`Fallo en el procesamiento: ${err.message}`);
     }
+}
+
+// ============================================
+// DEDUCCION DE TIPO DE CUENTA (COMPARTIDA)
+// ============================================
+
+// decision Franco 2026-08-13: la deduccion sale de adentro de procesarCargas() y pasa a ser una
+// funcion propia. Motivo: la migracion del historico de la planilla vieja
+// (MIGRACION_v031_Historico.js) tiene que clasificar exactamente igual que el pipeline, y una
+// segunda implementacion "equivalente" es la forma mas barata de que dos partes del sistema
+// clasifiquen distinto sin que nadie se entere. La extraccion PRESERVA el comportamiento
+// historico byte por byte: sin opciones, compara con igualdad estricta contra los tres
+// catalogos y en el mismo orden de precedencia. Las dos tolerancias nuevas son OPT-IN y solo
+// las pide el devtool de migracion, de modo que procesarCargas() no cambia -- lo que respeta
+// la decision de Franco de corregir los traspasos solo en las formulas de lectura.
+
+/**
+ * Lee los tres catalogos del Plan de Cuentas que definen el Tipo de Cuenta.
+ *
+ * @returns {{ingresos: string[], fijos: string[], variables: string[]}}
+ */
+function leerCatalogosPlanCuentas() {
+    return {
+        ingresos: getTableData('INGRESOS').map(r => r[0]),
+        fijos: getTableData('GASTOS_FIJOS').map(r => r[0]),
+        variables: getTableData('GASTOS_VARIABLES').map(r => r[0])
+    };
+}
+
+/**
+ * Deduce el Tipo de Cuenta buscando el nombre de la cuenta en los catalogos del Plan de Cuentas.
+ *
+ * Precedencia (la historica, no se altera): Ingreso -> Gasto Fijo -> Gasto Variable. Una cuenta
+ * que no aparece en ningun catalogo devuelve '' -- el gap de validacion conocido del pipeline:
+ * la fila se registra igual, con el Tipo de Cuenta vacio.
+ *
+ * @param {*} nombreCuenta valor de la columna Cuenta
+ * @param {{ingresos: string[], fijos: string[], variables: string[]}} catalogos
+ * @param {{tolerante?: boolean, excluirNeutras?: boolean}} [opciones]
+ *        tolerante: si no hubo match exacto, reintenta normalizando mayusculas y espacios.
+ *          Solo puede AGREGAR clasificaciones donde antes quedaba '': nunca cambia una que
+ *          ya matcheo exacto.
+ *        excluirNeutras: las cuentas de CUENTAS_NEUTRAS devuelven '' aunque figuren en un
+ *          catalogo. Hace falta porque "Traspaso" SI esta dado de alta como ingreso en el Plan
+ *          de Cuentas de produccion (por eso las 533 patas de traspaso quedaron clasificadas
+ *          como Ingreso). Es opt-in a proposito: activarlo por defecto cambiaria como escribe
+ *          procesarCargas() de aca en mas, y esa no es la decision que se tomo.
+ * @returns {string} 'Ingreso' | 'Gasto Fijo' | 'Gasto Variable' | ''
+ */
+function deducirTipoCuenta(nombreCuenta, catalogos, opciones) {
+    opciones = opciones || {};
+    const ingresos = (catalogos && catalogos.ingresos) || [];
+    const fijos = (catalogos && catalogos.fijos) || [];
+    const variables = (catalogos && catalogos.variables) || [];
+
+    if (opciones.excluirNeutras === true && esCuentaNeutra(nombreCuenta)) return '';
+
+    // --- Camino historico: igualdad estricta, mismo orden. ---
+    if (ingresos.indexOf(nombreCuenta) !== -1) return 'Ingreso';
+    if (fijos.indexOf(nombreCuenta) !== -1) return 'Gasto Fijo';
+    if (variables.indexOf(nombreCuenta) !== -1) return 'Gasto Variable';
+
+    if (opciones.tolerante !== true) return '';
+
+    // --- Reintento tolerante (mayusculas y espacios). Solo llega aca lo que ya quedaba en ''. ---
+    const buscado = normalizarNombreCuenta(nombreCuenta);
+    if (buscado === '') return '';
+    if (_catalogoContiene(ingresos, buscado)) return 'Ingreso';
+    if (_catalogoContiene(fijos, buscado)) return 'Gasto Fijo';
+    if (_catalogoContiene(variables, buscado)) return 'Gasto Variable';
+    return '';
+}
+
+/** true si el catalogo tiene un nombre que normaliza igual que el buscado (ya normalizado). */
+function _catalogoContiene(catalogo, nombreNormalizado) {
+    for (let i = 0; i < catalogo.length; i++) {
+        if (normalizarNombreCuenta(catalogo[i]) === nombreNormalizado) return true;
+    }
+    return false;
 }
 
 /**

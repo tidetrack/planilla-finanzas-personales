@@ -5,6 +5,43 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-13] v0.10.0 - Migracion historica desde la planilla v03.1:
+ * - CONTEXTO: mientras el pipeline estuvo roto (2026-03-29 a 2026-08-13) Franco siguio
+ *   cargando sus finanzas en la planilla vieja "PLANILLA FINANZAS_v03.1 | Fran". El ledger
+ *   nuevo quedo con un agujero: abril 2026 (106 movimientos), mayo (110), junio (112) y
+ *   julio/agosto completos. Casi cinco meses de historia fuera de la planilla.
+ * - NUEVO MIGRACION_v031_Historico.js: trio estado/aplicar/revertir. Lee la planilla vieja EN
+ *   VIVO con openById (re-ejecutable: si Franco sigue cargando alla, se vuelve a correr y trae
+ *   solo lo nuevo). El delta NO se define por rango de fechas sino por AUSENCIA en el destino,
+ *   cruzando fecha + monto + sentido con el medio como desempate: de 3.635 filas del origen,
+ *   2.896 ya estaban y 632 faltaban. Migrar "toda la BD" habria duplicado ~2.880 movimientos.
+ * - Transformacion: monto partido en dos columnas -> Monto + Tipo; Tipo de Cuenta se DEDUCE
+ *   contra el Plan de Cuentas (no se copia); moneda inferida del medio; TC congelados tomados
+ *   de la hoja Tipos de cambio por fecha; alias de medios unificados (MP -> Mercado Pago y
+ *   tres mas, decision Franco).
+ * - GUARD DE COBERTURA DE TC (el bloqueante mas caro de la ronda): el Data Lake llega hasta
+ *   2026-03-20 (ARS) y 2026-03-29 (USD/AUD/EUR), y 540 de 541 filas del lote son posteriores.
+ *   Sin guard, TODAS congelaban una cotizacion de fallback y julio/agosto quedaban valuados a
+ *   la de junio. La cotizacion congelada es el unico dato del ledger que despues no se puede
+ *   recalcular. Ahora el preflight compara max(fecha del lote) contra max(fecha de cada serie)
+ *   y ABORTA indicando correr "Forzar carga historica" primero.
+ * - Dos buckets que NO se migran y se reportan uno por uno: filas con MONTO NEGATIVO (hay una
+ *   real: -$34.999,97 en "Medicamentos / Accesorios", que migrada con abs() habria entrado como
+ *   un ingreso ficticio indistinguible de uno legitimo) y filas con FECHA AMBIGUA (dia <= 12 y
+ *   distinto del mes: "12/04/2026" tiene dos lecturas validas y ningun dato resuelve la duda).
+ * - Parser de fechas es-AR explicito: cero new Date(string), que interpreta dd/mm con semantica
+ *   de EE.UU. y habria duplicado filas cambiandoles el mes.
+ * - Respaldo completo de Registros congelado y VERIFICADO antes de mutar: al insertar y
+ *   reordenar por fecha las filas migradas quedan intercaladas, asi que no hay vuelta atras por
+ *   rango. revertir restaura desde ahi.
+ * - RETIRADOS DEL MENU: DEVTOOL_Presupuesto.js y DEVTOOL_CableadoPresupuesto.js quedan en el
+ *   repo con cabecera "NO LISTO" y sus bloqueantes enumerados, pero inalcanzables desde la UI.
+ *   Tres rondas adversariales no cerraron sus defectos de "declarar exito sin hacer el trabajo"
+ *   (el motor informa ok sobre una hoja en ceros; el cableado escribe contra celdas vacias).
+ *   Decision Franco: el Presupuesto se retoma en una sesion dedicada, con la planilla completa.
+ *
+ * ---
+ *
  * [2026-08-13] v0.9.9 - Reparacion del formato de cotizaciones + auditoria de respaldos:
  * - HALLAZGO (verificacion post-migracion en vivo): el backfill de la v0.9.5 dejo 791 de 820
  *   filas de la columna Cotizacion de EUR mostrando FECHAS en vez de montos ("25/8/1904" en

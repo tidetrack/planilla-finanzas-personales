@@ -96,7 +96,14 @@ const SHEETS = {
     get TIPOS_CAMBIO() { return _resolverNombreHoja(['Tipos de cambio', 'Tipos de Cambio']); },  // el codigo v0.8.x usa minuscula, el scanner de marzo registro mayuscula: el resolver devuelve la que exista
     get BD_ANTIGUA() { return _resolverNombreHoja(['BD antigua', 'BD Antigua']); },  // el config viejo usa minuscula, el scanner de marzo registro 'BD Antigua': el resolver devuelve la que exista
     MIRADA_INTERANUAL: 'Mirada Interanual',  // antes hardcodeada en 07_MiradaInteranual.js (regla SSOT)
-    DEBUG_MIRADA: 'DEBUG Mirada'  // antes hardcodeada en 07_MiradaInteranual.js (regla SSOT)
+    DEBUG_MIRADA: 'DEBUG Mirada',  // antes hardcodeada en 07_MiradaInteranual.js (regla SSOT)
+    // decision Franco 2026-08-13: el nombre de la hoja del Presupuesto se fija en el SSOT ANTES
+    // de crearla, no despues (MAPA_ARQUITECTURA_PLANILLA.md 14.8, punto 7: la planilla ya tiene
+    // tres rotulos distintos para la misma idea -- "Presupuesto del Mes.", "Control de
+    // Presupuesto." y "PRESUPUESTO"). String estatico y no getter de alias: es una hoja que el
+    // sistema CREA, asi que no hay historico con datos con el que pueda haber ambiguedad.
+    // No se duplica en NAV_CONFIG.SHEETS: la navegacion la lee desde aca (regla SSOT).
+    PRESUPUESTO: 'Presupuesto'
 };
 
 // DEFAULT GLOBAL, no verdad universal: corresponden al layout del Plan de Cuentas, la unica
@@ -232,6 +239,82 @@ const RANGES = {
 const MONEDAS_DISPONIBLES = ['ARS', 'USD', 'AUD', 'EUR'];
 
 // ============================================
+// CUENTAS NEUTRAS (MOVIMIENTOS PERMUTATIVOS)
+// ============================================
+
+// [CONCEPTO DE NEGOCIO]
+// Hay movimientos que no son un ingreso ni un gasto: solo mueven plata de una caja propia a
+// otra, o inicializan el saldo con el que una caja arranca el mes. El patrimonio no cambia;
+// cambia su composicion. Son dos, y viven en la columna Cuenta (RANGES.REGISTROS.columns.cuenta):
+//   - "Traspaso":   movimiento entre cajas propias (de la caja de ahorro al dolar, de Mercado
+//                   Pago al banco). El pipeline lo escribe como DOS patas, una que sale y una
+//                   que entra, y el ledger tiene que poder reconstruirlas: los datos estan bien.
+//   - "Inicio Mes": asiento de apertura, el saldo con el que arranca cada caja el dia 1.
+//
+// [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+// Son cuentas de MOVIMIENTOS, permutativas: por definicion no afectan el resultado del periodo.
+// El concepto viene del plan de cuentas de planilla-pymes, donde tienen su propio bloque
+// (arnes, Fase 6). Aca todavia NO existe ese bloque en la hoja "Plan de Cuentas": hasta que la
+// Fase 6 lo cree, esta constante ES el registro de cuentas neutras del sistema.
+// @see docs/permanente/ARNES_TIDETRACK.md (Fase 6 - plan de cuentas)
+//
+// POR QUE EXISTE, medido y no estimado (2026-08-13): la pata que entra de cada traspaso queda
+// clasificada como Ingreso. Sumar los ingresos sin excluir estas cuentas da 31,1 M contra 17,5 M
+// reales: un 77 % de inflacion. Los saldos de apertura son del mismo genero.
+//
+// decision Franco 2026-08-13: se corrige SOLO EN LA LECTURA. No se migran las 2.904 filas del
+// ledger ni se toca procesarCargas(): los datos son correctos -- son las dos patas de un
+// movimiento real, y Tablero!I21 justamente comprueba que cierren --, lo que esta mal es
+// sumarlas como ingreso. Por eso esto es una constante de exclusion y no una migracion de datos.
+//
+// FUENTE UNICA: todo modulo o formula que agregue ingresos o gastos debe excluir estas cuentas,
+// y la lista sale de aca. Ningun literal 'Traspaso' suelto en un modulo nuevo: si manana entra
+// una tercera cuenta neutra, tiene que alcanzar con agregarla en esta linea.
+//
+// LA COMPARACION TIENE QUE SER TOLERANTE a mayusculas/minusculas y a espacios (de sobra al
+// principio o al final, y dobles adentro). Las cuentas se tipean a mano en la grilla de Cargas
+// y se pegan desde planillas viejas, donde conviven "Traspaso", "traspaso " y "Inicio  Mes";
+// una comparacion con === sobre el texto crudo deja pasar justo las filas que hay que excluir,
+// que es la falla mas cara posible aca (una sola fila colada infla el agregado). Desde codigo
+// se compara SIEMPRE con esCuentaNeutra(), que ya lo resuelve. Dentro de una formula de hoja de
+// calculo, donde no se puede llamar a esCuentaNeutra(), el equivalente es comparar contra
+// TRIM(...) y con funciones insensibles a mayusculas.
+const CUENTAS_NEUTRAS = ['Traspaso', 'Inicio Mes'];
+
+/**
+ * Normaliza un nombre de cuenta o de medio para poder compararlo.
+ *
+ * Recorta los extremos, colapsa los espacios internos (incluidos tabulaciones, saltos y el
+ * espacio duro   que aparece al pegar desde otras planillas) y pasa a minusculas.
+ *
+ * @param {*} nombre valor crudo de la celda
+ * @returns {string} '' si el valor no es texto util
+ */
+function normalizarNombreCuenta(nombre) {
+    if (nombre === null || nombre === undefined) return '';
+    return String(nombre)
+        .replace(/[\s ]+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+/**
+ * true si la cuenta es NEUTRA (permutativa) y por lo tanto no suma ni a ingresos ni a gastos.
+ * Comparacion tolerante a mayusculas y espacios (ver el comentario de CUENTAS_NEUTRAS).
+ *
+ * @param {*} nombreCuenta valor de la columna Cuenta
+ * @returns {boolean}
+ */
+function esCuentaNeutra(nombreCuenta) {
+    const n = normalizarNombreCuenta(nombreCuenta);
+    if (n === '') return false;
+    for (let i = 0; i < CUENTAS_NEUTRAS.length; i++) {
+        if (normalizarNombreCuenta(CUENTAS_NEUTRAS[i]) === n) return true;
+    }
+    return false;
+}
+
+// ============================================
 // MENSAJES DE ERROR
 // ============================================
 
@@ -276,6 +359,10 @@ const MENU_CONFIG = {
                 // 'Espacio blanco 1' y 'Espacio blanco 3' quedaron fuera: no existen.
                 { name: 'Inicio', function: 'navigateToInicio' },
                 { name: 'Tablero', function: 'navigateToTablero' },
+                // "Presupuesto" sale del menu junto con sus devtools: la unica pieza que crea esa
+                // hoja es DEVTOOL_Presupuesto.js, que quedo fuera de servicio. La entrada solo
+                // podia responder "la hoja no existe". navigateToPresupuesto() y SHEETS.PRESUPUESTO
+                // se conservan para reponerla en una linea cuando el modulo este listo.
                 { name: 'Cargas', function: 'navigateToCargas' }
             ]
         }
@@ -307,6 +394,25 @@ const MENU_CONFIG = {
                 { name: 'Auditar balanceo de la formula', function: 'auditarBalanceFormulaMirada' }
             ]
         },
+        {
+            // Se corren EN ESTE ORDEN: primero el estado (solo lectura), despues aplicar.
+            // Revertir usa el respaldo congelado. @see DEVTOOL_RobustezVistas.js
+            submenu: 'Robustez de vistas', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoRobustezVistas' },
+                { name: '2. Aplicar (envolver QUERY en IFERROR)', function: 'aplicarRobustezVistas' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirRobustezVistas' }
+            ]
+        },
+        // decision Franco 2026-08-13: el PRESUPUESTO SALE DEL MENU hasta su sesion dedicada.
+        // Los dos modulos (DEVTOOL_Presupuesto.js y DEVTOOL_CableadoPresupuesto.js) quedaron con
+        // bloqueantes abiertos -- el motor declara exito sobre una hoja en ceros, el cableado
+        // puede escribir contra celdas vacias -- y sus funciones publicas SIGUEN EXISTIENDO en el
+        // proyecto: si estan en el menu, se pueden disparar por accidente con un clic y escribir
+        // sobre la planilla productiva. Un modulo a medio terminar no se marca con un comentario,
+        // se vuelve inalcanzable. Los archivos se conservan enteros (el trabajo es valioso y la
+        // proxima sesion arranca de ahi) con su cabecera NO LISTO y la lista de bloqueantes.
+        // Para volver a habilitarlo: reponer aca los dos submenus y la entrada de navegacion.
         { separator: true },
         { seccion: 'DATOS' },
         {
@@ -319,6 +425,19 @@ const MENU_CONFIG = {
             submenu: 'BD Antigua (migracion legacy)', items: [
                 { name: '1. Analizar', function: 'analizarBdAntigua' },
                 { name: '2. Migrar', function: 'migrarBdAntigua' }
+            ]
+        },
+        {
+            // Recupera del "PLANILLA FINANZAS_v03.1 | Fran" todo lo que el ledger no tenga
+            // (abril a agosto de 2026, los meses en que el pipeline estuvo cortado). Es
+            // RE-EJECUTABLE: cruza por ausencia, asi que correrlo de nuevo trae solo lo nuevo.
+            // Se corren EN ESTE ORDEN: primero el estado (solo lectura), despues aplicar.
+            // Revertir restaura el ledger completo desde el respaldo. @see MIGRACION_v031_Historico.js
+            submenu: 'Historico v03.1 (planilla vieja)', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoMigracionV031' },
+                { name: '2. Aplicar (migrar lo que falta)', function: 'aplicarMigracionV031' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirMigracionV031' }
             ]
         },
         { separator: true },

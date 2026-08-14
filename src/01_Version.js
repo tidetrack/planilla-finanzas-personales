@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 9,
- patch: 9,
+ minor: 10,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-13',
- releaseName: 'v0.9.9 - Reparacion de formato de cotizaciones y auditoria de respaldos',
+ releaseName: 'v0.10.0 - Migracion historica de la planilla v03.1',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

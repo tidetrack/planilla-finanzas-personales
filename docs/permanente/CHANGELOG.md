@@ -9,6 +9,74 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.10.0 - Migracion historica desde la planilla v03.1 (2026-08-13)
+
+Recupera los movimientos que Franco cargo en su planilla vieja mientras el pipeline
+de la nueva estaba roto. **Pendiente de ejecucion por Franco.**
+
+### Contexto
+
+Entre el 2026-03-29 y el 2026-08-13 el pipeline no pudo escribir, y Franco siguio
+llevando sus finanzas en `PLANILLA FINANZAS_v03.1 | Fran`. El ledger nuevo quedo con
+un agujero de casi cinco meses: **abril 2026 (106 movimientos), mayo (110), junio
+(112) y julio/agosto completos**.
+
+### Added
+
+- **`src/MIGRACION_v031_Historico.js`** — trio estado/aplicar/revertir. Lee la planilla
+  vieja **en vivo** con `openById`, asi que es re-ejecutable: si Franco sigue cargando
+  alla, se vuelve a correr y trae solo lo nuevo.
+  - **El delta se define por AUSENCIA, no por fecha.** Cruce por fecha + monto +
+    sentido, con el medio como desempate. De 3.635 filas del origen, 2.896 ya estaban
+    en el destino y **632 faltaban**. Migrar "toda la BD" habria duplicado ~2.880
+    movimientos y roto todos los totales historicos.
+  - Transformacion: el monto partido en dos columnas se unifica en Monto + Tipo; el
+    Tipo de Cuenta se **deduce** contra el Plan de Cuentas (no se copia del origen); la
+    moneda se infiere del medio; los TC congelados salen de la hoja `Tipos de cambio`.
+  - **Guard de cobertura de TC**: el Data Lake llega hasta 2026-03-20 (ARS) y
+    2026-03-29 (USD/AUD/EUR), y 540 de 541 filas del lote son posteriores. Sin este
+    guard, todas congelaban una cotizacion de fallback y julio/agosto quedaban valuados
+    a la de junio. La cotizacion congelada es el unico dato del ledger que despues no se
+    puede recalcular. El preflight **aborta** e indica correr `Forzar carga historica`.
+  - **Dos buckets que no se migran** y se reportan uno por uno: monto negativo (hay una
+    fila real de -$34.999,97 que con `abs()` habria entrado como ingreso ficticio
+    indistinguible de uno legitimo) y fecha ambigua (dia <= 12 y distinto del mes).
+  - Parser de fechas **es-AR explicito**: cero `new Date(string)`, que interpreta dd/mm
+    con semantica de EE.UU. y habria duplicado filas cambiandoles el mes.
+  - Respaldo completo de `Registros` congelado y verificado antes de mutar: al insertar
+    y reordenar por fecha las filas migradas quedan intercaladas, asi que no hay vuelta
+    atras por rango.
+- **`src/DEVTOOL_RobustezVistas.js`** — envuelve en IFERROR las QUERY de staging
+  desprotegidas (un mes sin registros devuelve `#N/A` y tumba ~30 celdas; ya pasa en
+  `Inicio`). Aprobado sin bloqueantes, pendiente de ejecucion.
+
+### Retirados del menu (conservados en el repo)
+
+`src/DEVTOOL_Presupuesto.js` y `src/DEVTOOL_CableadoPresupuesto.js` llevan cabecera
+**NO LISTO** con sus bloqueantes enumerados, y quedaron **inalcanzables desde la UI**.
+Tres rondas adversariales no cerraron sus defectos de la familia "declarar exito sin
+haber hecho el trabajo": el motor informa `ok` sobre una hoja cuyos cuatro agregados
+son cero, y el cableado puede escribir contra celdas vacias. **Decision Franco: el
+Presupuesto se retoma en una sesion dedicada, con la planilla ya completa** — que es
+mejor contexto para disenarlo, porque recien entonces los promedios historicos son
+reales.
+
+### Diagnosticos que quedan documentados para esa sesion
+
+- Falta el concepto de **cuenta neutra** (`Traspaso`, `Inicio Mes`): hoy los traspasos
+  entran como "Ingreso" e inflan los ingresos un 77 % (31,1 M contra 17,5 M reales).
+- Falta la **apertura de mes** como funcionalidad. Franco la identifico: los asientos
+  de `Inicio Mes` son la conciliacion del saldo de caja con que arranca el periodo.
+  Existe probada en planilla-pymes (`10_Backend_AperturaMes.js`).
+- La inflacion del 77 % **no** esta en Tablero ni en Inicio (esas formulas ya excluyen
+  `Traspaso`): vive en `Mirada Interanual` y se corrige en `07_MiradaInteranual.js`.
+- `Tablero!U17` mide ahorro con **lista negra**, asi que hoy cuenta `Financiacion`
+  como ahorro; el contrato acordado exige lista blanca.
+- La geometria real del Tablero es `S13`=Ingresos, `S14`=Gastos Fijos, `S15`=Gastos
+  Variables y `S17`=Capacidad de Ahorro **derivada** (`=S13-S14-S15`).
+
+---
+
 ## v0.9.6 - Menus separados (2026-08-13)
 
 Pedido de Franco: replicar el patron de planilla-pymes, que tiene dos menus top-level.
