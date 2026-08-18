@@ -1,0 +1,229 @@
+# Funcionalidades - Planilla de Finanzas Personales (v4)
+
+> Documento funcional de la planilla "PLANILLA FINANZAS_v4 .WIP | Personal", escrito por
+> Franco el 2026-08-18 al declarar definitivas las hojas " - Fix", y VALIDADO formula por
+> formula contra el export de la planilla viva (2026-08-18 18:51) por 8 auditores
+> independientes. Cada funcionalidad lleva su estado real:
+>
+> - **FUNCIONA**: cableada y verificada contra formulas concretas.
+> - **PARCIAL**: existe pero con defectos o dependencias sin conectar.
+> - **PENDIENTE**: declarada en el doc pero sin motor de calculo (fase de formulerio).
+> - **ROTO**: formulas con error visible (#REF!, #VALUE!) o resultados incorrectos.
+>
+> Los nombres de hoja son los CANONICOS post-swap v0.11 (MIGRACION_v0.11_SwapHojasFix.js).
+> La geometria de referencia vive en 00_Config.js (SSOT) y en MAPA_HOJAS.md.
+
+---
+
+## 01 | Inicio
+
+Dos funciones a grandes rasgos: ver el capital y el flujo de fondos.
+
+**Layout**: titulo C2:C4; filtros F2:G4 (G2 mes, G3 anio, G4 moneda); KPI Saldo Actual C7:C8;
+KPI Capital Acumulado F7:F10; calendario J7:P14; KPI Ingresos C12:C15; KPI Egresos F12:F15;
+Presupuesto del Mes C17:G22; staging del periodo T7:AF1005; staging del mes anterior AH7:AT1005.
+
+**Motor**: dos QUERY (T8 y AH8) traen de `Registros` todos los movimientos del periodo
+seleccionado y del inmediato anterior, y los derraman como staging. Todos los KPI agregan
+sobre esos derrames, cruzando el Medio contra el Plan de Cuentas (categoria del medio y tipo
+de la categoria).
+
+| Funcionalidad | Estado | Detalle |
+|---|---|---|
+| 1. Ingresos vs Egresos con delta vs periodo anterior | FUNCIONA | C13/F13 (QUERY que excluye Traspaso y trata el arrastre 'Inicio Mes' por tipo) + C15/F15 (delta % contra el staging del mes previo). |
+| 2. Presupuesto del Mes (Presupuesto / Realidad / Consumo / Distribucion de fondos disponibles) | PENDIENTE | Existen los headers (C18:G18) y las 4 filas (Ingresos, Gastos Fijos, Gastos Variables, Capacidad de Capitalizacion); D19:G22 esta vacio, sin formulas. Depende de cablear la hoja Presupuesto. |
+| 3. Calendario con colores (rojo egresos, verde ingresos) | PARCIAL | La grilla J9:P14 es ESTATICA (junio 2026): no se recalcula al cambiar G2/G3. Los colores serian formato condicional (no verificable en el export). |
+| 4. Capital: saldo acumulativo de proyectos de ahorro+inversion | PARCIAL | F8 suma el mes seleccionado apoyandose en los arrastres 'Inicio Mes' (no es una suma historica completa). El "% de Crecimiento historico" (F10) es TEXTO estatico, sin formula. |
+| 5. Filtros de periodo y moneda | FUNCIONA | G2/G3 alimentan los dos motores; G4 alimenta el Saldo Actual y el header 'Valor en X' del staging. |
+
+**Deuda critica de taxonomia**: las condiciones de C8/F8/C13/F13 comparan contra el tipo
+`'Liquidez'`, que en el Plan de Cuentas nuevo NO EXISTE (la categoria 'Medio Cotidiano' ahora
+es tipo 'Hogar'; los tipos son Ahorros/Inversiones/Financiacion/Hogar). Hasta re-cablear esas
+condiciones en el formulerio, Saldo Actual y Capital clasifican mal. Detalle en la seccion
+"Pendientes del formulerio".
+
+---
+
+## 02 | Tablero
+
+Vista mensual en profundidad. Franco declaro al entregarlo: "faltaria ajustar todo el sistema
+de formulas para que dispare correctamente la informacion".
+
+**Layout**: titulo y filtros C2, L2:N4; calendario C7:I14; Medios Bancarios C16:H22;
+Presupuesto Asignado L7:O12; Movimientos del Mes L14:O19; Disponibilidad de fondos L21:O25;
+Comprobacion de Traspasos L27:L28; vistas generales de cuentas R7:Y27 y AA7:AC; Saldos
+Actuales AE7:AG12; Cotizaciones AE15:AF19; motor "Registros del Mes" AJ2:AV+.
+
+**Motor**: QUERY en AJ6 sobre `Registros` filtrando por mes/anio (N2/N3); todo lo demas
+agrega sobre ese derrame. Cotizaciones por funciones Apps Script custom
+(`tidetrack_usd`/`TIDETRACK_AUD`/`tidetrack_EUR`).
+
+| Funcionalidad | Estado | Detalle |
+|---|---|---|
+| 1. Calendario | PARCIAL | Fechas estaticas (dic-2025/feb-2026), no derivan de N2/N3. |
+| 2. Medios bancarios | FUNCIONA | Cableado y devolviendo valores. |
+| 3. Presupuesto asignado | PENDIENTE | N9:N11 son constantes tipeadas a mano; no lee de la hoja Presupuesto. |
+| 4. Movimientos del mes | PARCIAL | Cableado pero devuelve 0: toda la cadena suma la columna AV 'Valor en ARS', que quedo como CEROS estaticos sin formula (en el Tablero viejo la columna equivalente tenia valores). Reconstruir AV = monto x tasa segun N4. |
+| 5. Disponibilidad de fondos | ROTO | O23:O25 = #REF!; filas de cumplimiento corridas respecto de sus etiquetas (la de Capacidad de Ahorro quedo en la fila de Gastos Fijos). |
+| 6. Comprobacion de traspasos (suma 0) | ROTO | L28 = #VALUE! (SUMIFS con rangos de distinto tamanio). En el Tablero viejo funcionaba. |
+| 7. Vistas generales de cuentas | PARCIAL | Listas de cuentas aparecen; montos en 0 por la misma columna AV; bloque Proyectos (AA:AC) vacio. |
+| 8. Saldos actuales | FUNCIONA | Flujo y capital por moneda, cableados. |
+| 9. Cotizaciones | FUNCIONA | Via funciones custom del script. OJO: el actualizador FX no escribe filas nuevas en la BD desde el 2026-08-13 (diagnosticar el trigger). |
+
+**Defecto estructural detectado**: las formulas mezclan anclas de fila 6 (donde arranca el
+derrame real) con anclas de fila 9, un desfase de 3 filas heredado de la re-disposicion.
+Es la primera causa a revisar en el formulerio del Tablero.
+
+---
+
+## 03 | Presupuesto
+
+Hoja completamente nueva (sin contraparte vieja). Base declarada: listas por composicion con
+monto historico promedio (ponderado hacia lo reciente) + monto presupuestado a mano; el
+presupuesto del mes define la asignacion proporcional y alimenta el Presupuesto del Mes de
+Inicio y el Presupuesto Asignado del Tablero.
+
+**Layout**: titulo C2; selectores I2:J4 (mes/anio/moneda); resumen "Movimientos Promedio
+historicos" C7:F12; resumen "Presupuesto del Mes" C14:F19; listas Ingresos I7:K1005,
+Gastos Fijos M7:O1005, Gastos Variables Q7:S1005, Categorias U7:X1005 (cada una con
+Monto Historico y Monto Presupuestado).
+
+| Funcionalidad | Estado | Detalle |
+|---|---|---|
+| 1. Monto historico promedio por cuenta | PENDIENTE | No hay ninguna formula contra Registros ni poblado de cuentas desde el Plan. Solo existe la capa de agregacion (SUMs de listas vacias: todo da 0). |
+| 2. Monto presupuestado manual + comparacion | PENDIENTE | Columnas presentes, sin datos ni formula de comparacion. |
+| 3. Presupuesto del mes que alimenta Inicio/Tablero | PENDIENTE | Nada lo consume todavia. |
+| Selectores de periodo/moneda | PENDIENTE | Las celdas existen; ninguna formula las referencia. |
+
+**Contrato de arranque del formulerio**: el cableado debe partir del contrato de calculo del
+2026-08-13 documentado en las cabeceras de `DEVTOOL_Presupuesto.js` y
+`DEVTOOL_CableadoPresupuesto.js` (ambos NO LISTO y fuera del menu; sus bloqueantes estan
+enumerados ahi). Defecto ya detectado en las formulas existentes: F17:F19 dividen por el
+ingreso HISTORICO ($E$9) en vez del presupuestado (E16) — decidir la base antes de poblar.
+
+---
+
+## 04 | Cargas
+
+Centro de carga de movimientos en lotes de 15.
+
+**Layout**: titulo B2; numeracion del lote B7:B21; headers C6:I6 (Monto, Tipo, Cuenta, Medio,
+Moneda, Fecha, Nota); bloque de carga C7:I21; vista "Ultimos 15 movimientos" M6:S21 (motor:
+una QUERY en M7 sobre `Registros`, ORDER BY fecha DESC LIMIT 15).
+
+| Funcionalidad | Estado | Detalle |
+|---|---|---|
+| 1. Carga por lotes de 15 registros | FUNCIONA | Grilla C7:I21 + `procesarCargas` del script (config remapeado en v0.11). Dropdowns: Tipo (lista fija), Cuenta (Plan!S consolidada), Medio (Plan!L), Moneda (lista fija) — los dos del Plan los reconstruye el swap. |
+| 2. Vista ultimos 15 movimientos | FUNCIONA | Post-swap lee la BD canonica. Deuda: rango cerrado hasta la fila 3371 (cuando Registros crezca mas alla, la vista deja de ver lo nuevo; pasar a rango abierto en el formulerio). |
+| Fixes esteticos | PARCIAL | La Fix limpio restos de la vieja (rotulo huerfano, formulas #REF!). Pendientes: typo "Utimos" en M2 y formato de fecha en R7:R21 (hoy seriales). |
+
+---
+
+## 05 | Plan de Cuentas
+
+Catalogo maestro puro (cero formulas de negocio): la fuente de verdad de cuentas, medios y
+categorias.
+
+**Layout**: titulo C2; Ingresos C6:D18 (11 cuentas); Gastos Fijos F6:G22 (15); Gastos
+Variables I6:J29 (22); Medios Bancarios L6:N35 (28 medios con Moneda y Categoria);
+Categorias P6:Q19 (Nombre/Tipo). Headers de bloque fila 6, headers de columna fila 7,
+datos desde fila 8. Columna S (agregada por el swap v0.11): consolidacion de las cuentas de
+los 4 bloques, fuente del dropdown de Cuenta en Cargas (espeja la columna Y del Plan viejo).
+
+| Funcionalidad | Estado | Detalle |
+|---|---|---|
+| 1. Cinco registros (Ingreso / Gastos Fijos / Gastos Variables / Medios / Categorias) | FUNCIONA | Validado 1:1 contra los datos. La nocion "Proyecto" pasa a llamarse "Categoria". |
+| 2. Categorias generales (macrosegmentacion) | FUNCIONA | Los tipos de Q son exactamente Ahorros / Financiacion / Inversiones / Hogar (ej.: Europa -> Ahorros). Dropdown en Q y en las columnas Categoria de cada bloque (fuente P8:P37). |
+| 3. Distribucion de medios / traspaso Hogar->Ahorro = capitalizacion | PARCIAL | La estructura lo soporta (cada medio tiene Categoria, cada Categoria tiene Tipo; 'Medio Cotidiano' es tipo Hogar), pero ninguna vista lo computa todavia con la taxonomia nueva (ver deuda 'Liquidez' en 01-Inicio). |
+
+**Suciedad detectada en el catalogo** (limpiar con Franco):
+- Bloque residual C1005:N1033: ~29 filas de movimientos estilo Registros (mayo 2025)
+  incrustadas en la hoja. La columna S del swap se acota a la fila 1000 para no ingerirlas.
+- 'Meta de Ahorro 3' duplicada (P17 y P18) y fila huerfana Q19='Hogar' sin nombre en P19.
+- Cuentas eliminadas del catalogo nuevo que siguen en el historico de Registros (Seguro
+  Compu, Seguro Celu, Pago Tarjeta MP, Medicamentos / Accesorios, Gastos - Tidetrack): sus
+  movimientos historicos quedan fuera de cualquier vista que enumere desde el catalogo.
+- 'Traspaso' y 'Ajuste' aparecen como cuentas en el historico pero no estan en ningun
+  catalogo (ni viejo ni nuevo): decidir si se catalogan o se documentan como cuentas
+  virtuales del sistema.
+- Las columnas Categoria por cuenta individual (D, G, J) existen solo como header: estan
+  vacias en todas las filas. La Categoria efectiva opera en Medios (N) y en el bloque P:Q.
+
+---
+
+## 06 | Mirada Interanual
+
+Resumen de categorias con vision interanual y tendencias.
+
+**Layout**: titulo C2; filtros G2:I4 (I2 mes, I3 anio, I4 moneda) y M2 (proyecto); tabla
+C7:R11 (conceptos x 12 meses; columna E = total interanual por concepto; fila 11 =
+Capitalizacion); zona de graficos desde C13.
+
+| Funcionalidad | Estado | Detalle |
+|---|---|---|
+| 1. Resumen de categorias en 12 meses | FUNCIONA | 36 formulas LET/SUMPRODUCT sobre Registros. OJO: la ventana NO es anio calendario sino movil (mes de referencia -4 a +7, columna K = mes seleccionado). |
+| 2. Capitalizacion | PARCIAL | NO se suma del ledger: es el residual Ingresos - Gastos Fijos - Gastos Variables (puede dar negativa). Es "capacidad de capitalizacion", no capitalizacion efectiva. |
+| 3. Tendencias (graficos) | NO VERIFICABLE | Los exports no incluyen charts; solo existe el rotulo C13. |
+| 4. Filtro por periodo | FUNCIONA | I2/I3 mueven la ventana. |
+| 5. Filtro por moneda | NO VERIFICADO | I4 existe y la arquitectura de formula incluye conversion, pero el tramo quedo truncado en el export. |
+| 6. Filtro por proyecto | PENDIENTE | M2 ('Todos') es decorativo: ninguna formula lo referencia. |
+
+**Relacion con el script**: esta era la unica hoja GENERADA por script
+(`07_MiradaInteranual.js`). Las formulas de la Fix son las del modulo, pero la hoja movio
+selectores y filas (el script espera E4/F4/R4 y rotulos C10:C12; la Fix usa I2/I3/I4+M2 y
+C8:C10). El preflight del modulo bloquea sin escribir; re-alinear las constantes MIRADA_* es
+parte del formulerio. Los rangos estan cerrados en la fila 883 (verificar en vivo; dejar
+abiertos al regenerar).
+
+---
+
+## 07 | Bases de datos (no estaban en el doc de Franco)
+
+### Registros
+
+BD transaccional de movimientos. Titulo B2 ("Hoja de Registros."), headers fila 6 (B6:M6),
+datos desde fila 7 en B:M, orden por fecha descendente. Columnas: Monto, Tipo
+(Ingreso/Egreso), Cuenta, Tipo de Cuenta, Medio, Moneda, Fecha (timestamp), Nota, y
+Valor ARS/USD/AUD/EUR: snapshot de cotizaciones del dia del registro, pegado como valor.
+Ese snapshot CONGELA el tipo de cambio historico: es el unico dato del ledger que despues no
+se puede recalcular. Escriben: `procesarCargas`, `recalcularTcRegistros`, migraciones.
+
+### Tipos de Cambio
+
+BD de cotizaciones diarias. Titulo C2, nombres de moneda fila 6, headers fila 7, datos desde
+fila 8: C:D Peso Argentino (siempre 1.0, moneda base), F:G Dolar Estadounidense, I:J Dolar
+Australiano, L:M Euro. Una fila por dia (timestamp 09:00), orden descendente. Escribe:
+`15_ExchangeRateApi` (`forzarCargaHistorica` + actualizador). **Pendiente de diagnostico: no
+hay filas nuevas desde el 2026-08-13** — revisar el trigger instalable del FX.
+
+---
+
+## Pendientes del formulerio (fase siguiente, hoja por hoja)
+
+Lo que el swap v0.11 NO resolvio a proposito (repuntear a ciegas habria corrompido en
+silencio). En orden sugerido:
+
+1. **Taxonomia 'Liquidez' huerfana (Inicio)**: C8/F8/C13/F13 comparan contra el tipo
+   'Liquidez', que ya no existe. Decidir con Franco la regla nueva (probablemente tipo
+   'Hogar' = flujo cotidiano y el resto = capital) y re-cablear las 4 formulas.
+2. **Tablero**: reconstruir la columna AV 'Valor en ARS' (monto x tasa segun N4); corregir
+   los #REF! de O23:O25 y el desfase de anclas (filas 6 vs 9); arreglar el SUMIFS de
+   traspasos (L28); realinear las filas de cumplimiento.
+3. **Presupuesto**: cablear monto historico promedio (contrato del 2026-08-13 en los
+   DEVTOOL), poblar cuentas desde el Plan, conectar los selectores, decidir la base de los
+   porcentajes (E16 vs $E$9), y recien despues conectar Inicio (D19:G22) y Tablero (N9:N11).
+4. **Mirada Interanual**: re-alinear las constantes MIRADA_* del script con la hoja nueva
+   (o regenerar la hoja desde el script); abrir los rangos cerrados en 883; decidir el rotulo
+   Capitalizacion vs Resultados; cablear o quitar el filtro Proyecto.
+5. **Calendarios** (Inicio y Tablero): derivarlos del periodo seleccionado.
+6. **Cargas**: rango abierto en la vista de ultimos 15; typo M2; formato de fecha R7:R21.
+7. **FX**: diagnosticar el trigger del actualizador (sin filas desde 2026-08-13).
+8. **Limpieza del catalogo**: residual C1005:N1033, 'Meta de Ahorro 3' duplicada, Q19
+   huerfana, decision sobre cuentas historicas eliminadas y sobre 'Traspaso'/'Ajuste'.
+
+---
+
+*Generado el 2026-08-18. Fuentes: doc funcional de Franco (2026-08-18), export de la
+planilla viva (2026-08-18 18:51), validacion por 8 auditores independientes, script
+productivo v0.10.0. Actualizar junto con cada release que toque hojas o formulas
+(regla changelog-obligatorio).*

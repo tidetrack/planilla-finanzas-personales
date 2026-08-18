@@ -18,7 +18,7 @@
 
 Este repo contiene el codigo Apps Script de la planilla en produccion (el prototipo funcional que el equipo y los clientes usan hoy). **No es la app web** - esa vive en `tidetrack/planilla-pymes` (PyME) y en la Tidetrack App (personales, stack Next.js). Este repositorio es la base de conocimiento y logica de negocio que se migrara: el schema esta normalizado y es transferible 1:1 a PostgreSQL.
 
-**Estado desde la Fase 0 (2026-08-12):** el baseline adoptado en la Fase 0 fue el script productivo **v0.8.2**, verbatim. Desde entonces el repo puede ir POR DELANTE de produccion entre deploys: la version del repo la declara `src/01_Version.js`, y la efectivamente desplegada se registra en `targets.yaml` (`version_desplegada`); ante duda, el drift-check de `sync_targets.command` es la verdad. Los commits v0.9.2-v0.9.4 (layout B:M de Registros, TC en bloques B/E/H/K) **nunca se desplegaron** y viven solo en la historia de git. El principio rector del arnes: la planilla productiva es la unica verdad del estado; el repo es la unica verdad del codigo; el vault es la unica verdad de las decisiones.
+**Estado del baseline:** la Fase 0 (2026-08-12) adopto produccion v0.8.2 verbatim; el 2026-08-18 se re-adopto produccion **v0.10.0** verbatim (una sesion del 2026-08-13 desarrollo v0.9.5-v0.10.0 fuera del repo: layout nuevo + migracion historica desde la planilla v03.1 — el drift fue en ambos sentidos, cicatriz conocida). Sobre ese baseline se construyo el **swap v0.11** (hojas Fix -> canonicas). La version del repo la declara `src/01_Version.js`; la efectivamente desplegada se registra en `targets.yaml` (`version_desplegada`); ante duda, el drift-check de `sync_targets.command` es la verdad, y **todo push arranca con un `clasp pull` a temp para comparar `ZZ_Changelog.js`**. El principio rector del arnes: la planilla productiva es la unica verdad del estado; el repo es la unica verdad del codigo; el vault es la unica verdad de las decisiones.
 
 ### Stack
 
@@ -93,90 +93,97 @@ Modulos de `src/` (17 archivos):
 | `ZZ_Changelog.js` | Historial de versiones in-code. OBLIGATORIO al final de cada cambio |
 | `appsscript.json` | Manifiesto OAuth |
 
-## 4. Esquema de datos (layout REAL de produccion, v0.8.2)
+## 4. Esquema de datos (layout REAL de produccion, v0.11 — geometria Fix)
 
-Las tablas viven en Google Sheets. **Este es el layout que describe `RANGES` en el `00_Config.js` actual y el que existe en la planilla productiva.** NUNCA cambiar la estructura de columnas sin actualizar `00_Config.js` primero.
+Las tablas viven en Google Sheets. **Este es el layout que describe `RANGES` en el `00_Config.js` actual y el que existe en la planilla productiva desde el swap v0.11 (2026-08-18).** NUNCA cambiar la estructura de columnas sin actualizar `00_Config.js` primero.
 
-> **ADVERTENCIA:** `docs/permanente/CONTEXTO_DATOS.md` y versiones anteriores de este
-> CLAUDE.md describen un layout B:M "nuevo" para Registros y Tipos de cambio. Ese
-> layout es codigo v0.9.x NO desplegado (ver subseccion al final). No asumirlo.
+> Historia en dos saltos: la migracion v0.9.5 (2026-08-13, verificada en vivo) movio
+> Registros a B:M y los TC a bloques B/E/H/K; el rediseno de Franco (hojas " - Fix") +
+> el swap v0.11 (2026-08-18) corrio TODO el layout de nuevo y reestructuro el Plan de
+> Cuentas. El detalle funcional por hoja vive en `docs/permanente/FUNCIONALIDADES.md`;
+> el mapa por hoja en `docs/permanente/MAPA_HOJAS.md`.
 
-### Plan de Cuentas (5 tablas)
+### Plan de Cuentas (5 tablas + consolidacion)
 
-Headers en fila 3, datos desde fila 4. Offset horizontal de 6-8 columnas (ADR-005 vigente).
+Titulo C2. Titulos de bloque fila 6, headers fila 7, datos desde fila 8 (los defaults
+globales `HEADER_ROW`/`DATA_START_ROW` = 7/8 describen esta hoja). En la hoja la nocion
+"Proyecto" se rotula **"Categoria"**; las claves internas de RANGES conservan el nombre
+historico.
 
 | Tabla | Columnas | Campos |
 |-------|----------|--------|
-| INGRESOS | I:J | nombre, proyecto |
-| GASTOS_FIJOS | L:M | nombre, proyecto |
-| GASTOS_VARIABLES | O:P | nombre, proyecto |
-| MEDIOS_PAGO | R:T | nombre, moneda, proyecto |
-| PROYECTOS | V:W | nombre, tipo (Liquidez/Ahorro/Inversion) |
+| INGRESOS | C:D | nombre, categoria |
+| GASTOS_FIJOS | F:G | nombre, categoria |
+| GASTOS_VARIABLES | I:J | nombre, categoria |
+| MEDIOS_PAGO | L:N | nombre, moneda, categoria |
+| PROYECTOS (rotulado "Categorias") | P:Q | nombre, tipo (Ahorros/Inversiones/Financiacion/Hogar) |
 
-Ademas: bloque "Categorias" en columna Y (Y2 titulo, Y3 header, Y4 formula ARRAYFORMULA/QUERY/FLATTEN consolidadora).
+Ademas: columna S = consolidacion de las cuentas de los 4 bloques (QUERY acotada a fila
+1000; la agrega el swap v0.11 espejando la columna Y del Plan viejo). Es la fuente del
+dropdown de Cuenta en Cargas: **no tocar a mano**.
 
-### Registros (ledger de transacciones) — columnas I:T
+### Registros (ledger de transacciones) — columnas B:M
+
+Titulo B2. Header fila 6, datos desde fila 7, orden por fecha descendente (Z-A).
 
 | Col | Campo | | Col | Campo |
 |-----|-------|-|-----|-------|
-| I | Monto | | O | Fecha |
-| J | Tipo | | P | Nota |
-| K | Cuenta | | Q | TC ARS |
-| L | Tipo de Cuenta | | R | TC USD |
-| M | Medio | | S | TC AUD |
-| N | Moneda | | T | TC EUR |
+| B | Monto | | H | Fecha |
+| C | Tipo | | I | Nota |
+| D | Cuenta | | J | TC ARS |
+| E | Tipo de Cuenta | | K | TC USD |
+| F | Medio | | L | TC AUD |
+| G | Moneda | | M | TC EUR |
 
-**Disputa de filas — CRITICO:** el codigo declara `HEADER_ROW = 3` / `DATA_START_ROW = 4` como globales, pero la evidencia real (scanner DevTools 2026-03: I2=Monto, I3=primer dato; auditoria del modulo Mirada Interanual 2026-06-23, que lee `Registros!$O$3:$O$5000`) ubica el **header en fila 2 y los datos desde fila 3**. Coherente con eso, `procesarCargas()` appendea con `minRow=2` y ordena desde la fila 2. Regla operativa: **toda formula o rango nuevo sobre Registros arranca en fila 3**. El gemelo digital de la Fase 2 cierra esta disputa de forma definitiva.
+Las columnas J:M congelan las cotizaciones del dia del registro (valor pegado): es el unico
+dato del ledger que despues no se puede recalcular.
 
-### Tipos de cambio (Data Lake) — bloques con offset
+### Tipos de Cambio (Data Lake) — bloques C/F/I/L
 
-Header fila 3, datos desde fila 4 (globales de Config; `appendMassive` usa `minRow=4`).
+Titulo C2. Nombres de moneda fila 6, header fila 7, datos desde fila 8. ARS siempre 1.0
+(moneda base).
 
 | Par | Columnas |
 |-----|----------|
-| TC_ARS | I:J |
-| TC_USD | L:M |
-| TC_AUD | O:P |
-| TC_EUR | R:S |
+| TC_ARS | C:D |
+| TC_USD | F:G |
+| TC_AUD | I:J |
+| TC_EUR | L:M |
 
 ### Cargas (data entry)
 
-Headers en fila 4, datos desde fila 5. Se lee con `getRange('I5:O19')`: Monto=I, Tipo=J, Cuenta=K, Medio=L, Moneda=M, Fecha=N, Nota=O. La hoja real se llama **`Cargas`** (via `NAV_CONFIG.SHEETS.CARGAS`).
+Titulo B2. Headers fila 6, grilla fija C7:I21 (15 filas, numeracion B7:B21): Monto=C,
+Tipo=D, Cuenta=E, Medio=F, Moneda=G, Fecha=H, Nota=I. Vista "Ultimos 15 movimientos" en
+M6:S21 (formula de hoja, el script no la toca). Dropdowns: Cuenta -> Plan!S, Medio ->
+Plan!L, Tipo y Moneda listas fijas.
 
 ### Monedas
 
 No hay tabla de monedas. Son una constante de backend: `MONEDAS_DISPONIBLES = ['ARS', 'USD', 'AUD', 'EUR']` (ADR-003).
 
-### Hojas reales de la planilla y discrepancias de nombres
+### Hojas reales y nombres
 
-Segun el scanner (2026-03-23, unica evidencia de cobertura total): Inicio, Tablero, Cargas, Plan de Cuentas, Tipos de Cambio, Registros, BD Antigua, Bocetos, Espacio blanco 1, Espacio blanco 2, DATA-ENTRY, CARGAS (Forest.), CALCU, ANUAL, PALETAS. La hoja "Mirada Interanual" se creo despues (junio 2026). Hay INCERTIDUMBRE declarada sobre renombres posteriores a marzo 2026; la Fase 2 (gemelo digital) resuelve el estado exacto.
+Canonicas post-swap: Inicio, Tablero, Presupuesto, Cargas, Plan de Cuentas, Mirada
+Interanual, Registros, Tipos de Cambio. Mas los respaldos ocultos del swap
+(`<nombre> (anterior 2026-08-18)`) hasta su purga. Las hojas auxiliares de marzo-junio
+(CALCU, ANUAL, Bocetos, _legacy, DATA-ENTRY, etc.) ya no existen.
 
-Discrepancias config vs planilla detectadas (`getSheetByName` es case-sensitive). Las tres primeras las resuelve desde v0.8.3 el resolver de alias de `00_Config.js` (las constantes son getters; la columna "valor historico" muestra lo que el config v0.8.2 declaraba en duro):
-
-| Constante | Valor historico (pre-v0.8.3) | Hoja real (scanner) |
-|---|---|---|
-| `SHEETS.DATA_ENTRY` | `'Hoja de Cargas'` | `Cargas` |
-| `SHEETS.TIPOS_CAMBIO` | `'Tipos de cambio'` | `Tipos de Cambio` |
-| `SHEETS.BD_ANTIGUA` | `'BD antigua'` | `BD Antigua` |
-| `NAV_CONFIG.SHEETS.ESPACIO_BLANCO_3` | `'Espacio blanco 3'` | no existe en el scanner (sin resolver: solo navegacion) |
-
-### Layout v0.9.x NO desplegado
-
-Los commits v0.9.2-v0.9.4 (2026-06-22) movieron Registros a B:M (header fila 5, datos fila 6) y los TC a bloques B:C/E:F/H:I/K:L, con `headerRow`/`dataRow` por tabla en RANGES y hojas `_legacy` de backup. **Ese codigo jamas llego a la planilla**: el ZZ_Changelog productivo termina en v0.8.2. Existe solo en la historia de git, para re-aplicarse (o descartarse — decision de Franco, probablemente en Fase 4) con deploy controlado y migracion de datos. Hasta entonces, ningun modulo ni formula nueva debe asumir el layout B:M.
+El resolver de alias de `00_Config.js` sigue vigente: `SHEETS.TIPOS_CAMBIO` acepta
+`'Tipos de Cambio'` (canonico desde v0.11) y `'Tipos de cambio'` (grafia historica);
+`SHEETS.DATA_ENTRY` acepta `'Cargas'` y `'Hoja de Cargas'`.
 
 ## 5. Logica critica (no tocar sin entender)
 
 **Motor FX (15_ExchangeRateApi.js):** USD se obtiene via `argentinadatos.com/v1/cotizaciones/dolares/oficial` (venta), con cache en memoria durante la ejecucion. EUR y AUD se triangulan via `frankfurter.app` (USD->EUR/AUD). Fallback a la cotizacion mas cercana disponible; ultimo recurso documentado. **Nunca silenciar errores de la API de tipo de cambio - siempre loguear el fallback.**
 
 **Flujo de datos principal:**
-1. Usuario ingresa transacciones en "Cargas" (I5:O19).
+1. Usuario ingresa transacciones en "Cargas" (grilla C7:I21).
 2. onEdit (appOnEdit) auto-completa fecha y moneda segun el medio seleccionado.
 3. procesarCargas() filtra el lote de forma no bloqueante — el filtro real es solo Monto no vacio: una fila con Monto pero sin Cuenta/Medio se procesa igual, con tipo_cuenta vacio (gap de validacion conocido) —, deduce tipo_cuenta contra los catalogos del Plan de Cuentas, busca/genera cotizaciones via APIs (cache por fecha, persistencia batch en los bloques TC).
-4. Registros finales se appendean a "Registros" (I:T) con TCs congelados y la hoja se ordena por fecha descendente.
-5. Hojas ocultas (CALCU, ANUAL) procesan cruces multidimensionales.
-6. Tablero consume resultados procesados (separacion de concerns).
+4. Registros finales se appendean a "Registros" (B:M, datos desde fila 7) con TCs congelados y la hoja se ordena por fecha descendente.
+5. Las vistas (Inicio, Tablero, Cargas, Mirada Interanual) agregan directo sobre Registros via QUERY, cruzando el Medio contra Plan de Cuentas L:N y P:Q. (Las hojas motor CALCU/ANUAL de la era v0.3 ya no existen.)
 
-**Mirada Interanual (07_MiradaInteranual.js):** escribe por codigo las formulas LET/SUMPRODUCT del rango G10:R14 de la hoja "Mirada Interanual" (Ingresos / Gastos Fijos / Gastos Variables por mes + Resultado), leyendo Registros filas 3:5000 con conversion de moneda por los TC congelados. Trampa de locale documentada en el modulo: la planilla esta en espanol (separador `;`), por eso las formulas se construyen en sintaxis en-US con SPLIT de string en vez de arrays literales (que `setFormula` no traduce). Selectores: E4=mes, F4=anio, R4=moneda.
+**Mirada Interanual (07_MiradaInteranual.js):** escribia por codigo las formulas LET/SUMPRODUCT de la hoja "Mirada Interanual". Trampa de locale documentada en el modulo: la planilla esta en espanol (separador `;`), por eso las formulas se construyen en sintaxis en-US con SPLIT de string en vez de arrays literales (que `setFormula` no traduce). **DESALINEADO desde el rediseno Fix**: el modulo espera selectores E4/F4/R4 y rotulos C10:C12, la hoja nueva usa I2/I3/I4+M2 y C8:C10; su preflight bloquea sin escribir. Re-alinear las constantes MIRADA_* es parte del formulerio (FUNCIONALIDADES.md, seccion 06).
 
 ## Decisiones Arquitectonicas Vigentes (ADRs)
 
@@ -184,8 +191,8 @@ Los commits v0.9.2-v0.9.4 (2026-06-22) movieron Registros a B:M (header fila 5, 
 - **ADR-002**: Moneda por defecto reactiva. Una cuenta = un nombre + moneda frecuente. El usuario puede cambiar moneda por transaccion.
 - **ADR-003**: Monedas como constante de backend, no como tabla en la hoja.
 - **ADR-004**: Data Lake de cotizaciones con carga batch via procesarCargas(). No hay consulta en vivo celda a celda.
-- **ADR-005**: Offset estructural. **VIGENTE EN PRODUCCION en todas las hojas** (Plan de Cuentas I+, Registros I:T, Tipos de cambio I:J..R:S). La eliminacion del offset en Registros/TC (2026-06-22) fue codigo v0.9.x que nunca se desplego; la evolucion queda pendiente de decision y deploy controlado (ver seccion 4). Ver GUIA_ARQUITECTURA.md.
-- **ADR-006**: Hidden Engines. Hojas ocultas CALCU y ANUAL procesan metricas matriciales. Las vistas publicas solo consumen resultados.
+- **ADR-005**: Offset estructural. SUPERADO por el rediseno Fix (2026-08-18): el layout actual arranca en B/C con titulos internos por hoja. Queda documentado como historia; la geometria vigente es la de la seccion 4.
+- **ADR-006**: Hidden Engines (CALCU/ANUAL). SUPERADO: esas hojas ya no existen; las vistas agregan directo sobre Registros.
 
 ## Convenciones de Codigo
 

@@ -6,6 +6,47 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-18 - Swap de hojas Fix: el rediseno de Franco pasa a ser canonico (v0.11.0)
+
+### Evento
+
+Franco rediseno la planilla completa duplicando hojas con sufijo " - Fix" (mas
+"Presupuesto - New") y entrego un documento funcional por hoja. Esta sesion: (1) re-adopto
+produccion v0.10.0 como baseline verbatim — una sesion del 2026-08-13 habia desarrollado
+v0.9.5-v0.10.0 (layout nuevo + migracion historica v03.1) fuera del repo, drift en ambos
+sentidos —; (2) valido el doc de Franco formula por formula con 8 auditores independientes
+sobre el export de la planilla viva y lo formalizo en `docs/permanente/FUNCIONALIDADES.md`;
+(3) construyo `MIGRACION_v0.11_SwapHojasFix.js` (quinteto estado / sincronizar / aplicar /
+revertir / purgar) auditado por 5 refutadores adversariales; (4) remapeo `00_Config.js` a la
+geometria Fix en el mismo release y reescribio MAPA_HOJAS.md y el CLAUDE.md.
+
+### Decisiones clave
+
+- **Repunteo semantico, no textual a ciegas**: las referencias de las vistas al Plan viejo
+  (`'Plan de Cuentas'!R:T` y `!V:W`) se remapean a la posicion nueva de los mismos bloques
+  (L:N y P:Q, columnas completas: el corrimiento de filas no las afecta). Toda referencia
+  que ningun patron cubre queda apuntando al respaldo y se lista en el informe.
+- **La ventana export->swap se cierra con `sincronizarBDsV011`**: lo cargado en las BDs
+  viejas despues de la duplicacion se copia a las Fix cruzando por AUSENCIA (multiconjunto),
+  nunca por rango. Filas presentes solo en la Fix abortan el swap.
+- **La columna Y del Plan viejo se recrea como columna S del nuevo** (consolidacion de
+  cuentas, fuente del dropdown de Cuenta en Cargas), acotada a fila 1000 por el bloque
+  residual C1005:N1033. Los dropdowns se reconstruyen por script: las fuentes de Validacion
+  de Datos siguen al objeto hoja, no al nombre.
+- **Respaldos por renombre + ocultamiento, purga aparte**: borrar hojas es irreversible;
+  la purga exige cero referencias vivas y confirmacion del operador.
+- **Migracion v0.9.5 retirada del menu**: su preflight espera la geometria pre-Fix y su
+  revertir restauraria el layout anterior al rediseno.
+
+### Pendiente (fase formulerio, hoja por hoja)
+
+Checklist completo en FUNCIONALIDADES.md ("Pendientes del formulerio"): taxonomia
+'Liquidez' huerfana en Inicio, columna 'Valor en ARS' y #REF!/#VALUE! del Tablero, motor del
+Presupuesto, realineacion de 07_MiradaInteranual, calendarios estaticos, trigger FX detenido
+desde 2026-08-13, limpieza del catalogo.
+
+---
+
 ## 2026-08-12 - Fase 1 del arnes Tidetrack: gobernanza (v0.8.3)
 
 ### Evento

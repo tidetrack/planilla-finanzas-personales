@@ -9,6 +9,37 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.11.0 - Swap de hojas Fix (2026-08-18)
+
+El rediseno de Franco (hojas " - Fix" + "Presupuesto - New") pasa a ser el layout canonico.
+Incluye la re-adopcion de produccion v0.10.0 como baseline (v0.9.5-v0.10.0 se desarrollaron
+fuera del repo el 2026-08-13: layout nuevo + migracion historica desde la planilla v03.1).
+
+### Added
+
+- **`MIGRACION_v0.11_SwapHojasFix.js`**: estado / sincronizar BDs / aplicar / revertir /
+  purgar. Renombra las viejas a respaldo oculto, las Fix a canonicas, repuntea formulas
+  (con remapeo semantico R:T->L:N y V:W->P:Q para el Plan), recrea la consolidacion de
+  cuentas (columna S del Plan) y reconstruye los dropdowns de Cargas.
+- **`docs/permanente/FUNCIONALIDADES.md`**: el doc funcional de Franco validado formula
+  por formula, con estado real por funcionalidad y el checklist del formulerio.
+
+### Changed
+
+- **`00_Config.js` remapeado a la geometria Fix**: Plan C:D/F:G/I:J/L:N/P:Q (headers 7,
+  datos 8), Cargas C7:I21, Registros B:M con datos desde fila 7, TC C:D/F:G/I:J/L:M con
+  datos desde fila 8. `HEADER_ROW`/`DATA_START_ROW` globales 3/4 -> 7/8. Canonico de TC:
+  'Tipos de Cambio'.
+- **MAPA_HOJAS.md y CLAUDE.md reescritos** a la realidad post-swap (las hojas auxiliares
+  CALCU/ANUAL/Bocetos/_legacy ya no existen; ADR-005 y ADR-006 quedan superados).
+
+### Removed
+
+- **Migracion v0.9.5 fuera del menu**: incoherente con el config remapeado; el archivo se
+  conserva como historia.
+
+---
+
 ## v0.8.3 - Gobernanza Fase 1 del arnes (2026-08-12)
 
 Primera version sobre el baseline productivo v0.8.2. Cambios de gobernanza sin

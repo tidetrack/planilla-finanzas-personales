@@ -1,168 +1,132 @@
 # Mapa de Hojas - Tidetrack Finanzas Personales
 
-Registro canónico de todas las hojas de la planilla con sus GIDs, propósito y layout.
+Registro canonico de todas las hojas de la planilla con su proposito y layout.
 
-**Spreadsheet ID:** `1YXnN-9X1itjpuxOBBwGwH3LSMqeGBtyCrUcFK4xCcUI`  
-**URL base:** `https://docs.google.com/spreadsheets/d/1YXnN-9X1itjpuxOBBwGwH3LSMqeGBtyCrUcFK4xCcUI/edit?gid=`  
-**Mapeado:** 2026-06-05 via Cowork + Claude in Chrome  
+**Spreadsheet ID:** `1YXnN-9X1itjpuxOBBwGwH3LSMqeGBtyCrUcFK4xCcUI`
+**Titulo:** `PLANILLA FINANZAS_v4 .WIP | Personal` (owner start.tidetrack)
+**URL base:** `https://docs.google.com/spreadsheets/d/1YXnN-9X1itjpuxOBBwGwH3LSMqeGBtyCrUcFK4xCcUI/edit?gid=`
+**Ultimo relevamiento completo:** 2026-08-18 (export xlsx de la planilla viva + 8 auditores)
 
----
-
-## Hojas Visibles (UX)
-
-| Nombre | GID | Rol | Estado |
-|--------|-----|-----|--------|
-| Inicio | 306858729 | Pantalla de bienvenida y navegacion | Produccion |
-| Tablero | 201314967 | Dashboard principal: patrimonio, presupuesto, flujo | WIP |
-| Cargas | 1889618311 | Formulario batch de carga de transacciones | Produccion |
-| Mirada Interanual | — | Resumen historico anual (consume ANUAL) | WIP |
-| Plan de Cuentas | 738279722 | Catalogo maestro de 5 tablas relacionales | Produccion |
-| Tipos de cambio | — (re-mapear) | Data lake historico de cotizaciones (4 vectores, layout nuevo) | Produccion |
-| Registros | — (re-mapear) | Ledger transaccional append-only (layout nuevo) | Produccion |
-| Bocetos | — | Prototipado visual de pantallas nuevas | Dev |
-| Espacio blanco 2 | — | Espacio libre de trabajo | Dev |
-
-> Nota: los GIDs de "Registros" y "Tipos de cambio" cambiaron con la migracion 2026-06-22 (las hojas de produccion actuales son las ex-"Copia de..."). El GID 709656625 anterior corresponde a la hoja que ahora es "Registros_legacy". Re-mapear via DevTools o inspeccion DOM.
-
-## Hojas Ocultas (Motores y Archivo)
-
-| Nombre | GID | Rol | Referencia |
-|--------|-----|-----|-----------|
-| CALCU | 367882887 | Motor mensual: cruces matriciales para Tablero | ADR-006 |
-| ANUAL | 1358411018 | Motor anual: agregaciones para Mirada Interanual | ADR-006 |
-| DATA-ENTRY | 1849033622 | Prototipo del nuevo schema relacional normalizado | DATABASE_SCHEMA.md |
-| Registros_legacy | — (re-mapear) | Backup del ledger pre-migracion (~2879 filas, layout I:T) | Migracion 2026-06-22 |
-| Tipos de cambio_legacy | — (re-mapear) | Backup del data lake TC pre-migracion (bloques I:J/L:M/O:P/R:S) | Migracion 2026-06-22 |
-| CARGAS (Forest.) | — | Backup/prototipo alternativo de hoja de Cargas | Legacy |
-| BD Antigua | — | Registros historicos pre-Tidetrack (formato plano) | Legacy |
-| Mirada Interanual backup | — | Backup del modulo anual | Legacy |
-| PALETAS | — | Sistema de colores y tokens de diseno | Dev |
+> Este mapa describe el estado POST-SWAP v0.11 (MIGRACION_v0.11_SwapHojasFix.js): Franco
+> rediseno la planilla duplicando hojas con sufijo " - Fix" y el swap las convirtio en las
+> canonicas, dejando las viejas como respaldos ocultos "<nombre> (anterior 2026-08-18)"
+> hasta su purga. Los GIDs sobreviven a los renombres (Sheets los conserva); re-mapearlos
+> con el proximo escaneo del gemelo digital.
+> El detalle funcional de cada hoja (que funciona, que esta pendiente) vive en
+> FUNCIONALIDADES.md; la geometria ejecutable vive en src/00_Config.js (SSOT).
 
 ---
 
-## Layout de Datos - Produccion
+## Hojas canonicas (post-swap v0.11)
 
-> Nota de migracion (2026-06-22): el offset historico de ADR-005 fue eliminado
-> en "Registros" y "Tipos de cambio". Esas hojas ahora arrancan en columna B.
-> Plan de Cuentas y Cargas NO cambiaron y siguen con offset (I+).
+| Nombre | Rol | Estado funcional |
+|--------|-----|------------------|
+| Inicio | Dashboard resumen: KPIs de flujo y capital, calendario, presupuesto del mes | Parcial (ver FUNCIONALIDADES 01) |
+| Tablero | Vista mensual en profundidad: medios, saldos, traspasos, disponibilidad | Parcial, con formulas a reparar (ver FUNCIONALIDADES 02) |
+| Presupuesto | Presupuesto por composicion (historico + presupuestado) | Esqueleto sin motor (ver FUNCIONALIDADES 03) |
+| Cargas | Carga de movimientos en lotes de 15 + vista ultimos 15 | Produccion |
+| Plan de Cuentas | Catalogo maestro: 5 bloques + columna S de consolidacion | Produccion |
+| Mirada Interanual | Matriz conceptos x 12 meses (ventana movil) + tendencias | Funciona; script desalineado (ver FUNCIONALIDADES 06) |
+| Registros | BD transaccional de movimientos (ledger) | Produccion |
+| Tipos de Cambio | BD de cotizaciones diarias (4 monedas) | Produccion (FX sin filas desde 2026-08-13: diagnosticar) |
 
-### Plan de Cuentas (gid=738279722) - SIN CAMBIOS
+## Respaldos del swap (ocultos, hasta la purga)
 
-5 tablas relacionales co-ubicadas. Header fila 3, datos desde fila 4. Offset I+.
-
-| Tabla interna | Columnas | Campos |
-|---------------|----------|--------|
-| INGRESOS | I:J | nombre, proyecto |
-| GASTOS_FIJOS | L:M | nombre, proyecto |
-| GASTOS_VARIABLES | O:P | nombre, proyecto |
-| MEDIOS_PAGO | R:T | nombre, moneda, proyecto |
-| PROYECTOS | V:W | nombre, tipo (Liquidez / Ahorro / Inversion) |
-
-Bloque "Categorias": Y2 titulo, Y3 header, Y4 formula consolidadora:
-```excel
-=ARRAYFORMULA(QUERY(FLATTEN({I4:I;L4:L;O4:O;R4:R}),"SELECT * WHERE Col1 IS NOT NULL",0))
-```
-Aplana las 4 tablas de cuentas en una lista plana para los dropdowns de validacion de datos en Cargas.
-
-### Registros (produccion) - LAYOUT NUEVO desde 2026-06-22
-
-Ledger append-only. Header en fila 5, datos desde fila 6. Sin offset (B:M). GID pendiente de re-mapeo.
-
-| Col | Campo | Notas |
-|-----|-------|-------|
-| B | Monto | Siempre positivo |
-| C | Tipo | "Ingreso" o "Egreso" |
-| D | Cuenta | FK -> Plan de Cuentas |
-| E | Tipo de Cuenta | Ingreso / Gasto fijo / Gasto variable |
-| F | Medio | FK -> MEDIOS_PAGO |
-| G | Moneda | ARS / USD / AUD / EUR |
-| H | Fecha | Timestamp congelado al procesar |
-| I | Nota | Texto libre |
-| J | Valor ARS | TC ARS congelado |
-| K | Valor USD | TC USD congelado |
-| L | Valor AUD | TC AUD congelado |
-| M | Valor EUR | TC EUR congelado |
-
-### Registros_legacy (oculta) - BACKUP
-
-Hoja de solo lectura. Layout anterior (~2879 filas). Header fila 2, datos desde fila 3.
-Columnas I:T (offset historico de ADR-005). GID pendiente de re-mapeo.
-
-### Tipos de cambio (produccion) - LAYOUT NUEVO desde 2026-06-22
-
-4 vectores de cotizaciones historicas. Titulos de bloque fila 5, sub-headers (Fecha/Cotizacion)
-fila 6, datos desde fila 7. Sin offset (bloques arrancan en B). GID pendiente de re-mapeo.
-
-| Par | Columnas |
-|-----|----------|
-| TC_ARS (ARS base = 1.0) | B:C |
-| TC_USD (USD/ARS oficial) | E:F |
-| TC_AUD (AUD/ARS) | H:I |
-| TC_EUR (EUR/ARS) | K:L |
-
-Carga via batch `procesarCargas()` que consume argentinadatos.com (ARS) y frankfurter.app (EUR/AUD).
-
-### Tipos de cambio_legacy (oculta) - BACKUP
-
-Hoja de solo lectura. Layout anterior. Header fila 3, datos desde fila 4.
-Bloques I:J (ARS), L:M (USD), O:P (AUD), R:S (EUR). GID pendiente de re-mapeo.
-
-### Cargas (gid=1889618311)
-
-Zona de ingreso de usuario: rango I5:O19 (hasta 15 filas por batch).
-El `onEdit` trigger auto-completa fecha y moneda segun el medio seleccionado.
-`procesarCargas()` valida el lote, busca cotizaciones y appendea a Registros.
+`Inicio / Tablero / Cargas / Plan de Cuentas / Registros / Tipos de cambio` con sufijo
+`(anterior 2026-08-18)`. Se leen entre si (foto consistente del pasado). Se purgan con
+`Tidetrack Dev > Migracion v0.11 > 5. Purgar respaldos`, que exige cero referencias vivas y
+confirmacion del operador. `Mirada Interanual` y `Presupuesto` no tienen respaldo (la Mirada
+vieja fue eliminada a mano antes del swap; Presupuesto es una hoja nueva).
 
 ---
 
-## Tablero (gid=201314967) - Dependencias de Modulos
+## Layout de datos - Produccion (geometria Fix)
 
-Ver FORMULAS_TABLERO.md para codigo completo de cada modulo.
+### Plan de Cuentas
 
-| Modulo | Rango renderizado | BD consumidas |
-|--------|-------------------|---------------|
-| Selector moneda global | I9 | — (controlador maestro) |
-| Liquidez (por moneda) | S4:S7 | BD Transaccional AN:AZ, Plan de Cuentas R:T + V:W |
-| Riqueza acumulada | U4:U7 | BD Transaccional, Plan de Cuentas, Cotizaciones AL4:AL6 |
-| Presupuesto vs Real | S13:S15 / U13:U15 | BD Transaccional filtrado por periodo |
-| Ahorro real del mes | U17 | BD Transaccional, Plan de Cuentas, selector I9 |
-| Disponibilidad de fondos | T20:T22 | Saldos S4:S7, Presupuestos S13:S15, Ejecucion U13:U15 |
-| Flujo: Ingresos / Fijos / Variables | Bajo titulos | BD Transaccional + QUERY + BUSCARV doble |
-| Medios bancarios | AF:AH | BD Transaccional, Plan de Cuentas |
-| Cotizaciones (controlador) | AL4:AL6 | TC congelados o actualizados manualmente |
-| Portafolio de proyectos | AJ10:AL22 | BD Transaccional, Plan de Cuentas, Cotizaciones, I9 |
+Titulo C2. Titulos de bloque fila 6, headers de columna fila 7, datos desde fila 8.
+En la hoja, la nocion "Proyecto" se rotula "Categoria"; las claves internas de RANGES
+conservan el nombre historico.
 
-**BD Transaccional del Tablero:** rangos AN:AZ dentro de la misma hoja Tablero.
-- AN: monto
-- AO: tipo (Ingreso/Egreso)
-- AP: categoria de cuenta (incluye "Inicio Mes")
-- AQ: categoria de gasto
-- AR: medio bancario
-- AS: moneda
+| Tabla interna (RANGES) | Columnas | Campos |
+|------------------------|----------|--------|
+| INGRESOS | C:D | nombre, categoria |
+| GASTOS_FIJOS | F:G | nombre, categoria |
+| GASTOS_VARIABLES | I:J | nombre, categoria |
+| MEDIOS_PAGO | L:N | nombre, moneda, categoria |
+| PROYECTOS (rotulado "Categorias") | P:Q | nombre, tipo (Ahorros / Inversiones / Financiacion / Hogar) |
+| (consolidacion, agregada por el swap) | S | union de las cuentas de los 4 bloques via QUERY acotada a fila 1000; fuente del dropdown de Cuenta en Cargas. No tocar a mano |
+
+Validaciones propias: columnas Categoria de cada bloque (D/G/J/N) -> lista P8:P37; columna
+Tipo (Q) -> lista fija de los 4 tipos.
+Suciedad conocida: bloque residual C1005:N1033 (movimientos de mayo 2025 incrustados),
+'Meta de Ahorro 3' duplicada, Q19 sin nombre. Ver FUNCIONALIDADES 05.
+
+### Cargas
+
+Titulo B2. Headers fila 6, grilla de carga fija C7:I21 (15 filas, numeracion B7:B21; no
+crece, se limpia despues de cada lote). Vista "Ultimos 15 movimientos" M6:S21 (QUERY sobre
+Registros). Dropdowns: Tipo lista fija Ingreso/Egreso, Cuenta -> Plan!S, Medio -> Plan!L,
+Moneda lista fija ARS/USD/AUD/EUR.
+
+| Campo | Columna |
+|-------|---------|
+| monto | C |
+| tipo | D |
+| cuenta | E |
+| medio | F |
+| moneda | G |
+| fecha | H |
+| nota | I |
+
+### Registros
+
+Titulo B2 ("Hoja de Registros."). Header fila 6, datos desde fila 7, columnas B:M, orden por
+fecha descendente (Z-A). Append por `procesarCargas`; las columnas J:M congelan las
+cotizaciones del dia del registro (valor pegado, irrecuperable despues).
+
+| Campo | Columna |
+|-------|---------|
+| monto | B |
+| tipo | C |
+| cuenta | D |
+| tipo_cuenta | E |
+| medio | F |
+| moneda | G |
+| fecha | H |
+| nota | I |
+| tc_ars / tc_usd / tc_aud / tc_eur | J / K / L / M |
+
+### Tipos de Cambio
+
+Titulo C2. Nombres de moneda fila 6, headers fila 7, datos desde fila 8. Cuatro tablas
+paralelas Fecha/Cotizacion, una fila por dia, orden descendente. ARS siempre 1.0 (moneda
+base).
+
+| Bloque | Columnas |
+|--------|----------|
+| TC_ARS | C:D |
+| TC_USD | F:G |
+| TC_AUD | I:J |
+| TC_EUR | L:M |
+
+### Inicio / Tablero / Presupuesto / Mirada Interanual
+
+Vistas sin escritura de script (salvo la Mirada, generable por `07_MiradaInteranual.js`,
+hoy desalineado). Su layout interno y el estado de cada bloque estan en FUNCIONALIDADES.md
+(secciones 01, 02, 03 y 06); sus motores QUERY leen `Registros` y cruzan contra
+`Plan de Cuentas` L:N y P:Q.
 
 ---
 
-## Motores Ocultos (ADR-006)
-
-### CALCU (gid=367882887)
-
-Procesa cruces multidimensionales del periodo mensual. Las vistas publicas (Tablero) consumen los resultados sin recalcular. Pendiente de documentar su layout interno.
-
-### ANUAL (gid=1358411018)
-
-Procesa agregaciones historicas para Mirada Interanual. Mismo patron que CALCU. Pendiente de documentar su layout interno.
-
----
-
-## DATA-ENTRY (gid=1849033622) - Schema Futuro
-
-Contiene el nuevo schema relacional normalizado (ver DATABASE_SCHEMA.md v1.0). Aun en diseno; la produccion sigue corriendo en Plan de Cuentas + Registros. La migracion se activara cuando > 3000 transacciones (ADR-001). El schema esta listo para traducirse 1:1 a PostgreSQL.
-
----
-
-## Historial del Mapa
+## Historial del mapa
 
 | Fecha | Accion | Autor |
 |-------|--------|-------|
 | 2026-06-05 | Primer mapeo completo de GIDs via inspeccion DOM + Chrome | Cowork |
-| 2026-06-22 | Actualizacion layout Registros (B:M, fila 5/6) y Tipos de cambio (B/E/H/K, fila 6/7). Incorporacion hojas _legacy ocultas. GIDs de produccion pendientes de re-mapeo | docs-keeper |
+| 2026-06-22 | Actualizacion layout Registros (B:M, fila 5/6) y Tipos de cambio (B/E/H/K, fila 6/7). Incorporacion hojas _legacy ocultas | docs-keeper |
+| 2026-08-13 | Migracion v0.9.5 (layout nuevo verificado en vivo) + migracion historica v0.10.0 desde la planilla v03.1 | sesion Claude 2026-08-13 |
+| 2026-08-18 | Rediseno de Franco (hojas " - Fix") + swap v0.11: reescritura completa del mapa a la geometria Fix. Las hojas ocultas de junio (CALCU, ANUAL, Bocetos, _legacy, etc.) ya no existen en la planilla | sesion Claude 2026-08-18 |
+
+> Los GIDs de la tabla de junio quedaron obsoletos tras las limpiezas de hojas; se
+> re-mapean con el proximo escaneo del gemelo digital (Dev > Exportar arquitectura).
