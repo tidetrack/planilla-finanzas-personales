@@ -2,7 +2,7 @@
 
 > Propósito: Fuente de verdad sobre la organización del repositorio. Toda nueva carpeta o archivo debe registrarse aquí antes de crearse. Los agentes de IA usan este documento como referencia canónica.
 
-Versión: v0.8.3 (gobernanza Fase 1 del arnés sobre el baseline productivo v0.8.2) | Última actualización: 2026-08-12
+Versión: v0.11.0 (post swap de hojas Fix; instrumental del gemelo digital recuperado) | Última actualización: 2026-08-18
 
 ---
 
@@ -50,6 +50,9 @@ planilla-finanzas-personales/
 │ │ ├── PROMPT_MAESTRO.md # Prompts de referencia para el ecosistema agéntico
 │ │ ├── RESUMEN_PROYECTO.md # Visión general de Tidetrack
 │ │ ├── ROADMAP_PRODUCTO.md # Etapas y prioridades del producto
+│ │ ├── MAPA_ARQUITECTURA_PLANILLA.md # Capa SEMÁNTICA curada del gemelo (el único que se edita a mano)
+│ │ ├── INVENTARIO_CELDAS.md # Capa MECÁNICA auto-generada (NO editar: se regenera)
+│ │ ├── celdas.tsv # Volcado aplanado para auditoría con awk/grep (NO editar)
 │ │ ├── TIDETRACK_ARQUITECTURA_ESTRICTA.json # JSON crudo generado por DevTools (para NotebookLM)
 │ │ └── database_er_diagram.png # Diagrama ER de relaciones
 │ ├── sesiones/ # Notas de sesiones de trabajo específicas
@@ -66,8 +69,9 @@ planilla-finanzas-personales/
 │ └── README.md # Índice de documentación
 │
 ├── .claude/ # Capa de gobernanza Claude Code (manda cuando se trabaja desde Claude Code)
-│ ├── agents/ # Subagentes especializados (7 agentes activos)
+│ ├── agents/ # Subagentes especializados (8 agentes activos)
 │ │ ├── tidetrack-pm.md # Dispatcher y orquestador central
+│ │ ├── gemelo-digital.md # Dueño del gemelo: scanner, snapshot, inventario, TSV, MAPA y diff de no-daño
 │ │ ├── appscript-backend.md # Experto en lógica Apps Script (src/*.js, pipelines, deploy)
 │ │ ├── appscript-ui.md # Especialista en HtmlService y UI embebida
 │ │ ├── docs-keeper.md # Coherencia documental (changelog, ADRs, estructura)
@@ -104,6 +108,11 @@ planilla-finanzas-personales/
 │ │ ├── estructura-obligatoria.md # Reglas de estructura de carpetas
 │ │ └── no-emojis.md # Regla estricta de tono profesional
 │ └── workflows/ # Flujos de trabajo reutilizables
+│
+├── devtools/ # Herramientas del gemelo digital (Python, corren en local, NO se deployan)
+│ ├── generar_inventario_planilla.py # Del snapshot JSON produce INVENTARIO_CELDAS.md (capa mecánica)
+│ ├── generar_tsv_celdas.py # Aplana el snapshot a celdas.tsv para auditar con awk/grep sin cargar el JSON
+│ └── diff_snapshots.py # Prueba de no-daño: compara dos snapshots y falla si cambió una fórmula
 │
 ├── scripts/ # Herramientas de automatización local
 │ └── auto-sync.js # Watcher: commit + push automático
