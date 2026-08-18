@@ -5,6 +5,62 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-18] v0.11.0 - Swap de hojas Fix: el rediseno de Franco pasa a ser canonico:
+ * - CONTEXTO: Franco rediseno la planilla duplicando hojas con sufijo " - Fix" (mas
+ *   "Presupuesto - New") y las declaro definitivas. El layout se corrio entero: Plan de
+ *   Cuentas reestructurado (bloques C:D/F:G/I:J/L:N/P:Q, headers fila 7, datos fila 8;
+ *   "Proyecto" pasa a llamarse "Categoria" y aparecen los tipos generales
+ *   Ahorros/Inversiones/Financiacion/Hogar), Cargas con grilla C7:I21, Registros con datos
+ *   desde fila 7 y Tipos de Cambio en C:D/F:G/I:J/L:M con datos desde fila 8.
+ * - NUEVO MIGRACION_v0.11_SwapHojasFix.js: quinteto estado / sincronizar / aplicar /
+ *   revertir / purgar. Aplicar renombra las viejas a "<nombre> (anterior YYYY-MM-DD)" y las
+ *   oculta, renombra las Fix a canonicas, repuntea las formulas y reconstruye los dropdowns.
+ *   Los respaldos NO se borran: la purga es un paso aparte que exige cero referencias vivas
+ *   y confirmacion del operador.
+ * - SINCRONIZAR cubre la ventana export->swap: todo lo cargado en las BDs viejas despues de
+ *   la duplicacion (movimientos y cotizaciones) se copia a las Fix cruzando por AUSENCIA
+ *   (multiconjunto fecha+monto+tipo+cuenta+medio; fechas por dia en TC), nunca por rango.
+ *   Filas presentes solo en la Fix abortan el swap: una diferencia no entendida no se pisa.
+ * - REPUNTEO SEMANTICO, no textual a ciegas: dos reglas derivadas del censo real de
+ *   referencias. (1) Plan viejo: 'Plan de Cuentas'!R:T y !V:W (columnas completas) se
+ *   remapean a la posicion nueva de los mismos bloques (L:N y P:Q). (2) Registros: TODAS las
+ *   referencias reales son ancladas por fila (B5:M1005, $B$6:$B883...) y la BD nueva corrio
+ *   una fila (header 5->6, datos 6->7): se reescriben celda por celda sumando 1 a cada numero
+ *   de fila, guardando la formula anterior para el rollback. Toda referencia que ninguna
+ *   regla cubre queda apuntando al respaldo y se LISTA en el informe en vez de adivinarse.
+ * - El bloque residual C1005:N1033 que el Plan Fix arrastra se mueve a una hoja de CUARENTENA
+ *   oculta (getLastRow/appendRow del ABM y los dropdowns lo ingeririan como catalogo). Nada
+ *   se borra: la cuarentena queda para decision de Franco.
+ * - La columna Y del Plan viejo (consolidacion de cuentas de los 4 bloques, fuente del
+ *   dropdown de Cuenta en Cargas) se recrea como columna S del Plan nuevo. La formula se
+ *   escribe con ";" y FLATTEN de argumentos multiples (sin array literal) por la trampa de
+ *   locale es_AR verificada en vivo (setFormula no traduce separadores), y la escritura se
+ *   VERIFICA leyendo la celda. Dropdowns de Cargas reconstruidos (Cuenta -> Plan!S, Medio ->
+ *   Plan!L, ambos acotados a la fila 1000) porque las fuentes de Validacion de Datos siguen
+ *   al objeto hoja, no al nombre.
+ * - Maquina de estados sin callejones: una corrida muerta sin catch (timeout de 6 min, corte
+ *   manual) deja estado "en vuelo" y "4. Revertir" la RECONCILIA mirando que hoja quedo con
+ *   que nombre; el rollback del catch deshace repunteos ademas de renombres y solo marca
+ *   revertido si quedo completo. La comparacion de BDs usa la fila COMPLETA (12 columnas)
+ *   como clave y detecta cotizaciones divergentes por fecha: toda diferencia no entendida
+ *   frena el swap en vez de pisarse.
+ * - 00_Config.js remapeado a la geometria Fix EN EL MISMO RELEASE (regla: config y planilla
+ *   cambian juntos). HEADER_ROW/DATA_START_ROW 3/4 -> 7/8; canonico de TC ahora
+ *   'Tipos de Cambio' (la grafia vieja queda de alias). Entre el push y aplicarSwapV011 el
+ *   sistema queda intencionalmente inconsistente: el swap se corre inmediatamente despues.
+ * - RETIRADOS DEL MENU la Migracion v0.9.5 y 'Robustez de vistas': ambos tienen anclas de la
+ *   geometria pre-Fix (la v0.9.5 en su preflight contra RANGES; RobustezVistas en su lista
+ *   cerrada RV_CELDAS: Tablero!AN4, Inicio!Y4/AM4, Cargas!R5) y post-swap operarian sobre
+ *   celdas equivocadas. Los archivos se conservan enteros como historia.
+ * - PENDIENTES CONOCIDOS que el swap NO resuelve (fase formulerio, hoja por hoja): la
+ *   condicion 'Liquidez' de Inicio quedo huerfana (el tipo ya no existe en la taxonomia
+ *   nueva; 'Medio Cotidiano' ahora es 'Hogar'), el Tablero Fix tiene #REF!/#VALUE! y su
+ *   columna 'Valor en ARS' esta en ceros sin formula, Presupuesto es un cascaron sin motor,
+ *   el calendario de Inicio es estatico, y 07_MiradaInteranual espera anclajes viejos (su
+ *   preflight bloquea sin escribir). Detalle en docs/permanente/FUNCIONALIDADES.md.
+ *
+ * ---
+ *
  * [2026-08-13] v0.10.0 - Migracion historica desde la planilla v03.1:
  * - CONTEXTO: mientras el pipeline estuvo roto (2026-03-29 a 2026-08-13) Franco siguio
  *   cargando sus finanzas en la planilla vieja "PLANILLA FINANZAS_v03.1 | Fran". El ledger

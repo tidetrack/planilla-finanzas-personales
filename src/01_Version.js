@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 10,
+ minor: 11,
  patch: 0,
 
  /**
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-08-13',
- releaseName: 'v0.10.0 - Migracion historica de la planilla v03.1',
+ releaseDate: '2026-08-18',
+ releaseName: 'v0.11.0 - Swap de hojas Fix (el rediseno pasa a ser canonico)',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,10 +36,11 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
-v0.8.3 (2026-08-12) - Gobernanza Fase 1 (arnes)
-+ 00_Config.js: _resolverNombreHoja(alias) + invalidarCacheNombresHojas(); SHEETS.DATA_ENTRY/TIPOS_CAMBIO/BD_ANTIGUA como getters con alias.
-+ SHEETS.MIRADA_INTERANUAL y SHEETS.DEBUG_MIRADA; 07_MiradaInteranual.js deja de hardcodear nombres de hoja.
-* MENU_CONFIG sin emojis; RANGES TC_* con sheet como getter (resolucion perezosa).
+v0.11.0 (2026-08-18) - Swap de hojas Fix
++ MIGRACION_v0.11_SwapHojasFix.js: estado / sincronizar BDs / aplicar / revertir / purgar.
+! 00_Config.js remapeado a la geometria Fix (Plan C:D-F:G-I:J-L:N-P:Q h7 d8, Cargas C7:I21, Registros h6 d7, TC C:D-F:G-I:J-L:M h7 d8).
+! HEADER_ROW/DATA_START_ROW globales 3/4 -> 7/8. Canonico de TC pasa a 'Tipos de Cambio'.
+- Menu: sale la Migracion v0.9.5 (incoherente con el config nuevo); entra el swap v0.11.
 
 Historial completo y canónico en: src/ZZ_Changelog.js
  `

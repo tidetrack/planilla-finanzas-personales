@@ -3,26 +3,33 @@
  * Configuración global del sistema Tidetrack
  * Define constantes, rangos de columnas, y enums
  *
- * @version 0.9.5
+ * @version 0.11.0
  * @since 0.1.0
- * @lastModified 2026-08-13
+ * @lastModified 2026-08-18
  */
 
 // [CONCEPTO DE NEGOCIO] Single Source of Truth de nombres de hoja y rangos; ningun modulo hardcodea posiciones.
 // [FUNDAMENTO TEORICO / ADMINISTRATIVO] La resolucion de alias tolera renombres de pestanas sin ventana de rotura; ante ambiguedad gana la hoja historica con datos. @see docs/permanente/ARNES_TIDETRACK.md
 //
 // [FUNDAMENTO TEORICO / ADMINISTRATIVO - LAYOUTS HETEROGENEOS]
-// Desde la migracion de la planilla productiva (verificada en vivo el 2026-08-13) las hojas
-// NO comparten un unico layout:
-//   - Plan de Cuentas: sin migrar. Header fila 3, datos fila 4, offset I+ (ADR-005).
-//   - Cargas: sin migrar. Header fila 4, datos fila 5, grilla fija I5:O19.
-//   - Registros: migrada. Titulo B2, header fila 5, datos fila 6, columnas B:M.
-//   - Tipos de cambio: migrada. Titulo B2, titulos de bloque fila 5, header fila 6,
-//     datos fila 7, bloques B:C / E:F / H:I / K:L.
-// Por eso cada entrada de RANGES puede declarar su propio headerRow/dataRow. HEADER_ROW y
+// decision Franco 2026-08-18: la geometria de este config describe las hojas FIX (el rediseno
+// que el swap v0.11 convierte en canonico). Se remapea en el MISMO release que ejecuta el
+// swap: entre el deploy y aplicarSwapV011 el sistema queda intencionalmente inconsistente
+// (config nuevo sobre hojas viejas), por eso el swap se corre inmediatamente despues del push.
+// Layout post-swap:
+//   - Plan de Cuentas: titulo C2, titulos de bloque fila 6, header fila 7, datos fila 8,
+//     bloques C:D (Ingresos) / F:G (Gastos Fijos) / I:J (Gastos Variables) / L:N (Medios) /
+//     P:Q (Categorias, ex Proyectos). La nocion "Proyecto" pasa a llamarse "Categoria" en la
+//     hoja; las claves internas de RANGES conservan su nombre historico.
+//   - Cargas: titulo B2, header fila 6, datos filas 7-21, grilla fija C7:I21 (numeracion B7:B21).
+//   - Registros: titulo B2, header fila 6, datos fila 7, columnas B:M (sin cambio de columnas).
+//   - Tipos de Cambio: titulo C2, titulos de bloque fila 6, header fila 7, datos fila 8,
+//     bloques C:D / F:G / I:J / L:M.
+// Cada entrada de RANGES puede declarar su propio headerRow/dataRow. HEADER_ROW y
 // DATA_START_ROW quedan como DEFAULT GLOBAL de las tablas que no los declaran (las cinco del
 // Plan de Cuentas), no como verdad universal.
 // @see docs/permanente/ARNES_TIDETRACK.md (Fase 2 - gemelo digital)
+// @see MIGRACION_v0.11_SwapHojasFix.js
 
 // [AGILE-VALOR] Configuración Core y Central. Define el esqueleto del Plan de Cuentas y Hoja de cargas.
 
@@ -93,7 +100,7 @@ const SHEETS = {
     PLAN_CUENTAS: 'Plan de Cuentas',
     get DATA_ENTRY() { return _resolverNombreHoja(['Cargas', 'Hoja de Cargas']); },   // canonico real: Cargas; 'Hoja de Cargas' era el valor viejo del config, se conserva como alias defensivo
     REGISTROS: 'Registros',
-    get TIPOS_CAMBIO() { return _resolverNombreHoja(['Tipos de cambio', 'Tipos de Cambio']); },  // el codigo v0.8.x usa minuscula, el scanner de marzo registro mayuscula: el resolver devuelve la que exista
+    get TIPOS_CAMBIO() { return _resolverNombreHoja(['Tipos de Cambio', 'Tipos de cambio']); },  // canonico post-swap v0.11: 'Tipos de Cambio' (C mayuscula, la hoja Fix); la grafia vieja queda como alias defensivo
     get BD_ANTIGUA() { return _resolverNombreHoja(['BD antigua', 'BD Antigua']); },  // el config viejo usa minuscula, el scanner de marzo registro 'BD Antigua': el resolver devuelve la que exista
     MIRADA_INTERANUAL: 'Mirada Interanual',  // antes hardcodeada en 07_MiradaInteranual.js (regla SSOT)
     DEBUG_MIRADA: 'DEBUG Mirada',  // antes hardcodeada en 07_MiradaInteranual.js (regla SSOT)
@@ -109,8 +116,9 @@ const SHEETS = {
 // DEFAULT GLOBAL, no verdad universal: corresponden al layout del Plan de Cuentas, la unica
 // hoja cuyas tablas no declaran headerRow/dataRow propios. Toda tabla con layout distinto lo
 // declara en su entrada de RANGES y gana sobre estos valores.
-const HEADER_ROW = 3;
-const DATA_START_ROW = 4;
+// decision Franco 2026-08-18: 7/8 desde el swap v0.11 (Plan de Cuentas Fix: header 7, datos 8).
+const HEADER_ROW = 7;
+const DATA_START_ROW = 8;
 
 // ============================================
 // CAPACIDAD DE GRID (FILAS FISICAS DE LA HOJA)
@@ -131,62 +139,66 @@ const GRID_MAX_FILAS = 50000;     // tope duro de seguridad; superarlo lanza err
 // ============================================
 
 const RANGES = {
- // --- Plan de Cuentas: layout historico sin migrar (header fila 3, datos fila 4) ---
+ // --- Plan de Cuentas: layout Fix (titulos de bloque fila 6, header fila 7, datos fila 8) ---
  // Sin headerRow/dataRow propios a proposito: usan el default global HEADER_ROW/DATA_START_ROW.
+ // En la hoja los headers dicen Cuenta/Categoria; la clave interna 'proyecto' se conserva
+ // (renombrarla tocaria todos los consumidores sin cambiar ningun comportamiento).
  INGRESOS: {
+ sheet: SHEETS.PLAN_CUENTAS,
+ start: 'C',
+ end: 'D',
+ columns: { nombre: 'C', proyecto: 'D' }
+ },
+    GASTOS_FIJOS: {
+ sheet: SHEETS.PLAN_CUENTAS,
+ start: 'F',
+ end: 'G',
+ columns: { nombre: 'F', proyecto: 'G' }
+ },
+    GASTOS_VARIABLES: {
  sheet: SHEETS.PLAN_CUENTAS,
  start: 'I',
  end: 'J',
  columns: { nombre: 'I', proyecto: 'J' }
  },
-    GASTOS_FIJOS: {
- sheet: SHEETS.PLAN_CUENTAS,
- start: 'L',
- end: 'M',
- columns: { nombre: 'L', proyecto: 'M' }
- },
-    GASTOS_VARIABLES: {
- sheet: SHEETS.PLAN_CUENTAS,
- start: 'O',
- end: 'P',
- columns: { nombre: 'O', proyecto: 'P' }
- },
  MEDIOS_PAGO: {
  sheet: SHEETS.PLAN_CUENTAS,
- start: 'R',
- end: 'T',
- columns: { nombre: 'R', moneda: 'S', proyecto: 'T' }
+ start: 'L',
+ end: 'N',
+ columns: { nombre: 'L', moneda: 'M', proyecto: 'N' }
  },
+    // El bloque se rotula 'Categorias' en la hoja Fix (Nombre/Tipo, con los tipos generales
+    // Ahorros/Inversiones/Financiacion/Hogar). La clave interna conserva el nombre historico.
     PROYECTOS: {
         sheet: SHEETS.PLAN_CUENTAS,
-        start: 'V',
-        end: 'W',
-        columns: { nombre: 'V', tipo: 'W' }
+        start: 'P',
+        end: 'Q',
+        columns: { nombre: 'P', tipo: 'Q' }
     },
-    // --- Cargas: layout historico sin migrar (header fila 4, datos fila 5) ---
+    // --- Cargas: layout Fix (titulo B2, header fila 6, datos filas 7-21, numeracion B7:B21) ---
     // decision Franco 2026-08-13: la geometria de la grilla de carga entra a Config como SSOT.
     // Antes vivia como literal 'I5:O19' en 06_RegistrosService y como numeros magicos (9, 12,
     // 13, 14) en 14_EventHandlers, que ademas usaba DATA_START_ROW (=4) como fila de datos: eso
     // dejaba la fila de encabezado dentro del area "editable" del autocompletado.
     CARGAS: {
         get sheet() { return SHEETS.DATA_ENTRY; },  // getter: preserva la resolucion perezosa del alias
-        start: 'I',
-        end: 'O',
-        headerRow: 4,
-        dataRow: 5,
-        filas: 15,   // grilla de altura fija I5:O19; no crece, se limpia despues de cada lote
-        columns: { monto: 'I', tipo: 'J', cuenta: 'K', medio: 'L', moneda: 'M', fecha: 'N', nota: 'O' }
+        start: 'C',
+        end: 'I',
+        headerRow: 6,
+        dataRow: 7,
+        filas: 15,   // grilla de altura fija C7:I21; no crece, se limpia despues de cada lote
+        columns: { monto: 'C', tipo: 'D', cuenta: 'E', medio: 'F', moneda: 'G', fecha: 'H', nota: 'I' }
     },
 
-    // --- Registros: layout migrado (titulo B2, header fila 5, datos fila 6, cols B:M) ---
+    // --- Registros: layout Fix (titulo B2, header fila 6, datos fila 7, cols B:M) ---
     // decision Franco 2026-08-13: se adapta el CODIGO al layout nuevo de la planilla, no al reves.
-    // Verificado celda por celda sobre la planilla productiva el 2026-08-13.
+    // El orden de columnas B:M no cambio entre la vieja y la Fix; solo bajo una fila.
     REGISTROS: {
         sheet: SHEETS.REGISTROS,
         start: 'B',
         end: 'M',
-        headerRow: 5,
-        dataRow: 6,
+        headerRow: 6,
+        dataRow: 7,
         columns: {
             monto: 'B', tipo: 'C', cuenta: 'D', tipo_cuenta: 'E',
             medio: 'F', moneda: 'G', fecha: 'H', nota: 'I',
@@ -194,39 +206,39 @@ const RANGES = {
         }
     },
 
-    // --- Tipos de cambio: layout migrado (titulos de bloque fila 5, header fila 6, datos fila 7) ---
-    // Bloques horizontales: ARS=B:C | USD=E:F | AUD=H:I | EUR=K:L
+    // --- Tipos de Cambio: layout Fix (titulos de bloque fila 6, header fila 7, datos fila 8) ---
+    // Bloques horizontales: ARS=C:D | USD=F:G | AUD=I:J | EUR=L:M
     TC_ARS: {
         get sheet() { return SHEETS.TIPOS_CAMBIO; },  // getter: preserva la resolucion perezosa del alias
-        start: 'B',
-        end: 'C',
-        headerRow: 6,
-        dataRow: 7,
-        columns: { fecha: 'B', cotizacion: 'C' }
+        start: 'C',
+        end: 'D',
+        headerRow: 7,
+        dataRow: 8,
+        columns: { fecha: 'C', cotizacion: 'D' }
     },
     TC_USD: {
         get sheet() { return SHEETS.TIPOS_CAMBIO; },  // getter: preserva la resolucion perezosa del alias
-        start: 'E',
-        end: 'F',
-        headerRow: 6,
-        dataRow: 7,
-        columns: { fecha: 'E', cotizacion: 'F' }
+        start: 'F',
+        end: 'G',
+        headerRow: 7,
+        dataRow: 8,
+        columns: { fecha: 'F', cotizacion: 'G' }
     },
     TC_AUD: {
         get sheet() { return SHEETS.TIPOS_CAMBIO; },  // getter: preserva la resolucion perezosa del alias
-        start: 'H',
-        end: 'I',
-        headerRow: 6,
-        dataRow: 7,
-        columns: { fecha: 'H', cotizacion: 'I' }
+        start: 'I',
+        end: 'J',
+        headerRow: 7,
+        dataRow: 8,
+        columns: { fecha: 'I', cotizacion: 'J' }
     },
     TC_EUR: {
         get sheet() { return SHEETS.TIPOS_CAMBIO; },  // getter: preserva la resolucion perezosa del alias
-        start: 'K',
-        end: 'L',
-        headerRow: 6,
-        dataRow: 7,
-        columns: { fecha: 'K', cotizacion: 'L' }
+        start: 'L',
+        end: 'M',
+        headerRow: 7,
+        dataRow: 8,
+        columns: { fecha: 'L', cotizacion: 'M' }
     }
 };
 
@@ -371,18 +383,24 @@ const MENU_CONFIG = {
     // --- Menu de desarrollo, fixes y migraciones ---
     DEV_ITEMS: [
         {
-            // Se corren EN ESTE ORDEN: primero el estado (solo lectura), despues aplicar.
-            // Revertir usa el respaldo congelado. @see MIGRACION_v0.9.5_LayoutNuevo.js
-            submenu: 'Migracion v0.9.5 (layout nuevo)', items: [
-                { name: '1. Ver estado (no escribe nada)', function: 'estadoMigracionV095' },
-                { name: '2. Aplicar', function: 'aplicarMigracionV095' },
+            // Se corren EN ESTE ORDEN: 1 (solo lectura) -> 2 si hace falta -> 3. Revertir
+            // deshace renombres y repunteos. La purga es IRREVERSIBLE y va al final, recien
+            // despues de validar los tableros. @see MIGRACION_v0.11_SwapHojasFix.js
+            submenu: 'Migracion v0.11 (swap hojas Fix)', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoSwapV011' },
+                { name: '2. Sincronizar BDs (viejas -> Fix)', function: 'sincronizarBDsV011' },
+                { name: '3. Aplicar swap', function: 'aplicarSwapV011' },
                 { separator: true },
-                { name: '3. Revertir (usa el respaldo)', function: 'revertirMigracionV095' },
+                { name: '4. Revertir (deshace el swap)', function: 'revertirSwapV011' },
                 { separator: true },
-                { name: 'Reparar formato de cotizaciones', function: 'repararFormatoCotizacionesV095' },
-                { name: 'Ver respaldos (cuales sirven)', function: 'estadoRespaldosV095' }
+                { name: '5. Purgar respaldos (IRREVERSIBLE)', function: 'purgarRespaldosV011' }
             ]
         },
+        // decision Franco 2026-08-18: la MIGRACION v0.9.5 SALE DEL MENU con el swap v0.11.
+        // Su preflight cruza contra RANGES esperando la geometria pre-Fix (Registros header 5,
+        // TC en B:C..K:L): con el config remapeado solo puede reportar incoherencia, y su
+        // "revertir" restauraria un respaldo con el layout anterior al rediseno. El archivo
+        // MIGRACION_v0.9.5_LayoutNuevo.js se conserva entero como historia ejecutable.
         { separator: true },
         { seccion: 'FORMULAS Y VISTAS' },
         {
@@ -394,16 +412,11 @@ const MENU_CONFIG = {
                 { name: 'Auditar balanceo de la formula', function: 'auditarBalanceFormulaMirada' }
             ]
         },
-        {
-            // Se corren EN ESTE ORDEN: primero el estado (solo lectura), despues aplicar.
-            // Revertir usa el respaldo congelado. @see DEVTOOL_RobustezVistas.js
-            submenu: 'Robustez de vistas', items: [
-                { name: '1. Ver estado (no escribe nada)', function: 'estadoRobustezVistas' },
-                { name: '2. Aplicar (envolver QUERY en IFERROR)', function: 'aplicarRobustezVistas' },
-                { separator: true },
-                { name: '3. Revertir (usa el respaldo)', function: 'revertirRobustezVistas' }
-            ]
-        },
+        // decision Franco 2026-08-18: 'Robustez de vistas' SALE DEL MENU con el swap v0.11.
+        // Su lista cerrada RV_CELDAS (Tablero!AN4, Inicio!Y4/AM4, Cargas!R5) fue verificada
+        // sobre las hojas PRE-Fix: post-swap esas celdas no son los motores de las hojas
+        // nuevas y estado/aplicar operarian sobre celdas equivocadas. El archivo
+        // DEVTOOL_RobustezVistas.js se conserva; re-verificar sus anclas en el formulerio.
         // decision Franco 2026-08-13: el PRESUPUESTO SALE DEL MENU hasta su sesion dedicada.
         // Los dos modulos (DEVTOOL_Presupuesto.js y DEVTOOL_CableadoPresupuesto.js) quedaron con
         // bloqueantes abiertos -- el motor declara exito sobre una hoja en ceros, el cableado
