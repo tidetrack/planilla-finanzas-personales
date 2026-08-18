@@ -1,6 +1,22 @@
 /**
  * 99_MigrationLogic.js
  * Utilidades transitorias/dev para la migración de la BD Legacy "BD antigua".
+ *
+ * [CONCEPTO DE NEGOCIO]
+ * Herramientas de ejecucion puntual para incorporar el historial de la planilla vieja al
+ * ledger vigente y para recalcular en bloque los tipos de cambio congelados de Registros.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+ * El origen (BD Antigua) conserva su layout historico (datos desde la fila 2, cols A:G).
+ * El destino (Registros) esta migrado: datos desde la fila 6, cols B:M, fecha en H y los
+ * cuatro TC en J:M. Escribir con las coordenadas viejas corrompe el ledger, asi que toda
+ * coordenada de destino sale de RANGES.REGISTROS.
+ *
+ * @see 00_Config.js (RANGES.REGISTROS)
+ *
+ * @version 0.9.5
+ * @since 0.1.0
+ * @lastModified 2026-08-13
  */
 
 /**
@@ -52,13 +68,14 @@ function analizarBdAntigua() {
     const mediosFaltantes = uniqueMedios.filter(m => !pcAllMedios.includes(m));
     if (mediosFaltantes.length > 0) {
         const mediosToAppend = mediosFaltantes.map(m => [m, 'ARS', '']); // Nombre, Moneda ARS, Proyecto vacio
-        appendMassive('MEDIOS_PAGO', mediosToAppend, 4); // Fila inicial de catalogos es 4
+        // Sin minRow explicito: MEDIOS_PAGO no declara dataRow y cae al default del Plan de Cuentas (4).
+        appendMassive('MEDIOS_PAGO', mediosToAppend);
     }
 
     SpreadsheetApp.getUi().alert(
         'Análisis Completo',
-        `📌 Medios agregados automáticamente en Plan de Cuentas: ${mediosFaltantes.length}\n` +
-        `📌 Cuentas faltantes listadas en la Columna H de "BD antigua": ${cuentasFaltantes.length}\n\n` +
+        `Medios agregados automáticamente en Plan de Cuentas: ${mediosFaltantes.length}\n` +
+        `Cuentas faltantes listadas en la Columna H de "BD antigua": ${cuentasFaltantes.length}\n\n` +
         `Por favor, agrega manualmente estas cuentas al Plan de Cuentas antes de ejecutar la Migración defintiva.`,
         SpreadsheetApp.getUi().ButtonSet.OK
     );
@@ -159,14 +176,24 @@ function migrarBdAntigua() {
     });
 
     if (registrosToAppend.length > 0) {
-        appendMassive('REGISTROS', registrosToAppend, 2);
-        
-        // Ordenar BD
+        // Datos de Registros desde la fila 6 (header en la 5) en el layout migrado.
+        appendMassive('REGISTROS', registrosToAppend, RANGES.REGISTROS.dataRow);
+
+        // Ordenar BD por Fecha descendente. Layout migrado: B:M = cols 2..13, fecha en H = 8.
+        // Sort best-effort: los registros ya estan escritos; un fallo de orden no debe empujar
+        // al usuario a re-ejecutar la migracion (duplicaria todo el historico).
         const registrosSheet = ss.getSheetByName(SHEETS.REGISTROS);
+        const dataRowReg = RANGES.REGISTROS.dataRow;
         const lastRowReg = registrosSheet.getLastRow();
-        if (lastRowReg >= 2) {
-            const baseFullRange = registrosSheet.getRange(2, 9, lastRowReg - 1, 12); // I:T
-            baseFullRange.sort({ column: 15, ascending: false }); // O = 15
+        if (lastRowReg >= dataRowReg) {
+            try {
+                const rowCount = lastRowReg - dataRowReg + 1;
+                const baseFullRange = registrosSheet.getRange(dataRowReg, 2, rowCount, 12); // B:M
+                baseFullRange.sort({ column: 8, ascending: false }); // H = 8 = Fecha
+                SpreadsheetApp.flush();
+            } catch (sortErr) {
+                logError('migrarBdAntigua: sort omitido (posibles celdas combinadas en Registros)', sortErr);
+            }
         }
     }
 
@@ -179,7 +206,8 @@ function migrarBdAntigua() {
 
 /**
  * Herramienta [Dev] para recalcular todos los TC de la base de Registros en bloque.
- * Lee las fechas y sobrescribe las columnas Q:T interpolando el Caché actual (Modo ARS Base).
+ * Lee las fechas de la columna H y sobrescribe las columnas J:M interpolando el Caché actual
+ * (Modo ARS Base), segun el layout migrado de Registros.
  */
 function recalcularTcRegistros() {
     const ui = SpreadsheetApp.getUi();
@@ -189,12 +217,14 @@ function recalcularTcRegistros() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const registrosSheet = ss.getSheetByName(SHEETS.REGISTROS);
     
+    const dataRow = RANGES.REGISTROS.dataRow;
     const lastRow = registrosSheet.getLastRow();
-    if (lastRow < 2) return;
+    if (lastRow < dataRow) return;
 
-    // Obtener Fechas (Col O = index absoluto 15)
-    // Rango O2:O
-    const fechasRange = registrosSheet.getRange(2, 15, lastRow - 1, 1);
+    // Obtener Fechas desde la col H (indice absoluto 8) del layout migrado.
+    // Los datos arrancan en dataRow (6); cantidad de filas = lastRow - dataRow + 1.
+    const rowCount = lastRow - dataRow + 1;
+    const fechasRange = registrosSheet.getRange(dataRow, 8, rowCount, 1);
     const fechasData = fechasRange.getValues();
 
     // Diccionarios actuales de Cotizaciones
@@ -235,12 +265,12 @@ function recalcularTcRegistros() {
         if (!tcAud) tcAud = 650.0;
         if (!tcEur) tcEur = 1100.0;
 
-        // Q=17(ARS), R=18(USD), S=19(AUD), T=20(EUR)
+        // Layout migrado: J=10(ARS), K=11(USD), L=12(AUD), M=13(EUR)
         newValues.push([1.0, tcUsd, tcAud, tcEur]);
     });
 
-    // Sobreescribir columnas Q:T
-    const tcRange = registrosSheet.getRange(2, 17, lastRow - 1, 4);
+    // Sobreescribir columnas J:M desde la fila de datos
+    const tcRange = registrosSheet.getRange(dataRow, 10, rowCount, 4);
     tcRange.setValues(newValues);
 
     let msg = `Se recalcularon ${newValues.length} transacciones exitosamente.\n\n`;

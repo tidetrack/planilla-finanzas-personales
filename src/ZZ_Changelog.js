@@ -5,6 +5,155 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-13] v0.10.0 - Migracion historica desde la planilla v03.1:
+ * - CONTEXTO: mientras el pipeline estuvo roto (2026-03-29 a 2026-08-13) Franco siguio
+ *   cargando sus finanzas en la planilla vieja "PLANILLA FINANZAS_v03.1 | Fran". El ledger
+ *   nuevo quedo con un agujero: abril 2026 (106 movimientos), mayo (110), junio (112) y
+ *   julio/agosto completos. Casi cinco meses de historia fuera de la planilla.
+ * - NUEVO MIGRACION_v031_Historico.js: trio estado/aplicar/revertir. Lee la planilla vieja EN
+ *   VIVO con openById (re-ejecutable: si Franco sigue cargando alla, se vuelve a correr y trae
+ *   solo lo nuevo). El delta NO se define por rango de fechas sino por AUSENCIA en el destino,
+ *   cruzando fecha + monto + sentido con el medio como desempate: de 3.635 filas del origen,
+ *   2.896 ya estaban y 632 faltaban. Migrar "toda la BD" habria duplicado ~2.880 movimientos.
+ * - Transformacion: monto partido en dos columnas -> Monto + Tipo; Tipo de Cuenta se DEDUCE
+ *   contra el Plan de Cuentas (no se copia); moneda inferida del medio; TC congelados tomados
+ *   de la hoja Tipos de cambio por fecha; alias de medios unificados (MP -> Mercado Pago y
+ *   tres mas, decision Franco).
+ * - GUARD DE COBERTURA DE TC (el bloqueante mas caro de la ronda): el Data Lake llega hasta
+ *   2026-03-20 (ARS) y 2026-03-29 (USD/AUD/EUR), y 540 de 541 filas del lote son posteriores.
+ *   Sin guard, TODAS congelaban una cotizacion de fallback y julio/agosto quedaban valuados a
+ *   la de junio. La cotizacion congelada es el unico dato del ledger que despues no se puede
+ *   recalcular. Ahora el preflight compara max(fecha del lote) contra max(fecha de cada serie)
+ *   y ABORTA indicando correr "Forzar carga historica" primero.
+ * - Dos buckets que NO se migran y se reportan uno por uno: filas con MONTO NEGATIVO (hay una
+ *   real: -$34.999,97 en "Medicamentos / Accesorios", que migrada con abs() habria entrado como
+ *   un ingreso ficticio indistinguible de uno legitimo) y filas con FECHA AMBIGUA (dia <= 12 y
+ *   distinto del mes: "12/04/2026" tiene dos lecturas validas y ningun dato resuelve la duda).
+ * - Parser de fechas es-AR explicito: cero new Date(string), que interpreta dd/mm con semantica
+ *   de EE.UU. y habria duplicado filas cambiandoles el mes.
+ * - Respaldo completo de Registros congelado y VERIFICADO antes de mutar: al insertar y
+ *   reordenar por fecha las filas migradas quedan intercaladas, asi que no hay vuelta atras por
+ *   rango. revertir restaura desde ahi.
+ * - RETIRADOS DEL MENU: DEVTOOL_Presupuesto.js y DEVTOOL_CableadoPresupuesto.js quedan en el
+ *   repo con cabecera "NO LISTO" y sus bloqueantes enumerados, pero inalcanzables desde la UI.
+ *   Tres rondas adversariales no cerraron sus defectos de "declarar exito sin hacer el trabajo"
+ *   (el motor informa ok sobre una hoja en ceros; el cableado escribe contra celdas vacias).
+ *   Decision Franco: el Presupuesto se retoma en una sesion dedicada, con la planilla completa.
+ *
+ * ---
+ *
+ * [2026-08-13] v0.9.9 - Reparacion del formato de cotizaciones + auditoria de respaldos:
+ * - HALLAZGO (verificacion post-migracion en vivo): el backfill de la v0.9.5 dejo 791 de 820
+ *   filas de la columna Cotizacion de EUR mostrando FECHAS en vez de montos ("25/8/1904" en
+ *   lugar de "$1.699,34"). Los valores guardados son correctos: es formato de celda. Causa:
+ *   setValues no propaga formato y las filas nuevas heredaron el del grid recien ampliado.
+ * - NUEVO repararFormatoCotizacionesV095(): toma como referencia el formato de la PRIMERA fila
+ *   de datos de cada bloque (anterior al backfill, ya validada) y lo aplica al resto. Corrige
+ *   SOLO formato, nunca valores, y saltea con aviso cualquier bloque sin fila de referencia.
+ * - NUEVO estadoRespaldosV095(): lista las hojas de respaldo y marca cuales NO sirven. El
+ *   primer intento de aplicar (sello _1721) dejo un RESP_FORMULAS con las formulas VIVAS -- el
+ *   defecto que corrigio la v0.9.8 -- que no puede usarse para revertir. No borra nada: borrar
+ *   hojas es irreversible y la decision es del operador.
+ * - Verificacion independiente de la migracion (por Sheets API, no por el propio modulo): grid
+ *   2200 OK; ARS 810 sin duplicados y en orden; las 4 formulas re-apuntadas son CIRUGIA PURA
+ *   (unica diferencia contra el respaldo: la referencia de hoja) y sus indices ColN alinean con
+ *   el header real; Registros_legacy intacta.
+ *
+ * ---
+ *
+ * [2026-08-13] v0.9.8 - El respaldo de formulas se guarda como TEXTO, no como formula viva:
+ * - SINTOMA: aplicarMigracionV095() abortaba con "El respaldo de formulas no quedo verificado
+ *   en: Tablero!AN4 ... columna 3". Aborto ANTES de mutar, o sea el contrato todo-o-nada
+ *   funciono: ninguna celda de las hojas vivas se toco.
+ * - CAUSA: setNumberFormat('@') afecta la visualizacion, NO el parseo. setValues con un string
+ *   que arranca en "=" lo guarda igual como FORMULA. La celda del respaldo quedaba con la
+ *   formula VIVA recalculandose contra Registros_legacy (un respaldo que se corrompe solo:
+ *   cicatriz 4 del arnes) y la relectura devolvia el resultado evaluado en vez del texto.
+ * - FIX: nuevo _textoLiteralV095() antepone el apostrofo de Sheets a todo valor que empiece
+ *   con = + - @ o '. El apostrofo NO forma parte del valor (getValue lo devuelve sin el), asi
+ *   que la verificacion sigue comparando contra el string original.
+ * - La verificacion ahora exige ademas que NINGUNA celda del respaldo haya quedado como formula
+ *   viva (getFormulas sobre las cinco columnas), que es la condicion que de verdad importa.
+ * - El guard de respaldos huerfanos deja de bloquear a ciegas: compara el contenido del respaldo
+ *   contra la hoja viva. Si coinciden, el respaldo es de un intento que aborto sin mutar y no
+ *   bloquea; solo aborta si DIFIEREN, que es la firma de una migracion a medio aplicar.
+ *
+ * ---
+ *
+ * [2026-08-13] v0.9.7 - Guards de hoja invalida y stack en el informe de estado:
+ * - estadoMigracionV095() fallaba con "TypeError: Cannot read properties of undefined
+ *   (reading 'getMaxRows')", un mensaje que no dice que hoja falta.
+ * - _contarBloquesTcV095 (cinco llamadores) y _validarRespaldoTcV095 validan su argumento y
+ *   fallan nombrando el problema en vez de reventar sobre undefined.
+ * - El catch de estadoMigracionV095 devuelve ademas las primeras lineas del stack.
+ *
+ * ---
+ *
+ * [2026-08-13] v0.9.6 - Menus separados: "Tidetrack" (uso diario) y "Tidetrack Dev" (desarrollo):
+ * - Calcado del patron de planilla-pymes. El menu unico mezclaba la operacion cotidiana con
+ *   herramientas que escriben estructura, y "Procesar Cargas" -- la funcion que mas se usa --
+ *   estaba rotulada "[Dev]" como si fuera peligrosa.
+ * - "Tidetrack": REGISTRAR (Procesar Cargas) + ADMINISTRAR (Plan de Cuentas) + submenu "Ir a
+ *   la hoja" (solo hojas confirmadas por el escaneo: Inicio, Tablero, Cargas; quedaron fuera
+ *   'Espacio blanco 1' y 'Espacio blanco 3', que ya no existen).
+ * - "Tidetrack Dev": migracion v0.9.5, Mirada Interanual, Tipos de cambio, BD Antigua y
+ *   mantenimiento, agrupados en submenus por dominio y numerados donde el orden importa.
+ * - 00_Config.js: MENU_CONFIG soporta ahora secciones ({seccion}) y submenus ({submenu, items}),
+ *   ademas de items y separadores. 12_MenuService.js los arma recursivamente.
+ * - NUEVO _menuSeccion(): los rotulos de seccion son items inertes que avisan por toast que son
+ *   un titulo (Apps Script no soporta encabezados de menu, y un item que no hace nada se lee
+ *   como una falla).
+ * - Cada menu se construye en su propio try/catch: si uno rompiera, el otro igual aparece.
+ *
+ * ---
+ *
+ * [2026-08-13] v0.9.5 - Adaptacion al layout REAL de la planilla (el pipeline vuelve a poder escribir):
+ * - CONTEXTO: la planilla migro a B:M en junio pero el codigo nunca acompanio, asi que
+ *   procesarCargas pedia Registros!I:T (col 9-20) sobre una hoja de 14 columnas y tiraba
+ *   excepcion. Ultimo registro del ledger: 2026-03-29. Decision Franco 2026-08-13: se adapta
+ *   el codigo al layout nuevo, no se revierte la planilla.
+ * - 00_Config.js: RANGES.REGISTROS -> B:M (headerRow 5, dataRow 6); RANGES.TC_* -> B:C / E:F /
+ *   H:I / K:L (headerRow 6, dataRow 7). Plan de Cuentas y Cargas SIN cambios (no migraron):
+ *   sus entradas no declaran headerRow/dataRow y siguen cayendo a los globales 3/4.
+ * - 03_SheetManager.js: getTableRange/getTableData/appendRow/appendMassive leen headerRow y
+ *   dataRow por tabla, con fallback a los globales. 06_RegistrosService.js: append y sort por
+ *   la columna de Fecha del layout nuevo (H). 99_MigrationLogic.js: lecturas y escrituras al
+ *   layout nuevo (fecha H=8, valores de moneda J:M=10..13).
+ * - 07_MiradaInteranual.js: formulas remapeadas (fecha O->H, monto I->B, tipo de cuenta L->E,
+ *   moneda N->G, TC R/S/T->K/L/M) y filas 3 -> 6. Ahora verifica precondiciones antes de
+ *   escribir (rotulos C10:C12 y selectores E4/F4/R4), protege setFormula, y NO declara exito
+ *   si la celda queda en cualquier valor de error (antes solo miraba #ERROR!, asi que un #REF!
+ *   se replicaba a las 36 celdas cantando exito). Nuevo guard que verifica que cada fila
+ *   replicada interrogue SU rotulo: hoy las filas 11 y 12 apuntan a $C10 y calcularian todas
+ *   Ingresos, tapado por el #ERROR!.
+ * - 15_ExchangeRateApi.js: forzarCargaHistorica verifica capacidad Y cobertura ANTES del primer
+ *   clearContent (contrato todo-o-nada). Aborta si un bloque viene vacio, si trae menos filas
+ *   que las que la hoja ya tiene, o si queda muy por debajo de los demas. fetchArsRate loguea
+ *   sus fallbacks (Regla Estricta 9) y deja de devolver el hardcode 1000 como si fuera
+ *   cotizacion: lanza, porque un TC inventado se congela en cada registro.
+ * - NUEVO MIGRACION_v0.9.5_LayoutNuevo.js: estado/aplicar/revertir con respaldo congelado y
+ *   VERIFICADO antes de mutar, respaldo original inmutable ante reintentos, DocumentLock y
+ *   contrato {ok, detalle, error}. Amplia el grid de Tipos de cambio (tenia 6 filas libres),
+ *   hace backfill idempotente de las 3.151 cotizaciones perdidas desde la hoja legacy, y
+ *   re-apunta por cirugia las formulas de Tablero/Inicio/Cargas que aun leen Registros_legacy.
+ *
+ * ---
+ *
+ * [2026-08-13] v0.8.4 - Gemelo digital Fase 2 (arnes): scanner de cobertura total:
+ * - 98_DevTools_Scanner.js reescrito: mapea TODA celda con valor o formula. El filtro r < 5
+ *   de la version anterior dejaba ciegas a las BDs (44 celdas de una hoja Registros de 2879 filas).
+ * - NUEVO: valor_mostrado via getDisplayValues() - unico lugar donde viven los errores de
+ *   runtime (#N/A, #DIV/0!, #REF!), que el campo valor nunca traia para celdas con formula.
+ * - NUEVO: gid (getSheetId()) por hoja en meta. Sin el, un renombre es indistinguible de
+ *   borrado + alta y el diff de no-danio reporta destruccion masiva falsa.
+ * - Estilo serializado solo si difiere del default; notacion A1 calculada en memoria.
+ * - Sin cambios en logica de negocio. Herramientas de soporte fuera de src/: devtools/
+ *   (inventario, TSV de auditoria, diff de no-danio) y MAPA_ARQUITECTURA_PLANILLA.md.
+ * - HALLAZGO: el primer escaneo en vivo probo que Registros y Tipos de cambio YA ESTAN en el
+ *   layout v0.9.x mientras el codigo desplegado asume el viejo. Ver CHANGELOG.md.
+ *
+ * ---
+ *
  * [2026-08-12] v0.8.3 - Gobernanza Fase 1 (arnes): resolver de nombres de hoja + menu sin emojis:
  * - NUEVO: _resolverNombreHoja(alias) + invalidarCacheNombresHojas() en 00_Config.js (portado de pymes).
  *   SHEETS.DATA_ENTRY / TIPOS_CAMBIO / BD_ANTIGUA pasan a getters con alias: corrigen las tres

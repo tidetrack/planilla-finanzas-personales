@@ -38,6 +38,19 @@ function navigateToCargas() {
  navigateToSheet(NAV_CONFIG.SHEETS.CARGAS);
 }
 
+// decision Franco 2026-08-13: el nombre sale de SHEETS.PRESUPUESTO y NO se duplica en
+// NAV_CONFIG.SHEETS. NAV_CONFIG naciO como registro de hojas que el sistema solo VISITA;
+// la del Presupuesto la CREA y la escribe este mismo sistema (DEVTOOL_Presupuesto.js), asi
+// que su nombre pertenece al SSOT de hojas propias. Dos constantes para un mismo nombre es
+// exactamente como se desincronizan las cosas.
+/**
+ * Navega a la hoja "Presupuesto"
+ * Asignar esta función a botón de navegación "Presupuesto"
+ */
+function navigateToPresupuesto() {
+ navigateToSheet(SHEETS.PRESUPUESTO);
+}
+
 /**
  * Navega a la hoja "Espacio blanco 1"
  * Asignar esta función a botón de navegación "Espacio blanco 1"

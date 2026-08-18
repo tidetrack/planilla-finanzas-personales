@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 8,
- patch: 3,
+ minor: 10,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-08-12',
- releaseName: 'v0.8.3 - Gobernanza Fase 1 (arnes)',
+ releaseDate: '2026-08-13',
+ releaseName: 'v0.10.0 - Migracion historica de la planilla v03.1',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
