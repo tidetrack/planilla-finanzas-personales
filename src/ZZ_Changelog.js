@@ -5,6 +5,42 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.16.0 - El saldo se corta en la ultima conciliacion.
+ * - LA REGLA: saldo de un medio = su ULTIMO asiento "Inicio Mes" + todos los movimientos
+ *   posteriores. "Inicio Mes" NO es un movimiento: es el punto de corte de una CONCILIACION.
+ *   Cuando Franco lo carga esta diciendo "el banco dice que tengo esto", y con eso todo lo
+ *   anterior queda saldado. Por eso fallan las dos alternativas obvias: sumar todo el historico
+ *   DUPLICA (cada arrastre vuelve a contar el dinero que ya estaba en los movimientos que lo
+ *   originaron: $8,7M contra $0,5M reales), e ignorar los arrastres -- lo que hicieron la v0.14 y
+ *   la v0.15 -- PIERDE EL SALDO DE APERTURA y deja nueve medios en negativo.
+ * - CERO NEGATIVOS. Franco lo habia dicho como requisito ("no pueden haber saldos negativos") y
+ *   resulto ser el sintoma exacto del modelo equivocado, no una regla de presentacion.
+ * - VALIDADA CONTRA VERDAD DE CAMPO, que es lo que faltaba en las dos vueltas anteriores. Franco
+ *   paso siete saldos reales y CINCO coinciden AL CENTAVO: Frascos Nx - Prestamo $230.000,00,
+ *   Frasco transitorio Nx $44.141,01, YPF $3.494,90, Dolar Cash US$110,00, Dolar Galicia
+ *   US$91,10. Los dos que no coinciden son exactamente los que usa todos los dias -- Efectivo
+ *   (delta $102.000) y NaranjaX (delta $29.635,41) -- y la causa esta medida: el ledger terminaba
+ *   el 2026-08-12 y la medicion se hizo el 19. Faltaban siete dias de carga, no de logica. Si el
+ *   calculo estuviera roto fallaria en los siete, no en los dos que tienen movimiento reciente.
+ * - EL MEDIO TIENE QUE EXISTIR EN EL PLAN DE CUENTAS. El corte se resuelve por VLOOKUP contra el
+ *   catalogo: un movimiento cuyo medio no este ahi queda fuera de todo saldo. Un saldo bancario
+ *   es la suma de lo que paso por una cuenta, y un movimiento sin cuenta valida no tiene saldo al
+ *   que pertenecer. Son 39 filas por $2.147.186 y se cuentan aparte, en L29.
+ * - ESO RESUELVE SOLO EL CASO "YPF - wallet", sin tocar una fila del ledger: son cinco filas y las
+ *   cinco son "Inicio Mes", el arrastre de YPF escrito con otro nombre. Como no esta en el
+ *   catalogo queda excluido, y YPF da $3.494,90, que es exactamente lo que Franco declaro. Los
+ *   estabamos contando como dos medios y duplicaban ese monto.
+ * - Tablero!C18 lista SOLO los medios con saldo distinto de cero, de mayor a menor. decision
+ *   Franco: "no quiero que me aparezcan todos los medios, solo los que tienen saldo a la fecha".
+ *   Un listado con veinte ceros no es informacion.
+ * - RENDIMIENTO: los cortes se calculan con UN solo MAP sobre los 28 medios del catalogo y
+ *   despues se proyectan a cada fila con un VLOOKUP vectorizado. La forma ingenua -- un FILTER
+ *   por medio dentro de cada formula de saldo -- repetia ocho veces el mismo barrido de 3.500
+ *   filas.
+ * - LOS TRASPASOS ESTABAN SANOS y quedan documentados como tales: 291 pares perfectos entre
+ *   medios distintos, uno solo con ambas patas en el mismo medio, 45 filas sin par. La sospecha
+ *   sobre ellos era razonable pero la medicion la descarto.
+ *
  * [2026-08-19] v0.15.0 - Saldos bancarios reales: el medio pasa a ser obligatorio.
  * - EL DEFECTO QUE FRANCO CAZO MIRANDO UN NUMERO: "aparece que tengo un flujo de ARS $2.574.778
  *   pero este mes tuve ingresos por $1.138.512... probablemente la diferencia no sea por eso".

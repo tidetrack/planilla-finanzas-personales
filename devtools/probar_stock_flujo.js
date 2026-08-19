@@ -92,12 +92,21 @@ const pm=ctx._formulaSaldoPorMedio();
 if(revisar('Tablero!C18',pm)) console.log('  OK  Tablero!C18 (saldo actual por cuenta bancaria)');
 const dg=ctx._formulaDiagnosticoSyf();
 if(revisar('Tablero!L29',dg)) console.log('  OK  Tablero!L29');
-// El medio TIENE que ser obligatorio en las formulas de saldo: es la correccion de la v0.15.0.
+// Invariantes del modelo de saldo validado contra los saldos reales de Franco (v0.16.0).
 [['AF9',false],['AG9',true]].forEach(([c,r])=>{
   const f=ctx._formulaSaldoPorMoneda(r,'AE9');
-  if(!/categoria<>""/.test(f)){console.log('  !!! '+c+' NO exige que el medio exista en el Plan');fallas++;}
-  else console.log('  OK  '+c+' exige medio valido (categoria<>"")');
+  const chk=[
+    [/corte_fila<>""/, 'exige que el medio exista en el Plan'],
+    [/col_cuenta="Inicio Mes"/, 'usa el ultimo Inicio Mes como punto de corte'],
+    [/col_fecha>=corte_fila/, 'suma solo lo posterior al corte'],
+    [/vigente/, 'aplica el filtro vigente'],
+  ];
+  chk.forEach(([re,d])=>{ if(!re.test(f)){console.log('  !!! '+c+' NO '+d);fallas++;} });
+  if(chk.every(([re])=>re.test(f))) console.log('  OK  '+c+' — corte por ultimo Inicio Mes + medio valido');
 });
+const pm2=ctx._formulaSaldoPorMedio();
+if(!/con_saldo/.test(pm2)){console.log('  !!! C18 no filtra los medios en cero');fallas++;}
+else console.log('  OK  C18 muestra solo medios con saldo distinto de cero');
 console.log('\n=== 4. Condiciones derivadas de TIPOS_RIQUEZA (tienen que ser complementarias) ===');
 console.log('  riqueza:   '+ctx._condTipoSyf(true,'tipo_cat'));
 console.log('  cotidiano: '+ctx._condTipoSyf(false,'tipo_cat'));

@@ -417,106 +417,114 @@ function _colLedger(clave) {
     return _refHoja(cfg.sheet) + '!' + l + cfg.dataRow + ':' + l;
 }
 
+/** Rango abierto de una columna del Plan de Cuentas. */
+function _colPlan(cfg, clave) {
+    const l = cfg.columns[clave];
+    return _refHoja(cfg.sheet) + '!' + l + getDataRow(cfg) + ':' + l;
+}
+
 /**
- * Preambulo LET compartido: lee el ledger entero y deja listas las variables de clasificacion.
- * Todas las formulas de STOCK arrancan con esto, asi que hay un solo lugar donde equivocarse.
+ * PREAMBULO COMPARTIDO -- el corazon del modelo de saldo, y el unico lugar donde puede estar mal.
+ *
+ * ============================================================================
+ * LA REGLA, Y POR QUE ES ESTA
+ * ============================================================================
+ * SALDO DE UN MEDIO = su ULTIMO asiento "Inicio Mes" + todos los movimientos posteriores.
+ *
+ * "Inicio Mes" NO es un movimiento: es el punto de corte de una CONCILIACION. Cuando Franco lo
+ * carga esta diciendo "el banco dice que tengo esto", y con eso todo lo anterior queda saldado.
+ * De ahi que las dos alternativas obvias fallen:
+ *   - sumar todo el historico (incluidos los arrastres) DUPLICA: cada arrastre vuelve a contar
+ *     el dinero que ya estaba en los movimientos que lo originaron. Da $8,7M contra $0,5M reales.
+ *   - ignorar los arrastres (lo que hicieron v0.14 y v0.15) PIERDE EL SALDO DE APERTURA y deja
+ *     nueve medios en negativo.
+ * La regla del ultimo corte da CERO negativos.
+ *
+ * VALIDADA CONTRA VERDAD DE CAMPO el 2026-08-19: de siete saldos reales que dio Franco, CINCO
+ * coinciden AL CENTAVO -- Frascos Nx - Prestamo $230.000,00, Frasco transitorio Nx $44.141,01,
+ * YPF $3.494,90, Dolar Cash US$110,00, Dolar Galicia US$91,10. Los dos que no coinciden son
+ * exactamente los que usa a diario (Efectivo, NaranjaX) y la causa esta medida: el ledger
+ * terminaba el 12/08 y la medicion se hizo el 19/08. Faltaban siete dias de carga, no de logica.
+ *
+ * ============================================================================
+ * EL MEDIO TIENE QUE EXISTIR EN EL PLAN DE CUENTAS
+ * ============================================================================
+ * `corte_fila` se resuelve por VLOOKUP contra la lista de medios del catalogo. Un movimiento cuyo
+ * medio no este ahi devuelve "" y queda FUERA de todo saldo. No se reparte ni se estima: un saldo
+ * bancario es la suma de lo que paso por una cuenta, y un movimiento sin cuenta valida no tiene
+ * saldo al que pertenecer. Son 39 filas por $2.147.186 y se cuentan aparte, en L29.
+ *
+ * Eso resuelve solo el caso "YPF - wallet": son cinco filas y las cinco son "Inicio Mes" -- el
+ * arrastre de YPF escrito con otro nombre. Como no esta en el catalogo queda excluido, y YPF da
+ * $3.494,90, que es exactamente lo que Franco declaro. Sin tocar una sola fila del ledger.
+ *
+ * ============================================================================
+ * POR QUE UN SOLO MAP Y NO UNO POR MEDIO
+ * ============================================================================
+ * `cortes` se calcula UNA vez sobre la lista de medios (28 iteraciones) y despues se proyecta a
+ * cada fila del ledger con un VLOOKUP vectorizado. La alternativa -- un FILTER por medio dentro
+ * de cada formula de saldo -- multiplicaba por ocho el mismo trabajo sobre 3.500 filas.
  */
-function _preambuloLedgerSyf() {
+function _preambuloSaldoSyf() {
     const pc = RANGES.PROYECTOS;
     const medios = RANGES.MEDIOS_PAGO;
     const colCatMedio = columnLetterToIndex(medios.columns.proyecto) - columnLetterToIndex(medios.start) + 1;
     const colTipoCat = columnLetterToIndex(pc.columns.tipo) - columnLetterToIndex(pc.start) + 1;
+    const colMonMedio = columnLetterToIndex(medios.columns.moneda) - columnLetterToIndex(medios.start) + 1;
+    const rangoMedios = _refHoja(medios.sheet) + '!' + medios.start + ':' + medios.end;
+    const rangoCats = _refHoja(pc.sheet) + '!' + pc.start + ':' + pc.end;
     return [
-        '  monto; ' + _colLedger('monto') + ';',
-        '  clase; ' + _colLedger('tipo') + ';',
-        '  cuenta; ' + _colLedger('cuenta') + ';',
-        '  medio; ' + _colLedger('medio') + ';',
-        '  moneda; ' + _colLedger('moneda') + ';',
-        '  neto; ARRAYFORMULA(IF(clase="Egreso"; -monto; monto));',
-        '  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(medio; ' + _refHoja(medios.sheet) + '!' + medios.start + ':' + medios.end + '; ' + colCatMedio + '; 0); ""));',
-        '  tipo_cat; ARRAYFORMULA(IFERROR(VLOOKUP(categoria; ' + _refHoja(pc.sheet) + '!' + pc.start + ':' + pc.end + '; ' + colTipoCat + '; 0); ""));',
-        '  vigente; ARRAYFORMULA(cuenta<>"' + SYF_ARRASTRE + '");'
+        '  col_medio; ' + _colLedger('medio') + ';',
+        '  col_cuenta; ' + _colLedger('cuenta') + ';',
+        '  col_fecha; ' + _colLedger('fecha') + ';',
+        '  col_moneda; ' + _colLedger('moneda') + ';',
+        '  neto; ARRAYFORMULA(IF(' + _colLedger('tipo') + '="Egreso"; -' + _colLedger('monto') + '; ' + _colLedger('monto') + '));',
+        '  lista; IFERROR(FILTER(' + _colPlan(medios, 'nombre') + '; ' + _colPlan(medios, 'nombre') + '<>""); "");',
+        // El ultimo "Inicio Mes" de cada medio: el punto de corte de su conciliacion.
+        '  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="' + SYF_ARRASTRE + '"); 0))));',
+        '  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));',
+        // Vigente = el medio existe en el catalogo Y la fila es posterior a su ultima conciliacion.
+        '  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));',
+        '  cat_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; ' + rangoMedios + '; ' + colCatMedio + '; 0); ""));',
+        '  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(cat_fila; ' + rangoCats + '; ' + colTipoCat + '; 0); ""));',
+        '  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; ' + rangoMedios + '; ' + colMonMedio + '; 0); "ARS"));'
     ].join('\n');
 }
 
-/**
- * Saldo por moneda, sobre TODO el ledger.
- *
- * EXIGE QUE EL MEDIO EXISTA EN EL PLAN DE CUENTAS, y esa es la correccion mas importante de la
- * v0.15.0. La version anterior clasificaba por "el tipo de categoria no es de riqueza", condicion
- * que un medio inexistente cumple (su tipo es cadena vacia): las 39 filas sin medio valido --
- * $2.147.186 -- caian enteras en el saldo cotidiano. Franco lo vio de una: "aparece que tengo un
- * flujo de ARS $2.574.778 pero este mes tuve ingresos por $1.138.512". De esos $2,57M, $2,40M
- * eran filas sin medio. El saldo real de las cuentas es $517.658.
- *
- * Un saldo bancario es la suma de lo que paso POR UNA CUENTA. Un movimiento sin cuenta no tiene
- * saldo al que pertenecer: no se reparte ni se estima, se deja afuera y se cuenta aparte (L29).
- */
+/** Saldo actual por moneda, de un grupo (riqueza o su complemento). */
 function _formulaSaldoPorMoneda(esRiqueza, celdaMoneda) {
-    return '=LET(\n' + _preambuloLedgerSyf() + '\n' +
-        '  grupo; ARRAYFORMULA((categoria<>"") * (' + _condTipoSyf(esRiqueza, 'tipo_cat') + '));\n' +
-        '  SUM(IFERROR(FILTER(neto; moneda=' + celdaMoneda + '; vigente; grupo); 0))\n)';
+    return '=LET(\n' + _preambuloSaldoSyf() + '\n' +
+        '  grupo; ARRAYFORMULA(' + _condTipoSyf(esRiqueza, 'tipo_fila') + ');\n' +
+        '  SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda=' + celdaMoneda + '); 0))\n)';
 }
 
-/** Saldo total convertido a la moneda del selector, sobre TODO el ledger. */
+/** Saldo actual total de un grupo, convertido a la moneda del selector. */
 function _formulaSaldoConvertido(esRiqueza, celdaSelector) {
-    return '=LET(\n' + _preambuloLedgerSyf() + '\n' +
-        '  grupo; ARRAYFORMULA((categoria<>"") * (' + _condTipoSyf(esRiqueza, 'tipo_cat') + '));\n' +
-        '  suma_ars; SUM(IFERROR(FILTER(neto; moneda="ARS"; vigente; grupo); 0));\n' +
-        '  suma_usd; SUM(IFERROR(FILTER(neto; moneda="USD"; vigente; grupo); 0));\n' +
-        '  suma_aud; SUM(IFERROR(FILTER(neto; moneda="AUD"; vigente; grupo); 0));\n' +
-        '  suma_eur; SUM(IFERROR(FILTER(neto; moneda="EUR"; vigente; grupo); 0));\n' +
+    return '=LET(\n' + _preambuloSaldoSyf() + '\n' +
+        '  grupo; ARRAYFORMULA(' + _condTipoSyf(esRiqueza, 'tipo_fila') + ');\n' +
+        '  suma_ars; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="ARS"); 0));\n' +
+        '  suma_usd; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="USD"); 0));\n' +
+        '  suma_aud; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="AUD"); 0));\n' +
+        '  suma_eur; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="EUR"); 0));\n' +
         '  total_ars; suma_ars + (suma_usd * TIDETRACK_USD()) + (suma_aud * TIDETRACK_AUD()) + (suma_eur * TIDETRACK_EUR());\n' +
         '  tasa_destino; IFERROR(SWITCH(' + celdaSelector + '; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n' +
         '  total_ars / tasa_destino\n)';
 }
 
 /**
- * Flujo Cotidiano del mes: la variacion neta de las cuentas de todos los dias.
- * Es el hermano de N19 (Capacidad de Capitalizacion) y el termino que le faltaba al bloque.
- * Se apoya en el motor del Tablero, que ya esta filtrado por el mes seleccionado.
- */
-function _formulaFlujoCotidianoMes() {
-    const pc = RANGES.PROYECTOS;
-    const medios = RANGES.MEDIOS_PAGO;
-    const colCatMedio = columnLetterToIndex(medios.columns.proyecto) - columnLetterToIndex(medios.start) + 1;
-    const colTipoCat = columnLetterToIndex(pc.columns.tipo) - columnLetterToIndex(pc.start) + 1;
-    const f = FORM_FILA_DERRAME_TABLERO;
-    return '=LET(\n' +
-        '  monto_neto; ARRAYFORMULA(IF(AK' + f + ':AK="Egreso"; -AJ' + f + ':AJ; AJ' + f + ':AJ));\n' +
-        '  vigente; ARRAYFORMULA(AL' + f + ':AL<>"' + SYF_ARRASTRE + '");\n' +
-        '  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(AN' + f + ':AN; ' + _refHoja(medios.sheet) + '!' + medios.start + ':' + medios.end + '; ' + colCatMedio + '; 0); ""));\n' +
-        '  tipo_cat; ARRAYFORMULA(IFERROR(VLOOKUP(categoria; ' + _refHoja(pc.sheet) + '!' + pc.start + ':' + pc.end + '; ' + colTipoCat + '; 0); ""));\n' +
-        '  cotidiano; ARRAYFORMULA((categoria<>"") * (' + _condTipoSyf(false, 'tipo_cat') + '));\n' +
-        '  suma_ars; SUM(IFERROR(FILTER(monto_neto; AO' + f + ':AO="ARS"; vigente; cotidiano); 0));\n' +
-        '  suma_usd; SUM(IFERROR(FILTER(monto_neto; AO' + f + ':AO="USD"; vigente; cotidiano); 0));\n' +
-        '  suma_aud; SUM(IFERROR(FILTER(monto_neto; AO' + f + ':AO="AUD"; vigente; cotidiano); 0));\n' +
-        '  suma_eur; SUM(IFERROR(FILTER(monto_neto; AO' + f + ':AO="EUR"; vigente; cotidiano); 0));\n' +
-        '  total_ars; suma_ars + (suma_usd * $AF$17) + (suma_aud * $AF$18) + (suma_eur * $AF$19);\n' +
-        '  tasa_cambio; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; $AF$17; "AUD"; $AF$18; "EUR"; $AF$19); 1);\n' +
-        '  total_ars / tasa_cambio\n)';
-}
-
-/**
- * Saldo ACTUAL de cada cuenta bancaria, con su moneda. Todo el historico, sin arrastres, solo
- * medios que existen en el Plan de Cuentas.
+ * Saldo ACTUAL de cada cuenta bancaria, con su moneda. Ordenado de mayor a menor.
  *
- * Es lo que Franco viene pidiendo desde el primer mensaje ("el tema esta en los saldos de los
- * medios bancarios") y lo que la hoja no mostraba: el bloque anterior sumaba solo el mes
- * seleccionado, asi que nunca era un saldo.
+ * decision Franco 2026-08-19: "No quiero que me aparezcan todos los medios. Solo los que tienen
+ * saldo a la fecha." Se filtran los que quedan en cero -- de 28 medios del catalogo, muestra los
+ * que efectivamente tienen plata. Un listado con veinte ceros no es informacion.
  */
 function _formulaSaldoPorMedio() {
-    const medios = RANGES.MEDIOS_PAGO;
-    const colCat = columnLetterToIndex(medios.columns.proyecto) - columnLetterToIndex(medios.start) + 1;
-    return '=LET(\n' + _preambuloLedgerSyf() + '\n' +
-        '  valido; ARRAYFORMULA((medio<>"") * (categoria<>"") * vigente);\n' +
-        '  med; IFERROR(FILTER(medio; valido); "");\n' +
-        '  mon; IFERROR(FILTER(moneda; valido); "");\n' +
-        '  imp; IFERROR(FILTER(neto; valido); 0);\n' +
-        '  IFERROR(QUERY(ARRAYFORMULA(HSTACK(med; mon; imp));\n' +
-        '    "SELECT Col1, Col2, SUM(Col3) WHERE Col1 IS NOT NULL AND Col1 <> \'\' ' +
-        'GROUP BY Col1, Col2 ORDER BY SUM(Col3) DESC LABEL Col1 \'\', Col2 \'\', SUM(Col3) \'\'"; 0);\n' +
-        '    HSTACK(""; ""; ""))\n)';
+    return '=LET(\n' + _preambuloSaldoSyf() + '\n' +
+        '  saldos; MAP(lista; LAMBDA(un_medio;\n' +
+        '    SUM(IFERROR(FILTER(neto; vigente; col_medio=un_medio); 0))));\n' +
+        '  con_saldo; ARRAYFORMULA(ROUND(saldos; 2)<>0);\n' +
+        '  IFERROR(SORT(FILTER(HSTACK(lista; mon_lista; saldos); con_saldo); 3; FALSE);\n' +
+        '    HSTACK("(sin saldos)"; ""; 0))\n)';
 }
 
 /**
