@@ -5,6 +5,68 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-18] v0.11.1 - Armas descargadas: se neutralizan las vias de escritura peligrosas
+ * que quedaron vivas despues del swap, y se cierra el camino lateral que encontro la auditoria:
+ * - CONTEXTO: con el swap v0.11 ya aplicado en produccion, la planilla quedo rodeada de codigo
+ *   que sigue existiendo, sigue siendo invocable y escribe con la geometria vieja. Cuatro vias
+ *   se neutralizaron en esta ronda; una auditoria adversarial posterior encontro que la
+ *   neutralizacion principal se podia esquivar.
+ * - VIA 1 - COTIZACIONES INVENTADAS (99_MigrationLogic). migrarBdAntigua y
+ *   recalcularTcRegistros rellenaban las fechas sin cotizacion con 1050/650/1100: numeros sin
+ *   ningun respaldo que quedaban CONGELADOS en el ledger, que es el unico dato que despues no
+ *   se puede recalcular. Ahora ante una sola fecha faltante se aborta TODO-O-NADA, sin escribir
+ *   una celda, listando las fechas y remitiendo a "Forzar carga historica".
+ * - VIA 2 - FALLBACK MUDO DE FX (15_ExchangeRateApi). fetchArsRate devolvia la cotizacion mas
+ *   reciente disponible sin emitir un solo log (verificado: fetchArsRate('2026-12-31')
+ *   devolvia 1510, la del 17, sin rastro). Ahora: formato invalido -> lanza; fecha FUTURA ->
+ *   lanza (el TC de un dia que no ocurrio no existe); cotizacion de otra fecha -> queda
+ *   registrada, una linea por cotizacion ancla mas un resumen de lote (resumirFallbacksArs).
+ * - VIA 3 - RECALCULO SIN AVISO (99_MigrationLogic). recalcularTcRegistros sobreescribe los TC
+ *   congelados de todo el ledger de una sola vez: ahora pide confirmacion explicita NOMBRANDO
+ *   cuantas filas va a pisar y el rango exacto. Ademas (a) las filas sin fecha legible se
+ *   SALTEAN conservando sus cotizaciones -- antes recibian vacios en J:M en silencio y el
+ *   cierre las contaba como recalculadas -- y se cuentan y se nombran; (b) el alto sale de la
+ *   ultima fila con dato en la columna FECHA y no de getLastRow(), que mide cualquier columna:
+ *   un valor suelto en T40 hacia escribir J7:M40, 34 filas para 2 registros reales.
+ * - VIA 4 - MIGRACION v0.9.5 OBSOLETA. Su geometria caduco con el swap y revertir habria pisado
+ *   la fila 7 (encabezados) y corrido el Data Lake una columna a la izquierda, destruyendo la
+ *   columna Fecha de los cuatro bloques. Se le puso un guard que se deriva del CONFIG
+ *   (_geometriaObsoletaV095 cruza el mapa del modulo contra RANGES y se apaga solo si algun dia
+ *   vuelven a coincidir).
+ * - LO QUE ENCONTRO LA AUDITORIA: el guard de la via 4 estaba SOLO en las tres entradas
+ *   publicas. cuerpoRevertirV095_ -- que es la que hace todo el trabajo destructivo -- era
+ *   invocable directo, no pasaba por el guard, escribia setValues sobre Tipos de Cambio B7:C1000
+ *   y equivalentes en E/H/K, y encima devolvia ok:true con "MIGRACION v0.9.5 REVERTIDA".
+ *   Exactamente el dano que el guard dice evitar, reportado como exito.
+ * - DATO DE PLATAFORMA QUE LO CAUSABA: en Google Apps Script una funcion es privada cuando su
+ *   nombre TERMINA en guion bajo (nombre_), NO cuando empieza (_nombre). Todas las funciones
+ *   _algo del proyecto son PUBLICAS: aparecen en el dropdown "Ejecutar" del editor. Toda
+ *   defensa apoyada en "es interna porque empieza con guion bajo" era falsa.
+ * - CORRECCION EN DOS CAPAS, ninguna apoyada en la otra: (a) el guard vive ahora en TODA funcion
+ *   que escribe -- las 22 escrituras del modulo v0.9.5 estan en 7 funciones y las 7 abortan al
+ *   entrar, mas el guardado de estado y el cuerpo de aplicar; (b) esas funciones se renombraron
+ *   para TERMINAR en guion bajo, que es lo unico que de verdad las saca del dropdown. Las cinco
+ *   entradas publicas conservan su nombre porque el menu las invoca por string. Mismo criterio
+ *   aplicado a MIGRACION_v0.11 y MIGRACION_v031: sus helpers que escriben se renombraron, y los
+ *   dos cuerpos de v031 (aplicar/revertir) abortan explicito si se los invoca sin su testigo de
+ *   progreso en vez de depender de un TypeError accidental.
+ * - MENU DEL SWAP v0.11 REDUCIDO a lo que todavia tiene trabajo. Salen "2. Sincronizar BDs"
+ *   (su docstring ya afirmaba estar fuera del menu mientras el item seguia vivo en
+ *   00_Config.js: la afirmacion era falsa, ahora es verdadera), "3. Aplicar" (no se aplica dos
+ *   veces) y "4. Revertir", que era la unica del quinteto que funcionaba entera y NO pedia
+ *   ninguna confirmacion: un clic devolvia la planilla al layout viejo contra un config que
+ *   describe el nuevo. Revertir sigue invocable como salida de emergencia deliberada y ahora
+ *   exige confirmacion (o revertirSwapV011(true) sin UI). Quedan "Ver estado" (solo lectura) y
+ *   "Purgar respaldos", que es el paso que le falta a Franco tras validar los tableros.
+ * - La precondicion de sincronizar chequeaba las dos hojas Fix con && ("faltan las dos"): con
+ *   una sola presente seguia y trabajaba a medias. Ahora aborta si falta cualquiera.
+ * - procesarCargas: el toast de fallbacks contaba LLAMADAS A LA API (una por fecha distinta),
+ *   asi que cinco movimientos de la misma fecha decian "1 fila(s)". Ahora cruza las fechas del
+ *   lote contra las que cayeron en fallback e informa filas afectadas sobre el total.
+ * - MODO DE FALLA NUEVO, documentado: una sola fecha futura tipeada en la grilla de Cargas
+ *   ABORTA EL LOTE COMPLETO (correcto como todo-o-nada, pero es nuevo en el habito diario; la
+ *   grilla queda intacta para corregir y reprocesar). @see FUNCIONALIDADES.md seccion 04.
+ *
  * [2026-08-18] v0.11.0 - Swap de hojas Fix: el rediseno de Franco pasa a ser canonico:
  * - CONTEXTO: Franco rediseno la planilla duplicando hojas con sufijo " - Fix" (mas
  *   "Presupuesto - New") y las declaro definitivas. El layout se corrio entero: Plan de

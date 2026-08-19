@@ -3,7 +3,7 @@
  * Configuración global del sistema Tidetrack
  * Define constantes, rangos de columnas, y enums
  *
- * @version 0.11.0
+ * @version 0.11.1
  * @since 0.1.0
  * @lastModified 2026-08-18
  */
@@ -383,17 +383,36 @@ const MENU_CONFIG = {
     // --- Menu de desarrollo, fixes y migraciones ---
     DEV_ITEMS: [
         {
-            // Se corren EN ESTE ORDEN: 1 (solo lectura) -> 2 si hace falta -> 3. Revertir
-            // deshace renombres y repunteos. La purga es IRREVERSIBLE y va al final, recien
-            // despues de validar los tableros. @see MIGRACION_v0.11_SwapHojasFix.js
+            // decision Franco 2026-08-18 (post-swap): el submenu queda REDUCIDO a los dos
+            // items que todavia tienen trabajo por delante. El swap ya se aplico en produccion
+            // el 2026-08-18, asi que los otros tres pasos no son "el proximo paso" de nada:
+            // son botones cargados apuntando a la planilla viva. Criterio item por item:
+            //   1. Ver estado -> SE CONSERVA. Solo lectura, y es la herramienta con la que
+            //      Franco verifica el swap antes de purgar. Nunca escribe una celda.
+            //   2. Sincronizar BDs -> SALE. Su trabajo (copiar a las Fix lo cargado en las
+            //      viejas entre la duplicacion y el swap) ya esta hecho y no se repite. Ademas
+            //      leeria "Registros" con la geometria VIEJA -- datos desde la fila 6, que hoy
+            //      es el ENCABEZADO -- y copiaria basura al ledger. Su docstring ya decia
+            //      "FUERA DEL MENU": hasta hoy era falso, la entrada seguia viva aca.
+            //   3. Aplicar swap -> SALE. No se aplica dos veces; su propio preflight lo
+            //      rechaza, pero un item de menu que solo puede contestar "ya se hizo" es
+            //      ruido en un menu donde el vecino de al lado si escribe.
+            //   4. Revertir -> SALE, y es la que mas importa sacar. Es la unica del quinteto
+            //      que HOY funcionaria de punta a punta (swap aplicado, respaldos vivos, sin
+            //      purgar) y NO pedia ninguna confirmacion: un clic deshacia el rediseno
+            //      entero -- renombra las 8 hojas, repuntea las formulas al reves -- dejando
+            //      la planilla en el layout viejo contra un 00_Config.js que describe el
+            //      nuevo, es decir el sistema roto de los dos lados. Sigue existiendo como
+            //      salida de emergencia deliberada desde el editor y ahora exige confirmar.
+            //   5. Purgar respaldos -> SE CONSERVA aunque sea IRREVERSIBLE: es el unico paso
+            //      que le queda pendiente a Franco (purgar recien despues de validar los
+            //      tableros). Ya exige cero referencias vivas + confirmacion explicita del
+            //      operador, y sin UI no corre.
+            // @see MIGRACION_v0.11_SwapHojasFix.js
             submenu: 'Migracion v0.11 (swap hojas Fix)', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoSwapV011' },
-                { name: '2. Sincronizar BDs (viejas -> Fix)', function: 'sincronizarBDsV011' },
-                { name: '3. Aplicar swap', function: 'aplicarSwapV011' },
                 { separator: true },
-                { name: '4. Revertir (deshace el swap)', function: 'revertirSwapV011' },
-                { separator: true },
-                { name: '5. Purgar respaldos (IRREVERSIBLE)', function: 'purgarRespaldosV011' }
+                { name: '2. Purgar respaldos (IRREVERSIBLE)', function: 'purgarRespaldosV011' }
             ]
         },
         // decision Franco 2026-08-18: la MIGRACION v0.9.5 SALE DEL MENU con el swap v0.11.

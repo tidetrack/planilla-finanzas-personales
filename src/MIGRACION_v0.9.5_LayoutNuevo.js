@@ -2,6 +2,26 @@
  * MIGRACION_v0.9.5_LayoutNuevo.js
  * Migracion asistida de la planilla productiva al layout nuevo (v0.9.5).
  *
+ * ============================================================================
+ * MODULO OBSOLETO -- NO SE EJECUTA (2026-08-18)
+ * ============================================================================
+ * Esta migracion YA SE APLICO y su geometria CADUCO con el swap de hojas Fix (v0.11): la
+ * planilla viva tiene Registros con datos desde la fila 7 y Tipos de Cambio en bloques
+ * C:D / F:G / I:J / L:M desde la fila 8, no el layout que este modulo escribe.
+ * TODA funcion del modulo que escribe aborta sola contra el guard _abortarSiObsoletoV095(),
+ * que compara el mapa propio del modulo contra RANGES: no hace falta acordarse de nada y se
+ * apaga solo si algun dia las geometrias vuelven a coincidir. El guard NO esta solo en las
+ * tres entradas publicas que mutan (aplicar, revertir, reparar formato) sino tambien en cada
+ * funcion interna que escribe, porque en Apps Script una funcion es privada cuando su nombre
+ * TERMINA en guion bajo (nombre_) y NO cuando empieza (_nombre): las internas se ven en el
+ * dropdown "Ejecutar" del editor y se pueden disparar salteando la entrada publica. Por eso
+ * las que escriben ademas se renombraron con el guion bajo al final. @see exigirGeometriaVigenteV095_
+ * El archivo se conserva entero como historia ejecutable; para revivirlo hay que remapear
+ * V095_BLOQUES_TC y V095_NUE_* a la geometria vigente.
+ * La foto anterior al rediseno NO se restaura desde aca: vive en las hojas ocultas
+ * "<hoja> (anterior 2026-08-18)" del swap v0.11.
+ * ============================================================================
+ *
  * [CONCEPTO DE NEGOCIO]
  * La planilla productiva migro sola al layout nuevo y el codigo desplegado se quedo en el
  * viejo: desde el 2026-03-29 no entra un solo registro al ledger. Adaptar el codigo (piezas
@@ -50,9 +70,9 @@
  * @see 00_Config.js (RANGES: layout nuevo verificado en vivo el 2026-08-13)
  * @see 03_SheetManager.js (asegurarCapacidadFilas: unico lugar que amplia grids)
  *
- * @version 0.9.5
+ * @version 0.11.1
  * @since 0.9.5
- * @lastModified 2026-08-13
+ * @lastModified 2026-08-18
  */
 
 // ============================================
@@ -154,6 +174,166 @@ var V095_REF_CONOCIDOS = [
     { hojaClave: 'tablero', rango: 'D706:D707' },
     { hojaClave: 'inicio',  rango: 'D692:D694' }
 ];
+
+// ============================================
+// GUARD DE OBSOLESCENCIA (arma descargada)
+// ============================================
+
+// [CONCEPTO DE NEGOCIO]
+// Este modulo ya hizo su trabajo: llevo la planilla al layout de agosto. El swap v0.11 del
+// 2026-08-18 despues volvio a mover todo (Registros bajo a datos en la fila 7; los bloques de
+// Tipos de Cambio se corrieron de B/E/H/K a C/F/I/L y a datos desde la fila 8). El mapa que
+// este modulo lleva adentro describe una planilla que ya no existe.
+//
+// [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+// decision Franco 2026-08-18: una migracion que ya se ejecuto y cuya geometria caduco es un
+// ARMA CARGADA, y se descarga en el codigo, no en el menu. Sacarla del menu (que ya se hizo,
+// ver 00_Config.js) no alcanza: estas funciones se siguen viendo y disparando desde el editor
+// de Apps Script, que es exactamente donde alguien va a entrar si algo sale mal.
+// El dano concreto que evita este guard: cuerpoRevertirV095_ escribe con
+// hojaTc.getRange(V095_NUE_TC_FILA_DATOS=7, b.nuevaCol=2/5/8/11, alto, 2) y despues limpia la
+// cola. Sobre la hoja viva -- datos en C/F/I/L desde la fila 8 -- eso pisaria la fila de
+// ENCABEZADOS y correria el Data Lake entero una columna a la izquierda, destruyendo la
+// columna Fecha de los cuatro bloques. A diferencia de aplicar, revertir NO pasa por el cruce
+// contra RANGES de _planV095, asi que el desajuste no lo detectaba nadie.
+//
+// El guard se deriva del CONFIG, no de constantes nuevas: compara el mapa propio del modulo
+// (V095_NUE_*, V095_BLOQUES_TC) contra RANGES. Si manana la geometria vuelve a moverse, el
+// guard sigue funcionando solo, sin que nadie tenga que acordarse de actualizarlo.
+
+/** Nombre de las hojas donde el swap v0.11 dejo la foto anterior de cada BD. */
+var V095_RESPALDOS_SWAP_V011 = '"<hoja> (anterior 2026-08-18)"';
+
+/**
+ * Cruza la geometria que este modulo ASUME contra la que declara el config vigente.
+ *
+ * @returns {{obsoleto: boolean, desajustes: string[]}}
+ */
+function _geometriaObsoletaV095() {
+    var desajustes = [];
+
+    V095_BLOQUES_TC.forEach(function (b) {
+        var cfg = (typeof RANGES !== 'undefined') ? RANGES[b.tabla] : null;
+        if (!cfg) {
+            desajustes.push('RANGES.' + b.tabla + ' no existe en el config');
+            return;
+        }
+        if (cfg.start !== b.nuevaLetra) {
+            desajustes.push('Tipos de Cambio/' + b.par + ': el modulo escribe en la columna ' +
+                            b.nuevaLetra + ' y el config declara ' + cfg.start);
+        }
+        if (cfg.dataRow !== V095_NUE_TC_FILA_DATOS) {
+            desajustes.push('Tipos de Cambio/' + b.par + ': el modulo escribe desde la fila ' +
+                            V095_NUE_TC_FILA_DATOS + ' y el config declara ' + cfg.dataRow);
+        }
+    });
+
+    var cfgReg = (typeof RANGES !== 'undefined') ? RANGES.REGISTROS : null;
+    if (!cfgReg) {
+        desajustes.push('RANGES.REGISTROS no existe en el config');
+    } else {
+        if (cfgReg.headerRow !== V095_NUE_REGISTROS_FILA_HEADER) {
+            desajustes.push('Registros: el modulo asume el header en la fila ' +
+                            V095_NUE_REGISTROS_FILA_HEADER + ' y el config declara ' + cfgReg.headerRow);
+        }
+        if (cfgReg.dataRow !== V095_NUE_REGISTROS_FILA_DATOS) {
+            desajustes.push('Registros: el modulo asume los datos desde la fila ' +
+                            V095_NUE_REGISTROS_FILA_DATOS + ' y el config declara ' + cfgReg.dataRow);
+        }
+    }
+
+    return { obsoleto: desajustes.length > 0, desajustes: desajustes };
+}
+
+/**
+ * Guard de las funciones que ESCRIBEN. Devuelve null si se puede seguir, o el {ok:false} con
+ * el que la funcion tiene que abortar sin haber tocado una sola celda.
+ *
+ * @param {string} operacion nombre humano de lo que se iba a hacer (va en el mensaje)
+ * @returns {?{ok: boolean, error: string, detalle: string}}
+ */
+function _abortarSiObsoletoV095(operacion) {
+    var g = _geometriaObsoletaV095();
+    if (!g.obsoleto) return null;
+
+    var texto =
+        'MODULO OBSOLETO: no se ejecuta "' + operacion + '" y NO SE TOCO NINGUNA CELDA.\n\n' +
+        'La migracion v' + V095_VERSION + ' ya se aplico y su geometria CADUCO con el swap de hojas Fix\n' +
+        '(v0.11, 2026-08-18). Este modulo escribe donde la planilla ya no tiene sus datos:\n\n' +
+        '  - ' + g.desajustes.join('\n  - ') + '\n\n' +
+        'Revertir con esta geometria pisaria la fila de encabezados de "Tipos de Cambio" y correria\n' +
+        'los cuatro bloques una columna a la izquierda: se DESTRUIRIA la columna Fecha del Data Lake.\n\n' +
+        'La foto anterior a este rediseno NO se restaura desde aca: vive en las hojas ocultas\n' +
+        V095_RESPALDOS_SWAP_V011 + ' que dejo el swap v0.11 (ver MIGRACION_v0.11_SwapHojasFix.js,\n' +
+        'revertirSwapV011: fuera del menu, se invoca a proposito desde el editor).\n' +
+        'Los respaldos propios de la v' + V095_VERSION + ' ("RESP_TC_v095_*") son de\n' +
+        'DOS layouts atras y tampoco sirven como punto de retorno de la planilla de hoy.\n\n' +
+        'Si algun dia hiciera falta revivir este modulo, hay que remapear V095_BLOQUES_TC y\n' +
+        'V095_NUE_* a la geometria vigente: este guard se apaga solo cuando coincidan con RANGES.';
+
+    logError('MIGRACION v' + V095_VERSION + ': "' + operacion + '" abortada por geometria obsoleta', {
+        desajustes: g.desajustes
+    });
+    _alertaV095('Migracion v' + V095_VERSION + ' - MODULO OBSOLETO', texto);
+
+    return {
+        ok: false,
+        error: 'Modulo obsoleto tras el swap v0.11: la geometria que escribe ya no es la de la ' +
+               'planilla. No se toco ninguna celda. Desajustes: ' + g.desajustes.join(' | '),
+        detalle: texto,
+        _avisado: true
+    };
+}
+
+// [FUNDAMENTO TEORICO / ADMINISTRATIVO] -- DEFENSA EN PROFUNDIDAD, SEGUNDA CAPA.
+// decision Franco 2026-08-18: el guard NO puede vivir solo en las entradas publicas.
+// La auditoria adversarial del 2026-08-18 encontro el camino lateral: cuerpoRevertirV095_()
+// hacia todo el trabajo destructivo y era invocable SIN pasar por revertirMigracionV095().
+// Devolvia ok:true con "MIGRACION v0.9.5 REVERTIDA" mientras escribia
+// setValues@Tipos de Cambio!B7:C1000 (y E/H/K), pisando la fila 7 -- los encabezados
+// post-swap -- y corriendo el Data Lake una columna a la izquierda sobre las cuatro
+// columnas de Fecha. El dano exacto que el guard dice evitar, reportado como exito.
+//
+// DATO DE PLATAFORMA que causaba el agujero (Apps Script, no JavaScript): una funcion es
+// privada -- invisible en el dropdown "Ejecutar" del editor y no invocable desde afuera --
+// cuando su nombre TERMINA en guion bajo (nombre_), NO cuando empieza (_nombre). Todas las
+// funciones _algo de este proyecto son PUBLICAS. Cualquier defensa apoyada en "es interna
+// porque empieza con guion bajo" es falsa, y esa era la premisa del diseno anterior.
+//
+// Por eso la correccion es doble y ninguna de las dos capas se apoya en la otra:
+//   (a) toda funcion de este modulo que ESCRIBE llama a exigirGeometriaVigenteV095_() al
+//       entrar. Las 22 escrituras del archivo viven en 7 funciones, y las 7 estan cubiertas:
+//         respaldarTiposCambioV095_  (insertSheet, insertRowsAfter, 2x copyTo, hideSheet)
+//         respaldarFormulasV095_     (insertSheet, asegurarCapacidadFilas, setNumberFormat,
+//                                     setValues, hideSheet) + setProperty del registro primario
+//         aplicarGridV095_           (asegurarCapacidadFilas)
+//         aplicarBackfillV095_       (asegurarCapacidadFilas, setValues, clearContent, 2x setNumberFormat)
+//         aplicarFormulasV095_       (setFormula)
+//         cuerpoRevertirV095_        (setValues, clearContent, setFormula, deleteRows)
+//         repararFormatoCotizacionesV095 (setNumberFormat) -- publica, ya guardada
+//       Mas guardarEstadoV095_ y cuerpoAplicarV095_, que no escriben celdas pero persisten
+//       estado / conducen la corrida: un registro que afirme una migracion que no ocurrio es
+//       tan mentira como una celda mal escrita.
+//   (b) esas funciones se renombraron para TERMINAR en guion bajo, que es lo unico que de
+//       verdad las saca del dropdown "Ejecutar". Las cinco entradas publicas del modulo
+//       (aplicar/revertir/estado/repararFormato/estadoRespaldos) conservan su nombre: el menu
+//       las invoca por string y renombrarlas romperia el menu.
+
+/**
+ * Guard de entrada de las funciones INTERNAS que escriben. Lanza si la geometria caduco.
+ *
+ * Lanza en vez de devolver {ok:false} porque estas funciones no tienen ese contrato: devuelven
+ * strings de detalle o structs propios, y un valor de retorno "de aborto" seria indistinguible
+ * de un resultado normal para el llamador. La excepcion la atrapan los catch de ultima
+ * instancia de aplicar/revertir, que ya saben no mentir sobre si se llego a mutar.
+ *
+ * @param {string} operacion nombre humano de lo que se iba a hacer (va en el mensaje)
+ * @throws {Error} si el modulo esta obsoleto contra RANGES
+ */
+function exigirGeometriaVigenteV095_(operacion) {
+    var abortar = _abortarSiObsoletoV095(operacion);
+    if (abortar) throw new Error(abortar.error);
+}
 
 // ============================================
 // HELPERS DE INFRAESTRUCTURA
@@ -264,7 +444,8 @@ function _migracionEnVueloV095(estado) {
 }
 
 /** Persiste el estado (merge sobre lo existente). Las claves internas (_*) no se persisten. */
-function _guardarEstadoV095(parcial) {
+function guardarEstadoV095_(parcial) {
+    exigirGeometriaVigenteV095_('persistir el estado de la migracion v' + V095_VERSION);
     var previo = _leerEstadoV095();
     var estado = {};
     for (var k0 in previo) {
@@ -967,7 +1148,10 @@ function _validarRespaldoTcV095(hojaResp, conteoRegistrado) {
  * @returns {{nombre: string, conteo: Object<string,number>, ultimaFila: number, total: number}}
  * @throws {Error} si la copia no queda verificada (el llamador aborta ANTES de mutar)
  */
-function _respaldarTiposCambioV095(ss, hojaTc, sello) {
+function respaldarTiposCambioV095_(ss, hojaTc, sello) {
+    // Crea hojas y copia: no destruye, pero ensucia la planilla productiva con respaldos de
+    // DOS layouts atras, que ademas invitan a confiar en ellos como punto de retorno.
+    exigirGeometriaVigenteV095_('congelar el respaldo de Tipos de Cambio');
     var vivo = _contarBloquesTcV095(hojaTc);
 
     var nombre = _nombreHojaLibreV095(ss, 'RESP_TC_v095_' + sello);
@@ -986,7 +1170,7 @@ function _respaldarTiposCambioV095(ss, hojaTc, sello) {
         // Cosmetico: sin el formato, las fechas se ven como seriales. Nunca bloquea el respaldo.
         origenRango.copyTo(destinoRango, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
     } catch (e) {
-        logInfo('_respaldarTiposCambioV095: no se pudo copiar el formato al respaldo (cosmetico): ' + e.message);
+        logInfo('respaldarTiposCambioV095_: no se pudo copiar el formato al respaldo (cosmetico): ' + e.message);
     }
 
     // --- VERIFICACION: se relee la copia. Sin esto, "respaldo" es una afirmacion sin evidencia.
@@ -1054,7 +1238,8 @@ function _textoLiteralV095(v) {
     return /^[=+\-@']/.test(s) ? "'" + s : s;
 }
 
-function _respaldarFormulasV095(ss, plan, sello, hojaExistente, soloProps) {
+function respaldarFormulasV095_(ss, plan, sello, hojaExistente, soloProps) {
+    exigirGeometriaVigenteV095_('congelar el respaldo de formulas');
     var props = PropertiesService.getDocumentProperties();
     var encabezado = ['hoja', 'celda', 'formula original', 'valor mostrado antes', 'sello'];
     var nuevas = [];
@@ -1066,7 +1251,7 @@ function _respaldarFormulasV095(ss, plan, sello, hojaExistente, soloProps) {
     });
 
     if (nuevas.length === 0) {
-        logInfo('_respaldarFormulasV095: ninguna formula a re-apuntar, no se crea hoja de respaldo.');
+        logInfo('respaldarFormulasV095_: ninguna formula a re-apuntar, no se crea hoja de respaldo.');
         return null;
     }
 
@@ -1082,7 +1267,7 @@ function _respaldarFormulasV095(ss, plan, sello, hojaExistente, soloProps) {
             throw new Error('El respaldo de formulas no quedo verificado en: ' + malas.join(', ') +
                             '. No se muto ninguna celda de las hojas vivas.');
         }
-        logInfo('_respaldarFormulasV095: la hoja de respaldo de esta migracion ya no esta; se registran ' +
+        logInfo('respaldarFormulasV095_: la hoja de respaldo de esta migracion ya no esta; se registran ' +
                 nuevas.length + ' formula(s) SOLO en DocumentProperties y no se abre una hoja nueva ' +
                 '(abrirla dejaria fuera de la lista las celdas de la corrida anterior).');
         return { nombre: null, celdas: nuevas.length };
@@ -1153,7 +1338,8 @@ function _respaldarFormulasV095(ss, plan, sello, hojaExistente, soloProps) {
 // ============================================
 
 /** Operacion 1: amplia el grid de "Tipos de cambio" hasta el objetivo. Idempotente por tamano. */
-function _aplicarGridV095(plan) {
+function aplicarGridV095_(plan) {
+    exigirGeometriaVigenteV095_('ampliar el grid de Tipos de Cambio');
     if (!plan.grid.ampliaria) {
         return 'grid: sin cambios (ya tiene ' + plan.grid.maxFilasActual + ' filas, alcanza para ' +
                plan.grid.filasNecesarias + ').';
@@ -1168,7 +1354,8 @@ function _aplicarGridV095(plan) {
  * deduplicadas por fecha y ordenadas descendente. Idempotente: en una segunda corrida todas
  * las fechas del legacy ya existen en el destino y el resultado es identico.
  */
-function _aplicarBackfillV095(plan) {
+function aplicarBackfillV095_(plan) {
+    exigirGeometriaVigenteV095_('escribir el backfill de cotizaciones');
     var hojaTc = plan.hojas.tiposCambio;
     var detalle = [];
 
@@ -1199,7 +1386,7 @@ function _aplicarBackfillV095(plan) {
                 fmtCotiz = hojaTc.getRange(V095_NUE_TC_FILA_DATOS, t.nuevaCol + 1).getNumberFormat();
             }
         } catch (e) {
-            logInfo('_aplicarBackfillV095: no se pudo leer el formato del bloque ' + t.par + ' (cosmetico): ' + e.message);
+            logInfo('aplicarBackfillV095_: no se pudo leer el formato del bloque ' + t.par + ' (cosmetico): ' + e.message);
         }
 
         // Escribir PRIMERO y limpiar la cola despues: no existe un instante en el que el bloque
@@ -1217,7 +1404,7 @@ function _aplicarBackfillV095(plan) {
                 hojaTc.getRange(V095_NUE_TC_FILA_DATOS, t.nuevaCol, t.filas.length, 1).setNumberFormat(fmtFecha);
                 hojaTc.getRange(V095_NUE_TC_FILA_DATOS, t.nuevaCol + 1, t.filas.length, 1).setNumberFormat(fmtCotiz);
             } catch (e) {
-                logInfo('_aplicarBackfillV095: no se pudo propagar el formato del bloque ' + t.par + ': ' + e.message);
+                logInfo('aplicarBackfillV095_: no se pudo propagar el formato del bloque ' + t.par + ': ' + e.message);
             }
         }
 
@@ -1233,7 +1420,8 @@ function _aplicarBackfillV095(plan) {
  * verifica lo escrito. Si la verificacion no cierra, lo dice como "no se pudo confirmar":
  * la formula YA fue escrita, negarlo seria mentir.
  */
-function _aplicarFormulasV095(plan) {
+function aplicarFormulasV095_(plan) {
+    exigirGeometriaVigenteV095_('re-apuntar las formulas de las vistas');
     var detalle = [];
     var avisos = [];
 
@@ -1288,6 +1476,19 @@ function estadoMigracionV095(yaConLock) {
             var ss = SpreadsheetApp.getActiveSpreadsheet();
             var plan = _planV095(ss);
             var informe = _redactarPlanV095(plan);
+
+            // estado NO escribe, asi que no aborta: informa. Pero encabeza el informe con la
+            // obsolescencia para que nadie lea los "bloqueantes" de abajo como algo a resolver
+            // (no lo son: son el sintoma de que el modulo describe una planilla que ya no es).
+            var geo = _geometriaObsoletaV095();
+            if (geo.obsoleto) {
+                informe = 'MODULO OBSOLETO tras el swap v0.11 (2026-08-18). aplicar / revertir /\n' +
+                          'reparar formato ABORTAN sin escribir. Desajustes contra el config vigente:\n' +
+                          '  - ' + geo.desajustes.join('\n  - ') + '\n' +
+                          'La foto anterior al rediseno vive en ' + V095_RESPALDOS_SWAP_V011 + '.\n' +
+                          '------------------------------------------------------------\n' + informe;
+            }
+
             Logger.log(informe);
             _alertaV095('Migracion v' + V095_VERSION + ' - estado', informe);
 
@@ -1327,12 +1528,16 @@ function estadoMigracionV095(yaConLock) {
  * @returns {{ok: boolean, detalle?: string, error?: string}}
  */
 function aplicarMigracionV095(yaConLock) {
+    // Guard de obsolescencia ANTES del lock: si el modulo caduco no hay nada que serializar.
+    var obsoleto = _abortarSiObsoletoV095('aplicar la migracion v' + V095_VERSION);
+    if (obsoleto) return _informarResultadoV095('Migracion v' + V095_VERSION + ' - NO APLICADA', obsoleto);
+
     return _informarResultadoV095('Migracion v' + V095_VERSION + ' - NO APLICADA', _conLockV095(yaConLock, function () {
         // progreso.muto se enciende justo antes de la PRIMERA escritura sobre una hoja viva:
         // es lo que le permite al catch de ultima instancia no mentir en ninguna direccion.
         var progreso = { muto: false, respaldoTc: null };
         try {
-            return _cuerpoAplicarV095(progreso, yaConLock === true);
+            return cuerpoAplicarV095_(progreso, yaConLock === true);
         } catch (err) {
             logError('aplicarMigracionV095: excepcion no prevista', err);
             if (!progreso.muto) {
@@ -1361,7 +1566,19 @@ function aplicarMigracionV095(yaConLock) {
  * @param {{muto: boolean, respaldoTc: ?string}} progreso testigo de si ya se escribio sobre hojas vivas
  * @param {boolean} conducida true si el llamador ya tenia el lock (rutina que ya decidio)
  */
-function _cuerpoAplicarV095(progreso, conducida) {
+function cuerpoAplicarV095_(progreso, conducida) {
+    // Guard propio, no heredado del llamador: esta funcion tiene el contrato {ok,...}, asi que
+    // devuelve el aborto en vez de lanzarlo. Es la misma respuesta que da aplicarMigracionV095.
+    var obsoletoCuerpo = _abortarSiObsoletoV095('aplicar la migracion v' + V095_VERSION);
+    if (obsoletoCuerpo) return obsoletoCuerpo;
+
+    // Segunda condicion, valida aunque el guard se apague: sin el testigo de progreso no hay
+    // catch de ultima instancia que sepa si se llego a mutar. No se escribe a ciegas.
+    if (!progreso || typeof progreso !== 'object') {
+        return { ok: false, error: 'cuerpoAplicarV095_ se invoco sin el testigo de progreso: solo corre ' +
+                 'desde aplicarMigracionV095(). No se toco ninguna celda.' };
+    }
+
     var ss, plan, informe;
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1470,13 +1687,13 @@ function _cuerpoAplicarV095(progreso, conducida) {
                 hechos.push('aviso: la hoja de respaldo de formulas "' + estadoPrevio.respaldoFormulas +
                             '" ya no esta; el registro vive en DocumentProperties y desde ahi se restaura.');
             }
-            var resForm = _respaldarFormulasV095(ss, plan, sello, hojaFormPrevia, faltaHojaForm);
+            var resForm = respaldarFormulasV095_(ss, plan, sello, hojaFormPrevia, faltaHojaForm);
             // El puntero de formulas solo se MUEVE si antes no habia ninguno (nunca se pisa).
             respaldoFormulas = estadoPrevio.respaldoFormulas || (resForm ? resForm.nombre : null);
 
             // Solo se registra el reintento. respaldoTc, respaldoConteo y gridPrevio quedan
             // exactamente como los dejo la primera corrida.
-            _guardarEstadoV095({
+            guardarEstadoV095_({
                 respaldoFormulas: respaldoFormulas,
                 intentos: (estadoPrevio.intentos || 1) + 1,
                 ultimoIntentoEn: new Date().toISOString()
@@ -1526,16 +1743,16 @@ function _cuerpoAplicarV095(progreso, conducida) {
                         '(' + huerfanas.join(', ') + ') con el MISMO contenido que la hoja viva: son ' +
                         'de un intento que aborto sin mutar. No bloquean; se pueden borrar a mano.');
             }
-            var resTc = _respaldarTiposCambioV095(ss, plan.hojas.tiposCambio, sello);
+            var resTc = respaldarTiposCambioV095_(ss, plan.hojas.tiposCambio, sello);
             respaldoTc = resTc.nombre;
             progreso.respaldoTc = respaldoTc;
-            var resForm2 = _respaldarFormulasV095(ss, plan, sello, null);
+            var resForm2 = respaldarFormulasV095_(ss, plan, sello, null);
             respaldoFormulas = resForm2 ? resForm2.nombre : null;
 
             // Se persiste el puntero al respaldo ANTES de la primera mutacion: si algo corta a
             // mitad de camino, el rastro de donde esta la copia ya quedo guardado. Con el
             // puntero va el conteo verificado, que es contra lo que revertir lo revalida.
-            _guardarEstadoV095({
+            guardarEstadoV095_({
                 sello: sello,
                 respaldoTc: respaldoTc,
                 respaldoConteo: resTc.conteo,
@@ -1565,7 +1782,7 @@ function _cuerpoAplicarV095(progreso, conducida) {
 
     // --- OPERACIONES ---
     try {
-        hechos.push(_aplicarGridV095(plan));
+        hechos.push(aplicarGridV095_(plan));
     } catch (err) {
         logError('aplicarMigracionV095: fallo la ampliacion del grid', err);
         return {
@@ -1578,10 +1795,10 @@ function _cuerpoAplicarV095(progreso, conducida) {
     }
 
     try {
-        hechos.push(_aplicarBackfillV095(plan));
+        hechos.push(aplicarBackfillV095_(plan));
     } catch (err) {
         logError('aplicarMigracionV095: fallo el backfill', err);
-        _guardarEstadoV095({ pasos: { grid: 'aplicado', backfill: 'incierto', formulas: 'no ejecutado' } });
+        guardarEstadoV095_({ pasos: { grid: 'aplicado', backfill: 'incierto', formulas: 'no ejecutado' } });
         return {
             ok: false,
             error: 'Fallo durante el backfill: ' + err.message +
@@ -1596,11 +1813,11 @@ function _cuerpoAplicarV095(progreso, conducida) {
 
     var resFormulas;
     try {
-        resFormulas = _aplicarFormulasV095(plan);
+        resFormulas = aplicarFormulasV095_(plan);
         hechos.push(resFormulas.detalle);
     } catch (err) {
         logError('aplicarMigracionV095: fallo el re-apuntado de formulas', err);
-        _guardarEstadoV095({ pasos: { grid: 'aplicado', backfill: 'aplicado', formulas: 'incierto' } });
+        guardarEstadoV095_({ pasos: { grid: 'aplicado', backfill: 'aplicado', formulas: 'incierto' } });
         return {
             ok: false,
             error: 'Grid y backfill quedaron aplicados. Fallo el re-apuntado de formulas: ' + err.message +
@@ -1611,7 +1828,7 @@ function _cuerpoAplicarV095(progreso, conducida) {
         };
     }
 
-    _guardarEstadoV095({
+    guardarEstadoV095_({
         aplicadaEn: new Date().toISOString(),
         revertidaEn: null,
         pasos: { grid: 'aplicado', backfill: 'aplicado', formulas: 'aplicado' },
@@ -1669,10 +1886,16 @@ function _cuerpoAplicarV095(progreso, conducida) {
  * @returns {{ok: boolean, detalle?: string, error?: string}}
  */
 function revertirMigracionV095(yaConLock) {
+    // EL guard que mas importa del modulo. Revertir es el unico camino que escribe con la
+    // geometria vieja HARDCODEADA sin pasar por el cruce contra RANGES de _planV095: sobre la
+    // planilla post-swap destruiria la columna Fecha de los cuatro bloques del Data Lake.
+    var obsoleto = _abortarSiObsoletoV095('revertir la migracion v' + V095_VERSION);
+    if (obsoleto) return _informarResultadoV095('Revertir migracion v' + V095_VERSION + ' - NO REVERTIDA', obsoleto);
+
     return _informarResultadoV095('Revertir migracion v' + V095_VERSION + ' - NO REVERTIDA', _conLockV095(yaConLock, function () {
         var progreso = { muto: false, respaldoTc: null };
         try {
-            return _cuerpoRevertirV095(progreso, yaConLock === true);
+            return cuerpoRevertirV095_(progreso, yaConLock === true);
         } catch (err) {
             logError('revertirMigracionV095: excepcion no prevista', err);
             if (!progreso.muto) {
@@ -1698,7 +1921,23 @@ function revertirMigracionV095(yaConLock) {
  * @param {{muto: boolean, respaldoTc: ?string}} progreso testigo de si ya se escribio sobre hojas vivas
  * @param {boolean} conducida true si el llamador ya tenia el lock (rutina que ya decidio)
  */
-function _cuerpoRevertirV095(progreso, conducida) {
+function cuerpoRevertirV095_(progreso, conducida) {
+    // EL guard que la auditoria del 2026-08-18 encontro que faltaba. Esta funcion es la que
+    // escribe con la geometria vieja HARDCODEADA (V095_NUE_TC_FILA_DATOS + b.nuevaCol), sin
+    // pasar por el cruce contra RANGES de _planV095: sobre la planilla post-swap pisa la fila
+    // de encabezados y destruye la columna Fecha de los cuatro bloques del Data Lake.
+    // Antes se apoyaba en que revertirMigracionV095() la llamara: eso NO es una defensa,
+    // porque en Apps Script _cuerpo... es publica (privada es cuerpo..._, con el guion bajo
+    // al FINAL). Ahora aborta por si misma, la llame quien la llame.
+    var obsoletoCuerpo = _abortarSiObsoletoV095('revertir la migracion v' + V095_VERSION);
+    if (obsoletoCuerpo) return obsoletoCuerpo;
+
+    // Segunda condicion, valida aunque el guard se apague. @see cuerpoAplicarV095_
+    if (!progreso || typeof progreso !== 'object') {
+        return { ok: false, error: 'cuerpoRevertirV095_ se invoco sin el testigo de progreso: solo corre ' +
+                 'desde revertirMigracionV095(). No se toco ninguna celda.' };
+    }
+
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var estado = _leerEstadoV095();
     var props = PropertiesService.getDocumentProperties();
@@ -1884,7 +2123,7 @@ function _cuerpoRevertirV095(progreso, conducida) {
 
     // Los pasos registran lo que REALMENTE paso, no la intencion: el grid puede quedar
     // ampliado a proposito y las formulas restauradas pueden ser cero.
-    _guardarEstadoV095({
+    guardarEstadoV095_({
         revertidaEn: new Date().toISOString(),
         pasos: {
             grid: pasoGrid,
@@ -1992,6 +2231,12 @@ function _celdasRegistradasV095(ss, estado, props, nombres) {
  * @returns {{ok: boolean, detalle?: string, error?: string}}
  */
 function repararFormatoCotizacionesV095(yaConLock) {
+    // Solo toca formato, pero lo toca en columnas: con la geometria caducada reformatearia las
+    // columnas B/E/H/K -- que hoy son las FECHAS de otro bloque -- y dejaria las fechas del
+    // Data Lake mostrando importes. Mismo guard, misma razon.
+    var obsoleto = _abortarSiObsoletoV095('reparar el formato de cotizaciones');
+    if (obsoleto) return _informarResultadoV095('Reparar formato de cotizaciones', obsoleto);
+
     return _informarResultadoV095('Reparar formato de cotizaciones', _conLockV095(yaConLock, function () {
         try {
             var ss = SpreadsheetApp.getActiveSpreadsheet();

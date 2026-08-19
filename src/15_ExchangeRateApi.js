@@ -8,41 +8,197 @@
  * monedas (ARS, USD, AUD, EUR) al pipeline de cargas y a las custom functions de celda.
  *
  * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
- * ADR-004: las cotizaciones viven congeladas en la hoja "Tipos de cambio" (layout migrado:
- * bloques B:C / E:F / H:I / K:L, header fila 6, datos desde la fila 7). forzarCargaHistorica
+ * ADR-004: las cotizaciones viven congeladas en la hoja "Tipos de Cambio". forzarCargaHistorica
  * reconstruye ese data lake completo bajo contrato TODO-O-NADA: antes de limpiar una sola celda
  * verifica el CONTENIDO (las cuatro monedas tienen que traer cotizaciones) y la capacidad fisica
- * del grid (la hoja quedo con apenas 6 filas libres tras la migracion). Si algo falta, aborta con
- * el detalle por moneda y la hoja queda intacta.
+ * del grid. Si algo falta, aborta con el detalle por moneda y la hoja queda intacta.
+ * NINGUNA coordenada de la hoja se escribe aca: todas salen de RANGES.TC_* (regla SSOT), asi
+ * que el modulo sobrevivio sin cambios al swap v0.11 (bloques C:D / F:G / I:J / L:M, titulos
+ * fila 6, header fila 7, datos desde la fila 8). Por eso no se repite la geometria en esta
+ * cabecera: la unica fuente es 00_Config.js.
+ *
+ * REGLA ESTRICTA 9 (nunca se silencia un fallback de tipo de cambio), implementada en tres
+ * niveles dentro de fetchArsRate: fecha invalida o futura -> lanza; cotizacion de otra fecha ->
+ * queda registrada (una linea por cotizacion ancla + resumen de lote via resumirFallbacksArs);
+ * serie vacia -> lanza. Nunca se devuelve un numero inventado.
  *
  * @see 00_Config.js (RANGES.TC_*)
  * @see 03_SheetManager.js (asegurarCapacidadFilas)
  *
- * @version 0.9.5
+ * @version 0.11.1
  * @since 0.1.0
- * @lastModified 2026-08-13
+ * @lastModified 2026-08-18
  */
 
 // Caché en memoria durante la ejecución del script para no pedir el JSON gigante múltiple veces
 let cachedArsData = null;
 
+// ============================================
+// TRAZA DE FALLBACKS DE COTIZACION (Regla Estricta 9)
+// ============================================
+
+// [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+// Un TC que no corresponde a la fecha pedida se CONGELA en el registro y en el Data Lake: es
+// irreversible sin recalcular. La Regla Estricta 9 lo cubre entero -- ningun fallback de la
+// API de tipo de cambio se silencia --, pero el fallback "cotizacion mas reciente disponible"
+// (la fecha pedida es posterior al ultimo dato de la serie, o cae en fin de semana/feriado)
+// era MUDO: devolvia el valor sin emitir un solo log. Verificado el 2026-08-18:
+// fetchArsRate('2026-12-31') devolvia 1510 -- la cotizacion del 17 -- sin dejar rastro.
+//
+// decision Franco 2026-08-18: se loguea UNA VEZ POR COTIZACION ANCLA, no una vez por llamada.
+// El ruido importa: forzarCargaHistorica pide dia por dia desde 2024-01-01 y procesarCargas
+// puede pedir cientos de fechas en un lote; un log por llamada serian ~600 lineas identicas y
+// el log deja de leerse (un log que nadie lee es tan mudo como no loguearlo).
+// La clave del resumen es la fecha DEVUELTA, no la pedida, y eso lo acota solo: todas las
+// fechas posteriores al fin de la serie caen sobre la MISMA ancla, asi que ese caso emite
+// exactamente una linea por corrida por mas filas que traiga el lote. La primera vez que
+// aparece un ancla se loguea con el detalle completo (que fecha se pidio, cual se devolvio,
+// con que valor); las repeticiones solo suman al contador y salen en el resumen final con el
+// rango de fechas que abarcaron. Ninguna corrida con fallback queda sin al menos una linea.
+var _arsFallbackResumen = null;
+
+/** Reinicia el acumulador de fallbacks. Se llama al levantar la serie de la API. */
+function _resetResumenFallbackArs() {
+    _arsFallbackResumen = Object.create(null);
+}
+
+/**
+ * Anota que se devolvio una cotizacion que NO es la de la fecha pedida.
+ *
+ * @param {string} tipo 'posterior' (ancla anterior a la fecha pedida) o 'anterior' (serie que arranca despues)
+ * @param {string} fechaPedida fecha solicitada, 'YYYY-MM-DD'
+ * @param {string} fechaDevuelta fecha de la cotizacion efectivamente devuelta, 'YYYY-MM-DD'
+ * @param {number} valor cotizacion devuelta
+ */
+function _registrarFallbackArs(tipo, fechaPedida, fechaDevuelta, valor) {
+    if (!_arsFallbackResumen) _resetResumenFallbackArs();
+
+    var entrada = _arsFallbackResumen[fechaDevuelta];
+    if (!entrada) {
+        entrada = {
+            tipo: tipo, valor: valor, veces: 0,
+            primeraPedida: fechaPedida, ultimaPedida: fechaPedida,
+            // decision Franco 2026-08-18: se guarda el SET de fechas pedidas, no solo el rango.
+            // 'veces' cuenta resoluciones de la API (una por fecha distinta que no estaba en
+            // cache), no filas del lote: un llamador que quiera informar filas afectadas
+            // necesita saber QUE fechas cayeron en fallback para cruzarlas contra su lote.
+            pedidas: Object.create(null)
+        };
+        _arsFallbackResumen[fechaDevuelta] = entrada;
+        // Primera aparicion de esta ancla: detalle completo, siempre, sin excepcion.
+        logInfo(
+            'fetchArsRate: FALLBACK -- se pidio ' + fechaPedida + ' y se devuelve la cotizacion del ' +
+            fechaDevuelta + ' (' + valor + '). Motivo: ' +
+            (tipo === 'posterior'
+                ? 'la serie de la API no llega a esa fecha (fin de semana, feriado o fecha posterior al ultimo dato publicado).'
+                : 'la serie de la API arranca despues de esa fecha.') +
+            ' Este TC se congela tal cual en el registro y en el Data Lake.'
+        );
+    }
+    entrada.veces++;
+    entrada.pedidas[fechaPedida] = true;
+    if (fechaPedida < entrada.primeraPedida) entrada.primeraPedida = fechaPedida;
+    if (fechaPedida > entrada.ultimaPedida) entrada.ultimaPedida = fechaPedida;
+}
+
+/**
+ * Cierra la traza de fallbacks de la corrida: loguea el resumen y reinicia el acumulador.
+ *
+ * La llaman los procesos por LOTE al terminar (procesarCargas, forzarCargaHistorica) para que
+ * el operador vea de un vistazo cuantas filas se llevaron un TC que no es el de su fecha.
+ * Es seguro llamarla siempre: sin fallbacks no escribe nada.
+ *
+ * `total` cuenta RESOLUCIONES DE COTIZACION (una por fecha distinta que hubo que ir a buscar),
+ * no filas de ningun lote: cinco movimientos de la misma fecha son una sola resolucion. El que
+ * quiera contar filas afectadas cruza su lote contra `fechasPedidas`.
+ *
+ * @returns {{total: number, anclas: Array, fechasPedidas: string[]}} resumen para el llamador
+ */
+function resumirFallbacksArs() {
+    var resumen = { total: 0, anclas: [], fechasPedidas: [] };
+    if (!_arsFallbackResumen) return resumen;
+
+    var vistas = Object.create(null);
+    for (var fechaDevuelta in _arsFallbackResumen) {
+        if (!Object.prototype.hasOwnProperty.call(_arsFallbackResumen, fechaDevuelta)) continue;
+        var e = _arsFallbackResumen[fechaDevuelta];
+        resumen.total += e.veces;
+        resumen.anclas.push({
+            fechaDevuelta: fechaDevuelta, tipo: e.tipo, valor: e.valor, veces: e.veces,
+            primeraPedida: e.primeraPedida, ultimaPedida: e.ultimaPedida
+        });
+        for (var pedida in e.pedidas) {
+            if (!Object.prototype.hasOwnProperty.call(e.pedidas, pedida)) continue;
+            if (!vistas[pedida]) { vistas[pedida] = true; resumen.fechasPedidas.push(pedida); }
+        }
+    }
+    resumen.fechasPedidas.sort();
+
+    if (resumen.total > 0) {
+        var detalle = resumen.anclas.map(function (a) {
+            return a.veces + ' pedido(s) entre ' + a.primeraPedida + ' y ' + a.ultimaPedida +
+                   ' resueltos con la cotizacion del ' + a.fechaDevuelta + ' (' + a.valor + ')';
+        }).join(' | ');
+        logInfo('fetchArsRate: RESUMEN DE FALLBACKS de esta corrida -> ' + detalle +
+                '. Total de cotizaciones devueltas fuera de su fecha: ' + resumen.total + '.');
+    }
+
+    _resetResumenFallbackArs();
+    return resumen;
+}
+
 /**
  * Obtiene la cotización del ARS Oficial (venta) para una fecha (formato YYYY-MM-DD).
  * Utiliza un caché en memoria del array histórico si procesa un lote.
+ *
+ * Nunca devuelve un numero inventado y nunca devuelve en silencio una cotizacion que no sea
+ * la de la fecha pedida: o es exacta, o queda logueada, o lanza (Regla Estricta 9).
  */
 function fetchArsRate(dateString) {
+    // decision Franco 2026-08-18: la fecha se valida ANTES de la llamada a la API.
+    // Un dateString con formato invalido producia `new Date(NaN)`, contra el que TODA
+    // comparacion da false: el bucle no matcheaba nunca y la funcion caia al fallback de la
+    // cotizacion mas antigua, devolviendo la de 2024-01-01 como si fuera la pedida. Basura
+    // adentro, cotizacion plausible afuera: el peor de los fallos posibles en este motor.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateString))) {
+        logError('fetchArsRate: fecha con formato invalido', { fechaPedida: String(dateString) });
+        throw new Error(
+            'Fecha invalida para cotizacion ARS: "' + dateString + '". Se espera YYYY-MM-DD. ' +
+            'No se devuelve ningun tipo de cambio.'
+        );
+    }
+
+    // decision Franco 2026-08-18: una fecha FUTURA es un error, no un fallback.
+    // Antes devolvia la ultima cotizacion publicada como si fuera la del dia pedido: el TC de
+    // un dia que todavia no ocurrio no existe, y congelarlo en un registro fechado adelante
+    // es inventar un dato con apariencia de dato. El caso es real (un tipeo en la columna
+    // Fecha de Cargas alcanza) y hasta hoy pasaba entero y sin rastro.
+    var hoyIso = formatDateISO(new Date());
+    if (hoyIso && dateString > hoyIso) {
+        logError('fetchArsRate: se pidio una cotizacion para una fecha futura', {
+            fechaPedida: dateString,
+            hoy: hoyIso
+        });
+        throw new Error(
+            'No hay cotizacion ARS para ' + dateString + ': es una fecha futura (hoy es ' + hoyIso +
+            '). Revisar la fecha del movimiento. No se escribe ningun tipo de cambio.'
+        );
+    }
+
     if (!cachedArsData) {
         try {
             const url = 'https://api.argentinadatos.com/v1/cotizaciones/dolares/oficial/';
             const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-            
+
             if (response.getResponseCode() !== 200) {
                 throw new Error("HTTP " + response.getResponseCode());
             }
-            
+
             cachedArsData = JSON.parse(response.getContentText());
             // Ordenar de más reciente a más antigua para búsqueda
             cachedArsData.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            // Serie recien levantada = corrida nueva: la traza de fallbacks arranca limpia.
+            _resetResumenFallbackArs();
         } catch (e) {
             logError('Error fetching ARS rates', e);
             throw new Error('No se pudo conectar con la API de Dólar.' + e.toString());
@@ -50,22 +206,24 @@ function fetchArsRate(dateString) {
     }
 
     const targetDate = new Date(dateString + 'T12:00:00Z');
-    
+
     for (let record of cachedArsData) {
         if (new Date(record.fecha + 'T12:00:00Z') <= targetDate) {
+            // Regla Estricta 9: si la cotizacion devuelta no es la de la fecha pedida, se
+            // deja rastro. Silencioso SOLO cuando la fecha coincide exactamente.
+            if (record.fecha !== dateString) {
+                _registrarFallbackArs('posterior', dateString, record.fecha, record.venta);
+            }
             return record.venta;
         }
     }
-    
+
     // Fallback: cotización más antigua disponible.
     // Regla Estricta 9: NUNCA se silencia un fallback de la API de tipo de cambio.
     // Este caso es real y frecuente al pedir fechas anteriores al inicio de la serie.
     if (cachedArsData.length > 0) {
         const masAntigua = cachedArsData[cachedArsData.length - 1];
-        logInfo(
-            'fetchArsRate: fallback a la cotizacion mas antigua disponible (' + masAntigua.fecha +
-            ') para la fecha pedida ' + dateString + '. La serie de la API no cubre esa fecha.'
-        );
+        _registrarFallbackArs('anterior', dateString, masAntigua.fecha, masAntigua.venta);
         return masAntigua.venta;
     }
 
@@ -309,7 +467,23 @@ function forzarCargaHistorica() {
     // ("N registros por divisa", tomado de arsAppend) daba por supuesto que las cuatro series
     // tenian el mismo largo, que es exactamente lo que fallaba sin avisar.
     logSuccess('forzarCargaHistorica: cotizaciones escritas -> ' + detallePorMoneda);
+
+    // Cierre de la traza de fallbacks del lote (Regla Estricta 9). Este proceso pide dia por
+    // dia desde 2024-01-01: los dias sin cotizacion publicada (fines de semana, feriados y la
+    // cola posterior al ultimo dato de la serie) se resolvieron con la cotizacion de otra
+    // fecha, y eso tiene que quedar contado en el log de la corrida, no solo en la primera
+    // aparicion de cada ancla.
+    const fallbacks = resumirFallbacksArs();
+    const avisoFallback = fallbacks.total > 0
+        ? '\n\nATENCION: ' + fallbacks.total + ' dia(s) se resolvieron con la cotizacion de otra fecha ' +
+          '(dias sin publicacion). Detalle por fecha en el log de ejecucion.'
+        : '';
+
     ss.toast('Cotizaciones escritas -> ' + detallePorMoneda, 'Carga historica completa', 8);
+    if (fallbacks.total > 0) {
+        ui.alert('Carga historica completa (con fallbacks)',
+                 'Cotizaciones escritas -> ' + detallePorMoneda + avisoFallback, ui.ButtonSet.OK);
+    }
 }
 
 // ============================================

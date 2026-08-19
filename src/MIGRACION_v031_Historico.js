@@ -67,9 +67,9 @@
  * @see 06_RegistrosService.js (deducirTipoCuenta, appendMassive: la misma logica que el pipeline)
  * @see 03_SheetManager.js (asegurarCapacidadFilas: unico lugar del sistema que amplia grids)
  *
- * @version 0.9.10
+ * @version 0.11.1
  * @since 0.9.10
- * @lastModified 2026-08-13
+ * @lastModified 2026-08-18
  */
 
 // ============================================
@@ -341,7 +341,7 @@ function _leerEstadoV031() {
 }
 
 /** Persiste el estado (merge sobre lo existente). Las claves internas (_*) no se persisten. */
-function _guardarEstadoV031(parcial) {
+function guardarEstadoV031_(parcial) {
     var previo = _leerEstadoV031();
     var estado = {};
     for (var k0 in previo) {
@@ -1772,7 +1772,7 @@ function _medirRegistrosV031(hoja) {
  *
  * @throws {Error} si la copia no queda verificada (el llamador aborta ANTES de mutar)
  */
-function _respaldarRegistrosV031(ss, hojaReg, sello) {
+function respaldarRegistrosV031_(ss, hojaReg, sello) {
     var vivo = _medirRegistrosV031(hojaReg);
 
     var nombre = _nombreHojaLibreV031(ss, V031_PREFIJO_RESPALDO + sello);
@@ -1796,7 +1796,7 @@ function _respaldarRegistrosV031(ss, hojaReg, sello) {
         origenRango.copyTo(destinoRango, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
     } catch (e) {
         formatoCopiado = false;
-        logInfo('_respaldarRegistrosV031: no se pudo copiar el formato al respaldo (' + e.message +
+        logInfo('respaldarRegistrosV031_: no se pudo copiar el formato al respaldo (' + e.message +
                 '). Las fechas se restauran convirtiendo el serial.');
     }
 
@@ -1897,7 +1897,7 @@ function _validarRespaldoV031(hojaResp, registrado) {
  * @param {Array<Object>} altas entradas del plan con aplicable === true
  * @returns {{hechas: Array<string>, fallidas: Array<string>}}
  */
-function _aplicarAltasV031(altas) {
+function aplicarAltasV031_(altas) {
     var hechas = [];
     var fallidas = [];
     altas.forEach(function (a) {
@@ -1942,7 +1942,7 @@ function _matrizDestinoV031(filas) {
  * Best-effort: las filas YA quedaron escritas, y dejar caer todo por un sort fallido invitaria
  * a re-ejecutar y duplicar el lote.
  */
-function _reordenarLedgerV031(hojaReg) {
+function reordenarLedgerV031_(hojaReg) {
     var cfg = RANGES.REGISTROS;
     var colIni = columnLetterToIndex(cfg.start);
     var nCols = columnLetterToIndex(cfg.end) - colIni + 1;
@@ -2022,7 +2022,7 @@ function aplicarMigracionV031(yaConLock) {
         // lo que le permite al catch de ultima instancia no mentir en ninguna direccion.
         var progreso = { muto: false, respaldo: null };
         try {
-            return _cuerpoAplicarV031(progreso, yaConLock === true);
+            return cuerpoAplicarV031_(progreso, yaConLock === true);
         } catch (err) {
             logError('aplicarMigracionV031: excepcion no prevista', err);
             if (!progreso.muto) {
@@ -2051,7 +2051,19 @@ function aplicarMigracionV031(yaConLock) {
  * @param {{muto: boolean, respaldo: ?string}} progreso testigo de si ya se escribio sobre hojas vivas
  * @param {boolean} conducida true si el llamador ya tenia el lock
  */
-function _cuerpoAplicarV031(progreso, conducida) {
+function cuerpoAplicarV031_(progreso, conducida) {
+    // decision Franco 2026-08-18: aborto explicito si se la invoca fuera de su unico llamador.
+    // En Apps Script el guion bajo INICIAL no hace privada a una funcion (privada es la que
+    // TERMINA en guion bajo), asi que hasta hoy esta funcion se veia en el dropdown "Ejecutar"
+    // del editor y saltearla dejaba a aplicarMigracionV031() -- y a su catch de ultima
+    // instancia, que es quien sabe no mentir sobre si se llego a mutar -- fuera del camino.
+    // El nombre ya termina en guion bajo; esto es la segunda capa, para el caso de un llamador
+    // nuevo que la use mal en vez de un clic en el editor.
+    if (!progreso || typeof progreso !== 'object') {
+        return { ok: false, error: 'cuerpoAplicarV031_ se invoco sin el testigo de progreso: solo corre ' +
+                 'desde aplicarMigracionV031(). No se toco ninguna celda.' };
+    }
+
     var ss, plan, informe;
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -2179,15 +2191,15 @@ function _cuerpoAplicarV031(progreso, conducida) {
                 ultimaFila: reval.medida.ultimaFila, primeraHuella: reval.medida.primeraHuella
             };
             hechos.push('respaldo: se reutiliza el de la corrida en vuelo, "' + respaldo.nombre + '" (no se pisa).');
-            _guardarEstadoV031({
+            guardarEstadoV031_({
                 intentos: (estadoPrevio.intentos || 1) + 1,
                 ultimoIntentoEn: new Date().toISOString()
             });
         } else {
-            respaldo = _respaldarRegistrosV031(ss, plan.hojas.registros, sello);
+            respaldo = respaldarRegistrosV031_(ss, plan.hojas.registros, sello);
             hechos.push('respaldo: "' + respaldo.nombre + '" congelado y VERIFICADO (' + respaldo.filas +
                         ' filas, suma ' + _montoTextoV031(respaldo.suma) + ').');
-            _guardarEstadoV031({
+            guardarEstadoV031_({
                 iniciadaEn: new Date().toISOString(),
                 completadaEn: null,
                 revertidaEn: null,
@@ -2215,7 +2227,7 @@ function _cuerpoAplicarV031(progreso, conducida) {
 
     // 1. Altas de catalogo (si Franco las confirmo), ANTES de deducir de nuevo.
     if (altasConfirmadas) {
-        var resAltas = _aplicarAltasV031(altasAplicables);
+        var resAltas = aplicarAltasV031_(altasAplicables);
         if (resAltas.hechas.length) hechos.push('altas aplicadas: ' + resAltas.hechas.join(', ') + '.');
         if (resAltas.fallidas.length) hechos.push('AVISO, altas fallidas: ' + resAltas.fallidas.join(', ') + '.');
 
@@ -2262,7 +2274,7 @@ function _cuerpoAplicarV031(progreso, conducida) {
     }
 
     // 4. Reordenar por fecha descendente (best-effort, igual que el pipeline).
-    hechos.push(_reordenarLedgerV031(plan.hojas.registros));
+    hechos.push(reordenarLedgerV031_(plan.hojas.registros));
 
     // 5. Verificacion posterior: se relee el ledger y se compara con lo esperado.
     var despues = _medirRegistrosV031(plan.hojas.registros);
@@ -2287,7 +2299,7 @@ function _cuerpoAplicarV031(progreso, conducida) {
         filasAntes: filasAntes, filasDespues: despues.filas, verificado: verificado
     });
     if (historial.length > V031_MAX_HISTORIAL) historial = historial.slice(historial.length - V031_MAX_HISTORIAL);
-    _guardarEstadoV031({
+    guardarEstadoV031_({
         completadaEn: new Date().toISOString(),
         ultimasFilasMigradas: matriz.length,
         ultimaVerificacion: { esperado: esperado, medido: despues.filas, ok: verificado },
@@ -2312,7 +2324,7 @@ function revertirMigracionV031(yaConLock) {
     return _informarResultadoV031('Revertir migracion historico v03.1 - NO REVERTIDA', _conLockV031(yaConLock, function () {
         var progreso = { muto: false, respaldo: null };
         try {
-            return _cuerpoRevertirV031(progreso, yaConLock === true);
+            return cuerpoRevertirV031_(progreso, yaConLock === true);
         } catch (err) {
             logError('revertirMigracionV031: excepcion no prevista', err);
             if (!progreso.muto) {
@@ -2334,7 +2346,15 @@ function revertirMigracionV031(yaConLock) {
 /**
  * Cuerpo de revertirMigracionV031(). Ya corre bajo el lock y bajo el catch de ultima instancia.
  */
-function _cuerpoRevertirV031(progreso, conducida) {
+function cuerpoRevertirV031_(progreso, conducida) {
+    // Mismo aborto explicito que cuerpoAplicarV031_: esta es la que LIMPIA Y REESCRIBE el
+    // ledger entero (clearContent + setValues sobre B:M), asi que llegar aca por un camino
+    // que no sea revertirMigracionV031() no es una opcion. @see cuerpoAplicarV031_
+    if (!progreso || typeof progreso !== 'object') {
+        return { ok: false, error: 'cuerpoRevertirV031_ se invoco sin el testigo de progreso: solo corre ' +
+                 'desde revertirMigracionV031(). No se toco ninguna celda.' };
+    }
+
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var estado = _leerEstadoV031();
     var cfg = RANGES.REGISTROS;
@@ -2464,7 +2484,7 @@ function _cuerpoRevertirV031(progreso, conducida) {
         return { ok: false, error: falla, _avisado: true };
     }
 
-    _guardarEstadoV031({ revertidaEn: new Date().toISOString(), completadaEn: null });
+    guardarEstadoV031_({ revertidaEn: new Date().toISOString(), completadaEn: null });
 
     var resumen = 'MIGRACION HISTORICO v03.1 REVERTIDA\n\n' + hechos.map(function (h) { return '- ' + h; }).join('\n') +
                   '\n\nEl respaldo "' + estado.respaldoRegistros + '" se conserva (hoja oculta).\n' +

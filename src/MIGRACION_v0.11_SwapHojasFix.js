@@ -50,7 +50,7 @@
  * Todo corre bajo el lock del documento. El estado vive en
  * DocumentProperties para que revertir/purgar usen los nombres REALES que
  * se aplicaron, no una re-derivacion. Un estado "en vuelo" (corrida muerta
- * sin catch: timeout de 6 min, corte manual) NO es terminal: "4. Revertir"
+ * sin catch: timeout de 6 min, corte manual) NO es terminal: revertirSwapV011
  * lo reconcilia mirando que hojas quedaron con que nombre.
  *
  * @see docs/permanente/MAPA_HOJAS.md
@@ -114,6 +114,21 @@ var V011_FORMULA_S8_ENUS =
 // ============================================
 // HELPERS DEL MODULO (autocontenidos, sufijo V011)
 // ============================================
+
+// [FUNDAMENTO TEORICO / ADMINISTRATIVO] -- PRIVACIDAD DE PLATAFORMA.
+// decision Franco 2026-08-18: en Apps Script una funcion es privada -- fuera del dropdown
+// "Ejecutar" del editor y no invocable desde afuera del proyecto -- cuando su nombre TERMINA
+// en guion bajo (nombre_), NO cuando empieza (_nombre). La auditoria del 2026-08-18 encontro
+// en MIGRACION_v0.9.5 el camino lateral que esa confusion habilita: la funcion que hacia todo
+// el trabajo destructivo era invocable de un clic, salteando el guard de su entrada publica.
+// Aca el diseno ya no exponia ese agujero -- todos los helpers que escriben exigen un objeto
+// Sheet/Spreadsheet como argumento, asi que una corrida sin argumentos desde el editor lanza
+// antes de tocar una celda --, pero eso es una propiedad accidental de las firmas, no una
+// defensa. Los helpers que escriben (repuntearRegistrosV011_, escribirConsolidacionV011_,
+// validacionesCargasV011_, cuarentenaResidualV011_, restaurarValidacionesViejasV011_ y
+// guardarEstadoV011_) se renombraron con el guion bajo al FINAL: eso es lo unico que de
+// verdad los saca del dropdown. Las cinco entradas publicas (estado/sincronizar/aplicar/
+// revertir/purgar) conservan su nombre porque MENU_CONFIG las invoca por string.
 
 /** Ejecuta fn bajo el lock del documento, salvo que el llamador ya lo tenga. */
 function _conLockV011(yaConLock, fn) {
@@ -179,7 +194,7 @@ function _leerEstadoV011() {
 }
 
 /** Persiste el estado (merge). Las claves internas (_*) no se persisten. */
-function _guardarEstadoV011(parcial) {
+function guardarEstadoV011_(parcial) {
     var previo = _leerEstadoV011();
     var estado = {};
     for (var k0 in previo) {
@@ -357,7 +372,7 @@ function _ajustarRefRegistrosV011(formula, nombreOrigen, nombreDestino, deltaFil
  * Registros. Devuelve las celdas tocadas con su formula anterior (para poder
  * deshacer exacto en el rollback).
  */
-function _repuntearRegistrosV011(hoja, nombreOrigen, nombreDestino, deltaFilas) {
+function repuntearRegistrosV011_(hoja, nombreOrigen, nombreDestino, deltaFilas) {
     var tocadas = [];
     var celdas = hoja.createTextFinder("'" + nombreOrigen + "'!").matchFormulaText(true).findAll();
     for (var i = 0; i < celdas.length; i++) {
@@ -379,7 +394,7 @@ function _repuntearRegistrosV011(hoja, nombreOrigen, nombreDestino, deltaFilas) 
  * formula no lleva IFERROR justamente para que un fallo de evaluacion no se
  * disfrace de catalogo vacio.
  */
-function _escribirConsolidacionV011(hojaPlan) {
+function escribirConsolidacionV011_(hojaPlan) {
     hojaPlan.getRange('S7').setValue('Cuentas (fuente de validacion - no tocar)');
     var celda = hojaPlan.getRange('S8');
     var variantes = [V011_FORMULA_S8, V011_FORMULA_S8_ENUS];
@@ -396,7 +411,7 @@ function _escribirConsolidacionV011(hojaPlan) {
 }
 
 /** Aplica las validaciones de la grilla de Cargas contra el Plan canonico. */
-function _validacionesCargasV011(hojaCargas, hojaPlan) {
+function validacionesCargasV011_(hojaCargas, hojaPlan) {
     var g = V011_GEO.cargasFixGrilla;
     var tope = V011_FILA_TOPE_CATALOGO;
     var reglaCuenta = SpreadsheetApp.newDataValidation()
@@ -416,7 +431,7 @@ function _validacionesCargasV011(hojaCargas, hojaPlan) {
  * como cuentas). Nada se borra: los valores quedan en la cuarentena.
  * Devuelve null si no habia residual.
  */
-function _cuarentenaResidualV011(ss, hojaPlan, sello) {
+function cuarentenaResidualV011_(ss, hojaPlan, sello) {
     var ultima = hojaPlan.getLastRow();
     var desde = V011_FILA_TOPE_CATALOGO + 1;
     if (ultima < desde) return null;
@@ -520,7 +535,7 @@ function estadoSwapV011() {
     if (estado._corrupto) problemasEstado.push('El estado guardado es ILEGIBLE: no aplicar ni purgar hasta resolverlo.');
     if (_swapEnVueloV011(estado)) {
         problemasEstado.push('Hay una corrida iniciada el ' + estado.iniciadaEn +
-            ' que no termino. Usar "4. Revertir" para reconciliar.');
+            ' que no termino. Reconciliar con revertirSwapV011(true) desde el editor (esta fuera del menu).');
     }
 
     if (d.aplicado) {
@@ -562,7 +577,7 @@ function estadoSwapV011() {
     if (!d.aplicado) lineas.push('Plan de Cuentas: reestructurado, no se compara. La Fix es la verdad nueva.');
     if (d.pendienteSync) {
         lineas.push('');
-        lineas.push('HAY DATOS SIN SINCRONIZAR: correr "2. Sincronizar BDs" antes de aplicar.');
+        lineas.push('HAY DATOS SIN SINCRONIZAR: correr sincronizarBDsV011() antes de aplicar (fuera del menu).');
     }
     var todosProblemas = problemasEstado.concat(d.problemas);
     if (todosProblemas.length) {
@@ -580,21 +595,116 @@ function estadoSwapV011() {
 // ============================================
 
 /**
+ * Precondicion REAL de la sincronizacion: geometria y contenido, no solo estado guardado.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+ * decision Franco 2026-08-18: sincronizarBDsV011 escribe sobre BDs con dinero y hasta hoy lo
+ * unico que la frenaba post-swap era la bandera de DocumentProperties. Eso no es un diseno,
+ * es una casualidad con memoria: si el registro se pierde, se limpia o se corrompe, la
+ * funcion queda operativa sobre una planilla que ya no tiene nada que sincronizar. Y el dano
+ * no seria benigno: el modulo lee la hoja canonica con la geometria VIEJA
+ * (V011_GEO.registrosVieja.filaDatos = 6) y post-swap la fila 6 de "Registros" es el
+ * ENCABEZADO. Leeria el header como si fuera un movimiento, no lo encontraria del otro lado y
+ * lo copiaria -- junto con toda la banda corrida una fila -- como filas "nuevas" del ledger.
+ * De ahi los tres chequeos, todos previos a la primera celda escrita y ninguno dependiente de
+ * la bandera:
+ *   1. CONFIG: si RANGES ya declara la geometria Fix como canonica, el swap esta hecho.
+ *      Criterio derivado del config, igual que el guard de MIGRACION_v0.9.5: si manana la
+ *      geometria se mueve otra vez, sigue funcionando solo.
+ *   2. RESPALDOS: si existe una hoja "<canonico> (anterior ...)", el swap se ejecuto. Es la
+ *      huella que el propio aplicarSwapV011 deja en la planilla.
+ *   3. HOJAS FIX: sin las dos hojas " - Fix" no hay origen ni destino que sincronizar.
+ *
+ * @param {Spreadsheet} ss planilla activa
+ * @param {Object} estado estado guardado (ya leido)
+ * @returns {?{ok: boolean, error: string}} null si se puede sincronizar; el aborto si no
+ */
+function _precondicionSincronizarV011(ss, estado) {
+    if (estado && estado._corrupto) {
+        return { ok: false, error: 'El estado guardado es ilegible. No se sincroniza. No se toco ninguna celda.' };
+    }
+    if (_swapAplicadoV011(estado)) {
+        return { ok: false, error: 'El swap ya fue aplicado el ' + estado.completadaEn +
+            ': las BDs canonicas son las nuevas y no hay nada que sincronizar. No se toco ninguna celda.' };
+    }
+
+    // --- 1. El config vigente: ¿describe todavia las hojas viejas como canonicas? ---
+    var pruebasConfig = [];
+    var cfgReg = (typeof RANGES !== 'undefined') ? RANGES.REGISTROS : null;
+    if (cfgReg && cfgReg.dataRow === V011_GEO.registrosFix.filaDatos) {
+        pruebasConfig.push('RANGES.REGISTROS.dataRow=' + cfgReg.dataRow + ' (la geometria de la Fix)');
+    }
+    var cfgTc = (typeof RANGES !== 'undefined') ? RANGES.TC_ARS : null;
+    if (cfgTc && cfgTc.dataRow === V011_GEO.tcFix.filaDatos) {
+        pruebasConfig.push('RANGES.TC_ARS.dataRow=' + cfgTc.dataRow + ' (la geometria de la Fix)');
+    }
+    if (pruebasConfig.length) {
+        return { ok: false, error: 'SINCRONIZACION ABORTADA: el config vigente ya declara la geometria Fix ' +
+            'como canonica (' + pruebasConfig.join(', ') + '), asi que el swap ya se ejecuto. Esta funcion ' +
+            'leeria "Registros" con la geometria VIEJA (datos desde la fila ' + V011_GEO.registrosVieja.filaDatos +
+            ', que hoy es el ENCABEZADO) y copiaria basura al ledger. No se toco ninguna celda.' };
+    }
+
+    // --- 2. La huella del swap en la propia planilla ---
+    var respaldos = [];
+    var hojas = ss.getSheets();
+    for (var i = 0; i < hojas.length; i++) {
+        var n = hojas[i].getName();
+        for (var j = 0; j < V011_SWAPS.length; j++) {
+            if (n.indexOf(V011_SWAPS[j].canonico + ' (anterior ') === 0) { respaldos.push(n); break; }
+        }
+    }
+    if (respaldos.length) {
+        return { ok: false, error: 'SINCRONIZACION ABORTADA: la planilla tiene ' + respaldos.length +
+            ' hoja(s) de respaldo del swap (' + respaldos.slice(0, 3).join(', ') + '...), asi que el swap ' +
+            'ya se ejecuto y las BDs canonicas son las nuevas. No se toco ninguna celda.' };
+    }
+
+    // --- 3. Origen y destino: si falta CUALQUIERA de las dos Fix, no se sincroniza ---
+    // decision Franco 2026-08-18: el chequeo era con && ("faltan las dos"), asi que con una
+    // sola Fix presente la sincronizacion seguia y trabajaba a medias sobre una planilla que
+    // ya no esta en el estado que este modulo asume. Falta una = el swap esta a mitad de
+    // camino o alguien renombro a mano: los dos casos exigen mirar, no escribir.
+    var faltanFix = [];
+    if (!ss.getSheetByName('Registros - Fix')) faltanFix.push('"Registros - Fix"');
+    if (!ss.getSheetByName('Tipos de Cambio - Fix')) faltanFix.push('"Tipos de Cambio - Fix"');
+    if (faltanFix.length) {
+        return { ok: false, error: 'SINCRONIZACION ABORTADA: no existe ' + faltanFix.join(' ni ') +
+            '. O el swap ya las renombro a sus nombres canonicos, o nunca estuvieron: en ' +
+            'cualquier caso no hay par origen-destino completo. No se toco ninguna celda.' };
+    }
+
+    return null;
+}
+
+/**
  * Copia a las BDs Fix lo que Franco cargo en las viejas DESPUES de
  * duplicarlas: filas de Registros y fechas de Tipos de cambio que existen
  * en la vieja y faltan en la Fix. Solo agrega, nunca borra. Las filas nuevas
  * se apilan DEBAJO de la ultima fila de datos (mismo criterio que
  * appendMassive: heredan formato de datos, no del header) y al final se
  * ordena por fecha descendente (regla de la casa: Z-A).
+ *
+ * FUERA DEL MENU desde el 2026-08-18: su trabajo ya esta hecho y no se repite. La entrada
+ * "2. Sincronizar BDs (viejas -> Fix)" quedo efectivamente retirada de MENU_CONFIG.DEV_ITEMS
+ * (00_Config.js) -- hasta esa fecha esta misma linea lo afirmaba mientras el item seguia vivo
+ * en el submenu, que es justo el tipo de afirmacion que este proyecto no se permite.
+ * Sacarla del menu NO es la defensa: sigue siendo invocable desde el dropdown "Ejecutar" del
+ * editor de Apps Script. La defensa real vive en el CODIGO, antes de la primera celda escrita:
+ * @see _precondicionSincronizarV011
  */
 function sincronizarBDsV011(yaConLock) {
     var r = _conLockV011(yaConLock, function () {
         var ss = SpreadsheetApp.getActiveSpreadsheet();
         var estado = _leerEstadoV011();
-        if (estado._corrupto) return { ok: false, error: 'El estado guardado es ilegible. No se sincroniza.' };
-        if (_swapAplicadoV011(estado)) {
-            return { ok: false, error: 'El swap ya fue aplicado: las BDs canonicas son las nuevas y no hay nada que sincronizar.' };
+
+        // Precondicion real (geometria + contenido), previa a la primera celda escrita.
+        var aborto = _precondicionSincronizarV011(ss, estado);
+        if (aborto) {
+            logError('sincronizarBDsV011: abortada por precondicion', { motivo: aborto.error });
+            return aborto;
         }
+
         var partes = [];
         var avisos = [];
 
@@ -707,6 +817,12 @@ function sincronizarBDsV011(yaConLock) {
 // 3. APLICAR
 // ============================================
 
+/**
+ * Aplica el swap. FUERA DEL MENU desde el 2026-08-18: ya se aplico en produccion ese mismo
+ * dia y no se aplica dos veces (lo rechaza su propio preflight, primer chequeo del cuerpo).
+ * Se conserva invocable para el escenario de reconstruir la planilla desde cero.
+ * @see MENU_CONFIG.DEV_ITEMS en 00_Config.js (justificacion item por item del submenu)
+ */
 function aplicarSwapV011() {
     var r = _conLockV011(false, function () {
         var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -719,13 +835,14 @@ function aplicarSwapV011() {
         }
         if (_swapEnVueloV011(estado)) {
             return { ok: false, error: 'Hay una corrida iniciada el ' + estado.iniciadaEn +
-                ' que no termino. Correr "4. Revertir": reconcilia los renombres a medio hacer y limpia el estado.' };
+                ' que no termino. Correr revertirSwapV011(true) desde el editor: reconcilia los renombres a ' +
+                'medio hacer y limpia el estado.' };
         }
         var d = _diagnosticoV011(ss, estado);
         if (d.problemas.length) return { ok: false, error: 'Preflight fallo: ' + d.problemas.join(' / ') };
         if (d.pendienteSync) {
             return { ok: false, error: 'Hay datos en las BDs viejas que faltan en las Fix. ' +
-                'Correr "2. Sincronizar BDs" primero: si no, el swap dejaria afuera esos movimientos.' };
+                'Correr sincronizarBDsV011() primero (fuera del menu): si no, el swap dejaria afuera esos movimientos.' };
         }
 
         var sello = _selloV011();
@@ -745,7 +862,7 @@ function aplicarSwapV011() {
             plan.push({ fix: s.fix, canonico: s.canonico, hojaFix: hojaFix, hojaVieja: hojaVieja, respaldo: respaldo });
         }
 
-        _guardarEstadoV011({ iniciadaEn: new Date().toISOString(), sello: sello,
+        guardarEstadoV011_({ iniciadaEn: new Date().toISOString(), sello: sello,
                              completadaEn: null, revertidaEn: null, purgadaEn: null,
                              cuarentena: null, respaldos: null, repunteos: null, remanentes: null });
 
@@ -801,7 +918,7 @@ function aplicarSwapV011() {
                 // numero de fila del rango (header 5->6, datos 6->7). Celda por
                 // celda, guardando la formula anterior para el rollback.
                 if (respaldoRegistros) {
-                    var tocadas = _repuntearRegistrosV011(hojaNueva, respaldoRegistros, 'Registros', +1);
+                    var tocadas = repuntearRegistrosV011_(hojaNueva, respaldoRegistros, 'Registros', +1);
                     if (tocadas.length > 0) {
                         repunteos.push(hojaNueva.getName() + ': ' + tocadas.length + ' x Registros (+1 fila)');
                         hechos.push({ tipo: 'repunteoRegistros', hoja: hojaNueva.getName(), celdas: tocadas });
@@ -826,17 +943,17 @@ function aplicarSwapV011() {
 
             // --- Paso 4: cuarentena del residual del Plan ---
             var hojaPlanNueva = ss.getSheetByName('Plan de Cuentas');
-            var cuarentena = _cuarentenaResidualV011(ss, hojaPlanNueva, sello);
+            var cuarentena = cuarentenaResidualV011_(ss, hojaPlanNueva, sello);
             if (cuarentena) {
                 hechos.push({ tipo: 'cuarentena', hoja: cuarentena.hoja, desde: cuarentena.desde });
                 // Se persiste YA, no recien al final: si la corrida muere sin catch
                 // (timeout, corte manual), revertir tiene que saber que la cuarentena
                 // existe para devolverla en la reconciliacion.
-                _guardarEstadoV011({ cuarentena: { hoja: cuarentena.hoja, filas: cuarentena.filas, desde: cuarentena.desde } });
+                guardarEstadoV011_({ cuarentena: { hoja: cuarentena.hoja, filas: cuarentena.filas, desde: cuarentena.desde } });
             }
 
             // --- Paso 5: columna S del Plan nuevo (consolidacion de cuentas) ---
-            var resS = _escribirConsolidacionV011(hojaPlanNueva);
+            var resS = escribirConsolidacionV011_(hojaPlanNueva);
             hechos.push({ tipo: 'columnaS' });
             var avisoS = resS.ok ? null
                 : 'ATENCION: la formula de consolidacion (Plan!S8) quedo con error en los dos separadores. ' +
@@ -847,12 +964,12 @@ function aplicarSwapV011() {
             // dropdowns de Cuenta y Medio quedaron mirando el respaldo del Plan
             // (y Cuenta ademas miraba la columna Y, que el Plan nuevo no tiene).
             var hojaCargasNueva = ss.getSheetByName('Cargas');
-            _validacionesCargasV011(hojaCargasNueva, hojaPlanNueva);
+            validacionesCargasV011_(hojaCargasNueva, hojaPlanNueva);
             hechos.push({ tipo: 'validaciones' });
 
             var respaldos = [];
             for (var rr = 0; rr < plan.length; rr++) { if (plan[rr].respaldo) respaldos.push(plan[rr].respaldo); }
-            _guardarEstadoV011({
+            guardarEstadoV011_({
                 completadaEn: new Date().toISOString(),
                 respaldos: respaldos,
                 repunteos: repunteos,
@@ -868,7 +985,7 @@ function aplicarSwapV011() {
                 (cuarentena ? '- Residual del Plan movido a la hoja oculta "' + cuarentena.hoja + '" (' + cuarentena.filas + ' filas).\n' : '') +
                 '- Dropdowns de Cargas reconstruidos (Cuenta -> Plan!S, Medio -> Plan!L).\n' +
                 (avisoS ? '- ' + avisoS + '\n' : '') +
-                '\nLos respaldos NO se borraron: quedan ocultos. Verificar los tableros y despues correr "5. Purgar respaldos".';
+                '\nLos respaldos NO se borraron: quedan ocultos. Verificar los tableros y despues correr "2. Purgar respaldos".';
             logInfo('[V011] ' + detalle);
             return { ok: true, detalle: detalle };
 
@@ -918,22 +1035,22 @@ function aplicarSwapV011() {
                 }
             }
             // Dropdowns de Cargas - Fix de vuelta a sus fuentes viejas, best-effort.
-            try { _restaurarValidacionesViejasV011(ss); } catch (e3) { logError('rollback validaciones', e3); }
+            try { restaurarValidacionesViejasV011_(ss); } catch (e3) { logError('rollback validaciones', e3); }
             _invalidarCacheV011();
             if (rollbackOk) {
-                _guardarEstadoV011({ revertidaEn: new Date().toISOString(), errorUltimaCorrida: String(e), cuarentena: null });
+                guardarEstadoV011_({ revertidaEn: new Date().toISOString(), errorUltimaCorrida: String(e), cuarentena: null });
                 return { ok: false, error: 'El swap fallo y se deshizo todo (renombres y repunteos): ' + e +
                     '\nVerificar con "1. Ver estado".' };
             }
             return { ok: false, error: 'El swap fallo (' + e + ') y el rollback quedo INCOMPLETO. ' +
-                'Correr "4. Revertir" para reconciliar, y verificar con "1. Ver estado".' };
+                'Correr revertirSwapV011(true) desde el editor para reconciliar, y verificar con "1. Ver estado".' };
         }
     });
     return _informarResultadoV011('Swap hojas Fix - aplicar', r);
 }
 
 /** Dropdowns de 'Cargas - Fix' contra las fuentes del Plan viejo (Y y R). */
-function _restaurarValidacionesViejasV011(ss) {
+function restaurarValidacionesViejasV011_(ss) {
     var hojaCargasFix = ss.getSheetByName('Cargas - Fix');
     var hojaPlanVieja = ss.getSheetByName('Plan de Cuentas');
     if (!hojaCargasFix || !hojaPlanVieja) return;
@@ -963,8 +1080,19 @@ function _restaurarValidacionesViejasV011(ss) {
  * Si despues del swap se escribieron formulas NUEVAS contra las hojas
  * canonicas, tambien quedan redirigidas a las viejas restauradas: revertir
  * restaura el MUNDO pre-swap, no distingue autores de formulas.
+ *
+ * FUERA DEL MENU desde el 2026-08-18 (ver la justificacion item por item en
+ * MENU_CONFIG.DEV_ITEMS, 00_Config.js). Con el swap ya aplicado esta era la
+ * unica del quinteto que funcionaba entera, y no pedia ninguna confirmacion:
+ * un clic devolvia la planilla al layout viejo contra un config que describe
+ * el nuevo. Queda como salida de emergencia DELIBERADA, con dos condiciones:
+ *   - con UI, confirmacion explicita nombrando lo que se va a deshacer;
+ *   - sin UI (editor de Apps Script), hay que pasar confirmado === true, o
+ *     sea escribir revertirSwapV011(true). Un "Ejecutar" a secas no revierte.
+ *
+ * @param {boolean} [confirmado] true para confirmar la reversion sin UI
  */
-function revertirSwapV011() {
+function revertirSwapV011(confirmado) {
     var r = _conLockV011(false, function () {
         var ss = SpreadsheetApp.getActiveSpreadsheet();
         var estado = _leerEstadoV011();
@@ -978,6 +1106,25 @@ function revertirSwapV011() {
         }
         var sello = estado.sello;
         if (!sello) return { ok: false, error: 'El estado no registra el sello del swap. Revision manual.' };
+
+        // --- Confirmacion, ANTES del primer renombre ---
+        var uiRev = _uiV011();
+        if (uiRev) {
+            var respRev = uiRev.alert('Revertir el swap v0.11 (deshace el rediseno)',
+                'Se va a DESHACER el swap aplicado el ' + (estado.completadaEn || estado.iniciadaEn) + ':\n' +
+                '  - las 8 hojas canonicas vuelven a llamarse "<nombre> - Fix"\n' +
+                '  - los respaldos "(anterior ' + sello + ')" vuelven a ser las hojas canonicas\n' +
+                '  - las formulas repunteadas se devuelven a su forma pre-swap\n\n' +
+                'La planilla queda en el layout VIEJO mientras 00_Config.js describe el NUEVO: ' +
+                'el sistema queda inconsistente hasta que se despliegue el config anterior.\n\n' +
+                'Continuar?', uiRev.ButtonSet.YES_NO);
+            if (respRev !== uiRev.Button.YES) {
+                return { ok: false, error: 'Reversion cancelada por el operador. No se toco ninguna hoja.', _avisado: true };
+            }
+        } else if (confirmado !== true) {
+            return { ok: false, error: 'Sin UI para confirmar una reversion que renombra las 8 hojas de la ' +
+                'planilla productiva. Si es a proposito, invocar revertirSwapV011(true). No se toco ninguna hoja.' };
+        }
 
         var acciones = [];
         var avisos = [];
@@ -1024,7 +1171,7 @@ function revertirSwapV011() {
                        .matchFormulaText(true)
                        .replaceAllWith("'Plan de Cuentas'" + V011_REMAP_PLAN[rm].de);
             }
-            _repuntearRegistrosV011(hojaFix, 'Registros - Fix', 'Registros', -1);
+            repuntearRegistrosV011_(hojaFix, 'Registros - Fix', 'Registros', -1);
         }
 
         // Paso 3: devolver la cuarentena al Plan Fix. El nombre es
@@ -1052,9 +1199,9 @@ function revertirSwapV011() {
         if (hojaPlanFix) hojaPlanFix.getRange('S7:S8').clearContent();
 
         // Paso 4: dropdowns de 'Cargas - Fix' de vuelta a sus fuentes viejas.
-        _restaurarValidacionesViejasV011(ss);
+        restaurarValidacionesViejasV011_(ss);
 
-        _guardarEstadoV011({ revertidaEn: new Date().toISOString(), cuarentena: null });
+        guardarEstadoV011_({ revertidaEn: new Date().toISOString(), cuarentena: null });
         var detalle = (enVuelo ? 'Corrida a medio hacer RECONCILIADA y revertida.' : 'Swap revertido.') +
             '\nAcciones: ' + (acciones.length ? acciones.join(' | ') : 'ninguna hizo falta') +
             '\nHojas viejas restauradas con sus nombres, hojas Fix con su sufijo, formulas y dropdowns devueltos.' +
@@ -1123,7 +1270,7 @@ function purgarRespaldosV011() {
             var hojaB = ss.getSheetByName(respaldos[b]);
             if (hojaB) { ss.deleteSheet(hojaB); borradas.push(respaldos[b]); }
         }
-        _guardarEstadoV011({ purgadaEn: new Date().toISOString(), purgadas: borradas });
+        guardarEstadoV011_({ purgadaEn: new Date().toISOString(), purgadas: borradas });
         var detalle = 'Respaldos purgados: ' + (borradas.length ? borradas.join(', ') : 'ninguno (ya no existian)') + '.' +
             (estado.cuarentena ? '\nLa hoja de cuarentena "' + estado.cuarentena.hoja + '" NO se toco: decidir aparte.' : '');
         logInfo('[V011] ' + detalle);

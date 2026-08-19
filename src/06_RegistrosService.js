@@ -10,20 +10,32 @@
  * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
  * ADR-004: la carga batch garantiza que cada registro quede inmutable con los tipos de
  * cambio del momento de procesamiento; no hay consulta en vivo celda a celda.
- * Origen (Cargas) y destino (Registros, Tipos de cambio) tienen layouts distintos: el
- * origen no migro (datos fila 5) y los destinos si (Registros datos fila 6, cols B:M;
- * bloques TC datos fila 7). Toda coordenada sale de RANGES.
+ * Origen (Cargas) y destinos (Registros, Tipos de Cambio) tienen layouts distintos y los tres
+ * se movieron con el swap v0.11. Este modulo no repite ninguna geometria: toda coordenada
+ * -- grilla de origen, columnas y fila de datos de los destinos -- sale de RANGES en vivo.
  *
  * @see 00_Config.js (RANGES.CARGAS, RANGES.REGISTROS, RANGES.TC_*)
  * @see 03_SheetManager.js (getTableData, asegurarCapacidadFilas)
  *
- * @version 0.9.5
+ * @version 0.11.1
  * @since 0.1.0
- * @lastModified 2026-08-13
+ * @lastModified 2026-08-18
  */
 
 /**
  * Función maestra invocada desde el menú [Dev] o botón.
+ *
+ * MODO DE FALLA NUEVO desde el 2026-08-18 (v0.11.1), del habito diario y conviene conocerlo:
+ * UNA SOLA FECHA FUTURA TIPEADA EN LA GRILLA ABORTA EL LOTE COMPLETO. fetchArsRate lanza ante
+ * una fecha posterior a hoy (no existe cotizacion de un dia que no ocurrio, y antes devolvia
+ * la ultima publicada como si fuera la del dia pedido, congelandola en el registro). La
+ * excepcion sube hasta el catch de procesarCargas, que muestra "Fallo en el procesamiento" y
+ * NO escribe nada: la grilla de Cargas queda intacta con las 15 filas.
+ * Es todo-o-nada a proposito -- escribir "las que se pudo" dejaria el lote partido en dos y al
+ * operador sin saber cuales entraron --, pero significa que un dedo en la tecla del ano (2027
+ * por 2026) frena la carga entera. Se corrige la fecha en la grilla y se vuelve a procesar.
+ * El mensaje de la excepcion nombra la fecha pedida y el dia de hoy.
+ * @see 15_ExchangeRateApi.js (fetchArsRate: validacion de formato y de fecha futura)
  */
 function procesarCargas() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -68,6 +80,7 @@ function procesarCargas() {
     let newTcAudToAppend = [];
     let newTcEurToAppend = [];
     const registrosToAppend = [];
+    const fechasPorFila = [];   // fecha resuelta de cada registro, para contar filas afectadas al cierre
 
     const FLOOR_DATE = new Date('2024-01-01T12:00:00Z');
 
@@ -117,18 +130,19 @@ function procesarCargas() {
                 row[0], row[1], row[2], tipoCuenta, row[3], row[4], dateObj, row[6],
                 tcArs, tcUsd, tcAud, tcEur
             ]);
+            fechasPorFila.push(dateStr);
         });
 
-        // 3. Escribir nuevos TCs a la hoja "Tipos de cambio" (bloques con datos desde la fila 7)
+        // 3. Escribir nuevos TCs a la hoja de Tipos de Cambio (fila de datos segun RANGES.TC_*)
         if (newTcUsdToAppend.length > 0) appendMassive('TC_USD', newTcUsdToAppend, RANGES.TC_USD.dataRow);
         if (newTcAudToAppend.length > 0) appendMassive('TC_AUD', newTcAudToAppend, RANGES.TC_AUD.dataRow);
         if (newTcEurToAppend.length > 0) appendMassive('TC_EUR', newTcEurToAppend, RANGES.TC_EUR.dataRow);
 
-        // 4. Escribir los registros en el ledger Registros (datos desde la fila 6, header en la 5)
+        // 4. Escribir los registros en el ledger Registros (fila de datos segun RANGES.REGISTROS)
         appendMassive('REGISTROS', registrosToAppend, RANGES.REGISTROS.dataRow);
 
         // 5. Ordenar la hoja Registros por Fecha (columna H = indice absoluto 8), descendente.
-        // Layout nuevo: datos en B:M = columnas 2..13 (12 columnas), desde la fila 6.
+        // Layout vigente: datos en B:M = columnas 2..13 (12 columnas), desde RANGES.REGISTROS.dataRow.
         // decision Franco 2026-08-13: el sort es best-effort. Los registros YA quedaron escritos
         // en el paso 4; si el sort falla (celdas combinadas cruzando el rango) se loguea y se
         // sigue: dejar caer todo el pipeline invitaria a re-ejecutarlo y duplicar el lote.
@@ -150,7 +164,30 @@ function procesarCargas() {
         // en lugar de limpiar todo I5:O19 iterando, podemos limpiar los valids
         cargasRange.clearContent();
 
-        ss.toast(`Registrado exitosamente.`, '¡Éxito!', 4);
+        // 7. Cierre de la traza de fallbacks de cotizacion del lote (Regla Estricta 9).
+        // decision Franco 2026-08-18: fetchArsRate loguea la PRIMERA vez que usa cada
+        // cotizacion ancla y acumula las repeticiones; este cierre las vuelca en una linea con
+        // el rango de fechas afectadas. Va DESPUES de escribir a proposito: los TC ya quedaron
+        // congelados en el ledger y lo que el operador necesita saber es cuantas filas se
+        // llevaron el TC de otra fecha, no si conviene abortar (abortar aca ya no es opcion).
+        //
+        // decision Franco 2026-08-18: el toast cuenta FILAS DEL LOTE, no llamadas a la API.
+        // resumirFallbacksArs().total cuenta resoluciones de cotizacion -- una por fecha
+        // distinta que hubo que ir a buscar --, asi que cinco movimientos de la misma fecha en
+        // fallback informaban "1 fila(s)". El operador no decide nada con la cantidad de
+        // llamadas; decide con cuantos de SUS registros quedaron con el TC de otro dia. Se
+        // cruzan las fechas del lote contra el set de fechas que cayeron en fallback.
+        const fallbacksTc = resumirFallbacksArs();
+        if (fallbacksTc.total > 0) {
+            const enFallback = {};
+            fallbacksTc.fechasPedidas.forEach(f => { enFallback[f] = true; });
+            const filasAfectadas = fechasPorFila.filter(f => enFallback[f] === true).length;
+            ss.toast(`${filasAfectadas} de ${registrosToAppend.length} fila(s) quedaron con el TC de otra fecha ` +
+                     `(${fallbacksTc.anclas.length} cotizacion(es) de dias sin publicacion). Detalle en el log.`,
+                     'Registrado, con fallbacks de cotizacion', 8);
+        } else {
+            ss.toast(`Registrado exitosamente.`, '¡Éxito!', 4);
+        }
         logSuccess(`Batch transfer completo: ${registrosToAppend.length} iteraciones procesadas.`);
 
     } catch (err) {

@@ -3,9 +3,9 @@
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
  *
- * @version 0.8.3
+ * @version 0.11.1
  * @since 0.1.0
- * @lastModified 2026-08-12
+ * @lastModified 2026-08-18
  */
 
 // [AGILE-VALOR] Control de versiones esencial para el mantenimiento del entorno.
@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 11,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-18',
- releaseName: 'v0.11.0 - Swap de hojas Fix (el rediseno pasa a ser canonico)',
+ releaseName: 'v0.11.1 - Armas descargadas (vias de escritura peligrosas neutralizadas)',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,11 +36,14 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
-v0.11.0 (2026-08-18) - Swap de hojas Fix
-+ MIGRACION_v0.11_SwapHojasFix.js: estado / sincronizar BDs / aplicar / revertir / purgar.
-! 00_Config.js remapeado a la geometria Fix (Plan C:D-F:G-I:J-L:N-P:Q h7 d8, Cargas C7:I21, Registros h6 d7, TC C:D-F:G-I:J-L:M h7 d8).
-! HEADER_ROW/DATA_START_ROW globales 3/4 -> 7/8. Canonico de TC pasa a 'Tipos de Cambio'.
-- Menu: sale la Migracion v0.9.5 (incoherente con el config nuevo); entra el swap v0.11.
+v0.11.1 (2026-08-18) - Armas descargadas
+- fetchArsRate: fecha invalida o FUTURA lanza en vez de devolver la ultima cotizacion publicada.
+- migrarBdAntigua / recalcularTcRegistros: sin cotizacion real se aborta todo-o-nada (fuera 1050/650/1100).
+- recalcularTcRegistros: pide confirmacion nombrando cuantas filas pisa, saltea (sin blanquear) las filas sin fecha y acota el rango a la ultima fila con Fecha, no a getLastRow().
+- MIGRACION v0.9.5: el guard de obsolescencia pasa a estar en TODA funcion que escribe, no solo en las publicas. La auditoria encontro que cuerpoRevertirV095_ se invocaba directo y pisaba Tipos de Cambio declarando exito.
+! Privacidad real de plataforma: en Apps Script una funcion es privada si TERMINA en guion bajo, no si empieza. Las internas que escriben (v0.9.5, v0.11, v031) se renombraron con el guion bajo al final.
+- Menu: salen Sincronizar / Aplicar / Revertir del swap v0.11 (ya aplicado); quedan Ver estado y Purgar. Revertir ahora exige confirmacion.
+! procesarCargas: una sola fecha futura en la grilla aborta el LOTE COMPLETO sin escribir nada.
 
 Historial completo y canónico en: src/ZZ_Changelog.js
  `

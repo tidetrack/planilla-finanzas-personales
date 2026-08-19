@@ -9,6 +9,61 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.11.1 - Armas descargadas (2026-08-18)
+
+Con el swap ya aplicado en produccion, la planilla quedo rodeada de codigo que sigue
+existiendo, sigue siendo invocable y escribe con la geometria vieja. Este release neutraliza
+cuatro vias de escritura peligrosas y cierra el camino lateral que encontro una auditoria
+adversarial posterior.
+
+### Fixed
+
+- **Cotizaciones inventadas fuera del sistema** (`99_MigrationLogic.js`): `migrarBdAntigua` y
+  `recalcularTcRegistros` rellenaban las fechas sin cotizacion con 1050/650/1100. Esos numeros
+  quedaban congelados en el ledger, que es el unico dato que despues no se puede recalcular.
+  Ahora ante una sola fecha faltante se aborta **todo-o-nada**, sin escribir una celda.
+- **Fallback mudo del motor FX** (`15_ExchangeRateApi.js`): `fetchArsRate` devolvia la
+  cotizacion mas reciente disponible sin dejar un solo log (verificado: `fetchArsRate('2026-12-31')`
+  devolvia la del 17 sin rastro). Ahora formato invalido y **fecha futura lanzan**, y toda
+  cotizacion devuelta fuera de su fecha queda registrada, con resumen de lote.
+- **Recalculo de TC sin aviso** (`recalcularTcRegistros`): pide confirmacion nombrando cuantas
+  filas pisa y el rango exacto; las filas sin fecha legible se **saltean conservando sus
+  cotizaciones** (antes recibian vacios en silencio y el cierre las contaba como recalculadas);
+  y el alto sale de la ultima fila con dato en la columna **Fecha**, no de `getLastRow()`, que
+  mide cualquier columna (un valor suelto en T40 hacia escribir 34 filas para 2 registros).
+- **Toast de `procesarCargas`**: contaba llamadas a la API (una por fecha distinta), asi que
+  cinco movimientos de la misma fecha decian "1 fila(s)". Ahora informa filas afectadas del lote.
+- **Precondicion de `sincronizarBDsV011`**: chequeaba las dos hojas Fix con `&&`, asi que solo
+  abortaba si faltaban las dos. Ahora aborta si falta cualquiera.
+
+### Changed
+
+- **El guard de obsolescencia de la migracion v0.9.5 pasa a estar en TODA funcion que escribe**,
+  no solo en las tres entradas publicas. La auditoria encontro que `cuerpoRevertirV095_` -- la
+  que hace el trabajo destructivo -- era invocable directa, escribia sobre Tipos de Cambio
+  pisando la fila de encabezados y las cuatro columnas de Fecha, y devolvia `ok:true` con
+  "MIGRACION v0.9.5 REVERTIDA". Las 22 escrituras del modulo viven en 7 funciones y las 7
+  abortan al entrar.
+- **Privacidad real de plataforma**: en Apps Script una funcion es privada cuando su nombre
+  **TERMINA** en guion bajo (`nombre_`), no cuando empieza (`_nombre`) -- las `_algo` aparecen
+  en el dropdown "Ejecutar" del editor. Las funciones internas que escriben de las tres
+  migraciones (v0.9.5, v0.11, v03.1) se renombraron con el guion bajo al final. Las entradas
+  publicas conservan su nombre: el menu las invoca por string.
+- **`procesarCargas` tiene un modo de falla nuevo**: una sola fecha futura tipeada en la grilla
+  aborta el **lote completo** sin escribir nada (la grilla queda intacta para corregir y
+  reprocesar). Documentado en `FUNCIONALIDADES.md`, seccion 04.
+
+### Removed
+
+- **Submenu del swap v0.11 reducido** a "Ver estado" (solo lectura) y "Purgar respaldos" (el
+  paso que le falta a Franco tras validar los tableros). Salen Sincronizar (su trabajo ya esta
+  hecho; su docstring ya lo afirmaba mientras el item seguia vivo en `00_Config.js`), Aplicar
+  (no se aplica dos veces) y Revertir, que era la unica del quinteto que funcionaba entera y no
+  pedia ninguna confirmacion. Revertir queda como salida de emergencia deliberada desde el
+  editor y ahora exige confirmar.
+
+---
+
 ## v0.11.0 - Swap de hojas Fix (2026-08-18)
 
 El rediseno de Franco (hojas " - Fix" + "Presupuesto - New") pasa a ser el layout canonico.

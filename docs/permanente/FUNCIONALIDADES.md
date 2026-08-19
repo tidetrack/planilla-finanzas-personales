@@ -117,6 +117,23 @@ una QUERY en M7 sobre `Registros`, ORDER BY fecha DESC LIMIT 15).
 | 2. Vista ultimos 15 movimientos | FUNCIONA | Post-swap lee la BD canonica. Deuda: rango cerrado hasta la fila 3371 (cuando Registros crezca mas alla, la vista deja de ver lo nuevo; pasar a rango abierto en el formulerio). |
 | Fixes esteticos | PARCIAL | La Fix limpio restos de la vieja (rotulo huerfano, formulas #REF!). Pendientes: typo "Utimos" en M2 y formato de fecha en R7:R21 (hoy seriales). |
 
+### Modo de falla nuevo desde v0.11.1: una fecha futura aborta el lote completo
+
+Desde el 2026-08-18 `fetchArsRate` LANZA ante una fecha posterior a hoy en vez de devolver la
+ultima cotizacion publicada como si fuera la del dia pedido. Es lo correcto — el tipo de cambio
+de un dia que todavia no ocurrio no existe, y hasta ahora quedaba congelado en el registro sin
+dejar rastro — pero cambia el habito diario: **una sola fila de la grilla con la fecha mal
+tipeada (el ano, tipicamente) frena el procesamiento de las 15**.
+
+Que se ve: el alert "Fallo en el procesamiento" con la fecha pedida y el dia de hoy. Que pasa
+con los datos: **nada se escribe** y la grilla C7:I21 queda intacta, con el lote completo listo
+para corregir la fecha y volver a "Procesar Cargas". Es todo-o-nada a proposito: escribir "las
+que se pudo" partiria el lote en dos sin dejar forma de saber cuales entraron.
+
+El caso hermano —dias sin cotizacion publicada (fin de semana, feriado)— NO aborta: se resuelve
+con la cotizacion del dia habil anterior y el toast de cierre informa **cuantas filas del lote**
+quedaron con el TC de otra fecha, con el detalle por fecha en el log.
+
 ---
 
 ## 05 | Plan de Cuentas
