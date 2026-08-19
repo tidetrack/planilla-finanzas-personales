@@ -1341,4 +1341,108 @@ Apps Script no tiene control de versiones nativo. El changelog viaja con el cód
 
 **Responsable de este documento**: @context-historian
 
-_Última actualización: 2026-01-17_
+_Última actualización: 2026-08-19_
+
+
+---
+
+# 2026-08-19 — Campaña Tablero v4 (sesión larga, en curso)
+
+> Registro pedido explícitamente por Franco al cierre de la jornada. Se deja acá porque es la
+> bitácora cronológica del repo; el detalle técnico de cada release está en CHANGELOG.md y el
+> estado funcional hoja por hoja en FUNCIONALIDADES.md.
+
+## Qué se desplegó (todo con drift-check, drift cero)
+
+| Versión | Qué |
+|---|---|
+| v0.12.0 | Formulerío: anclas fila 9→6, selector de moneda `#REF!`→`$N$4`, bloque Disponibilidad rotado, `'Liquidez'`→`'Hogar'` |
+| v0.12.1 | Reparar la reparación: bug de escape de `$` que rompió O23:O25, y el verificador que solo miraba texto |
+| v0.13.0 | Riqueza por lista blanca (Ahorros+Inversiones) + columna Tipo en el bloque de categorías |
+| v0.14.0 | Stock vs flujo: saldos independientes del mes, arrastres apagados, fila Flujo Cotidiano |
+| v0.14.1 | Dos defectos de escritura: comillas de más en `'Registros'!` y variable `LET` llamada `n` |
+| v0.15.0 | El saldo exige medio válido, capitalización como residuo, alta de 12 cuentas |
+
+## Los tres errores propios de la jornada, y qué se aprendió de cada uno
+
+1. **Escape de `$` en un string de reemplazo** (v0.12.0). `'$1$N$17'` produce `$N$N$10 - 7`, no
+   `$N$17`. Escribió tres fórmulas que no parsean en producción. **Todos los reemplazos pasan a
+   ir por función de reemplazo.**
+2. **Un verificador que comparaba texto, no resultado.** El texto corrupto pasaba sus cuatro
+   pruebas. **Ahora se lee el VALOR de cada celda escrita y se revierte el lote si queda en
+   error.** Es la cicatriz 5 del arnés cometida por el módulo que la cita.
+3. **No correr las transformaciones contra datos reales antes de desplegar.** Nacieron
+   `devtools/probar_formulerio.js` y `devtools/probar_stock_flujo.js`, que corren las funciones
+   REALES contra las fórmulas REALES del gemelo. Se verificó que los guards **disparan**,
+   reproduciendo los bugs históricos contra ellos: un guard que no salta es peor que no tenerlo.
+
+## El hallazgo grande: el arrastre `Inicio Mes` es un punto de corte, no un movimiento
+
+Diagnóstico equivocado en v0.14/v0.15: se apagaron los `Inicio Mes` por completo, asumiendo que
+eran redundantes. **No lo son.** Cuando Franco carga un `Inicio Mes` está diciendo "el banco dice
+que tengo esto": es una CONCILIACIÓN que salda todo lo anterior.
+
+| Regla de saldo | Medios en negativo |
+|---|---|
+| Sumar todo, incluidos arrastres | 1 (pero duplica: $8,7M) |
+| Ignorar arrastres (v0.14/v0.15) | **9** |
+| **Último arrastre del medio + todo lo posterior** | **0** |
+
+## Validación contra verdad de campo (2026-08-19)
+
+Franco pasó siete saldos reales. **Cinco coinciden AL CENTAVO** con la regla del último arrastre:
+Frascos Nx - Préstamo $230.000,00 · Frasco transitorio Nx $44.141,01 · YPF - wallet $3.494,90 ·
+Dolar Cash US$110,00 · Dolar Galicia US$91,10.
+
+Los dos que no coinciden son **exactamente los que usa todos los días**: Efectivo (delta $102.000)
+y NaranjaX (delta $29.635,41). Causa medida: **el ledger termina el 2026-08-12 y hoy es 08-19**.
+Faltan siete días de carga. No es un error de cálculo — los cinco que dan exacto son los que no
+tuvieron movimiento reciente.
+
+## Hallazgos de datos, medidos y sin resolver
+
+- **`YPF - wallet` son 5 filas y las cinco son `Inicio Mes`** (abril a agosto, siempre $3.494,90).
+  Es el arrastre de `YPF` escrito con otro nombre: se cuentan como dos medios y **duplican
+  $3.494,90**. `YPF` es el que está en el Plan de Cuentas y el que tiene la historia real.
+- **`Galicia Fina - Fran`**: una sola fila, −$259.994,57, no está en el Plan. Typo de
+  `Galicia Fima - Fran`.
+- **`Fracsos Nx - Dima`**: 2 filas, $0,50. Trivial.
+- **39 filas sin medio válido, $2.147.186.** Con el saldo exigiendo medio, quedan fuera y se
+  cuentan aparte en `Tablero!L29`.
+- **Traspasos: sanos.** 291 pares perfectos entre medios distintos, 1 solo con ambas patas en el
+  mismo medio, 45 filas sin par.
+- **12 cuentas del ledger no estaban en el Plan** (111 movimientos), la mayor `Ajuste` con 70
+  filas y $1.949.641. Alta preparada en `DEVTOOL_AltaCuentas.js`.
+
+## La planilla predecesora (auditada por Chrome)
+
+**El ID que se venía usando era el del Apps Script, no el de la planilla.** La v03.1 real es
+`1RkyL_lD97EeeoibyZs40ME-ZylFnwhi38Dm493DP-08` ("PLANILLA FINANZAS_v03.1 | Fran").
+
+Su TABLERO organiza los saldos en **tres bloques — FLUJO DE CAJA, AHORROS, DÓLARES —**, cada medio
+con un **checkbox**, y lista solo ~10 medios en Flujo de Caja, no los 28 del catálogo. Tiene un
+`Flujo mes anterior` y un `COMPROBACIÓN MOVIMIENTOS: Traspaso $0,00`. **Es una vista MENSUAL con
+arrastre, no un saldo acumulado** — de ahí que sus $51.509,27 y US$241,42 sean valores de enero
+2026, que es exactamente lo que el Tablero v4 venía reproduciendo.
+
+## Estado al cierre y qué sigue
+
+**El código desplegado (v0.15.0) todavía tiene el modelo de saldo equivocado** (ignora los
+arrastres, produce negativos). La corrección está diseñada y validada contra los cinco saldos
+reales, pero **no escrita en código todavía**. Es lo primero de la próxima sesión.
+
+Pendiente además:
+1. Unificar `YPF - wallet` → `YPF` en el ledger (quita el doble conteo de $3.494,90).
+2. Bloque de saldos con la regla validada: solo medios con saldo distinto de cero, agrupados como
+   en la v03.1.
+3. Confirmar con Franco si CRYPTO ($50.607,27) y FCI ($25.937,88) tienen saldo real.
+4. BD Proyección (espejo de Registros) para el bloque Presupuesto Asignado.
+5. Función de developer que repare cotizaciones históricas por fecha (decisión Franco: el TC vive
+   en el registro, no hace falta un data lake permanente).
+6. Quinto defecto: `Inicio!C15`/`F15` siempre en "0%" por condiciones de `LET` sin `ARRAYFORMULA`.
+
+## Nota fuera de este repo
+
+Franco dejó pedido para mañana, en otro contexto (`wdwmbdb1qw`): **correcciones de search** y
+**análisis en profundidad de PMAX**. Es trabajo de Google Ads, no de esta planilla; se anota acá
+sólo para que no se pierda hasta que se registre en el proyecto que corresponda.
