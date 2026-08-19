@@ -36,11 +36,19 @@ de la categoria).
 | 4. Capital: saldo acumulativo de proyectos de ahorro+inversion | PARCIAL | F8 suma el mes seleccionado apoyandose en los arrastres 'Inicio Mes' (no es una suma historica completa). El "% de Crecimiento historico" (F10) es TEXTO estatico, sin formula. |
 | 5. Filtros de periodo y moneda | FUNCIONA | G2/G3 alimentan los dos motores; G4 alimenta el Saldo Actual y el header 'Valor en X' del staging. |
 
-**Deuda critica de taxonomia**: las condiciones de C8/F8/C13/F13 comparan contra el tipo
-`'Liquidez'`, que en el Plan de Cuentas nuevo NO EXISTE (la categoria 'Medio Cotidiano' ahora
-es tipo 'Hogar'; los tipos son Ahorros/Inversiones/Financiacion/Hogar). Hasta re-cablear esas
-condiciones en el formulerio, Saldo Actual y Capital clasifican mal. Detalle en la seccion
-"Pendientes del formulerio".
+**Deuda critica de taxonomia** (celdas corregidas el 2026-08-19 contra la planilla viva; la
+lista anterior de esta ficha estaba mal): las que comparan contra el tipo `'Liquidez'` son
+**F8, C13, F13, C15 y F15** -- cinco celdas, siete ocurrencias. Ese tipo NO EXISTE en el Plan
+de Cuentas nuevo: la categoria 'Medio Cotidiano' hoy es tipo `'Hogar'` (los tipos son
+Ahorros / Inversiones / Financiacion / Hogar), asi que la condicion nunca se cumple. Efecto:
+F8 (Capital Acumulado) esta contando el gasto cotidiano como capital, y C13/F13 excluyen
+TODOS los arrastres 'Inicio Mes' cuando deberian dejar entrar los de medios cotidianos.
+
+**C8 NO esta roto** -- filtra por el NOMBRE de la categoria ("Medio Cotidiano"), no por el
+tipo, asi que hoy da el numero correcto. Es fragil (hardcodea un dato de catalogo) pero
+fragil no es roto: se deja como esta.
+
+La reparacion esta escrita en `DEVTOOL_FormulerioV0111.js` y desplegada; falta ejecutarla.
 
 ---
 
@@ -63,16 +71,35 @@ agrega sobre ese derrame. Cotizaciones por funciones Apps Script custom
 | 1. Calendario | PARCIAL | Fechas estaticas (dic-2025/feb-2026), no derivan de N2/N3. |
 | 2. Medios bancarios | FUNCIONA | Cableado y devolviendo valores. |
 | 3. Presupuesto asignado | PENDIENTE | N9:N11 son constantes tipeadas a mano; no lee de la hoja Presupuesto. |
-| 4. Movimientos del mes | PARCIAL | Cableado pero devuelve 0: toda la cadena suma la columna AV 'Valor en ARS', que quedo como CEROS estaticos sin formula (en el Tablero viejo la columna equivalente tenia valores). Reconstruir AV = monto x tasa segun N4. |
-| 5. Disponibilidad de fondos | ROTO | O23:O25 = #REF!; filas de cumplimiento corridas respecto de sus etiquetas (la de Capacidad de Ahorro quedo en la fila de Gastos Fijos). |
-| 6. Comprobacion de traspasos (suma 0) | ROTO | L28 = #VALUE! (SUMIFS con rangos de distinto tamanio). En el Tablero viejo funcionaba. |
-| 7. Vistas generales de cuentas | PARCIAL | Listas de cuentas aparecen; montos en 0 por la misma columna AV; bloque Proyectos (AA:AC) vacio. |
-| 8. Saldos actuales | FUNCIONA | Flujo y capital por moneda, cableados. |
-| 9. Cotizaciones | FUNCIONA | Via funciones custom del script. OJO: el actualizador FX no escribe filas nuevas en la BD desde el 2026-08-13 (diagnosticar el trigger). |
+| 4. Movimientos del mes | ROTO - fix listo | Devuelve 0 en toda la cadena. **Correccion al diagnostico previo: AV6 SI tiene formula** -- una ARRAYFORMULA cuyo `tasa_destino` es `#REF!` (era el selector de moneda, hoy N4) y cuyo `IFERROR(...; 0)` convierte el error en una columna entera de ceros. Los ceros no son estaticos: son el error enmascarado. |
+| 5. Disponibilidad de fondos | ROTO - fix listo | O23:O25 = `#REF!` (3 tokens cada una: el selector de moneda, y los reales de fijos/variables que hoy viven en N17/N18). Ademas el bloque esta **rotado una posicion** respecto de sus rotulos: el rediseno reordeno las etiquetas y las formulas se pegaron en el orden viejo. |
+| 6. Comprobacion de traspasos (suma 0) | ROTO - fix listo | L28 = `#VALUE!`. Causa exacta: `SUMIFS(AV6:AV; AL9:AL; ...)` compara un rango de 50.495 filas contra dos de 50.492. Es el mismo desfase 6/9 del resto, pero aca no se enmascara -- `SUMIFS` es estricto. **L28 es el canario del defecto estructural.** |
+| 7. Vistas generales de cuentas | ROTO - fix listo | Listas de cuentas correctas, montos en 0 por la misma columna AV. El bloque Proyectos (AA9) arrastra las tres cosas a la vez: desfase, `#REF!` y `'Liquidez'`. |
+| 8. Saldos actuales | PARCIAL | AF9:AF12 devuelven numeros, pero con el desfase 6/9 (montos apareados con la moneda del movimiento tres filas mas abajo). Ademas filtran por el NOMBRE de la categoria ("Medio Cotidiano") en vez de por su tipo: fragil, no roto. |
+| 9. Cotizaciones | FUNCIONA | Via funciones custom del script. La serie diaria llega al 2026-08-18 en las cuatro monedas tras correr "Forzar carga historica" (verificado 2026-08-19 sobre valores crudos). |
 
-**Defecto estructural detectado**: las formulas mezclan anclas de fila 6 (donde arranca el
-derrame real) con anclas de fila 9, un desfase de 3 filas heredado de la re-disposicion.
-Es la primera causa a revisar en el formulerio del Tablero.
+### El defecto estructural, ya identificado y con reparacion escrita
+
+`Tablero!AJ6` es el **motor entero** de la hoja: un unico QUERY sobre `Registros!B6:M` que
+derrama doce columnas **desde la fila 6** (AJ=Monto, AK=Tipo, AL=Cuenta, AM=Tipo de Cuenta,
+AN=Medio, AO=Moneda, AP=Fecha, AQ=Nota, AR/AS/AT/AU=los TC congelados). Quince formulas
+consumidoras piden la **fila 9**. Cada monto se aparea con el tipo, la moneda y la cotizacion
+del movimiento tres filas mas abajo. **No da error: da otro numero.** Explica que N19 declare
+$63.567.848 de capitalizacion en un mes -- montos en pesos multiplicados por la cotizacion del
+dolar porque cayeron en el bucket de moneda equivocado.
+
+Junto con el selector de moneda perdido (17 `#REF!` en 8 celdas), el bloque rotado y el tipo
+`'Liquidez'` huerfano (14 celdas contra un tipo que el catalogo nuevo ya no tiene; su
+equivalente 1:1 es `Hogar`), son los cuatro defectos que repara
+**`DEVTOOL_FormulerioV0111.js`** -- *Tidetrack Dev > Formulerio v0.11*.
+
+> **Estado: la reparacion existe en el codigo y esta desplegada; NO se corrio sobre la planilla.**
+> Hasta que Franco ejecute "2. Aplicar", todo lo de arriba sigue tal cual en produccion.
+
+Fuera de alcance declarado: el Plan de Cuentas tiene una fila huerfana (P19/Q19, sin nombre y
+con tipo Hogar) y un duplicado ("Meta de Ahorro 3" en P17/P18) -- es dato, no formula. Y
+`Inicio!C15`/`F15` devuelven "0% respecto del mes anterior" con `C13` en $1,27M: es un **quinto
+defecto**, distinto de estos cuatro, sin diagnosticar.
 
 ---
 
@@ -220,12 +247,20 @@ hay filas nuevas desde el 2026-08-13** — revisar el trigger instalable del FX.
 Lo que el swap v0.11 NO resolvio a proposito (repuntear a ciegas habria corrompido en
 silencio). En orden sugerido:
 
-1. **Taxonomia 'Liquidez' huerfana (Inicio)**: C8/F8/C13/F13 comparan contra el tipo
-   'Liquidez', que ya no existe. Decidir con Franco la regla nueva (probablemente tipo
-   'Hogar' = flujo cotidiano y el resto = capital) y re-cablear las 4 formulas.
-2. **Tablero**: reconstruir la columna AV 'Valor en ARS' (monto x tasa segun N4); corregir
-   los #REF! de O23:O25 y el desfase de anclas (filas 6 vs 9); arreglar el SUMIFS de
-   traspasos (L28); realinear las filas de cumplimiento.
+1. ~~**Taxonomia 'Liquidez' huerfana (Inicio)**~~ y ~~**Tablero: AV, #REF!, desfase de
+   anclas, SUMIFS de traspasos, filas de cumplimiento**~~ -- **DIAGNOSTICADOS Y CON
+   REPARACION ESCRITA** el 2026-08-19. Resultaron ser cuatro defectos de una sola raiz, que
+   se intersectan sobre las mismas celdas: arreglar uno a mano arriesgaba pisar los otros.
+   Van juntos, en una sola pasada, por `DEVTOOL_FormulerioV0111.js`
+   (*Tidetrack Dev > Formulerio v0.11*). La regla de taxonomia quedo definida por medicion,
+   no por eleccion: `'Liquidez'` -> `'Hogar'` es una sustitucion **1:1** -- en el catalogo
+   viejo 'Medio Cotidiano' era tipo 'Liquidez' y hoy es tipo 'Hogar', y ninguna otra
+   categoria usa 'Hogar'. El conjunto "capital" (Ahorros + Inversiones + Financiacion) queda
+   identico al de antes.
+   **PENDIENTE: correr "2. Aplicar" sobre la planilla.** Hasta entonces, nada de esto cambio.
+   Queda abierta una decision de negocio que el arreglo NO toma: `Financiacion` (Tarjeta de
+   Credito, Prestamo Mac) sigue contando como capital, igual que antes. Una tarjeta es un
+   pasivo; si Franco quiere cambiarlo, es una linea mas en la misma pasada.
 3. **Presupuesto**: cablear monto historico promedio (contrato del 2026-08-13 en los
    DEVTOOL), poblar cuentas desde el Plan, conectar los selectores, decidir la base de los
    porcentajes (E16 vs $E$9), y recien despues conectar Inicio (D19:G22) y Tablero (N9:N11).

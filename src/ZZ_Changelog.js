@@ -5,6 +5,53 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.12.0 - Formulerio reparado: "Inicio" y "Tablero" dejan de mentir.
+ * - CONTEXTO: el swap v0.11 movio las celdas de las dos hojas que Franco MIRA y las formulas se
+ *   copiaron apuntando a las direcciones viejas. El resultado no eran errores -- eso hubiera
+ *   sido benigno -- sino numeros plausibles calculados sobre datos mal apareados. Solo cuatro
+ *   celdas mostraban un error visible (#REF!/#VALUE! en el Tablero); el resto mentia en silencio.
+ * - DEFECTO 1, EL DE FONDO: "Tablero"!AJ6 es el motor entero de la hoja, un unico QUERY sobre
+ *   Registros!B6:M que DERRAMA doce columnas desde la fila 6. Quince formulas consumidoras
+ *   pedian la fila 9 (AK9:AK, AO9:AO, AR9:AR...), asi que cada monto se apareaba con el tipo, la
+ *   moneda y la cotizacion del movimiento TRES FILAS MAS ABAJO. De ahi que N19 declarara
+ *   $63.567.848 de capitalizacion en un mes: montos en pesos multiplicados por la cotizacion del
+ *   dolar porque cayeron en el bucket de moneda equivocado.
+ * - DEFECTO 2: el selector de moneda vivia en $I$9 y el rediseno lo movio a N4; las formulas
+ *   portadas quedaron con #REF! en su lugar -- diecisiete tokens en ocho celdas. Donde el #REF!
+ *   estaba envuelto en IFERROR se degradaba en silencio: AV6 ("Valor en ARS") devolvia una
+ *   columna entera de ceros, y con ella S7/V7/Y7, N16/N17/N18 y O16:O19, o sea el bloque
+ *   "Movimientos del mes" completo. Donde no lo estaba, propagaba (O23:O25 = #REF!).
+ * - DEFECTO 3: el bloque "Disponibilidad de fondos" quedo rotado UNA POSICION respecto de sus
+ *   rotulos. El rediseno reordeno las etiquetas (el orden viejo empezaba por Ahorro, el nuevo
+ *   por Gastos Fijos) pero las formulas se pegaron en el orden viejo: la de Capacidad de Ahorro
+ *   terminó en la fila de Gastos Fijos. Cada una calculaba bien lo suyo, en la fila del vecino.
+ * - DEFECTO 4: catorce celdas comparaban contra el tipo de categoria 'Liquidez', que el Plan de
+ *   Cuentas nuevo ya no tiene (sus tipos son Ahorros / Inversiones / Financiacion / Hogar).
+ *   'Hogar' es su equivalente 1:1 -- ambos con una sola categoria, "Medio Cotidiano". Al no
+ *   cumplirse nunca la condicion, el gasto cotidiano se contaba como capital acumulado y los
+ *   arrastres de "Inicio Mes" que si debian entrar quedaban todos afuera.
+ * - COMO SE REPARA, Y POR QUE ASI: el modulo NO redacta ni una formula. Lee cada celda con
+ *   getFormula(), reemplaza los tokens equivocados y la escribe de vuelta. El bloque rotado no
+ *   se reescribe: se INTERCAMBIA. Es deliberado y evita de raiz la trampa de locale de
+ *   07_MiradaInteranual -- la planilla es es_AR y setFormula no traduce los arrays literales {},
+ *   que media docena de estas formulas usan. Al no autorizar ninguna, el ida y vuelta es
+ *   identidad.
+ * - GUARDS QUE ABORTAN SIN ESCRIBIR: el mapeo de columnas del motor se deriva de
+ *   RANGES.REGISTROS.columns y se contrasta rotulo por rotulo contra el header del ledger (un
+ *   mapeo supuesto y no verificado ya nos costo una vez); la rotacion se decide por el ROTULO de
+ *   cada fila y no por su posicion; el catalogo debe tener cero 'Liquidez' y al menos un 'Hogar';
+ *   el selector N4 debe contener una moneda del sistema. Y el re-apuntado toca UNICAMENTE rangos
+ *   abiertos de dos letras (AK9:AK), nunca celdas sueltas: AF9:AF12 y $AF$17:$AF$19 son otro
+ *   bloque de la hoja, hoy funcionan, y un reemplazo numerico 9->6 a ciegas los corrompia.
+ * - RESPALDO: congela TODAS las formulas de las dos hojas como texto (apostrofo inicial, no
+ *   setNumberFormat: ya nos paso en v0.9.8 que un respaldo "de texto" quedara vivo y
+ *   recalculando) y lo RELEE antes de mutar. Si la relectura posterior a escribir no verifica, o
+ *   si setFormula lanza a mitad del lote, cada celda vuelve a su formula previa.
+ * - LO QUE NO TOCA, A PROPOSITO: AF9:AF12 e "Inicio"!C8 filtran por el NOMBRE de la categoria en
+ *   vez de por su tipo -- fragil, pero hoy dan el numero correcto, y fragil no es roto. Tampoco
+ *   limpia el Plan de Cuentas (fila huerfana P19/Q19, duplicado "Meta de Ahorro 3"): eso es dato
+ *   de Franco. Ni el "0%" de "Inicio"!C15/F15, que es un quinto defecto y merece su diagnostico.
+ *
  * [2026-08-18] v0.11.1 - Armas descargadas: se neutralizan las vias de escritura peligrosas
  * que quedaron vivas despues del swap, y se cierra el camino lateral que encontro la auditoria:
  * - CONTEXTO: con el swap v0.11 ya aplicado en produccion, la planilla quedo rodeada de codigo

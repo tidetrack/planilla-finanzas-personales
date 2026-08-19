@@ -283,3 +283,19 @@ function columnLetterToIndex(columnLetter) {
  return index;
 }
 
+
+/**
+ * Obtiene la letra de columna desde un índice numérico (inverso de columnLetterToIndex)
+ * @param {number} index Índice 1-based (ej: 2 -> 'B', 36 -> 'AJ')
+ * @returns {string} Letra de columna
+ */
+function columnIndexToLetter(index) {
+ let letra = '';
+ let n = index;
+ while (n > 0) {
+ const resto = (n - 1) % 26;
+ letra = String.fromCharCode(65 + resto) + letra;
+ n = Math.floor((n - 1) / 26);
+ }
+ return letra;
+}

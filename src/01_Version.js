@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 11,
- patch: 1,
+ minor: 12,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-08-18',
- releaseName: 'v0.11.1 - Armas descargadas (vias de escritura peligrosas neutralizadas)',
+ releaseDate: '2026-08-19',
+ releaseName: 'v0.12.0 - Formulerio reparado (Inicio y Tablero dejan de mentir)',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,14 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.12.0 (2026-08-19) - Formulerio reparado
++ DEVTOOL_FormulerioV0111: repara los cuatro defectos que el swap v0.11 dejo en las formulas de "Inicio" y "Tablero". Trio estado / aplicar / revertir, con respaldo congelado y verificado.
+- Anclas corridas: quince formulas del Tablero pedian AK9:AK / AO9:AO / AR9:AR mientras el motor (AJ6) derrama desde la fila 6. Cada monto se apareaba con el tipo, la moneda y la cotizacion del movimiento tres filas mas abajo. No daba error: daba otro numero.
+- Selector de moneda: diecisiete #REF! en ocho celdas repuestos a $N$4 (y a N17/N18 los reales de fijos y variables). Con AV6 en #REF! toda la columna "Valor en ARS" devolvia cero y con ella el bloque "Movimientos del mes" entero.
+- Bloque "Disponibilidad de fondos": estaba rotado una posicion respecto de sus rotulos. La formula de Capacidad de Ahorro vivia en la fila de Gastos Fijos. Se intercambian, no se reescriben.
+- Tipo 'Liquidez' huerfano: catorce celdas comparaban contra un tipo de categoria que el Plan de Cuentas nuevo ya no tiene. Pasa a 'Hogar', su equivalente 1:1.
++ columnIndexToLetter en 03_SheetManager (inverso de columnLetterToIndex).
+
 v0.11.1 (2026-08-18) - Armas descargadas
 - fetchArsRate: fecha invalida o FUTURA lanza en vez de devolver la ultima cotizacion publicada.
 - migrarBdAntigua / recalcularTcRegistros: sin cotizacion real se aborta todo-o-nada (fuera 1050/650/1100).

@@ -9,6 +9,73 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.12.0 - Formulerio reparado (2026-08-19)
+
+El swap v0.11 movio las celdas de las dos hojas que Franco **mira** -- "Inicio" y "Tablero" --
+y las formulas se copiaron apuntando a las direcciones viejas. El resultado no eran errores,
+que hubieran sido benignos: eran numeros plausibles calculados sobre datos mal apareados. De
+toda la superficie del producto solo cuatro celdas mostraban un error visible; el resto mentia
+en silencio.
+
+### Added
+
+- **`DEVTOOL_FormulerioV0111.js`**: trio `estadoFormulerioV0111` (solo lectura) /
+  `aplicarFormulerioV0111` / `revertirFormulerioV0111`, bajo *Tidetrack Dev > Formulerio v0.11*.
+- **`columnIndexToLetter`** en `03_SheetManager.js`, inverso de `columnLetterToIndex`.
+
+### Fixed
+
+- **Anclas corridas tres filas** -- la raiz de casi todo. `Tablero!AJ6` es el motor entero de la
+  hoja: un unico QUERY sobre `Registros!B6:M` que **derrama doce columnas desde la fila 6**
+  (AJ=Monto, AK=Tipo, AL=Cuenta, AM=Tipo de Cuenta, AN=Medio, AO=Moneda, AR/AS/AT/AU=los TC
+  congelados). Quince formulas consumidoras pedian la fila 9, asi que cada monto se apareaba con
+  el tipo, la moneda y la cotizacion del movimiento **tres filas mas abajo**. Explica que `N19`
+  declarara $63.567.848 de capitalizacion en un mes: montos en pesos multiplicados por la
+  cotizacion del dolar porque cayeron en el bucket de moneda equivocado.
+- **El selector de moneda perdido**: vivia en `$I$9` y el rediseno lo movio a `N4`; las formulas
+  portadas quedaron con `#REF!` en su lugar, **17 tokens en 8 celdas**. Donde el `#REF!` estaba
+  envuelto en `IFERROR` se degradaba en silencio -- `AV6` ("Valor en ARS") devolvia una columna
+  entera de ceros, y con ella `S7`/`V7`/`Y7`, `N16:N19` y `O16:O19`, o sea el bloque
+  "Movimientos del mes" completo. Donde no lo estaba, propagaba (`O23:O25` = `#REF!`).
+- **Bloque "Disponibilidad de fondos" rotado una posicion**: el rediseno reordeno los rotulos
+  (el orden viejo empezaba por Ahorro, el nuevo por Gastos Fijos) pero las formulas se pegaron
+  en el orden viejo. La de Capacidad de Ahorro termino en la fila de Gastos Fijos. Cada una
+  calculaba bien lo suyo, en la fila del vecino.
+- **Tipo de categoria `'Liquidez'` huerfano**: 14 celdas comparaban contra un tipo que el Plan
+  de Cuentas nuevo ya no tiene (hoy son Ahorros / Inversiones / Financiacion / **Hogar**).
+  `Hogar` es su equivalente 1:1 -- ambos con una sola categoria, "Medio Cotidiano". Al no
+  cumplirse nunca la condicion, el gasto cotidiano se contaba como capital acumulado y los
+  arrastres de "Inicio Mes" que si debian entrar quedaban todos afuera.
+
+### Decisiones de diseno
+
+- **El modulo no redacta ni una formula.** Lee cada celda con `getFormula()`, reemplaza los
+  tokens equivocados y la escribe de vuelta; el bloque rotado no se reescribe, se **intercambia**.
+  Es deliberado: evita de raiz la trampa de locale documentada en `07_MiradaInteranual.js` --
+  la planilla es es_AR y `setFormula` no traduce los arrays literales `{}`, que media docena de
+  estas formulas usan. Al no autorizar ninguna, el ida y vuelta es identidad.
+- **El re-apuntado toca unicamente rangos abiertos de dos letras** (`AK9:AK`), nunca celdas
+  sueltas. `AF9:AF12` y `$AF$17:$AF$19` son otro bloque de la hoja, hoy funcionan, y un
+  reemplazo numerico 9->6 a ciegas los habria corrompido.
+- **La rotacion se decide por el rotulo de cada fila, no por su posicion.** Si el rotulo no es
+  el esperado, no se rota nada: mover formulas a ciegas seria repetir el error original con
+  otro orden.
+- **El mapeo de columnas del motor se deriva de `RANGES.REGISTROS.columns`** y se contrasta
+  rotulo por rotulo contra el header del ledger. Un mapeo supuesto y no verificado ya costo caro
+  una vez.
+
+### Fuera de alcance (declarado, no olvidado)
+
+- `Tablero!AF9:AF12` e `Inicio!C8` filtran por el **nombre** de la categoria ("Medio Cotidiano")
+  en vez de por su tipo. Es fragil -- hardcodea un dato de catalogo -- pero hoy dan el numero
+  correcto. Fragil no es roto.
+- El Plan de Cuentas tiene una fila huerfana (`P19`/`Q19`, sin nombre y con tipo Hogar) y un
+  duplicado ("Meta de Ahorro 3" en `P17`/`P18`). Es dato de Franco, no formula.
+- `Inicio!C15`/`F15` devuelven "0% respecto del mes anterior" con `C13` en $1,27M. Es un quinto
+  defecto, no uno de estos cuatro, y merece su propio diagnostico.
+
+---
+
 ## v0.11.1 - Armas descargadas (2026-08-18)
 
 Con el swap ya aplicado en produccion, la planilla quedo rodeada de codigo que sigue

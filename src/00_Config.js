@@ -423,6 +423,20 @@ const MENU_CONFIG = {
         { separator: true },
         { seccion: 'FORMULAS Y VISTAS' },
         {
+            // Repara los cuatro defectos que el swap v0.11 dejo en las formulas de "Inicio" y
+            // "Tablero": anclas corridas tres filas respecto del derrame del motor, el selector
+            // de moneda perdido como #REF!, el bloque "Disponibilidad de fondos" rotado una
+            // posicion respecto de sus rotulos, y el tipo de categoria 'Liquidez' que ya no
+            // existe en el catalogo. Se corren EN ESTE ORDEN: estado (solo lectura) y despues
+            // aplicar. @see DEVTOOL_FormulerioV0111.js
+            submenu: 'Formulerio v0.11 (Inicio + Tablero)', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoFormulerioV0111' },
+                { name: '2. Aplicar reparacion', function: 'aplicarFormulerioV0111' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirFormulerioV0111' }
+            ]
+        },
+        {
             submenu: 'Mirada Interanual', items: [
                 { name: '1. Verificar precondiciones', function: 'verificarPrecondicionesMirada' },
                 { name: '2. Inicializar formulas', function: 'inicializarMiradaInteranual' },
