@@ -9,6 +9,75 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.12.1 - Reparar la reparacion (2026-08-19)
+
+Franco corrio "Aplicar reparacion" y el modulo declaro exito. La auditoria sobre la planilla
+viva encontro que **tres celdas habian quedado peor que antes**: `Tablero!O23`, `O24` y `O25`
+pasaron de `#REF!` a `#ERROR!`. Las otras 24 quedaron bien y las siete agregaciones que se
+recalcularon contra el ledger cierran **al centavo**, pero el modulo que vino a combatir los
+falsos exitos produjo uno.
+
+### El bug
+
+```js
+out.replace(/(\$N\$10\s*-\s*)#REF!/g, '$1$N$17')   // <- string de reemplazo
+```
+
+En un string de reemplazo, `$1` es el grupo capturado, `$N` es literal y `$17` **vuelve a ser el
+grupo 1** seguido de un `7`. En vez de `$N$10 - $N$17` escribio `$N$10 - $N$N$10 - 7`. Las otras
+cuatro sustituciones de esa funcion zafaron por casualidad: dos no tienen grupos (y un `$4` sin
+grupo queda literal) y dos llevan el `$1` al final.
+
+### Lo grave no es el bug, es que paso el guard
+
+`_verificarEscrituraFormulerio` comparaba el **texto** releido contra el texto escrito, y exigia
+cero `#REF!`, cero `'Liquidez'` y cero anclas viejas. El texto corrupto cumple las cuatro
+condiciones. **Comprobar que escribiste lo que querias escribir no es comprobar que funciona.**
+Es la cicatriz 5 del arnes -- *un guard que reporta exito sin hacer el trabajo es peor que no
+tener guard* -- cometida por el modulo que la cita en su propia cabecera.
+
+### Fixed
+
+- **Todos los reemplazos van por funcion de reemplazo.** El valor devuelto se inserta tal cual y
+  esta clase de bug deja de ser posible en un proyecto donde toda formula lleva `$`.
+- **El verificador lee el VALOR resultante** de cada celda escrita y revierte el lote entero si
+  alguna quedo en error, distinguiendo "ya estaba rota" de "la rompi yo".
+- **El modulo deshace el danio**: reconoce el artefacto `$N$N$10 - 7` y lo devuelve a `$N$17`.
+  Sin eso, re-correr "Aplicar" contestaria "nada que hacer" con tres celdas rotas a la vista --
+  otra vez el mismo modo de falla.
+- **Sexto defecto** (hallado por la misma auditoria): las columnas "Valor en X" de `Inicio`
+  (`AF8` y `AT8`) **no convierten moneda**. Leen la moneda de la columna de **Cuenta** (`V` y
+  `AJ`) en vez de la de **Moneda** (`Y` y `AM`), asi que ninguna rama del `IF` se cumple,
+  `tasa_origen` cae al literal `1` y la columna es un passthrough del monto crudo: todo
+  movimiento en moneda extranjera entra a `C13`, `F13`, `C15` y `F15` **a valor nominal**. Un
+  cobro de 200 USD cuenta como 200 pesos. Medido en junio de 2026: **~$376.740 de ingreso
+  desaparecido, el 23% del mes**. `AT8` tomaba ademas la moneda de destino de `Y13` -- que no es
+  un selector sino la celda con la moneda del sexto movimiento del mes actual --, y el rotulo
+  `AT7` repetia la referencia.
+
+### Added
+
+- **`devtools/probar_formulerio.js`**: corre las transformaciones **reales** del devtool contra
+  las formulas **reales** del gemelo (`docs/permanente/celdas.tsv`) y muestra el antes y el
+  despues de cada celda. Comprueba la firma `$N$N` del bug de escape, residuos de `#REF!` /
+  `Liquidez` / anclas viejas, balanceo de parentesis y comillas, e idempotencia. Habria cortado
+  el bug en diez segundos: **no correrlo fue el error de fondo**, mas que el bug en si.
+
+### Diagnosticado, no reparado
+
+- **Quinto defecto**: `Inicio!C15`/`F15` devuelven siempre "0% respecto del mes anterior" aunque
+  la variacion real sea de +155%. Causa: cuatro condiciones se ligan a variables de `LET` sin
+  `ARRAYFORMULA`; la comparacion rango-contra-escalar se evalua por interseccion implicita,
+  `FILTER` recibe una condicion de una sola fila, tira error de tamanio, y el `IFERROR` externo
+  lo convierte en 0. La correccion seria envolver esas cuatro (dos en `F15`) en `ARRAYFORMULA`.
+  Queda para una pasada propia: es otro mecanismo de falla, no esta verificado de forma
+  independiente, y muestra un rotulo feo, no un numero equivocado en una cifra de portada.
+- **Un movimiento de $302.209 invisible** para todo el Tablero: en enero 2026 hay una fila del
+  ledger con Tipo de Cuenta y Medio vacios. Esta en el derrame pero ningun bloque la recoge. Es
+  el gap de validacion de `procesarCargas` materializado -- de las 203 filas sin Tipo de Cuenta.
+
+---
+
 ## v0.12.0 - Formulerio reparado (2026-08-19)
 
 El swap v0.11 movio las celdas de las dos hojas que Franco **mira** -- "Inicio" y "Tablero" --

@@ -116,10 +116,11 @@ planilla-finanzas-personales/
 │ │ └── no-emojis.md # Regla estricta de tono profesional
 │ └── workflows/ # Flujos de trabajo reutilizables
 │
-├── devtools/ # Herramientas del gemelo digital (Python, corren en local, NO se deployan)
+├── devtools/ # Herramientas locales: corren en tu máquina, NO se deployan (src/ es el rootDir de clasp)
 │ ├── generar_inventario_planilla.py # Del snapshot JSON produce INVENTARIO_CELDAS.md (capa mecánica)
 │ ├── generar_tsv_celdas.py # Aplana el snapshot a celdas.tsv para auditar con awk/grep sin cargar el JSON
-│ └── diff_snapshots.py # Prueba de no-daño: compara dos snapshots y falla si cambió una fórmula
+│ ├── diff_snapshots.py # Prueba de no-daño: compara dos snapshots y falla si cambió una fórmula
+│ └── probar_formulerio.js # Banco de pruebas: corre las transformaciones del formulerío contra las fórmulas reales del gemelo ANTES de deployar
 │
 ├── scripts/ # Herramientas de automatización local
 │ └── auto-sync.js # Watcher: commit + push automático
@@ -197,4 +198,4 @@ El pipeline estándar para cerrar cualquier feature:
 
 ---
 
-*Tidetrack - ESTRUCTURA.md - v0.12.0 - 2026-08-19*
+*Tidetrack - ESTRUCTURA.md - v0.12.1 - 2026-08-19*

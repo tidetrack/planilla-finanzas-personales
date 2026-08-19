@@ -48,7 +48,19 @@ TODOS los arrastres 'Inicio Mes' cuando deberian dejar entrar los de medios coti
 tipo, asi que hoy da el numero correcto. Es fragil (hardcodea un dato de catalogo) pero
 fragil no es roto: se deja como esta.
 
-La reparacion esta escrita en `DEVTOOL_FormulerioV0111.js` y desplegada; falta ejecutarla.
+Reparado el 2026-08-19 por `DEVTOOL_FormulerioV0111.js`.
+
+**SEXTO DEFECTO, hallado despues y mas caro que el anterior: `Inicio` nunca convirtio moneda.**
+Las dos columnas "Valor en X" (`AF8`, mes actual; `AT8`, mes anterior) leen la moneda de la
+columna de **Cuenta** (`V` y `AJ`) en vez de la de **Moneda** (`Y` y `AM`). Ninguna rama del `IF`
+se cumple nunca, `tasa_origen` cae al literal `1`, y la columna entera es un passthrough del
+monto crudo: **todo movimiento en moneda extranjera entra a C13, F13, C15 y F15 a valor
+nominal.** Un cobro de 200 USD cuenta como 200 pesos. Medido en junio de 2026: C13 mostraba
+$1.268.947,31 cuando el ingreso real convertido es $1.645.337,26 -- **$376.740 desaparecidos, el
+23% del mes**. `AT8` ademas tomaba la moneda de destino de `Y13`, que no es un selector sino la
+celda con la moneda del **sexto movimiento del mes actual**; el rotulo `AT7` repetia la
+referencia. `C8` y `F8` no estaban afectadas: convierten por su cuenta y usan `Y8:Y` bien.
+Reparado en v0.12.1, **pendiente de correr**.
 
 ---
 
@@ -71,11 +83,11 @@ agrega sobre ese derrame. Cotizaciones por funciones Apps Script custom
 | 1. Calendario | PARCIAL | Fechas estaticas (dic-2025/feb-2026), no derivan de N2/N3. |
 | 2. Medios bancarios | FUNCIONA | Cableado y devolviendo valores. |
 | 3. Presupuesto asignado | PENDIENTE | N9:N11 son constantes tipeadas a mano; no lee de la hoja Presupuesto. |
-| 4. Movimientos del mes | ROTO - fix listo | Devuelve 0 en toda la cadena. **Correccion al diagnostico previo: AV6 SI tiene formula** -- una ARRAYFORMULA cuyo `tasa_destino` es `#REF!` (era el selector de moneda, hoy N4) y cuyo `IFERROR(...; 0)` convierte el error en una columna entera de ceros. Los ceros no son estaticos: son el error enmascarado. |
-| 5. Disponibilidad de fondos | ROTO - fix listo | O23:O25 = `#REF!` (3 tokens cada una: el selector de moneda, y los reales de fijos/variables que hoy viven en N17/N18). Ademas el bloque esta **rotado una posicion** respecto de sus rotulos: el rediseno reordeno las etiquetas y las formulas se pegaron en el orden viejo. |
-| 6. Comprobacion de traspasos (suma 0) | ROTO - fix listo | L28 = `#VALUE!`. Causa exacta: `SUMIFS(AV6:AV; AL9:AL; ...)` compara un rango de 50.495 filas contra dos de 50.492. Es el mismo desfase 6/9 del resto, pero aca no se enmascara -- `SUMIFS` es estricto. **L28 es el canario del defecto estructural.** |
-| 7. Vistas generales de cuentas | ROTO - fix listo | Listas de cuentas correctas, montos en 0 por la misma columna AV. El bloque Proyectos (AA9) arrastra las tres cosas a la vez: desfase, `#REF!` y `'Liquidez'`. |
-| 8. Saldos actuales | PARCIAL | AF9:AF12 devuelven numeros, pero con el desfase 6/9 (montos apareados con la moneda del movimiento tres filas mas abajo). Ademas filtran por el NOMBRE de la categoria ("Medio Cotidiano") en vez de por su tipo: fragil, no roto. |
+| 4. Movimientos del mes | **FUNCIONA** | Reparado y **verificado contra el ledger**: N16 = $1.118.535,58, N17 = $455.797,31, N18 = $250.665,80 (Enero 2026, ARS) coinciden **al centavo** con una reconstruccion independiente desde las 3.458 filas crudas de `Registros`. N19 paso de $63.567.848 a **$372.451,30**, tambien reproducible. La columna AV derrama 79 filas, cero ceros, y `AV = monto x tasa_origen / tasa_destino` cierra en 10 de 10 muestras. |
+| 5. Disponibilidad de fondos | **PARCIAL - fix pendiente de correr** | La columna N quedo **reparada y rotada bien** (N23 = N17/N10 = 81%, N24 = N18/N11 = 8%, N25 = N19/(N9-N10-N11) = 103%, cada una bajo su rotulo). **O23:O25 quedaron PEOR que antes**: pasaron de `#REF!` a `#ERROR!` por un bug de escape de `$` en la v0.12.0 (ver CHANGELOG v0.12.1). La v0.12.1 lo repara; falta correr "Aplicar" de nuevo. |
+| 6. Comprobacion de traspasos (suma 0) | **FUNCIONA** | L28 dice "Traspasos balanceados", y es un **verde legitimo, no un falso verde**: verificado contra el ledger (Enero 2026: Traspaso/Ingreso $197.000,62 = Traspaso/Egreso $197.000,62) y con AV poblada -- 79 valores no nulos que suman $3.209.995,33 --, asi que la suma cero no viene de sumar ceros. |
+| 7. Vistas generales de cuentas | **FUNCIONA** | R9/U9/X9 devuelven cuentas y montos; S7/V7/Y7 cierran contra N16/N17/N18. El bloque Categorias (AA9) dejo de estar vacio: devuelve "Chanchito" $365.751,30 y "Meta de Ahorro 1" $37.000,00. |
+| 8. Saldos actuales | **FUNCIONA** | AF9 paso de -$791.499,05 a **$51.509,27**, recalculado y exacto; AG9 = $37.000 y AG10 = 241,42 USD, ambos verificados. Nota: AF9:AF12 filtran por el NOMBRE de la categoria ("Medio Cotidiano") en vez de por su tipo -- fragil, pero da el numero correcto. |
 | 9. Cotizaciones | FUNCIONA | Via funciones custom del script. La serie diaria llega al 2026-08-18 en las cuatro monedas tras correr "Forzar carga historica" (verificado 2026-08-19 sobre valores crudos). |
 
 ### El defecto estructural, ya identificado y con reparacion escrita
@@ -93,8 +105,12 @@ Junto con el selector de moneda perdido (17 `#REF!` en 8 celdas), el bloque rota
 equivalente 1:1 es `Hogar`), son los cuatro defectos que repara
 **`DEVTOOL_FormulerioV0111.js`** -- *Tidetrack Dev > Formulerio v0.11*.
 
-> **Estado: la reparacion existe en el codigo y esta desplegada; NO se corrio sobre la planilla.**
-> Hasta que Franco ejecute "2. Aplicar", todo lo de arriba sigue tal cual en produccion.
+> **Estado al 2026-08-19: Franco corrio "2. Aplicar". El apareamiento quedo corregido** -- en la
+> prueba de corrimiento, 73 de 76 filas del derrame coinciden con la MISMA fila del ledger contra
+> 40 con la fila +3 --, **y las siete agregaciones recalculadas cierran al centavo**. Pero esa
+> corrida **rompio O23:O25** (bug de escape de `$`, ver CHANGELOG v0.12.1) y dejo al descubierto
+> un **sexto defecto**: la conversion de moneda de "Inicio" nunca convirtio. La v0.12.1 repara
+> las dos cosas; **falta correr "2. Aplicar" otra vez**.
 
 Fuera de alcance declarado: el Plan de Cuentas tiene una fila huerfana (P19/Q19, sin nombre y
 con tipo Hogar) y un duplicado ("Meta de Ahorro 3" en P17/P18) -- es dato, no formula. Y
@@ -257,10 +273,22 @@ silencio). En orden sugerido:
    viejo 'Medio Cotidiano' era tipo 'Liquidez' y hoy es tipo 'Hogar', y ninguna otra
    categoria usa 'Hogar'. El conjunto "capital" (Ahorros + Inversiones + Financiacion) queda
    identico al de antes.
-   **PENDIENTE: correr "2. Aplicar" sobre la planilla.** Hasta entonces, nada de esto cambio.
+   **Corrido el 2026-08-19 y auditado en vivo.** Resultado: el apareamiento quedo corregido y
+   las siete agregaciones recalculadas contra el ledger cierran al centavo, PERO la corrida
+   rompio `O23:O25` (pasaron de `#REF!` a `#ERROR!`). Reparado en v0.12.1 junto con el sexto
+   defecto. **PENDIENTE: correr "2. Aplicar" una segunda vez.**
    Queda abierta una decision de negocio que el arreglo NO toma: `Financiacion` (Tarjeta de
    Credito, Prestamo Mac) sigue contando como capital, igual que antes. Una tarjeta es un
    pasivo; si Franco quiere cambiarlo, es una linea mas en la misma pasada.
+2. **Quinto defecto -- `Inicio!C15`/`F15` siempre en "0%"**, aunque la variacion real del mes
+   sea de +155%. Diagnosticado el 2026-08-19: cuatro condiciones se ligan a variables de `LET`
+   **sin envolverlas en `ARRAYFORMULA`**; la comparacion rango-contra-escalar se evalua por
+   interseccion implicita, `FILTER` recibe una condicion de una sola fila, tira error de
+   tamanio, y el `IFERROR` externo lo convierte en 0. Con los dos meses en 0, `TEXT` imprime la
+   tercera seccion del formato. Correccion propuesta: envolver `cond_ingreso_act`,
+   `cond_no_traspaso_act` y sus gemelas `_ant` en `ARRAYFORMULA` (cuatro lineas en `C15`, dos en
+   `F15`). NO aplicado todavia: es un mecanismo de falla distinto y no esta verificado de forma
+   independiente.
 3. **Presupuesto**: cablear monto historico promedio (contrato del 2026-08-13 en los
    DEVTOOL), poblar cuentas desde el Plan, conectar los selectores, decidir la base de los
    porcentajes (E16 vs $E$9), y recien despues conectar Inicio (D19:G22) y Tablero (N9:N11).
@@ -272,6 +300,16 @@ silencio). En orden sugerido:
 7. **FX**: diagnosticar el trigger del actualizador (sin filas desde 2026-08-13).
 8. **Limpieza del catalogo**: residual C1005:N1033, 'Meta de Ahorro 3' duplicada, Q19
    huerfana, decision sobre cuentas historicas eliminadas y sobre 'Traspaso'/'Ajuste'.
+9. **Integridad del ledger** (nuevo, medido el 2026-08-19): **203 de 3.458 filas (5,9%) no
+   tienen Tipo de Cuenta** -- 122 Ingreso y 81 Egreso; 2024: 22, 2025: 41, 2026: 140. El patron
+   dominante son pares Egreso/Ingreso de `Traspaso`, y hay filas con Cuenta directamente vacia.
+   Es el gap de validacion de `procesarCargas` (filtra solo por Monto no vacio) materializado.
+   Consecuencia concreta ya observada: en enero 2026 hay un movimiento de **$302.209 con Tipo de
+   Cuenta y Medio vacios que es invisible para TODO el Tablero** -- esta en el derrame pero
+   ningun bloque lo recoge. Dos frentes: cerrar el gap en `procesarCargas` y sanear lo existente.
+10. **Las patas de Egreso de los Traspasos llevan Tipo de Cuenta "Ingreso"** en el derrame. Hoy
+   es inocuo porque todos los bloques excluyen `Cuenta = 'Traspaso'`, pero cualquier agregacion
+   futura que no lo haga va a sumar ~$394.001 de traspasos como ingreso.
 
 ---
 

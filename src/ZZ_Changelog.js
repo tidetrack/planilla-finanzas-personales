@@ -5,6 +5,49 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.12.1 - Reparar la reparacion: el modulo que arreglo el formulerio rompio tres
+ * celdas, y su verificador lo dejo pasar.
+ * - QUE PASO: Franco corrio "Aplicar reparacion" y el modulo declaro exito. La auditoria sobre
+ *   la planilla viva encontro que "Tablero"!O23, O24 y O25 habian pasado de #REF! a #ERROR!
+ *   (Formula parse error): quedaron PEOR que antes. Las otras 24 celdas quedaron bien, y las
+ *   siete agregaciones que se recalcularon contra el ledger cierran AL CENTAVO.
+ * - EL BUG, en una linea: en _reponerReferencias habia dos reemplazos que usaban string de
+ *   reemplazo en vez de funcion --  out.replace(/(\$N\$10\s*-\s*)#REF!/g, '$1$N$17'). En un
+ *   string de reemplazo '$1' es el grupo capturado, '$N' es literal y '$17' vuelve a ser el
+ *   grupo 1 seguido de un 7. En vez de "$N$10 - $N$17" escribio "$N$10 - $N$N$10 - 7". Las
+ *   otras cuatro sustituciones de esa funcion zafaron por casualidad: dos no tienen grupos (y
+ *   un '$4' sin grupo queda literal) y dos llevan el '$1' al final.
+ * - LO GRAVE NO ES EL BUG SINO QUE PASO EL GUARD. _verificarEscrituraFormulerio comparaba el
+ *   TEXTO releido contra el texto escrito y exigia cero #REF!, cero 'Liquidez' y cero anclas
+ *   viejas. El texto corrupto cumple las cuatro. Comprobar que escribiste lo que querias
+ *   escribir NO ES comprobar que funciona. Es la cicatriz 5 del arnes -- "un guard que reporta
+ *   exito sin hacer el trabajo es peor que no tener guard" -- cometida por el modulo que la
+ *   cita en su propia cabecera.
+ * - CORRECCION EN TRES CAPAS, ninguna apoyada en la otra: (a) TODOS los reemplazos van por
+ *   funcion de reemplazo, asi el valor devuelto se inserta tal cual y el problema no puede
+ *   existir en un proyecto donde toda formula lleva '$'; (b) el verificador LEE EL VALOR
+ *   RESULTANTE de cada celda y revierte el lote entero si alguna quedo en error, distinguiendo
+ *   "ya estaba rota" de "la rompi yo"; (c) devtools/probar_formulerio.js corre las
+ *   transformaciones REALES contra las formulas REALES del gemelo antes de desplegar. Esa
+ *   tercera capa habria cortado el bug en diez segundos: no correrla fue el error de fondo.
+ * - REPARACION DEL DANIO: el modulo reconoce y deshace el artefacto "$N$N$10 - 7" que aquella
+ *   corrida dejo escrito. Sin eso, re-correr "Aplicar" contestaria "nada que hacer" con tres
+ *   celdas rotas a la vista -- otra vez el mismo modo de falla.
+ * - SEXTO DEFECTO, hallado por la misma auditoria y reparado aca: las columnas "Valor en X" de
+ *   "Inicio" (AF8 y AT8) NO CONVIERTEN MONEDA. Leen la moneda de la columna de CUENTA (V y AJ)
+ *   en vez de la de MONEDA (Y y AM), asi que ninguna rama del IF se cumple, tasa_origen cae al
+ *   literal 1 y la columna es un passthrough del monto crudo: todo movimiento en moneda
+ *   extranjera entra a C13, F13, C15 y F15 A VALOR NOMINAL. Un cobro de 200 USD cuenta como 200
+ *   pesos. Medido en junio de 2026: ~$376.740 de ingreso desaparecido, el 23% del mes. AT8
+ *   ademas tomaba la moneda de DESTINO de Y13 -- que no es un selector sino la celda con la
+ *   moneda del sexto movimiento del mes actual --, y el rotulo AT7 repetia la referencia.
+ * - QUINTO DEFECTO diagnosticado pero NO reparado: "Inicio"!C15/F15 devuelven siempre "0%
+ *   respecto del mes anterior" aunque la variacion real sea de +155%. Causa: cuatro condiciones
+ *   se ligan a variables de LET sin ARRAYFORMULA, la comparacion se evalua por interseccion
+ *   implicita, FILTER recibe una condicion de una fila y tira error de tamanio, y el IFERROR
+ *   externo lo vuelve 0. Queda para una pasada propia: es otro mecanismo de falla y muestra un
+ *   rotulo feo, no un numero equivocado en una cifra de portada.
+ *
  * [2026-08-19] v0.12.0 - Formulerio reparado: "Inicio" y "Tablero" dejan de mentir.
  * - CONTEXTO: el swap v0.11 movio las celdas de las dos hojas que Franco MIRA y las formulas se
  *   copiaron apuntando a las direcciones viejas. El resultado no eran errores -- eso hubiera

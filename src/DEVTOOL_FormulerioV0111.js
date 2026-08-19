@@ -42,6 +42,19 @@
  *    Fijos) pero las formulas se pegaron en el orden viejo. La formula de Capacidad de Ahorro
  *    quedo en la fila de Gastos Fijos. Cada una calcula bien lo suyo, en la fila del vecino.
  *
+ * 4bis. LA CONVERSION DE MONEDA DE "Inicio" NO CONVIERTE (hallado el 2026-08-19, DESPUES de
+ *    reparar los cuatro primeros: es el sexto defecto, no uno de los cuatro).
+ *    "Inicio"!AF8 y AT8 son las columnas "Valor en X" de los dos motores de la hoja. Leen la
+ *    moneda de la columna de CUENTA (V y AJ) en vez de la de MONEDA (Y y AM), asi que ninguna
+ *    rama del IF se cumple nunca, `tasa_origen` cae al literal 1 y la columna entera es un
+ *    passthrough del monto crudo. Cada movimiento en moneda extranjera entra a C13, F13, C15 y
+ *    F15 A VALOR NOMINAL: un cobro de 200 USD cuenta como 200 pesos. Medido en junio de 2026:
+ *    ~$376.740 de ingreso desaparecido, el 23% del mes. AT8 arrastra ademas una referencia
+ *    todavia mas fragil -- toma la moneda de DESTINO de `Y13`, que no es un selector sino la
+ *    celda de datos con la moneda del sexto movimiento del mes actual --, y el rotulo AT7 la
+ *    repite. Es de la misma familia que el defecto 2: una referencia que el rediseno dejo
+ *    apuntando a otra cosa.
+ *
  * 4. 'Liquidez' HUERFANA -- un tipo de categoria que ya no existe.
  *    El Plan de Cuentas nuevo tiene cuatro tipos: Ahorros, Inversiones, Financiacion, Hogar.
  *    'Liquidez' era el nombre viejo de lo que hoy se llama 'Hogar' (ambos con una sola
@@ -73,9 +86,17 @@
  *    catalogo -- pero hoy da el numero correcto. Fragil no es roto: se documenta, no se toca.
  * 2. NO LIMPIA el Plan de Cuentas (la fila huerfana P19/Q19 sin nombre y con tipo Hogar, ni
  *    el duplicado "Meta de Ahorro 3" en P17/P18). Es dato de Franco, no formula.
- * 3. NO ARREGLA "Inicio"!C15/F15 mas alla del literal. Devuelven "0% respecto del mes
- *    anterior" con C13 en $1,27M: hay un segundo defecto ahi (probable FILTER errando dentro
- *    de un IFERROR) que NO es ninguno de los cuatro y merece diagnostico propio.
+ * 3. NO ARREGLA "Inicio"!C15/F15 mas alla del literal -- el QUINTO defecto, todavia abierto.
+ *    Devuelven siempre "0% respecto del mes anterior" aunque la variacion real sea de +155%.
+ *    Diagnostico del 2026-08-19: cuatro condiciones (cond_ingreso_act, cond_no_traspaso_act y
+ *    sus gemelas _ant) se ligan a variables de LET SIN envolverlas en ARRAYFORMULA. En una
+ *    formula de resultado escalar, la comparacion rango-contra-escalar se evalua por
+ *    interseccion implicita, FILTER recibe una condicion de una sola fila, tira error de
+ *    tamanio, y el IFERROR externo lo convierte en 0. Con ambos meses en 0, TEXT imprime la
+ *    tercera seccion del formato: "0%". La correccion seria envolver esas cuatro (dos en F15)
+ *    en ARRAYFORMULA. NO se aplica todavia porque es un mecanismo de falla distinto del de los
+ *    otros seis y no esta verificado de forma independiente; y porque muestra un rotulo feo,
+ *    no un numero equivocado en una cifra de portada.
  * 4. NO ESCRIBE si el catalogo o la geometria no son los esperados. El preflight deriva los
  *    rotulos del motor desde RANGES.REGISTROS.columns (regla SSOT) y aborta ante la minima
  *    discrepancia. Un mapeo de columnas supuesto y no verificado ya nos costo una vez.
@@ -85,7 +106,35 @@
  *   aplicarFormulerioV0111()   -> preflight + respaldo verificado + escritura + relectura.
  *   revertirFormulerioV0111()  -> restaura desde el respaldo de la ultima corrida.
  *
- * @version 0.12.0
+ * ============================================================================
+ * LA CORRIDA FALLIDA DEL 2026-08-19 (v0.12.0) -- por que este archivo cambio
+ * ============================================================================
+ * La primera version escribio en la planilla productiva tres formulas que NO PARSEAN. En
+ * `_reponerReferencias` habia dos reemplazos con string de reemplazo en vez de funcion:
+ *     out.replace(/(\$N\$10\s*-\s*)#REF!/g, '$1$N$17')
+ * En un string de reemplazo, '$1' es el grupo, '$N' es literal y '$17' vuelve a ser el grupo 1
+ * seguido de un 7. En vez de "$N$10 - $N$17" escribio "$N$10 - $N$N$10 - 7". O23, O24 y O25
+ * pasaron de #REF! a #ERROR!: quedaron PEOR que antes.
+ *
+ * Y el verificador lo dejo pasar, que es lo grave. `_verificarEscrituraFormulerio` comparaba el
+ * TEXTO releido contra el texto escrito, y comprobaba ausencia de #REF!, de 'Liquidez' y de
+ * anclas viejas. El texto corrupto cumplia las cuatro condiciones. Comprobar que escribiste lo
+ * que querias escribir NO ES comprobar que funciona: es la cicatriz 5 del arnes cometida por el
+ * modulo que la cita en su propia cabecera.
+ *
+ * Las dos correcciones de fondo, ninguna apoyada en la otra:
+ *   (a) TODOS los reemplazos van por funcion. El valor devuelto se inserta tal cual y esta
+ *       clase de bug deja de ser posible en un proyecto donde toda formula lleva '$'.
+ *   (b) El verificador LEE EL VALOR RESULTANTE de cada celda escrita y aborta -- revirtiendo
+ *       todo el lote -- si alguna quedo en error.
+ * Y una tercera, fuera del codigo: las transformaciones se corren contra las formulas reales
+ * del gemelo (docs/permanente/celdas.tsv) ANTES de desplegar. Ese banco de pruebas habria
+ * cortado el bug en diez segundos; no correrlo fue el error de verdad.
+ *
+ * Ademas, este modulo repara ahora el artefacto "$N$N$10 - 7" que aquella corrida dejo escrito:
+ * sin eso, re-correr "Aplicar" contestaria "nada que hacer" con tres celdas rotas a la vista.
+ *
+ * @version 0.12.1
  * @since 2026-08-19
  * @lastModified 2026-08-19
  * @see docs/permanente/FUNCIONALIDADES.md (seccion formulerio)
@@ -162,6 +211,45 @@ const FORM_CELDAS = [
     // --- Tablero: capitalizacion del mes y comprobacion de traspasos ---
     { hoja: 'TABLERO', celda: 'N19', anclas: true, refs: true, literal: true, nota: 'Capitalizacion real del mes' },
     { hoja: 'TABLERO', celda: 'L28', anclas: true, refs: false, literal: false, nota: 'Comprobacion de traspasos' }
+];
+
+/** Geometria del motor de "Inicio": derrama desde la fila 8, con sus rotulos en la fila 7. */
+const FORM_FILA_DERRAME_INICIO = 8;
+const FORM_FILA_HEADER_INICIO = 7;
+
+/**
+ * SEXTO DEFECTO (hallado el 2026-08-19, despues de reparar los cuatro primeros): las dos
+ * columnas "Valor en X" de "Inicio" NO CONVIERTEN MONEDA. Leen la moneda de la columna
+ * equivocada -- la de Cuenta -- asi que ninguna de las cuatro ramas del IF se cumple nunca,
+ * `tasa_origen` cae al literal 1, y toda la columna es un passthrough del monto crudo.
+ *
+ * Consecuencia medida: cada movimiento en moneda extranjera entra a C13, F13, C15 y F15 A
+ * VALOR NOMINAL. Un cobro de 200 USD se cuenta como 200 pesos. En junio de 2026 eso son
+ * ~$376.740 de ingreso desaparecido, el 23% del mes.
+ *
+ * "Inicio"!AT8 (mes anterior) tiene ademas un segundo error, mas raro: toma la moneda de
+ * DESTINO de `Y13`, que no es un selector sino UNA CELDA DE DATOS del derrame del mes actual
+ * -- la moneda del sexto movimiento del mes. Hoy no se nota porque ese movimiento es en ARS;
+ * el dia que sea en USD, la conversion del mes anterior entera cambia sin que nadie toque nada.
+ * El rotulo AT7 arrastra la misma referencia.
+ *
+ * `colMal` y `colBien` NO se dan por sabidas: el preflight lee los rotulos de la fila 7 y exige
+ * que `colMal` diga "Cuenta" (probando que hoy lee lo que no debe) y `colBien` diga "Moneda"
+ * (probando que el destino es el correcto). Si no, se saltea con aviso y no se toca nada.
+ */
+const FORM_MONEDA_INICIO = [
+    {
+        celda: 'AF8', nota: 'Valor convertido del mes actual',
+        colMal: 'V', colBien: 'Y', destinoMal: null, destinoBien: null
+    },
+    {
+        celda: 'AT8', nota: 'Valor convertido del mes anterior',
+        colMal: 'AJ', colBien: 'AM', destinoMal: 'Y13', destinoBien: '$G$4'
+    },
+    {
+        celda: 'AT7', nota: 'Rotulo "Valor en X" del mes anterior',
+        colMal: null, colBien: null, destinoMal: 'Y13', destinoBien: '$G$4'
+    }
 ];
 
 /**
@@ -299,19 +387,21 @@ function aplicarFormulerioV0111() {
         const respaldo = _respaldarFormulerio(ss, sello);
 
         // --- ESCRITURA ---
-        plan.cambios.forEach(function (c) {
-            const rango = ss.getSheetByName(c.nombreHoja).getRange(c.celda);
-            rango.setFormula(c.formulaNueva);
-            escritas.push({ nombreHoja: c.nombreHoja, celda: c.celda, previa: c.formulaActual, nueva: c.formulaNueva });
-        });
-
-        if (plan.rotacion) {
-            plan.rotacion.escrituras.forEach(function (w) {
-                const rango = ss.getSheetByName(w.nombreHoja).getRange(w.celda);
-                rango.setFormula(w.formulaNueva);
-                escritas.push({ nombreHoja: w.nombreHoja, celda: w.celda, previa: w.formulaActual, nueva: w.formulaNueva });
+        const escribir = function (w) {
+            const rango = ss.getSheetByName(w.nombreHoja).getRange(w.celda);
+            // El valor PREVIO se lee antes de pisar la celda: sin el no se puede distinguir
+            // "esta celda ya estaba en error" de "esta celda la rompi yo".
+            const errorPrevio = _errorDeCelda(rango);
+            rango.setFormula(w.formulaNueva);
+            escritas.push({
+                nombreHoja: w.nombreHoja, celda: w.celda,
+                previa: w.formulaActual, nueva: w.formulaNueva,
+                errorPrevio: errorPrevio
             });
-        }
+        };
+
+        plan.cambios.forEach(escribir);
+        if (plan.rotacion) plan.rotacion.escrituras.forEach(escribir);
 
         SpreadsheetApp.flush();
 
@@ -657,6 +747,31 @@ function _planFormulerio(ss, pre) {
         });
     });
 
+    // --- Sexto defecto: la conversion de moneda de "Inicio" (aditivo, se saltea sin bloquear) ---
+    const motivoSalteo = _motivoSaltearMonedaInicio(ss, pre);
+    if (motivoSalteo) {
+        avisos.push('NO se repara la conversion de moneda de "' + pre.nombreInicio + '" (' +
+            motivoSalteo + '). El resto del formulerio SI se repara.');
+    } else {
+        const hojaInicio = ss.getSheetByName(pre.nombreInicio);
+        FORM_MONEDA_INICIO.forEach(function (spec) {
+            const actual = hojaInicio.getRange(spec.celda).getFormula();
+            if (!actual) {
+                avisos.push(pre.nombreInicio + '!' + spec.celda + ' (' + spec.nota + ') no tiene formula: se saltea.');
+                return;
+            }
+            const nueva = _repararMonedaInicio(actual, spec);
+            if (nueva === actual) return;
+            cambios.push({
+                hoja: 'INICIO', nombreHoja: pre.nombreInicio, celda: spec.celda, nota: spec.nota,
+                formulaActual: actual, formulaNueva: nueva,
+                resumen: (spec.colMal ? 'moneda leida de ' + spec.colMal + ' (Cuenta) -> ' + spec.colBien + ' (Moneda)' : '') +
+                    (spec.colMal && spec.destinoMal ? ' | ' : '') +
+                    (spec.destinoMal ? 'moneda destino ' + spec.destinoMal + ' (celda de datos) -> ' + spec.destinoBien + ' (el selector)' : '')
+            });
+        });
+    }
+
     const rotacion = _planRotacion(ss, pre, avisos);
     return { cambios: cambios, rotacion: rotacion, avisos: avisos };
 }
@@ -703,20 +818,98 @@ function _reponerReferencias(formula) {
     let out = formula;
     const sel = FORM_SELECTOR_MONEDA_TABLERO;
 
+    // TODOS los reemplazos van por FUNCION, nunca por string de reemplazo. Es la leccion cara
+    // del 2026-08-19: en String.replace, un string de reemplazo interpreta '$'. La linea
+    //     out.replace(/(\$N\$10\s*-\s*)#REF!/g, '$1$N$17')
+    // no produce "$N$10 - $N$17" sino "$N$10 - $N$N$10 - 7", porque '$1' es el grupo, '$N' es
+    // literal y '$17' vuelve a ser el grupo 1 seguido de un 7. Escribio tres formulas que no
+    // parsean en la planilla productiva de Franco, y el verificador no lo vio porque solo
+    // comparaba TEXTO. Con funcion de reemplazo el valor devuelto se inserta tal cual y el
+    // problema no puede existir. Toda formula de este proyecto lleva '$' por todos lados:
+    // la regla es no volver a usar nunca un string de reemplazo aca.
+
     // SWITCH(#REF!; "ARS"; 1; ...) -> el selector de moneda de la hoja
-    out = out.replace(/SWITCH\(\s*#REF!\s*;/g, 'SWITCH(' + sel + ';');
+    out = out.replace(/SWITCH\(\s*#REF!\s*;/g, function () { return 'SWITCH(' + sel + ';'; });
     // IF(#REF!="ARS"; ...) -> idem (AV6 lo usa cuatro veces)
-    out = out.replace(/IF\(\s*#REF!\s*=/g, 'IF(' + sel + '=');
+    out = out.replace(/IF\(\s*#REF!\s*=/g, function () { return 'IF(' + sel + '='; });
     // MAX(0; $N$10 - #REF!) -> el REAL de gastos fijos (N17), contra el PRESUPUESTO (N10)
-    out = out.replace(/(\$N\$10\s*-\s*)#REF!/g, '$1$N$17');
+    out = out.replace(/(\$N\$10\s*-\s*)#REF!/g, function (m, g1) { return g1 + '$N$17'; });
     // MAX(0; $N$11 - #REF!) -> el REAL de gastos variables (N18), contra el presupuesto (N11)
-    out = out.replace(/(\$N\$11\s*-\s*)#REF!/g, '$1$N$18');
+    out = out.replace(/(\$N\$11\s*-\s*)#REF!/g, function (m, g1) { return g1 + '$N$18'; });
     // IFERROR(#REF! / N10; 0) -> cumplimiento de gastos fijos = real / presupuesto
-    out = out.replace(/IFERROR\(\s*#REF!(\s*\/\s*N10)/g, 'IFERROR(N17$1');
+    out = out.replace(/IFERROR\(\s*#REF!(\s*\/\s*N10)/g, function (m, g1) { return 'IFERROR(N17' + g1; });
     // IFERROR(#REF! / N11; 0) -> cumplimiento de gastos variables
-    out = out.replace(/IFERROR\(\s*#REF!(\s*\/\s*N11)/g, 'IFERROR(N18$1');
+    out = out.replace(/IFERROR\(\s*#REF!(\s*\/\s*N11)/g, function (m, g1) { return 'IFERROR(N18' + g1; });
+
+    // --- REPARACION DE LA CORRIDA FALLIDA DEL 2026-08-19 ---
+    // La v0.12.0 dejo "$N$10 - $N$N$10 - 7" y "$N$11 - $N$N$11 - 8" escritos en O23:O25 de la
+    // planilla productiva: fallan al parsear y las tres celdas quedaron en #ERROR!. Como ya no
+    // contienen #REF!, ningun otro patron de arriba las alcanza. Se reconocen por su forma
+    // exacta -- es una cadena que nadie escribiria a mano -- y se las devuelve a lo que debieron
+    // ser. Sin esto, re-correr "Aplicar" contesta "nada que hacer" con tres celdas rotas a la
+    // vista, que es justo el modo de falla que este modulo dice combatir.
+    out = out.replace(/(\$N\$10\s*-\s*)\$N\$N\$10\s*-\s*7/g, function (m, g1) { return g1 + '$N$17'; });
+    out = out.replace(/(\$N\$11\s*-\s*)\$N\$N\$11\s*-\s*8/g, function (m, g1) { return g1 + '$N$18'; });
 
     return out;
+}
+
+/**
+ * Repone la columna de moneda (y, en el bloque del mes anterior, la moneda de destino) en las
+ * formulas "Valor en X" de "Inicio". Cirugia de tokens, igual que todo lo demas de este modulo.
+ *
+ * Los rangos se reconocen ABIERTOS y de columna completa ("V8:V"): el \b inicial impide que
+ * "V8:V" matchee dentro de "AV8:AV", y el final impide que matchee "V8:V200".
+ */
+function _repararMonedaInicio(formula, spec) {
+    let out = formula;
+    if (spec.colMal && spec.colBien) {
+        const re = new RegExp('\\b' + spec.colMal + FORM_FILA_DERRAME_INICIO + ':' + spec.colMal + '\\b', 'g');
+        out = out.replace(re, function () {
+            return spec.colBien + FORM_FILA_DERRAME_INICIO + ':' + spec.colBien;
+        });
+    }
+    if (spec.destinoMal && spec.destinoBien) {
+        const re2 = new RegExp('\\b' + spec.destinoMal.replace(/\$/g, '\\$') + '\\b', 'g');
+        out = out.replace(re2, function () { return spec.destinoBien; });
+    }
+    return out;
+}
+
+/**
+ * Verifica los rotulos que justifican la reparacion del sexto defecto. NO lanza: devuelve el
+ * motivo por el que hay que saltearla, o '' si esta habilitada.
+ *
+ * Es deliberadamente NO BLOQUEANTE. Este arreglo es aditivo e independiente de los otros cinco;
+ * si su geometria no verifica, lo correcto es saltearlo con un aviso a la vista, no impedir que
+ * se reparen los defectos que si estan confirmados.
+ */
+function _motivoSaltearMonedaInicio(ss, pre) {
+    const hoja = ss.getSheetByName(pre.nombreInicio);
+    if (!hoja) return 'no existe la hoja "' + pre.nombreInicio + '"';
+
+    const problemas = [];
+    FORM_MONEDA_INICIO.forEach(function (spec) {
+        if (!spec.colMal || !spec.colBien) return;
+        const rotuloMal = hoja.getRange(spec.colMal + FORM_FILA_HEADER_INICIO).getValue();
+        const rotuloBien = hoja.getRange(spec.colBien + FORM_FILA_HEADER_INICIO).getValue();
+        if (_normalizarRotulo(rotuloMal) !== 'cuenta') {
+            problemas.push(spec.colMal + FORM_FILA_HEADER_INICIO + ' dice "' + rotuloMal +
+                '" y se esperaba "Cuenta" (es la columna que ' + spec.celda + ' lee por error)');
+        }
+        if (_normalizarRotulo(rotuloBien) !== 'moneda') {
+            problemas.push(spec.colBien + FORM_FILA_HEADER_INICIO + ' dice "' + rotuloBien +
+                '" y se esperaba "Moneda" (es la columna que ' + spec.celda + ' deberia leer)');
+        }
+    });
+
+    const selector = String(hoja.getRange('G4').getValue() || '').trim();
+    if (MONEDAS_DISPONIBLES.indexOf(selector) === -1) {
+        problemas.push('el selector de moneda "' + pre.nombreInicio + '"!G4 dice "' + selector +
+            '", que no es ninguna moneda del sistema');
+    }
+
+    return problemas.length ? problemas.join('; ') : '';
 }
 
 /**
@@ -938,11 +1131,18 @@ function _leerRespaldoFormulerio(hoja) {
 }
 
 /**
- * Relee cada celda escrita y comprueba que la formula quedo. Devuelve la lista de fallas.
+ * Relee cada celda escrita y comprueba que la formula quedo Y QUE CALCULA.
  *
- * La comparacion es NORMALIZADA por espacios: Sheets reacomoda saltos de linea y sangrias al
- * guardar, y una diferencia cosmetica no es una falla. Lo que si se exige literalmente son las
- * tres garantias semanticas del arreglo: cero #REF!, cero anclas en la fila 9, cero literal viejo.
+ * La comparacion del texto es NORMALIZADA por espacios: Sheets reacomoda saltos de linea y
+ * sangrias al guardar, y una diferencia cosmetica no es una falla. Lo que si se exige
+ * literalmente son las garantias semanticas del arreglo: cero #REF!, cero anclas en la fila 9,
+ * cero literal viejo.
+ *
+ * Y SOBRE TODO: se lee el VALOR RESULTANTE de cada celda. La version anterior de este
+ * verificador solo comparaba texto, y por eso dejo pasar tres formulas que no parseaban --
+ * el texto habia ido y vuelto perfecto, pero la planilla mostraba #ERROR!. Comprobar que
+ * escribiste lo que querias escribir NO es comprobar que funciona. Es la cicatriz 5 del arnes
+ * cometida por el propio modulo que la cita.
  */
 function _verificarEscrituraFormulerio(ss, escritas) {
     const fallas = [];
@@ -975,9 +1175,38 @@ function _verificarEscrituraFormulerio(ss, escritas) {
                 }
             }
         }
+
+        // --- LA PRUEBA QUE FALTABA: la celda tiene que CALCULAR, no solo decir lo correcto ---
+        const errorAhora = _errorDeCelda(ss.getSheetByName(w.nombreHoja).getRange(w.celda));
+        if (errorAhora) {
+            fallas.push(ref + ' quedo en ' + errorAhora +
+                (w.errorPrevio
+                    ? ' (ya estaba en ' + w.errorPrevio + ' antes, y el objetivo del arreglo era sacarla de ahi)'
+                    : ' (ANTES CALCULABA BIEN: la rompio esta corrida)'));
+        }
     });
 
     return fallas;
+}
+
+/**
+ * Devuelve el codigo de error que muestra una celda, o '' si calcula.
+ *
+ * Se lee el valor MOSTRADO y se compara contra la lista cerrada de errores de Sheets: no basta
+ * con "empieza con #", porque una celda podria contener texto legitimo que arranque asi.
+ */
+function _errorDeCelda(rango) {
+    let mostrado;
+    try {
+        mostrado = String(rango.getDisplayValue() || '').trim();
+    } catch (e) {
+        return '';   // no se pudo leer: no se inventa un error que no se comprobo
+    }
+    const ERRORES = ['#REF!', '#VALUE!', '#DIV/0!', '#N/A', '#NAME?', '#NUM!', '#NULL!', '#ERROR!'];
+    for (let i = 0; i < ERRORES.length; i++) {
+        if (mostrado.indexOf(ERRORES[i]) === 0) return ERRORES[i];
+    }
+    return '';
 }
 
 /** Devuelve cada celda escrita a su formula previa. Se usa cuando la verificacion falla. */
