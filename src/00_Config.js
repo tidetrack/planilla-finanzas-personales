@@ -250,6 +250,23 @@ const RANGES = {
 // No requieren una tabla en la hoja de cálculo.
 const MONEDAS_DISPONIBLES = ['ARS', 'USD', 'AUD', 'EUR'];
 
+// decision Franco 2026-08-19: RIQUEZA se define por LISTA BLANCA, no por lista negra.
+// Solo los tipos de categoria de abajo componen la situacion patrimonial. Todo lo demas
+// -- Hogar, Financiacion y lo que se agregue -- es macrosegmentacion de analisis, no capital.
+//
+// Antes las formulas preguntaban "todo lo que NO sea Hogar", con dos consecuencias malas:
+// (1) FINANCIACION sumaba como patrimonio, o sea una tarjeta de credito contaba como capital
+//     cuando es un pasivo; (2) cualquier tipo nuevo entraba a riqueza sin que nadie lo decidiera,
+//     por el solo hecho de no llamarse Hogar. Una lista blanca obliga a decidir.
+//
+// OJO al tocar esto: hay DOS usos distintos del tipo de categoria en las formulas y solo UNO
+// se rige por esta constante. "Es riqueza?" -> aca. "Es flujo cotidiano?" (los bloques que
+// incluyen 'Inicio Mes' cuando el medio es de casa, y los saldos de Inicio!C8 / Tablero!AF9:AF12)
+// -> sigue siendo el tipo Hogar y NO depende de esta lista. Confundirlos rompe el saldo
+// cotidiano, que hoy cierra al centavo contra el ledger.
+// @see DEVTOOL_RiquezaYCategorias.js
+const TIPOS_RIQUEZA = ['Ahorros', 'Inversiones'];
+
 // ============================================
 // CUENTAS NEUTRAS (MOVIMIENTOS PERMUTATIVOS)
 // ============================================
@@ -429,6 +446,19 @@ const MENU_CONFIG = {
             // posicion respecto de sus rotulos, y el tipo de categoria 'Liquidez' que ya no
             // existe en el catalogo. Se corren EN ESTE ORDEN: estado (solo lectura) y despues
             // aplicar. @see DEVTOOL_FormulerioV0111.js
+            // Lleva la definicion de RIQUEZA de lista negra ("todo lo que no sea Hogar", que hacia
+            // que una tarjeta de credito contara como patrimonio) a la lista blanca de
+            // TIPOS_RIQUEZA, y llena la columna AB del bloque de categorias con el Tipo -- el
+            // rotulo AB8 ya decia "Tipo" y la columna estaba vacia a proposito desde el rediseno.
+            // @see DEVTOOL_RiquezaYCategorias.js
+            submenu: 'Riqueza y categorias', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoRiquezaCategorias' },
+                { name: '2. Aplicar', function: 'aplicarRiquezaCategorias' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirRiquezaCategorias' }
+            ]
+        },
+        {
             submenu: 'Formulerio v0.11 (Inicio + Tablero)', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoFormulerioV0111' },
                 { name: '2. Aplicar reparacion', function: 'aplicarFormulerioV0111' },

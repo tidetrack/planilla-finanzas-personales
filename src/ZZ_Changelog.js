@@ -5,6 +5,40 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.13.0 - Riqueza por lista blanca, y el Tipo a la vista en el bloque de categorias.
+ * - CAMBIO DE DEFINICION, no correccion de bug (decision de Franco del 2026-08-19). Hasta hoy el
+ *   capital acumulado se calculaba como "todo tipo de categoria que NO sea Hogar". Eso hacia que
+ *   la FINANCIACION -- Tarjeta de Credito, Prestamo Mac -- sumara como patrimonio. Una tarjeta es
+ *   un pasivo. Riqueza pasa a definirse por LISTA BLANCA: solo Ahorros e Inversiones.
+ * - POR QUE LISTA BLANCA Y NO ARREGLAR LA NEGRA: con "todo lo que no sea Hogar", cualquier tipo
+ *   nuevo del catalogo entraba a riqueza sin que nadie lo decidiera, por el solo hecho de no
+ *   llamarse Hogar. Una lista blanca obliga a decidir. La regla vive en TIPOS_RIQUEZA
+ *   (00_Config.js), no repartida por seis formulas.
+ * - LA TRAMPA DE ESTE CAMBIO, y por que el modulo trabaja sobre una lista cerrada de celdas en
+ *   vez de barrer la planilla reemplazando "Hogar": hay DOS usos del tipo de categoria que se
+ *   parecen y no se corrigen igual. (a) "es riqueza?" -> las seis celdas que ligan cond_riqueza /
+ *   cond_ahorro: Inicio!F8, Tablero!N19 y Tablero!AG9:AG12. (b) "es flujo cotidiano?" -> las diez
+ *   que dejan entrar los arrastres 'Inicio Mes' cuando el medio es de casa (Inicio!C13/F13/C15/F15,
+ *   Tablero!R9/U9/X9) y los saldos cotidianos (Inicio!C8, Tablero!AF9:AF12, que ademas filtran por
+ *   NOMBRE de categoria y no por tipo). Las (b) NO se tocan: romperlas romperia el saldo cotidiano,
+ *   que hoy cierra al centavo contra el ledger.
+ * - IMPACTO MEDIDO sobre el ledger crudo antes de aplicar: el cambio mueve meses enteros --
+ *   marzo 2026 -$567.974, abril +$332.974, junio +$200.000, agosto -$230.000 -- aunque en el
+ *   acumulado historico la Financiacion neta solo +$230.000 en 7 filas. Es el efecto buscado.
+ * - LA COLUMNA DEL TIPO. Tablero!AA9 derrama AA=categoria, AB=vacia, AC=monto, y el rotulo AB8 YA
+ *   DECIA "Tipo" desde el rediseno: la columna se diseno para eso y quedo sin llenar, con una
+ *   variable que la formula llamaba literalmente columna_ak_vacia y devolvia "" siempre. Ahora
+ *   trae el tipo de cada categoria (VLOOKUP al catalogo) y la variable se llama columna_tipo.
+ *   Ademas el bloque deja de filtrar las categorias de tipo Hogar: con el Tipo a la vista, mostrar
+ *   todas es la lectura por macrosegmento que se buscaba. Si se prefiere lo otro, es una linea.
+ * - CATALOGO: se deja 'Financiacion' como un solo tipo (decision de Franco). No se parte en
+ *   'Tarjetas' y 'Financiamiento'.
+ * - VERIFICACION: preflight que exige que el catalogo tenga al menos una categoria de cada tipo de
+ *   la lista blanca (si no, el capital daria cero) y que el rotulo AB8 diga "Tipo"; respaldo
+ *   congelado y releido antes de mutar; y relectura del VALOR de cada celda escrita, con reversion
+ *   del lote entero si alguna queda en error. Mas devtools/probar_riqueza.js, que corre las
+ *   transformaciones reales contra las formulas reales del gemelo ANTES de desplegar.
+ *
  * [2026-08-19] v0.12.1 - Reparar la reparacion: el modulo que arreglo el formulerio rompio tres
  * celdas, y su verificador lo dejo pasar.
  * - QUE PASO: Franco corrio "Aplicar reparacion" y el modulo declaro exito. La auditoria sobre

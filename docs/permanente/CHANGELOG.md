@@ -9,6 +9,61 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.13.0 - Riqueza por lista blanca (2026-08-19)
+
+**Cambio de definicion, no correccion de bug.** Hasta hoy el capital acumulado se calculaba como
+*todo tipo de categoria que no sea Hogar*. Eso hacia que la **Financiacion** -- Tarjeta de Credito,
+Prestamo Mac -- sumara como patrimonio. Una tarjeta es un pasivo. Riqueza pasa a definirse por
+**lista blanca**: solo `Ahorros` e `Inversiones`.
+
+### Por que lista blanca y no arreglar la negra
+
+Con "todo lo que no sea Hogar", cualquier tipo nuevo del catalogo entraba a riqueza **sin que
+nadie lo decidiera**, por el solo hecho de no llamarse Hogar. Una lista blanca obliga a decidir.
+La regla vive en `TIPOS_RIQUEZA` (`00_Config.js`), no repartida por seis formulas.
+
+### La trampa de este cambio
+
+Hay **dos usos del tipo de categoria** que se parecen y no se corrigen igual. Por eso el modulo
+trabaja sobre una lista cerrada de celdas en vez de barrer la planilla reemplazando "Hogar":
+
+| Uso | Celdas | Que pasa |
+|---|---|---|
+| **(a) "es riqueza?"** | `Inicio!F8`, `Tablero!N19`, `Tablero!AG9:AG12` | pasan a lista blanca |
+| **(b) "es flujo cotidiano?"** | `Inicio!C8/C13/F13/C15/F15`, `Tablero!R9/U9/X9/AF9:AF12` | **NO se tocan** |
+
+Las (b) son los bloques que dejan entrar los arrastres `Inicio Mes` cuando el medio es de casa, y
+los saldos cotidianos -- que ademas filtran por *nombre* de categoria, no por tipo. Romperlas
+romperia el saldo cotidiano, que hoy cierra al centavo contra el ledger.
+
+### Impacto medido antes de aplicar
+
+Sobre el ledger crudo (3.458 filas): el cambio mueve meses enteros -- marzo 2026 **−$567.974**,
+abril **+$332.974**, junio **+$200.000**, agosto **−$230.000** -- aunque en el acumulado historico
+la Financiacion neta apenas +$230.000 en 7 filas. Es el efecto buscado, no un error.
+
+### Added
+
+- **`TIPOS_RIQUEZA`** en `00_Config.js`.
+- **`DEVTOOL_RiquezaYCategorias.js`**: trio estado / aplicar / revertir, bajo
+  *Tidetrack Dev > Riqueza y categorias*.
+- **`devtools/probar_riqueza.js`**: banco de pruebas contra las formulas reales del gemelo.
+
+### Fixed
+
+- **La columna del Tipo del bloque de categorias**. `Tablero!AA9` derrama AA=categoria, AB=vacia,
+  AC=monto, y el rotulo `AB8` **ya decia "Tipo"** desde el rediseno: la columna se diseno para eso
+  y quedo sin llenar, con una variable que la formula llamaba literalmente `columna_ak_vacia` y
+  devolvia `""` siempre. Ahora trae el tipo de cada categoria desde el catalogo.
+- **El bloque deja de ocultar las categorias de tipo Hogar.** Con el Tipo a la vista, mostrar todas
+  es la lectura por macrosegmento que se buscaba. Si se prefiere lo anterior, es una linea.
+
+### Decidido y no hecho
+
+- `Financiacion` **se deja como un solo tipo**; no se parte en 'Tarjetas' y 'Financiamiento'.
+
+---
+
 ## v0.12.1 - Reparar la reparacion (2026-08-19)
 
 Franco corrio "Aplicar reparacion" y el modulo declaro exito. La auditoria sobre la planilla
