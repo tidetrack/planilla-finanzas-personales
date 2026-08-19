@@ -29,7 +29,7 @@ vm.createContext(ctx);
 vm.runInContext(
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_FormulerioV0111.js'),'utf8')+'\n'+
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_StockYFlujo.js'),'utf8')+
-  '\n;Object.assign(globalThis,{FORM_CELDAS,SYF_SALDOS_TABLERO,SYF_FILA_RESIDUO,SYF_ARRASTRE});', ctx);
+  '\n;Object.assign(globalThis,{FORM_CELDAS,SYF_SALDOS_TABLERO,SYF_FILA_RESIDUO,SYF_ARRASTRE,SYF_BLOQUE_MEDIOS});', ctx);
 
 const tsv=fs.readFileSync(path.join(RAIZ,'docs/permanente/celdas.tsv'),'utf8').split('\n');
 const F={}; for(const l of tsv){const p=l.split('\t'); if(p.length<3||!p[2])continue;
@@ -88,8 +88,19 @@ console.log('\n=== 2. STOCKS convertidos (Inicio C8 / F8) ===');
   if(revisar(c,f)) console.log('  OK  '+c);
 });
 console.log('\n=== 3. Saldo actual POR MEDIO y el diagnostico ===');
-const pm=ctx._formulaSaldoPorMedio();
-if(revisar('Tablero!C18',pm)) console.log('  OK  Tablero!C18 (saldo actual por cuenta bancaria)');
+// TRES formulas de UNA columna: el bloque son celdas combinadas y un derrame de 3 columnas
+// solo entra la primera (defecto de la v0.16.0).
+const cols=ctx.SYF_BLOQUE_MEDIOS.columnas;
+const matrices=new Set();
+cols.forEach(c=>{
+  const f=ctx._formulaSaldoPorMedio(c.indice);
+  const ref=c.col+ctx.SYF_BLOQUE_MEDIOS.filaDatos;
+  if(revisar('Tablero!'+ref,f)) console.log('  OK  Tablero!'+ref+'  ('+c.rotulo+', INDEX col '+c.indice+')');
+  if(!new RegExp('INDEX\\(tabla; 0; '+c.indice+'\\)').test(f)){console.log('  !!! '+ref+' no toma la columna '+c.indice);fallas++;}
+  matrices.add(f.replace(/INDEX\(tabla; 0; \d+\)/,'INDEX(tabla; 0; K)'));
+});
+if(matrices.size!==1){console.log('  !!! las tres columnas NO derivan de la misma matriz: se pueden desincronizar');fallas++;}
+else console.log('  OK  las tres columnas derivan de la MISMA matriz ordenada (filas sincronizadas)');
 const dg=ctx._formulaDiagnosticoSyf();
 if(revisar('Tablero!L29',dg)) console.log('  OK  Tablero!L29');
 // Invariantes del modelo de saldo validado contra los saldos reales de Franco (v0.16.0).

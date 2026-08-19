@@ -117,10 +117,40 @@ const SYF_SALDOS_TABLERO = { colMoneda: 'AE', colFlujo: 'AF', colCapital: 'AG', 
  * importante, no menos: es el unico lugar donde queda visible lo que no clasifica.
  */
 const SYF_FILA_RESIDUO = 19;
-const SYF_CELDA_DIAGNOSTICO = 'L29';
 
-/** Bloque "detalle por medio": pasa a mostrar el SALDO ACTUAL de cada cuenta bancaria. */
-const SYF_CELDA_POR_MEDIO = 'C18';
+/**
+ * Bloque "Medios Bancarios." del Tablero, medido en vivo el 2026-08-19.
+ *
+ * ESTA HECHO DE CELDAS COMBINADAS, y eso decide como hay que escribirlo:
+ *   C17:E17 = "Medio"   F17:G17 = "Moneda"   H17:I17 = "Monto"
+ * Cada fila de datos es igual: C18:E18, F18:G18, H18:I18.
+ *
+ * Una formula que devuelve tres columnas NO PUEDE derramar ahi. La v0.16.0 escribio una sola
+ * formula de 3 columnas en C18 y Sheets derramo unicamente la PRIMERA -- los nombres -- fila por
+ * fila hacia abajo. Las columnas Moneda y Monto que Franco ve (F:G y H:I) quedaron con los
+ * valores estaticos viejos. Resultado: medios nuevos con montos viejos al lado, que es peor que
+ * no haber hecho nada, porque parece que anduvo.
+ *
+ * Por eso van TRES formulas de una columna cada una, ancladas en el primer cuadro de cada
+ * cabecera. Las tres derivan de la MISMA matriz ordenada y toman su columna con INDEX, asi que
+ * las filas se corresponden siempre, incluso ante empates de saldo.
+ */
+const SYF_BLOQUE_MEDIOS = {
+    filaHeader: 17,
+    filaDatos: 18,
+    columnas: [
+        { col: 'C', rotulo: 'Medio', indice: 1 },
+        { col: 'F', rotulo: 'Moneda', indice: 2 },
+        { col: 'H', rotulo: 'Monto', indice: 3 }
+    ]
+};
+
+/**
+ * Candidatas para el indicador de movimientos sin clasificar, en orden de preferencia.
+ * L29 quedo descartada: es parte del merge L28:O29 que contiene la comprobacion de traspasos,
+ * asi que escribir ahi no muestra nada (y en el peor caso pisa el control de traspasos).
+ */
+const SYF_CANDIDATAS_DIAGNOSTICO = ['L31', 'L32', 'L33', 'C34', 'C35'];
 
 // ============================================
 // PUBLICAS
@@ -143,7 +173,8 @@ function estadoStockYFlujo() {
         l.push('    NO se borran: quedan como historia, pero ninguna formula los mira.');
         l.push('  - La Capacidad de Capitalizacion pasa a ser el RESIDUO: los tres buckets');
         l.push('    (fijos, variables, capitalizacion) reparten el 100% del ingreso.');
-        l.push('  - "' + SYF_CELDA_POR_MEDIO + '" pasa a mostrar el SALDO ACTUAL de cada cuenta bancaria.');
+        l.push('  - El bloque "Medios Bancarios" pasa a mostrar el SALDO ACTUAL de cada cuenta,');
+        l.push('    solo las que tienen saldo, de mayor a menor.');
         l.push('');
         l.push('Preflight: ' + pre.resumen);
         l.push('');
@@ -245,9 +276,10 @@ function aplicarStockYFlujo() {
             'QUE MIRAR:\n' +
             '  1. "Tablero"!AF9 (saldo cotidiano ARS): tiene que dejar de cambiar cuando cambias\n' +
             '     el mes en N2. Es un saldo, no un movimiento.\n' +
-            '  2. "Tablero"!' + SYF_CELDA_POR_MEDIO + ': el saldo ACTUAL de cada cuenta bancaria.\n' +
-            '  3. "Tablero"!O16 tiene que dar 100%: la capitalizacion es el residuo. Lo que NO\n' +
-            '     clasifica se cuenta aparte, en ' + SYF_CELDA_DIAGNOSTICO + '.\n' +
+            '  2. El bloque "Medios Bancarios" (C17:I31): las TRES columnas -- Medio, Moneda y\n' +
+            '     Monto -- tienen que corresponderse fila por fila. Si el nombre no coincide con\n' +
+            '     el monto de al lado, avisar: es el defecto que tuvo la v0.16.0.\n' +
+            '  3. "Tablero"!O16 tiene que dar 100%: la capitalizacion es el residuo.\n' +
             '  4. "Tablero"!N16 (Ingresos) BAJA respecto de antes. Es correcto: ya no cuenta los\n' +
             '     arrastres de "' + SYF_ARRASTRE + '" como si fueran ingresos del mes.\n\n' +
             'Si algo quedo peor: Tidetrack Dev > Stock y flujo > 3. Revertir.';
@@ -287,8 +319,9 @@ function revertirStockYFlujo() {
         const conf = ui.alert('Revertir stock y flujo',
             'Se restauran ' + filas.length + ' formula(s) desde "' + nombre + '".\n\n' +
             'Los saldos vuelven a depender del mes seleccionado y los arrastres "' + SYF_ARRASTRE +
-            '" vuelven a contar.\n\nOJO: ' + SYF_CELDA_DIAGNOSTICO + ' no estaba en el respaldo porque ' +
-            'antes estaba vacia; hay que borrarla a mano si se quiere volver del todo.\n\nContinuar?', ui.ButtonSet.YES_NO);
+            '" vuelven a contar.\n\nOJO: la celda del indicador de movimientos sin clasificar no ' +
+            'estaba en el respaldo porque antes estaba vacia; hay que borrarla a mano si se ' +
+            'quiere volver del todo.\n\nContinuar?', ui.ButtonSet.YES_NO);
         if (conf !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se restauro nada.' };
 
         let n = 0;
@@ -348,10 +381,20 @@ function _preflightSyf(ss) {
     // La celda del diagnostico tambien. Y ademas NO puede estar combinada: una celda que es
     // parte de un merge sin ser su ancla se lee vacia y se deja escribir sin protestar, pero lo
     // escrito no queda. Se veria igual que "quedo sin formula".
-    const rd = hojaTablero.getRange(SYF_CELDA_DIAGNOSTICO);
-    let diagCombinada = false;
-    try { diagCombinada = rd.isPartOfMerge(); } catch (e) { diagCombinada = false; }
-    const diagLibre = !diagCombinada && String(rd.getValue() || '').trim() === '' && !rd.getFormula();
+    // Se busca la primera candidata que este LIBRE y que NO sea parte de una celda combinada.
+    // L29 fallo por lo segundo: es parte del merge L28:O29 de la comprobacion de traspasos, asi
+    // que lo escrito ahi no se muestra -- se veria igual que "no paso nada".
+    let celdaDiag = '';
+    for (let i = 0; i < SYF_CANDIDATAS_DIAGNOSTICO.length; i++) {
+        const r = hojaTablero.getRange(SYF_CANDIDATAS_DIAGNOSTICO[i]);
+        let comb = false;
+        try { comb = r.isPartOfMerge(); } catch (e) { comb = false; }
+        if (!comb && String(r.getValue() || '').trim() === '' && !r.getFormula()) {
+            celdaDiag = SYF_CANDIDATAS_DIAGNOSTICO[i];
+            break;
+        }
+    }
+    const diagLibre = celdaDiag !== '';
 
     // Los rotulos del bloque de saldos: AF8 "Flujo", AG8 "Capital".
     const s = SYF_SALDOS_TABLERO;
@@ -374,9 +417,23 @@ function _preflightSyf(ss) {
             s.filas[0] + ':' + s.colMoneda + s.filas[s.filas.length - 1] + ': ' + monedas.join(', ') + '.');
     }
 
+    // El bloque de medios se verifica POR SUS ROTULOS antes de escribir. Es el guard que faltaba
+    // en la v0.16.0: se escribio una formula de tres columnas sobre celdas combinadas y solo
+    // entro la primera, dejando Moneda y Monto con datos viejos.
+    const rotulosMal = [];
+    SYF_BLOQUE_MEDIOS.columnas.forEach(function (c) {
+        const vivo = String(hojaTablero.getRange(c.col + SYF_BLOQUE_MEDIOS.filaHeader).getValue() || '').trim();
+        if (_normalizarRotulo(vivo) !== _normalizarRotulo(c.rotulo)) {
+            rotulosMal.push(c.col + SYF_BLOQUE_MEDIOS.filaHeader + ' dice "' + vivo + '" y se esperaba "' + c.rotulo + '"');
+        }
+    });
+    const bloqueMediosOk = !rotulosMal.length;
+    const bloqueMediosMotivo = rotulosMal.join('; ');
+
     return {
+        bloqueMediosOk: bloqueMediosOk, bloqueMediosMotivo: bloqueMediosMotivo,
         nombreInicio: nombreInicio, nombreTablero: nombreTablero,
-        diagLibre: diagLibre, monedas: monedas,
+        diagLibre: diagLibre, celdaDiag: celdaDiag, monedas: monedas,
         resumen: 'ledger "' + cfg.sheet + '" con header en la fila ' + cfg.headerRow +
             '; bloque de saldos rotulado ' + monedas.join('/')
     };
@@ -518,13 +575,16 @@ function _formulaSaldoConvertido(esRiqueza, celdaSelector) {
  * saldo a la fecha." Se filtran los que quedan en cero -- de 28 medios del catalogo, muestra los
  * que efectivamente tienen plata. Un listado con veinte ceros no es informacion.
  */
-function _formulaSaldoPorMedio() {
+function _formulaSaldoPorMedio(indiceColumna) {
     return '=LET(\n' + _preambuloSaldoSyf() + '\n' +
         '  saldos; MAP(lista; LAMBDA(un_medio;\n' +
         '    SUM(IFERROR(FILTER(neto; vigente; col_medio=un_medio); 0))));\n' +
         '  con_saldo; ARRAYFORMULA(ROUND(saldos; 2)<>0);\n' +
-        '  IFERROR(SORT(FILTER(HSTACK(lista; mon_lista; saldos); con_saldo); 3; FALSE);\n' +
-        '    HSTACK("(sin saldos)"; ""; 0))\n)';
+        // La MISMA matriz ordenada en las tres columnas: cada una toma la suya con INDEX y las
+        // filas se corresponden siempre, aun con saldos empatados.
+        '  tabla; IFERROR(SORT(FILTER(HSTACK(lista; mon_lista; saldos); con_saldo); 3; FALSE);\n' +
+        '    HSTACK("(sin saldos)"; ""; 0));\n' +
+        '  INDEX(tabla; 0; ' + indiceColumna + ')\n)';
 }
 
 /**
@@ -589,10 +649,18 @@ function _planSyf(ss, pre) {
         _formulaSaldoConvertido(true, '$G$4'),
         'capital acumulado real: todo el ledger, sin arrastres, lista blanca de riqueza');
 
-    // --- SALDO ACTUAL POR MEDIO: lo que Franco viene pidiendo desde el primer mensaje ---
-    proponer(pre.nombreTablero, SYF_CELDA_POR_MEDIO, 'Saldo actual por cuenta bancaria',
-        _formulaSaldoPorMedio(),
-        'pasa de "movimientos del mes por medio" a SALDO ACTUAL por medio, con todo el historico');
+    // --- SALDO ACTUAL POR MEDIO: tres formulas de UNA columna, por las celdas combinadas ---
+    if (pre.bloqueMediosOk) {
+        SYF_BLOQUE_MEDIOS.columnas.forEach(function (c) {
+            proponer(pre.nombreTablero, c.col + SYF_BLOQUE_MEDIOS.filaDatos,
+                'Medios Bancarios: ' + c.rotulo,
+                _formulaSaldoPorMedio(c.indice),
+                'saldo actual por cuenta, solo las que tienen saldo, de mayor a menor');
+        });
+    } else {
+        avisos.push('NO se toca el bloque "Medios Bancarios": ' + pre.bloqueMediosMotivo +
+            '. Escribir ahi a ciegas dejaria nombres nuevos con montos viejos al lado.');
+    }
 
     // --- FLUJO: capitalizacion como residuo, sin quinta fila ---
     // decision Franco: los tres buckets tienen que repartir el 100% del ingreso. Con tres
@@ -606,11 +674,11 @@ function _planSyf(ss, pre) {
         'suma las tres filas; con la capitalizacion como residuo da 100% por construccion');
 
     if (!pre.diagLibre) {
-        avisos.push('NO se escribe el indicador de movimientos sin clasificar: ' + SYF_CELDA_DIAGNOSTICO +
-            ' tiene contenido o es parte de una celda combinada.');
+        avisos.push('NO se escribe el indicador de movimientos sin clasificar: ninguna de las ' +
+            'celdas candidatas (' + SYF_CANDIDATAS_DIAGNOSTICO.join(', ') + ') esta libre y sin combinar.');
     } else {
-        proponer(pre.nombreTablero, SYF_CELDA_DIAGNOSTICO, 'Movimientos sin clasificar',
-            _formulaDiagnosticoSyf(), 'le pone nombre y numero a lo que le falta al 100%');
+        proponer(pre.nombreTablero, pre.celdaDiag, 'Movimientos sin clasificar',
+            _formulaDiagnosticoSyf(), 'le pone nombre y numero a lo que no clasifica (celda ' + pre.celdaDiag + ')');
     }
 
     // --- FLUJOS: apagar la clausula especial del arrastre ---

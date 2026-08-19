@@ -5,6 +5,33 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.16.1 - Celdas combinadas: el bloque de medios necesita tres formulas, no una.
+ * - SINTOMA: Franco corrio la v0.16.0 y dijo "no note los cambios". Se midio en vivo por Chrome
+ *   sobre la planilla productiva en vez de suponer: las formulas SI estaban escritas (AF9, AG9,
+ *   C18, N19, O16 tenian el modelo nuevo), pero el bloque "Medios Bancarios" mostraba los medios
+ *   NUEVOS con los montos VIEJOS al lado. Es peor que no haber hecho nada, porque parece que
+ *   anduvo: la lista de cuentas era correcta y los numeros de al lado no.
+ * - CAUSA, y es de geometria: el bloque esta hecho de CELDAS COMBINADAS. C17:E17 dice "Medio",
+ *   F17:G17 "Moneda", H17:I17 "Monto", y cada fila de datos repite ese patron. Una formula que
+ *   devuelve TRES columnas no puede derramar sobre eso: Sheets derramo unicamente la primera --
+ *   los nombres -- fila por fila hacia abajo, y las columnas Moneda y Monto reales, que son F:G y
+ *   H:I, quedaron con los valores estaticos que ya tenian.
+ * - CORRECCION: tres formulas de UNA columna, ancladas en C18, F18 y H18. Las tres derivan de la
+ *   MISMA matriz ordenada y toman su columna con INDEX, de modo que las filas se corresponden
+ *   siempre, aun cuando dos medios tengan el mismo saldo. Mas un preflight que verifica los tres
+ *   rotulos antes de escribir, y un chequeo en el banco de pruebas que exige que las tres salgan
+ *   de la misma matriz.
+ * - EL DIAGNOSTICO SE MUDA DE L29. Esa celda es parte del merge L28:O29 que contiene la
+ *   comprobacion de traspasos: escribir ahi no muestra nada. El guard de isPartOfMerge existia
+ *   desde la v0.14.1 pero solo se aplicaba a esa unica celda; ahora se recorre una lista de
+ *   candidatas y se usa la primera libre y sin combinar, informando cual fue.
+ * - LO QUE SI HABIA QUEDADO BIEN y no se toca: el bloque "Saldos Actuales" (AE:AG) son celdas
+ *   simples y tienen el modelo correcto; N19 es el residuo; O16 suma las tres filas; y la
+ *   comprobacion de traspasos de L28 nunca se piso -- se verifico leyendola.
+ * - LECCION: el guard de celdas combinadas se habia escrito para UNA celda cuando el problema era
+ *   de toda una familia. Un guard puntual sobre un defecto estructural solo tapa el caso que ya
+ *   conocias.
+ *
  * [2026-08-19] v0.16.0 - El saldo se corta en la ultima conciliacion.
  * - LA REGLA: saldo de un medio = su ULTIMO asiento "Inicio Mes" + todos los movimientos
  *   posteriores. "Inicio Mes" NO es un movimiento: es el punto de corte de una CONCILIACION.
