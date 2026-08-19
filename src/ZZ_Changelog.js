@@ -5,6 +5,40 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.14.0 - Stock y flujo separados: los saldos dejan de depender del mes.
+ * - EL PROBLEMA DE FONDO: un saldo y un movimiento son cosas distintas y la planilla los calculaba
+ *   igual, filtrados por mes. Por eso hacia falta cargar un "Inicio Mes" todos los meses -- un
+ *   asiento que reescribe el saldo de apertura de cada medio -- para que los saldos dieran bien.
+ *   A partir de aca: FLUJO se filtra por mes, STOCK lee el ledger entero y no se filtra por nada.
+ * - POR QUE EL ARRASTRE ROMPIA TODO: 'Inicio Mes' hacia DOS trabajos a la vez, saldo de apertura
+ *   (redundante con la suma de los movimientos que lo originaron) y ajuste de conciliacion
+ *   (legitimo). Como el arrastre ES el saldo anterior, sumar el historico lo cuenta dos veces y se
+ *   infla mas cuantos mas meses hay. Medido: los 165 arrastres suman $10.153.852 contra $884.860
+ *   de saldo real. "Frascos Naranja X" mostraba $1.465.839 y su saldo real es $0,00.
+ * - LOS INGRESOS DEL MES BAJAN, y es correcto. Los arrastres no tienen Tipo de Cuenta, asi que
+ *   obligaban a la clausula "(Col1 <> 'Inicio Mes' OR Col5 = 'Hogar')" en seis formulas: una regla
+ *   que metia los arrastres de las cuentas de casa dentro de INGRESOS. Plata que no era ingreso de
+ *   nada, contada como ingreso del mes. Se apaga en las seis.
+ * - EL TERMINO QUE FALTABA. El bloque "Movimientos del Mes" nunca cerraba en 100% y no era un bug
+ *   de formula: faltaba un sumando. La identidad es Ingresos - Gastos = variacion del patrimonio, y
+ *   el patrimonio tiene dos mitades: los vehiculos de riqueza y las cuentas de todos los dias. Con
+ *   solo la primera, la plata que no gastaste pero tampoco moviste a un plazo fijo no aparecia en
+ *   ningun lado. Va a la fila 20, "Flujo Cotidiano" -- vocabulario que ya existia en la hoja, AF8
+ *   dice "Flujo" y AG8 dice "Capital". N16 = N17 + N18 + N19 + N20.
+ * - LO QUE NO CIERRA SE MUESTRA, NO SE DISIMULA. Aun con la fila nueva el porcentaje no da 100%
+ *   exacto: 116 movimientos no clasifican (36 sin medio, 70 de cuenta 'Ajuste' -- que no esta en el
+ *   Plan de Cuentas -- y 10 sin cuenta), $3,6M que cambian saldos sin ser ingreso ni gasto.
+ *   Rellenarlo con una regla inventada seria exactamente el numero plausible y falso que este
+ *   proyecto viene sacando de la planilla. Va a Tablero!L29 con nombre y monto; cuando esos 116 se
+ *   resuelvan, el indicador va a cero y el bloque cierra solo.
+ * - NO SE TOCA NI UNA FILA DEL LEDGER. Los 'Inicio Mes' quedan donde estan; lo que cambia es que
+ *   ninguna formula los mira. Reversible sin perder datos.
+ * - VERIFICACION: preflight que cruza el header del ledger contra RANGES columna por columna,
+ *   exige que la fila 20 y L29 esten libres y que los rotulos AF8/AG8 digan "Flujo"/"Capital";
+ *   respaldo congelado y releido antes de mutar; relectura del VALOR de cada celda con reversion
+ *   del lote entero. Mas devtools/probar_stock_flujo.js, que revisa separadores es_AR, balanceo y
+ *   ausencia de arrays literales autorados en cada formula generada, antes de desplegar.
+ *
  * [2026-08-19] v0.13.0 - Riqueza por lista blanca, y el Tipo a la vista en el bloque de categorias.
  * - CAMBIO DE DEFINICION, no correccion de bug (decision de Franco del 2026-08-19). Hasta hoy el
  *   capital acumulado se calculaba como "todo tipo de categoria que NO sea Hogar". Eso hacia que

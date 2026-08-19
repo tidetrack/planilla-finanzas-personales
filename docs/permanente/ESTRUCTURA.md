@@ -27,6 +27,7 @@ planilla-finanzas-personales/
 │ ├── 99_MigrationLogic.js # Migración desde BD antigua (legacy)
 │ ├── DEVTOOL_FormulerioV0111.js # Repara las fórmulas de Inicio/Tablero que rompió el swap v0.11
 │ ├── DEVTOOL_RiquezaYCategorias.js # Riqueza por lista blanca (Ahorros+Inversiones) + columna Tipo en categorías
+│ ├── DEVTOOL_StockYFlujo.js # Saldos independientes del filtro mensual + fila Flujo Cotidiano
 │ ├── DEVTOOL_Presupuesto.js # Motor de la hoja Presupuesto - NO LISTO, fuera del menú
 │ ├── DEVTOOL_CableadoPresupuesto.js # Cableado Presupuesto <-> Tablero - NO LISTO, fuera del menú
 │ ├── DEVTOOL_RobustezVistas.js # Anclas de vistas - anclas PRE-Fix, fuera del menú
@@ -122,7 +123,8 @@ planilla-finanzas-personales/
 │ ├── generar_tsv_celdas.py # Aplana el snapshot a celdas.tsv para auditar con awk/grep sin cargar el JSON
 │ ├── diff_snapshots.py # Prueba de no-daño: compara dos snapshots y falla si cambió una fórmula
 │ ├── probar_formulerio.js # Banco de pruebas: corre las transformaciones del formulerío contra las fórmulas reales del gemelo ANTES de deployar
-│ └── probar_riqueza.js # Banco de pruebas de la lista blanca de riqueza y la columna Tipo
+│ ├── probar_riqueza.js # Banco de pruebas de la lista blanca de riqueza y la columna Tipo
+│ └── probar_stock_flujo.js # Banco de pruebas de las fórmulas de saldo y del Flujo Cotidiano
 │
 ├── scripts/ # Herramientas de automatización local
 │ └── auto-sync.js # Watcher: commit + push automático
@@ -188,6 +190,7 @@ El pipeline estándar para cerrar cualquier feature:
 | `99_MigrationLogic.js` | Activo - migración desde BD antigua (legacy) | v0.5.0 |
 | `DEVTOOL_FormulerioV0111.js` | Activo - repara el formulerío de Inicio/Tablero post-swap | v0.12.0 |
 | `DEVTOOL_RiquezaYCategorias.js` | Activo - riqueza por lista blanca + columna Tipo | v0.13.0 |
+| `DEVTOOL_StockYFlujo.js` | Activo - separa stock de flujo, apaga los arrastres | v0.14.0 |
 | `DEVTOOL_Presupuesto.js` | **Fuera del menú** - NO LISTO, bloqueantes abiertos | v0.9.x |
 | `DEVTOOL_CableadoPresupuesto.js` | **Fuera del menú** - NO LISTO, bloqueantes abiertos | v0.9.x |
 | `DEVTOOL_RobustezVistas.js` | **Fuera del menú** - sus anclas son PRE-Fix, re-verificar | v0.9.x |
@@ -201,4 +204,4 @@ El pipeline estándar para cerrar cualquier feature:
 
 ---
 
-*Tidetrack - ESTRUCTURA.md - v0.13.0 - 2026-08-19*
+*Tidetrack - ESTRUCTURA.md - v0.14.0 - 2026-08-19*

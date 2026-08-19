@@ -451,6 +451,18 @@ const MENU_CONFIG = {
             // TIPOS_RIQUEZA, y llena la columna AB del bloque de categorias con el Tipo -- el
             // rotulo AB8 ya decia "Tipo" y la columna estaba vacia a proposito desde el rediseno.
             // @see DEVTOOL_RiquezaYCategorias.js
+            // Separa STOCK de FLUJO: los saldos dejan de filtrarse por mes y pasan a leer el
+            // ledger entero, los asientos 'Inicio Mes' dejan de tener efecto (sin borrarlos), y
+            // el bloque "Movimientos del Mes" suma la fila que le faltaba para cerrar en 100%.
+            // @see DEVTOOL_StockYFlujo.js
+            submenu: 'Stock y flujo', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoStockYFlujo' },
+                { name: '2. Aplicar', function: 'aplicarStockYFlujo' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirStockYFlujo' }
+            ]
+        },
+        {
             submenu: 'Riqueza y categorias', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoRiquezaCategorias' },
                 { name: '2. Aplicar', function: 'aplicarRiquezaCategorias' },
