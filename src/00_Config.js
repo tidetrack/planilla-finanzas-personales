@@ -455,6 +455,15 @@ const MENU_CONFIG = {
             // ledger entero, los asientos 'Inicio Mes' dejan de tener efecto (sin borrarlos), y
             // el bloque "Movimientos del Mes" suma la fila que le faltaba para cerrar en 100%.
             // @see DEVTOOL_StockYFlujo.js
+            // Da de alta en el Plan de Cuentas las 12 cuentas que el ledger usa hace anios y
+            // el catalogo nunca tuvo -- entre ellas 'Ajuste', el mecanismo de conciliacion de
+            // Franco con 70 movimientos. @see DEVTOOL_AltaCuentas.js
+            submenu: 'Alta de cuentas faltantes', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoAltaCuentas' },
+                { name: '2. Aplicar', function: 'aplicarAltaCuentas' }
+            ]
+        },
+        {
             submenu: 'Stock y flujo', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoStockYFlujo' },
                 { name: '2. Aplicar', function: 'aplicarStockYFlujo' },

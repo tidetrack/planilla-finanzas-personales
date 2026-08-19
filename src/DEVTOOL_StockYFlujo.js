@@ -101,10 +101,26 @@ const SYF_ARRASTRE = 'Inicio Mes';
 /** Bloque de saldos del Tablero: AE=moneda, AF=flujo cotidiano, AG=capital. */
 const SYF_SALDOS_TABLERO = { colMoneda: 'AE', colFlujo: 'AF', colCapital: 'AG', filas: [9, 10, 11, 12] };
 
-/** Bloque "Movimientos del Mes": la fila 20 estaba libre y es donde va el termino que faltaba. */
-const SYF_FILA_NUEVA = 20;
-const SYF_ROTULO_NUEVO = 'Flujo Cotidiano';
+/**
+ * decision Franco 2026-08-19 (segunda vuelta): NO va una quinta fila. "Lo de Flujo cotidiano
+ * esta de mas. No es una categoria definida. Todo se debe repartir en fijos, variables y
+ * capitalizacion."
+ *
+ * Con tres buckets la identidad se cierra de la unica forma posible: la CAPITALIZACION pasa a
+ * ser el RESIDUO. Capitalizacion = Ingresos - Gastos Fijos - Gastos Variables. Deja de medirse
+ * sumando movimientos hacia vehiculos de ahorro y pasa a ser "lo que no gastaste", que es la
+ * definicion que Franco quiere leer: si no se fue en gastos, se capitalizo -- este en un plazo
+ * fijo o durmiendo en la caja de ahorro.
+ *
+ * Como es una resta, O16 da 100% SIEMPRE y por construccion. Eso quita un indicador (el
+ * porcentaje deja de avisar si algo no cuadra) y por eso el diagnostico de L29 se vuelve mas
+ * importante, no menos: es el unico lugar donde queda visible lo que no clasifica.
+ */
+const SYF_FILA_RESIDUO = 19;
 const SYF_CELDA_DIAGNOSTICO = 'L29';
+
+/** Bloque "detalle por medio": pasa a mostrar el SALDO ACTUAL de cada cuenta bancaria. */
+const SYF_CELDA_POR_MEDIO = 'C18';
 
 // ============================================
 // PUBLICAS
@@ -125,7 +141,9 @@ function estadoStockYFlujo() {
         l.push('    siempre el saldo actual.');
         l.push('  - Los asientos "' + SYF_ARRASTRE + '" dejan de tener efecto en toda la planilla.');
         l.push('    NO se borran: quedan como historia, pero ninguna formula los mira.');
-        l.push('  - El bloque "Movimientos del Mes" suma una fila: ' + SYF_ROTULO_NUEVO + ' (fila ' + SYF_FILA_NUEVA + ').');
+        l.push('  - La Capacidad de Capitalizacion pasa a ser el RESIDUO: los tres buckets');
+        l.push('    (fijos, variables, capitalizacion) reparten el 100% del ingreso.');
+        l.push('  - "' + SYF_CELDA_POR_MEDIO + '" pasa a mostrar el SALDO ACTUAL de cada cuenta bancaria.');
         l.push('');
         l.push('Preflight: ' + pre.resumen);
         l.push('');
@@ -173,8 +191,8 @@ function aplicarStockYFlujo() {
         const plan = _planSyf(ss, pre);
 
         if (!plan.cambios.length) {
-            const t = 'Ya estaba aplicado: los saldos leen el ledger entero y el bloque de ' +
-                'Movimientos del Mes ya tiene su fila de ' + SYF_ROTULO_NUEVO + '. No se escribio nada.';
+            const t = 'Ya estaba aplicado: los saldos leen el ledger entero y la capitalizacion ' +
+                'es el residuo de los otros dos buckets. No se escribio nada.';
             _mostrarSyf('Stock y flujo', t);
             return { ok: true, detalle: t };
         }
@@ -227,9 +245,9 @@ function aplicarStockYFlujo() {
             'QUE MIRAR:\n' +
             '  1. "Tablero"!AF9 (saldo cotidiano ARS): tiene que dejar de cambiar cuando cambias\n' +
             '     el mes en N2. Es un saldo, no un movimiento.\n' +
-            '  2. "Tablero"!N20: la fila nueva, ' + SYF_ROTULO_NUEVO + '.\n' +
-            '  3. "Tablero"!O16: ahora suma cuatro filas. Lo que le falte para 100% esta explicado\n' +
-            '     en ' + SYF_CELDA_DIAGNOSTICO + ': son los movimientos que no clasifican.\n' +
+            '  2. "Tablero"!' + SYF_CELDA_POR_MEDIO + ': el saldo ACTUAL de cada cuenta bancaria.\n' +
+            '  3. "Tablero"!O16 tiene que dar 100%: la capitalizacion es el residuo. Lo que NO\n' +
+            '     clasifica se cuenta aparte, en ' + SYF_CELDA_DIAGNOSTICO + '.\n' +
             '  4. "Tablero"!N16 (Ingresos) BAJA respecto de antes. Es correcto: ya no cuenta los\n' +
             '     arrastres de "' + SYF_ARRASTRE + '" como si fueran ingresos del mes.\n\n' +
             'Si algo quedo peor: Tidetrack Dev > Stock y flujo > 3. Revertir.';
@@ -269,9 +287,8 @@ function revertirStockYFlujo() {
         const conf = ui.alert('Revertir stock y flujo',
             'Se restauran ' + filas.length + ' formula(s) desde "' + nombre + '".\n\n' +
             'Los saldos vuelven a depender del mes seleccionado y los arrastres "' + SYF_ARRASTRE +
-            '" vuelven a contar.\n\nOJO: la fila ' + SYF_FILA_NUEVA + ' y ' + SYF_CELDA_DIAGNOSTICO +
-            ' no estaban en el respaldo porque antes estaban vacias; hay que borrarlas a mano si ' +
-            'se quiere volver del todo.\n\nContinuar?', ui.ButtonSet.YES_NO);
+            '" vuelven a contar.\n\nOJO: ' + SYF_CELDA_DIAGNOSTICO + ' no estaba en el respaldo porque ' +
+            'antes estaba vacia; hay que borrarla a mano si se quiere volver del todo.\n\nContinuar?', ui.ButtonSet.YES_NO);
         if (conf !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se restauro nada.' };
 
         let n = 0;
@@ -328,14 +345,6 @@ function _preflightSyf(ss) {
             desvios.join('; ') + '. No se escribe nada.');
     }
 
-    // La fila donde va el termino nuevo tiene que estar LIBRE.
-    const ocupada = [];
-    ['L', 'M', 'N', 'O'].forEach(function (c) {
-        const r = hojaTablero.getRange(c + SYF_FILA_NUEVA);
-        if (String(r.getValue() || '').trim() !== '' || r.getFormula()) ocupada.push(c + SYF_FILA_NUEVA);
-    });
-    const filaLibre = !ocupada.length;
-
     // La celda del diagnostico tambien. Y ademas NO puede estar combinada: una celda que es
     // parte de un merge sin ser su ancla se lee vacia y se deja escribir sin protestar, pero lo
     // escrito no queda. Se veria igual que "quedo sin formula".
@@ -367,10 +376,9 @@ function _preflightSyf(ss) {
 
     return {
         nombreInicio: nombreInicio, nombreTablero: nombreTablero,
-        filaLibre: filaLibre, ocupada: ocupada, diagLibre: diagLibre, monedas: monedas,
+        diagLibre: diagLibre, monedas: monedas,
         resumen: 'ledger "' + cfg.sheet + '" con header en la fila ' + cfg.headerRow +
-            '; bloque de saldos rotulado ' + monedas.join('/') +
-            '; fila ' + SYF_FILA_NUEVA + (filaLibre ? ' libre' : ' OCUPADA (' + ocupada.join(', ') + ')')
+            '; bloque de saldos rotulado ' + monedas.join('/')
     };
 }
 
@@ -431,17 +439,29 @@ function _preambuloLedgerSyf() {
     ].join('\n');
 }
 
-/** Saldo por moneda, sobre TODO el ledger. `celdaMoneda` trae el rotulo de la moneda (AE9..AE12). */
+/**
+ * Saldo por moneda, sobre TODO el ledger.
+ *
+ * EXIGE QUE EL MEDIO EXISTA EN EL PLAN DE CUENTAS, y esa es la correccion mas importante de la
+ * v0.15.0. La version anterior clasificaba por "el tipo de categoria no es de riqueza", condicion
+ * que un medio inexistente cumple (su tipo es cadena vacia): las 39 filas sin medio valido --
+ * $2.147.186 -- caian enteras en el saldo cotidiano. Franco lo vio de una: "aparece que tengo un
+ * flujo de ARS $2.574.778 pero este mes tuve ingresos por $1.138.512". De esos $2,57M, $2,40M
+ * eran filas sin medio. El saldo real de las cuentas es $517.658.
+ *
+ * Un saldo bancario es la suma de lo que paso POR UNA CUENTA. Un movimiento sin cuenta no tiene
+ * saldo al que pertenecer: no se reparte ni se estima, se deja afuera y se cuenta aparte (L29).
+ */
 function _formulaSaldoPorMoneda(esRiqueza, celdaMoneda) {
     return '=LET(\n' + _preambuloLedgerSyf() + '\n' +
-        '  grupo; ARRAYFORMULA(' + _condTipoSyf(esRiqueza, 'tipo_cat') + ');\n' +
+        '  grupo; ARRAYFORMULA((categoria<>"") * (' + _condTipoSyf(esRiqueza, 'tipo_cat') + '));\n' +
         '  SUM(IFERROR(FILTER(neto; moneda=' + celdaMoneda + '; vigente; grupo); 0))\n)';
 }
 
 /** Saldo total convertido a la moneda del selector, sobre TODO el ledger. */
 function _formulaSaldoConvertido(esRiqueza, celdaSelector) {
     return '=LET(\n' + _preambuloLedgerSyf() + '\n' +
-        '  grupo; ARRAYFORMULA(' + _condTipoSyf(esRiqueza, 'tipo_cat') + ');\n' +
+        '  grupo; ARRAYFORMULA((categoria<>"") * (' + _condTipoSyf(esRiqueza, 'tipo_cat') + '));\n' +
         '  suma_ars; SUM(IFERROR(FILTER(neto; moneda="ARS"; vigente; grupo); 0));\n' +
         '  suma_usd; SUM(IFERROR(FILTER(neto; moneda="USD"; vigente; grupo); 0));\n' +
         '  suma_aud; SUM(IFERROR(FILTER(neto; moneda="AUD"; vigente; grupo); 0));\n' +
@@ -475,6 +495,28 @@ function _formulaFlujoCotidianoMes() {
         '  total_ars; suma_ars + (suma_usd * $AF$17) + (suma_aud * $AF$18) + (suma_eur * $AF$19);\n' +
         '  tasa_cambio; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; $AF$17; "AUD"; $AF$18; "EUR"; $AF$19); 1);\n' +
         '  total_ars / tasa_cambio\n)';
+}
+
+/**
+ * Saldo ACTUAL de cada cuenta bancaria, con su moneda. Todo el historico, sin arrastres, solo
+ * medios que existen en el Plan de Cuentas.
+ *
+ * Es lo que Franco viene pidiendo desde el primer mensaje ("el tema esta en los saldos de los
+ * medios bancarios") y lo que la hoja no mostraba: el bloque anterior sumaba solo el mes
+ * seleccionado, asi que nunca era un saldo.
+ */
+function _formulaSaldoPorMedio() {
+    const medios = RANGES.MEDIOS_PAGO;
+    const colCat = columnLetterToIndex(medios.columns.proyecto) - columnLetterToIndex(medios.start) + 1;
+    return '=LET(\n' + _preambuloLedgerSyf() + '\n' +
+        '  valido; ARRAYFORMULA((medio<>"") * (categoria<>"") * vigente);\n' +
+        '  med; IFERROR(FILTER(medio; valido); "");\n' +
+        '  mon; IFERROR(FILTER(moneda; valido); "");\n' +
+        '  imp; IFERROR(FILTER(neto; valido); 0);\n' +
+        '  IFERROR(QUERY(ARRAYFORMULA(HSTACK(med; mon; imp));\n' +
+        '    "SELECT Col1, Col2, SUM(Col3) WHERE Col1 IS NOT NULL AND Col1 <> \'\' ' +
+        'GROUP BY Col1, Col2 ORDER BY SUM(Col3) DESC LABEL Col1 \'\', Col2 \'\', SUM(Col3) \'\'"; 0);\n' +
+        '    HSTACK(""; ""; ""))\n)';
 }
 
 /**
@@ -539,30 +581,22 @@ function _planSyf(ss, pre) {
         _formulaSaldoConvertido(true, '$G$4'),
         'capital acumulado real: todo el ledger, sin arrastres, lista blanca de riqueza');
 
-    // --- FLUJO: el termino que faltaba ---
-    if (!pre.filaLibre) {
-        avisos.push('NO se agrega la fila ' + SYF_FILA_NUEVA + ' (' + SYF_ROTULO_NUEVO + '): las celdas ' +
-            pre.ocupada.join(', ') + ' tienen contenido. Sin esa fila, el bloque no puede cerrar en 100%.');
-    } else {
-        const rotuloActual = String(hojaT.getRange('L' + SYF_FILA_NUEVA).getValue() || '').trim();
-        if (rotuloActual !== SYF_ROTULO_NUEVO) {
-            cambios.push({
-                nombreHoja: pre.nombreTablero, celda: 'L' + SYF_FILA_NUEVA, nota: 'Rotulo de la fila nueva',
-                esValor: true, valorActual: rotuloActual, valorNuevo: SYF_ROTULO_NUEVO,
-                formulaActual: '', formulaNueva: '',
-                resumen: 'rotulo "' + SYF_ROTULO_NUEVO + '" (el vocabulario ya existe: AF8 dice "Flujo")'
-            });
-        }
-        proponer(pre.nombreTablero, 'N' + SYF_FILA_NUEVA, SYF_ROTULO_NUEVO,
-            _formulaFlujoCotidianoMes(),
-            'variacion neta de las cuentas cotidianas en el mes: el termino que le faltaba al bloque');
-        proponer(pre.nombreTablero, 'O' + SYF_FILA_NUEVA, '% del ' + SYF_ROTULO_NUEVO,
-            '=IFERROR(N' + SYF_FILA_NUEVA + '/$N$16;0)', 'porcentaje sobre los ingresos del mes');
-        proponer(pre.nombreTablero, 'O16', 'Total del bloque',
-            '=SUM(O17:O' + SYF_FILA_NUEVA + ')', 'pasa a sumar las CUATRO filas, no tres');
-    }
+    // --- SALDO ACTUAL POR MEDIO: lo que Franco viene pidiendo desde el primer mensaje ---
+    proponer(pre.nombreTablero, SYF_CELDA_POR_MEDIO, 'Saldo actual por cuenta bancaria',
+        _formulaSaldoPorMedio(),
+        'pasa de "movimientos del mes por medio" a SALDO ACTUAL por medio, con todo el historico');
 
-    // --- El diagnostico que le pone nombre al desvio ---
+    // --- FLUJO: capitalizacion como residuo, sin quinta fila ---
+    // decision Franco: los tres buckets tienen que repartir el 100% del ingreso. Con tres
+    // buckets la unica forma de que cierre es que uno sea el residuo, y el que corresponde es
+    // la capitalizacion: lo que no se gasto, se capitalizo.
+    proponer(pre.nombreTablero, 'N' + SYF_FILA_RESIDUO, 'Capacidad de Capitalizacion',
+        '=N16-N17-N18',
+        'pasa a ser el RESIDUO (Ingresos - Fijos - Variables), asi los tres reparten el 100%');
+    proponer(pre.nombreTablero, 'O16', 'Total del bloque',
+        '=SUM(O17:O' + SYF_FILA_RESIDUO + ')',
+        'suma las tres filas; con la capitalizacion como residuo da 100% por construccion');
+
     if (!pre.diagLibre) {
         avisos.push('NO se escribe el indicador de movimientos sin clasificar: ' + SYF_CELDA_DIAGNOSTICO +
             ' tiene contenido o es parte de una celda combinada.');

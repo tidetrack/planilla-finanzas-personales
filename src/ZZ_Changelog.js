@@ -5,6 +5,41 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.15.0 - Saldos bancarios reales: el medio pasa a ser obligatorio.
+ * - EL DEFECTO QUE FRANCO CAZO MIRANDO UN NUMERO: "aparece que tengo un flujo de ARS $2.574.778
+ *   pero este mes tuve ingresos por $1.138.512... probablemente la diferencia no sea por eso".
+ *   Tenia razon. De esos $2,57M, $2,40M eran filas SIN MEDIO. La condicion de la v0.14 era "el
+ *   tipo de categoria no es de riqueza", y un medio inexistente la cumple porque su tipo es
+ *   cadena vacia: las 39 filas sin medio valido caian enteras en el saldo cotidiano. Ahora se
+ *   exige que el medio exista en el Plan de Cuentas. Un saldo bancario es la suma de lo que paso
+ *   POR UNA CUENTA; un movimiento sin cuenta no tiene saldo al que pertenecer, asi que no se
+ *   reparte ni se estima: se deja afuera y se cuenta aparte.
+ * - SALDOS REALES, medidos: ARS $517.658 (cotidiano $427.591 + riqueza $90.067), USD -434,41.
+ *   Por medio: NaranjaX $144.177, Efectivo $112.500, Frascos Nx - Prestamo $230.000, Uala
+ *   -$38.892, Patagonia -$13.850. Total de las cuentas del Plan: $517.224.
+ * - FUERA LA QUINTA FILA. decision Franco: "lo de Flujo cotidiano esta de mas, no es una
+ *   categoria definida; todo se debe repartir en fijos, variables y capitalizacion". Con tres
+ *   buckets la identidad se cierra de la unica forma posible: la capitalizacion pasa a ser el
+ *   RESIDUO (Ingresos - Fijos - Variables). Deja de medirse sumando movimientos hacia vehiculos
+ *   de ahorro y pasa a ser "lo que no gastaste", que es la definicion que se quiere leer.
+ *   Contrapartida honesta: O16 da 100% por construccion, asi que deja de avisar si algo no
+ *   cuadra. Por eso el diagnostico de L29 se vuelve MAS importante, no menos.
+ * - Tablero!C18 pasa a mostrar el SALDO ACTUAL por cuenta bancaria, sobre todo el historico.
+ *   Antes sumaba solo el mes seleccionado: nunca habia sido un saldo. Es lo que Franco venia
+ *   pidiendo desde el primer mensaje de la sesion.
+ * - ALTA DE 12 CUENTAS que el ledger usa hace anios y el catalogo nunca tuvo, 111 movimientos.
+ *   La mas importante es 'Ajuste' (70 filas, $1.949.641): el mecanismo de conciliacion contra el
+ *   banco, que existia en los datos y era invisible para el sistema. Once traen su tipo declarado
+ *   por el propio ledger de forma unanime (las 12 filas de "Pago Tarjeta" dicen Gasto Fijo, las
+ *   10 de "umoh" dicen Ingreso): no se adivina ninguna. 'Ajuste' es la unica decision, porque no
+ *   tiene tipo en ninguna de sus 70 filas -- no es ingreso ni gasto, es una correccion de saldo.
+ *   Va al bloque de Ingresos: el signo ya lo lleva la columna Tipo del movimiento, asi que el
+ *   bloque solo decide en que dropdown aparece, y ahi queda disponible en los dos sentidos.
+ * - "Frasco transitorio USD" NO EXISTE, ni en el ledger ni en el catalogo. El unico parecido es
+ *   "Frasco Transitorio NaranjaX", que es ARS y apunta a Meta de Ahorro 1. El total USD del
+ *   ledger es -434,41 y esta enteramente en medios de riqueza (Dolar NaranjaX -636,51, Dolar
+ *   Cash 110, Dolar Galicia 91,10, Dolar Patagonia 1,00).
+ *
  * [2026-08-19] v0.14.1 - Los dos defectos que abortaron la corrida de v0.14.0.
  * - LO PRIMERO: la corrida fallida NO dejo dano. La reversion del lote funciono exactamente como
  *   debia y las 21 celdas volvieron a su formula previa. El guard hizo su trabajo; lo que fallo

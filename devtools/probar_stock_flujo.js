@@ -29,7 +29,7 @@ vm.createContext(ctx);
 vm.runInContext(
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_FormulerioV0111.js'),'utf8')+'\n'+
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_StockYFlujo.js'),'utf8')+
-  '\n;Object.assign(globalThis,{FORM_CELDAS,SYF_SALDOS_TABLERO,SYF_FILA_NUEVA,SYF_ARRASTRE});', ctx);
+  '\n;Object.assign(globalThis,{FORM_CELDAS,SYF_SALDOS_TABLERO,SYF_FILA_RESIDUO,SYF_ARRASTRE});', ctx);
 
 const tsv=fs.readFileSync(path.join(RAIZ,'docs/permanente/celdas.tsv'),'utf8').split('\n');
 const F={}; for(const l of tsv){const p=l.split('\t'); if(p.length<3||!p[2])continue;
@@ -87,11 +87,17 @@ console.log('\n=== 2. STOCKS convertidos (Inicio C8 / F8) ===');
   const f=ctx._formulaSaldoConvertido(r,'$G$4');
   if(revisar(c,f)) console.log('  OK  '+c);
 });
-console.log('\n=== 3. FLUJO: la fila nueva y el diagnostico ===');
-const fc=ctx._formulaFlujoCotidianoMes();
-if(revisar('Tablero!N'+ctx.SYF_FILA_NUEVA,fc)) console.log('  OK  Tablero!N'+ctx.SYF_FILA_NUEVA+'  '+fc.split('\n').pop().trim());
+console.log('\n=== 3. Saldo actual POR MEDIO y el diagnostico ===');
+const pm=ctx._formulaSaldoPorMedio();
+if(revisar('Tablero!C18',pm)) console.log('  OK  Tablero!C18 (saldo actual por cuenta bancaria)');
 const dg=ctx._formulaDiagnosticoSyf();
 if(revisar('Tablero!L29',dg)) console.log('  OK  Tablero!L29');
+// El medio TIENE que ser obligatorio en las formulas de saldo: es la correccion de la v0.15.0.
+[['AF9',false],['AG9',true]].forEach(([c,r])=>{
+  const f=ctx._formulaSaldoPorMoneda(r,'AE9');
+  if(!/categoria<>""/.test(f)){console.log('  !!! '+c+' NO exige que el medio exista en el Plan');fallas++;}
+  else console.log('  OK  '+c+' exige medio valido (categoria<>"")');
+});
 console.log('\n=== 4. Condiciones derivadas de TIPOS_RIQUEZA (tienen que ser complementarias) ===');
 console.log('  riqueza:   '+ctx._condTipoSyf(true,'tipo_cat'));
 console.log('  cotidiano: '+ctx._condTipoSyf(false,'tipo_cat'));
