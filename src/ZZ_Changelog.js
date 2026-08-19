@@ -5,6 +5,31 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.14.1 - Los dos defectos que abortaron la corrida de v0.14.0.
+ * - LO PRIMERO: la corrida fallida NO dejo dano. La reversion del lote funciono exactamente como
+ *   debia y las 21 celdas volvieron a su formula previa. El guard hizo su trabajo; lo que fallo
+ *   fue lo que el guard estaba comparando.
+ * - DEFECTO 1, COMILLAS DE MAS (10 formulas). Se escribia 'Registros'!B7:B y Sheets lo GUARDA como
+ *   Registros!B7:B: le saca las comillas porque el nombre no las necesita. La verificacion
+ *   comparaba el texto releido contra el texto escrito, no coincidian, y revertia diez formulas
+ *   CORRECTAS. La evidencia estaba a la vista en el gemelo: 256 referencias a Registros sin
+ *   comillas y CERO con comillas. Correccion en dos capas: _refHoja() entrecomilla solo cuando el
+ *   nombre lo requiere (Plan de Cuentas si, Registros no), y _canonizarFormula() normaliza ambos
+ *   lados antes de comparar, porque Sheets reescribe lo que le mandas. La comprobacion del VALOR
+ *   -- que es el gate duro, el que caza las formulas que no calculan -- no se relajo.
+ * - DEFECTO 2, UNA VARIABLE QUE CHOCA CON UNA FUNCION (Tablero!L29). La formula usaba 'n' como
+ *   nombre de variable de LET, y N() es una funcion de Sheets: la formula entera no parsea y la
+ *   celda queda SIN NADA, que es distinto de quedar con un error. Pasa a llamarse 'cantidad' y
+ *   'monto_total'.
+ * - EL BANCO DE PRUEBAS AHORA RECHAZA LAS DOS CLASES, y ademas toda variable LET de una o dos
+ *   letras. Y se verifico que los guards DISPARAN, reproduciendo los tres bugs historicos contra
+ *   ellos ('Registros' entrecomillado, la variable n, y el $N$N de la v0.12.0): un guard que no
+ *   salta es peor que no tenerlo, que es la cicatriz 5 y ya la cometimos una vez en este mismo
+ *   modulo.
+ * - PREFLIGHT: detecta celdas combinadas con isPartOfMerge(). Una celda que es parte de un merge
+ *   sin ser su ancla se lee vacia y se deja escribir sin protestar, pero lo escrito no queda: se
+ *   veria igual que "quedo sin formula" y mandaria el diagnostico por el camino equivocado.
+ *
  * [2026-08-19] v0.14.0 - Stock y flujo separados: los saldos dejan de depender del mes.
  * - EL PROBLEMA DE FONDO: un saldo y un movimiento son cosas distintas y la planilla los calculaba
  *   igual, filtrados por mes. Por eso hacia falta cargar un "Inicio Mes" todos los meses -- un

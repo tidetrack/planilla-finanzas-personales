@@ -53,6 +53,22 @@ function revisar(nombre,f,opts){
   if(str)p.push('comillas sin cerrar');
   const let_=(f.match(/\bLET\(/g)||[]).length;
   if(let_ && !/;/.test(f)) p.push('LET sin separador ;');
+  // --- Dos guards nacidos de la corrida fallida del 2026-08-19 17:23 ---
+  // (a) Sheets le SACA las comillas a los nombres de hoja que no las necesitan, y despues la
+  //     verificacion compara texto contra texto y no coincide: revirtio 10 formulas correctas.
+  const comillasDeMas=(f.match(/'[A-Za-z_][A-Za-z0-9_]*'!/g)||[]);
+  if(comillasDeMas.length) p.push('nombre de hoja entrecomillado sin necesidad: '+comillasDeMas[0]+' (Sheets se las va a sacar)');
+  // (b) Un nombre de variable LET que colisiona con una funcion de Sheets hace que la formula
+  //     entera no parsee. 'n' choca con N(): dejo L29 sin nada.
+  const FUNCS=new Set(['N','T','PI','ROW','COLUMN','NOW','TODAY','RAND','SIGN','ABS','SUM','MIN','MAX',
+    'IF','AND','OR','NOT','TEXT','VALUE','LEN','LEFT','RIGHT','MID','TRIM','DAY','MONTH','YEAR','DATE',
+    'TIME','LOG','LN','EXP','SIN','COS','TAN','SQRT','INT','MOD','ODD','EVEN','FACT','DELTA','CODE','CHAR']);
+  const cuerpoLet=f.replace(/^=\s*LET\(/,'');
+  (cuerpoLet.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*;/gm)||[]).forEach(m=>{
+    const v=m.replace(/[\s;]/g,'');
+    if(FUNCS.has(v.toUpperCase())) p.push('variable LET "'+v+'" colisiona con la funcion '+v.toUpperCase()+'() de Sheets');
+    else if(v.length<=2) p.push('variable LET "'+v+'" es demasiado corta: alto riesgo de chocar con una funcion');
+  });
   if(p.length){fallas++; console.log('\n### FALLA '+nombre+': '+p.join(', ')); console.log(f);}
   return !p.length;
 }

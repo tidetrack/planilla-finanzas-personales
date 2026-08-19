@@ -336,9 +336,13 @@ function _preflightSyf(ss) {
     });
     const filaLibre = !ocupada.length;
 
-    // La celda del diagnostico tambien.
+    // La celda del diagnostico tambien. Y ademas NO puede estar combinada: una celda que es
+    // parte de un merge sin ser su ancla se lee vacia y se deja escribir sin protestar, pero lo
+    // escrito no queda. Se veria igual que "quedo sin formula".
     const rd = hojaTablero.getRange(SYF_CELDA_DIAGNOSTICO);
-    const diagLibre = String(rd.getValue() || '').trim() === '' && !rd.getFormula();
+    let diagCombinada = false;
+    try { diagCombinada = rd.isPartOfMerge(); } catch (e) { diagCombinada = false; }
+    const diagLibre = !diagCombinada && String(rd.getValue() || '').trim() === '' && !rd.getFormula();
 
     // Los rotulos del bloque de saldos: AF8 "Flujo", AG8 "Capital".
     const s = SYF_SALDOS_TABLERO;
@@ -385,11 +389,24 @@ function _condTipoSyf(esRiqueza, variable) {
     return TIPOS_RIQUEZA.map(function (t) { return '(' + variable + '<>"' + t + '")'; }).join(' * ') + ' > 0';
 }
 
+/**
+ * Nombre de hoja tal como Sheets lo GUARDA en una formula: entrecomillado solo si lo necesita.
+ *
+ * Leccion del 2026-08-19: escribi 'Registros'!B7:B y Sheets lo guarda como Registros!B7:B --
+ * le saca las comillas porque el nombre no las precisa. La verificacion comparaba texto contra
+ * texto, no coincidia, y revertia diez formulas correctas. En la planilla viva hay 256
+ * referencias a Registros sin comillas y CERO con comillas: la evidencia estaba a la vista.
+ * "Plan de Cuentas" si las lleva, porque tiene espacios.
+ */
+function _refHoja(nombre) {
+    return /^[A-Za-z_][A-Za-z0-9_]*$/.test(nombre) ? nombre : "'" + nombre + "'";
+}
+
 /** Referencia abierta a una columna del ledger, desde RANGES (regla SSOT). */
 function _colLedger(clave) {
     const cfg = RANGES.REGISTROS;
     const l = cfg.columns[clave];
-    return "'" + cfg.sheet + "'!" + l + cfg.dataRow + ':' + l;
+    return _refHoja(cfg.sheet) + '!' + l + cfg.dataRow + ':' + l;
 }
 
 /**
@@ -408,8 +425,8 @@ function _preambuloLedgerSyf() {
         '  medio; ' + _colLedger('medio') + ';',
         '  moneda; ' + _colLedger('moneda') + ';',
         '  neto; ARRAYFORMULA(IF(clase="Egreso"; -monto; monto));',
-        "  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(medio; '" + medios.sheet + "'!" + medios.start + ':' + medios.end + '; ' + colCatMedio + '; 0); ""));',
-        "  tipo_cat; ARRAYFORMULA(IFERROR(VLOOKUP(categoria; '" + pc.sheet + "'!" + pc.start + ':' + pc.end + '; ' + colTipoCat + '; 0); ""));',
+        '  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(medio; ' + _refHoja(medios.sheet) + '!' + medios.start + ':' + medios.end + '; ' + colCatMedio + '; 0); ""));',
+        '  tipo_cat; ARRAYFORMULA(IFERROR(VLOOKUP(categoria; ' + _refHoja(pc.sheet) + '!' + pc.start + ':' + pc.end + '; ' + colTipoCat + '; 0); ""));',
         '  vigente; ARRAYFORMULA(cuenta<>"' + SYF_ARRASTRE + '");'
     ].join('\n');
 }
@@ -448,8 +465,8 @@ function _formulaFlujoCotidianoMes() {
     return '=LET(\n' +
         '  monto_neto; ARRAYFORMULA(IF(AK' + f + ':AK="Egreso"; -AJ' + f + ':AJ; AJ' + f + ':AJ));\n' +
         '  vigente; ARRAYFORMULA(AL' + f + ':AL<>"' + SYF_ARRASTRE + '");\n' +
-        "  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(AN" + f + ":AN; '" + medios.sheet + "'!" + medios.start + ':' + medios.end + '; ' + colCatMedio + '; 0); ""));\n' +
-        "  tipo_cat; ARRAYFORMULA(IFERROR(VLOOKUP(categoria; '" + pc.sheet + "'!" + pc.start + ':' + pc.end + '; ' + colTipoCat + '; 0); ""));\n' +
+        '  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(AN' + f + ':AN; ' + _refHoja(medios.sheet) + '!' + medios.start + ':' + medios.end + '; ' + colCatMedio + '; 0); ""));\n' +
+        '  tipo_cat; ARRAYFORMULA(IFERROR(VLOOKUP(categoria; ' + _refHoja(pc.sheet) + '!' + pc.start + ':' + pc.end + '; ' + colTipoCat + '; 0); ""));\n' +
         '  cotidiano; ARRAYFORMULA((categoria<>"") * (' + _condTipoSyf(false, 'tipo_cat') + '));\n' +
         '  suma_ars; SUM(IFERROR(FILTER(monto_neto; AO' + f + ':AO="ARS"; vigente; cotidiano); 0));\n' +
         '  suma_usd; SUM(IFERROR(FILTER(monto_neto; AO' + f + ':AO="USD"; vigente; cotidiano); 0));\n' +
@@ -471,13 +488,15 @@ function _formulaDiagnosticoSyf() {
     return '=LET(\n' +
         '  monto_neto; ARRAYFORMULA(IF(AK' + f + ':AK="Egreso"; -AJ' + f + ':AJ; AJ' + f + ':AJ));\n' +
         '  vigente; ARRAYFORMULA(AL' + f + ':AL<>"' + SYF_ARRASTRE + '");\n' +
-        "  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(AN" + f + ":AN; '" + medios.sheet + "'!" + medios.start + ':' + medios.end + '; ' + colCatMedio + '; 0); ""));\n' +
+        '  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(AN' + f + ':AN; ' + _refHoja(medios.sheet) + '!' + medios.start + ':' + medios.end + '; ' + colCatMedio + '; 0); ""));\n' +
         '  sin_clasificar; ARRAYFORMULA((AJ' + f + ':AJ<>"") * (categoria=""));\n' +
-        '  n; SUM(IFERROR(FILTER(ARRAYFORMULA(SIGN(ABS(monto_neto))); vigente; sin_clasificar); 0));\n' +
-        '  m; SUM(IFERROR(FILTER(monto_neto; vigente; sin_clasificar); 0));\n' +
-        '  IF(n = 0;\n' +
+        // OJO con los nombres de variable: 'n' colisiona con la funcion N() de Sheets y hace
+        // que la formula entera no parsee. Es lo que dejo L29 sin nada en la corrida del 1723.
+        '  cantidad; SUM(IFERROR(FILTER(ARRAYFORMULA(SIGN(ABS(monto_neto))); vigente; sin_clasificar); 0));\n' +
+        '  monto_total; SUM(IFERROR(FILTER(monto_neto; vigente; sin_clasificar); 0));\n' +
+        '  IF(cantidad = 0;\n' +
         '    "Todos los movimientos del mes clasifican.";\n' +
-        '    "Sin clasificar: " & TEXT(n; "0") & " movimiento(s) por " & TEXT(m; "$ #.##0,00") & " (sin medio o con un medio que no esta en el Plan de Cuentas). Es lo que le falta al 100%."\n' +
+        '    "Sin clasificar: " & TEXT(cantidad; "0") & " movimiento(s) por " & TEXT(monto_total; "$ #.##0,00") & " (sin medio o con un medio que no esta en el Plan de Cuentas). Es lo que le falta al 100%."\n' +
         '  )\n)';
 }
 
@@ -494,7 +513,7 @@ function _planSyf(ss, pre) {
 
     function proponer(nombreHoja, celda, nota, nueva, resumen) {
         const actual = ss.getSheetByName(nombreHoja).getRange(celda).getFormula();
-        if (_normalizarFormula(actual) === _normalizarFormula(nueva)) return;
+        if (_canonizarFormula(actual) === _canonizarFormula(nueva)) return;
         cambios.push({
             nombreHoja: nombreHoja, celda: celda, nota: nota,
             formulaActual: actual, formulaNueva: nueva, resumen: resumen
@@ -546,7 +565,7 @@ function _planSyf(ss, pre) {
     // --- El diagnostico que le pone nombre al desvio ---
     if (!pre.diagLibre) {
         avisos.push('NO se escribe el indicador de movimientos sin clasificar: ' + SYF_CELDA_DIAGNOSTICO +
-            ' tiene contenido.');
+            ' tiene contenido o es parte de una celda combinada.');
     } else {
         proponer(pre.nombreTablero, SYF_CELDA_DIAGNOSTICO, 'Movimientos sin clasificar',
             _formulaDiagnosticoSyf(), 'le pone nombre y numero a lo que le falta al 100%');
@@ -598,6 +617,19 @@ function _apagarArrastreSyf(formula) {
 // VERIFICACION
 // ============================================
 
+/**
+ * Canonicaliza una formula para compararla con la que se escribio. Sheets REESCRIBE lo que le
+ * mandas: le saca las comillas a los nombres de hoja que no las necesitan y reacomoda espacios.
+ * Comparar el texto crudo produce falsos negativos que revierten cambios correctos.
+ * Lo que NO se relaja es la comprobacion del VALOR: esa sigue siendo el gate duro.
+ */
+function _canonizarFormula(f) {
+    return String(f || '')
+        .replace(/'([A-Za-z_][A-Za-z0-9_]*)'!/g, '$1!')   // 'Registros'! -> Registros!
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function _verificarEscrituraSyf(ss, escritas) {
     const fallas = [];
     escritas.forEach(function (w) {
@@ -611,7 +643,7 @@ function _verificarEscrituraSyf(ss, escritas) {
         }
         const leida = rango.getFormula();
         if (!leida) { fallas.push(ref + ' quedo SIN formula'); return; }
-        if (_normalizarFormula(leida) !== _normalizarFormula(w.nueva)) {
+        if (_canonizarFormula(leida) !== _canonizarFormula(w.nueva)) {
             fallas.push(ref + ' no coincide con lo que se le escribio');
             return;
         }
