@@ -28,6 +28,7 @@ planilla-finanzas-personales/
 │ ├── DEVTOOL_FormulerioV0111.js # Repara las fórmulas de Inicio/Tablero que rompió el swap v0.11
 │ ├── DEVTOOL_RiquezaYCategorias.js # Riqueza por lista blanca (Ahorros+Inversiones) + columna Tipo en categorías
 │ ├── DEVTOOL_StockYFlujo.js # Saldos bancarios reales (independientes del mes) + capitalización como residuo
+│ ├── DEVTOOL_ConciliarSaldos.js # Ajustes de conciliación contra los saldos bancarios declarados
 │ ├── DEVTOOL_AltaCuentas.js # Alta en el Plan de Cuentas de las cuentas que el ledger usa y el catálogo no tiene
 │ ├── DEVTOOL_Presupuesto.js # Motor de la hoja Presupuesto - NO LISTO, fuera del menú
 │ ├── DEVTOOL_CableadoPresupuesto.js # Cableado Presupuesto <-> Tablero - NO LISTO, fuera del menú
@@ -192,6 +193,7 @@ El pipeline estándar para cerrar cualquier feature:
 | `DEVTOOL_FormulerioV0111.js` | Activo - repara el formulerío de Inicio/Tablero post-swap | v0.12.0 |
 | `DEVTOOL_RiquezaYCategorias.js` | Activo - riqueza por lista blanca + columna Tipo | v0.13.0 |
 | `DEVTOOL_StockYFlujo.js` | Activo - saldos bancarios reales, capitalización residual | v0.14.0 |
+| `DEVTOOL_ConciliarSaldos.js` | Activo - concilia saldos por medio vía cuenta 'Ajuste' | v0.17.0 |
 | `DEVTOOL_AltaCuentas.js` | Activo - alta de cuentas faltantes en el catálogo | v0.15.0 |
 | `DEVTOOL_Presupuesto.js` | **Fuera del menú** - NO LISTO, bloqueantes abiertos | v0.9.x |
 | `DEVTOOL_CableadoPresupuesto.js` | **Fuera del menú** - NO LISTO, bloqueantes abiertos | v0.9.x |
@@ -206,4 +208,4 @@ El pipeline estándar para cerrar cualquier feature:
 
 ---
 
-*Tidetrack - ESTRUCTURA.md - v0.15.0 - 2026-08-19*
+*Tidetrack - ESTRUCTURA.md - v0.17.0 - 2026-08-19*

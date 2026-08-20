@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 16,
- patch: 1,
+ minor: 17,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-19',
- releaseName: 'v0.16.1 - El bloque de medios son celdas combinadas: tres formulas, no una',
+ releaseName: 'v0.17.0 - Limpiar antes de derramar, y conciliar contra los saldos declarados',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.17.0 (2026-08-19) - Limpiar antes de derramar, y conciliar contra los saldos declarados
+- #REF! EN F18 Y H18: un derrame NO se expande si tiene que pisar algo, y debajo de esas dos columnas quedaban los valores estaticos viejos (ARS, 42327,35...). C18 no fallo solo porque su columna ya la habia pisado la corrida anterior. Ahora el area del bloque se limpia antes de escribir.
+! El respaldo de FORMULAS no alcanzaba: lo que hay que sacar de en medio son VALORES. Se fotografia el area completa -- valores y formulas, celda por celda -- antes de limpiar, y se restaura entera si algo falla.
++ DEVTOOL_ConciliarSaldos: mide el saldo de cada medio y carga un movimiento de cuenta 'Ajuste' por la diferencia contra el saldo declarado por Franco. Es su propio mecanismo, el de las 70 filas historicas, no un parche: un ajuste dice "a esta fecha mis registros diferian de la realidad en tanto", queda en el ledger con su fecha y es auditable. Lo que NO seria legitimo es tocar la formula para que devuelva el numero deseado.
+! ADVERTENCIA que el modulo declara en el dialogo: el ledger termina el 12/08 y los saldos son al 19. Parte de la diferencia de NaranjaX ($29.635,41) y Efectivo ($102.000,00) son movimientos reales de esos siete dias sin cargar. Al conciliar hoy quedan como un ajuste sin detalle. Si despues se cargan esos dias habra que borrar las filas del ajuste: no se pueden hacer las dos cosas.
+
 v0.16.1 (2026-08-19) - Celdas combinadas: el bloque de medios necesita tres formulas, no una
 - SINTOMA: Franco corrio la v0.16.0 y "no noto los cambios". Medido en vivo por Chrome: las formulas SI se habian escrito, pero el bloque "Medios Bancarios" mostraba los medios NUEVOS con los montos VIEJOS al lado. Peor que no hacer nada, porque parece que anduvo.
 - CAUSA: el bloque esta hecho de CELDAS COMBINADAS -- C17:E17 "Medio", F17:G17 "Moneda", H17:I17 "Monto", y cada fila de datos igual. Una formula que devuelve tres columnas no puede derramar ahi: Sheets derramo solo la PRIMERA (los nombres) fila por fila, y las columnas Moneda y Monto que Franco ve quedaron con los valores estaticos viejos.

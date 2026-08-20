@@ -138,6 +138,12 @@ const SYF_FILA_RESIDUO = 19;
 const SYF_BLOQUE_MEDIOS = {
     filaHeader: 17,
     filaDatos: 18,
+    // Hasta donde se limpia el area de datos antes de escribir. Un derrame NO se expande si
+    // tiene que pisar algo: las columnas Moneda y Monto tenian valores estaticos viejos debajo
+    // y por eso F18 y H18 daban #REF!. Se limpia C:I desde la fila de datos hasta aca.
+    filaFin: 45,
+    colIni: 'C',
+    colFin: 'I',
     columnas: [
         { col: 'C', rotulo: 'Medio', indice: 1 },
         { col: 'F', rotulo: 'Moneda', indice: 2 },
@@ -212,7 +218,7 @@ function estadoStockYFlujo() {
 /** Aplica. Respaldo verificado, escritura, y relectura del VALOR con reversion del lote. */
 function aplicarStockYFlujo() {
     const escritas = [];
-    let ss = null, yaRevertido = false, ui = null;
+    let ss = null, yaRevertido = false, ui = null, fotoBloque = null;
     try { ui = SpreadsheetApp.getUi(); }
     catch (e) { return { ok: false, error: 'aplicarStockYFlujo necesita UI (correr desde el menu Tidetrack Dev).' }; }
 
@@ -244,6 +250,15 @@ function aplicarStockYFlujo() {
         const sello = _selloSyf();
         const respaldo = _respaldarFormulerio(ss, sello);
 
+        // El respaldo de formulas NO alcanza para este bloque: lo que hay que quitar de en medio
+        // son VALORES estaticos, y un respaldo que solo guarda formulas los perderia sin red.
+        // Se fotografia el area completa -- valores y formulas -- antes de limpiarla.
+        if (plan.limpiarBloqueMedios) {
+            fotoBloque = _fotografiarBloqueMedios(ss, pre.nombreTablero);
+            _limpiarBloqueMedios(ss, pre.nombreTablero);
+            SpreadsheetApp.flush();
+        }
+
         plan.cambios.forEach(function (c) {
             const rango = ss.getSheetByName(c.nombreHoja).getRange(c.celda);
             const errorPrevio = _errorDeCelda(rango);
@@ -260,6 +275,7 @@ function aplicarStockYFlujo() {
         const fallas = _verificarEscrituraSyf(ss, escritas);
         if (fallas.length) {
             _revertirEscriturasSyf(ss, escritas);
+            if (fotoBloque) _restaurarBloqueMedios(ss, pre.nombreTablero, fotoBloque);
             yaRevertido = true;
             throw new Error('Se escribio pero NO VERIFICA al releer: ' + fallas.join('; ') +
                 '. Se restauro cada celda. El respaldo quedo en "' + respaldo.nombre + '".');
@@ -290,8 +306,12 @@ function aplicarStockYFlujo() {
 
     } catch (e) {
         let restaurado = '';
-        if (ss && escritas.length && !yaRevertido) {
-            try { _revertirEscriturasSyf(ss, escritas); restaurado = ' Se restauraron las ' + escritas.length + ' celda(s) ya escritas.'; }
+        if (ss && (escritas.length || fotoBloque) && !yaRevertido) {
+            try {
+                _revertirEscriturasSyf(ss, escritas);
+                if (fotoBloque) _restaurarBloqueMedios(ss, NAV_CONFIG.SHEETS.TABLERO, fotoBloque);
+                restaurado = ' Se restauraron las ' + escritas.length + ' celda(s) ya escritas y el bloque de medios.';
+            }
             catch (e2) { restaurado = ' ADEMAS fallo la restauracion (' + e2.message + '): revisar el respaldo a mano.'; }
         }
         const msg = 'NO APLICADO. ' + e.message + restaurado;
@@ -617,6 +637,7 @@ function _formulaDiagnosticoSyf() {
 function _planSyf(ss, pre) {
     const cambios = [];
     const avisos = [];
+    let limpiar = false;
     const s = SYF_SALDOS_TABLERO;
     const hojaT = ss.getSheetByName(pre.nombreTablero);
     const hojaI = ss.getSheetByName(pre.nombreInicio);
@@ -651,6 +672,7 @@ function _planSyf(ss, pre) {
 
     // --- SALDO ACTUAL POR MEDIO: tres formulas de UNA columna, por las celdas combinadas ---
     if (pre.bloqueMediosOk) {
+        limpiar = true;
         SYF_BLOQUE_MEDIOS.columnas.forEach(function (c) {
             proponer(pre.nombreTablero, c.col + SYF_BLOQUE_MEDIOS.filaDatos,
                 'Medios Bancarios: ' + c.rotulo,
@@ -700,7 +722,7 @@ function _planSyf(ss, pre) {
         });
     });
 
-    return { cambios: cambios, avisos: avisos };
+    return { cambios: cambios, avisos: avisos, limpiarBloqueMedios: limpiar };
 }
 
 /**
@@ -738,6 +760,54 @@ function _canonizarFormula(f) {
         .replace(/'([A-Za-z_][A-Za-z0-9_]*)'!/g, '$1!')   // 'Registros'! -> Registros!
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+/**
+ * Fotografia el area de datos del bloque de medios: valores Y formulas, celda por celda.
+ * Es la red que el respaldo de formulas no da, porque lo que hay que sacar de en medio son
+ * valores estaticos.
+ */
+function _fotografiarBloqueMedios(ss, nombreHoja) {
+    const b = SYF_BLOQUE_MEDIOS;
+    const hoja = ss.getSheetByName(nombreHoja);
+    const col = columnLetterToIndex(b.colIni);
+    const nCols = columnLetterToIndex(b.colFin) - col + 1;
+    const nFilas = Math.min(b.filaFin, hoja.getMaxRows()) - b.filaDatos + 1;
+    if (nFilas <= 0) return null;
+    const rango = hoja.getRange(b.filaDatos, col, nFilas, nCols);
+    return {
+        fila: b.filaDatos, col: col, nFilas: nFilas, nCols: nCols,
+        valores: rango.getValues(), formulas: rango.getFormulas()
+    };
+}
+
+/** Deja libre el area para que los tres derrames puedan expandirse. */
+function _limpiarBloqueMedios(ss, nombreHoja) {
+    const b = SYF_BLOQUE_MEDIOS;
+    const hoja = ss.getSheetByName(nombreHoja);
+    const col = columnLetterToIndex(b.colIni);
+    const nCols = columnLetterToIndex(b.colFin) - col + 1;
+    const nFilas = Math.min(b.filaFin, hoja.getMaxRows()) - b.filaDatos + 1;
+    if (nFilas <= 0) return;
+    hoja.getRange(b.filaDatos, col, nFilas, nCols).clearContent();
+}
+
+/** Devuelve el area a como estaba: primero las formulas, y los valores donde no habia formula. */
+function _restaurarBloqueMedios(ss, nombreHoja, foto) {
+    if (!foto) return;
+    const hoja = ss.getSheetByName(nombreHoja);
+    const destino = hoja.getRange(foto.fila, foto.col, foto.nFilas, foto.nCols);
+    destino.clearContent();
+    const salida = [];
+    for (let r = 0; r < foto.nFilas; r++) {
+        const fila = [];
+        for (let c = 0; c < foto.nCols; c++) {
+            fila.push(foto.formulas[r][c] ? foto.formulas[r][c] : foto.valores[r][c]);
+        }
+        salida.push(fila);
+    }
+    destino.setValues(salida);
+    SpreadsheetApp.flush();
 }
 
 function _verificarEscrituraSyf(ss, escritas) {

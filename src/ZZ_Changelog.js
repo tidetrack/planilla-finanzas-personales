@@ -5,6 +5,33 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.17.0 - Limpiar antes de derramar, y conciliar contra los saldos declarados.
+ * - EL #REF! DE F18 Y H18: un derrame NO se expande si tiene que pisar contenido, y debajo de las
+ *   columnas Moneda y Monto quedaban los valores estaticos viejos ("ARS", "42327,35"...). C18 no
+ *   fallo por casualidad: su columna ya la habia pisado la corrida anterior. Ahora el area de
+ *   datos del bloque se LIMPIA antes de escribir las tres formulas.
+ * - Y ESO OBLIGO A CORREGIR EL RESPALDO: el de este modulo guarda FORMULAS, y lo que hay que
+ *   sacar de en medio son VALORES. Un respaldo que no cubre lo que vas a destruir no es un
+ *   respaldo. Se fotografia el area completa -- valores y formulas, celda por celda -- antes de
+ *   limpiar, y se restaura entera si la verificacion falla.
+ * - CONCILIACION CONTRA LOS SALDOS DECLARADOS (DEVTOOL_ConciliarSaldos). Franco declaro dos veces
+ *   los saldos reales de sus cuentas y que "el resto son 0". Cuando la planilla dice $50.607 y el
+ *   banco dice $0, la planilla no esta mal calculada: le FALTAN MOVIMIENTOS. El mecanismo que
+ *   Franco ya usa para eso es la cuenta 'Ajuste' -- 70 filas historicas --, y este modulo lo
+ *   automatiza: mide, compara contra el declarado, y carga la diferencia.
+ *   No es cosmetica. Un ajuste de conciliacion es un asiento legitimo: dice "a esta fecha mis
+ *   registros diferian de la realidad en tanto", queda en el ledger con fecha y nota, y es
+ *   auditable. Lo que NO seria legitimo es tocar la formula para que devuelva el numero deseado.
+ * - LA ADVERTENCIA QUE EL MODULO PONE EN EL DIALOGO, porque tiene costo: el ledger termina el
+ *   2026-08-12 y los saldos son al 19. Parte de la diferencia de NaranjaX ($29.635,41) y Efectivo
+ *   ($102.000,00) son movimientos REALES de esos siete dias que todavia no se cargaron. Al
+ *   conciliar hoy, esos gastos quedan como un ajuste sin detalle en vez de como los movimientos
+ *   que fueron: se gana un saldo correcto y se pierde el detalle de la semana. Y si despues se
+ *   cargan esos dias, el saldo va a quedar mal por el monto del ajuste y habra que borrar esas
+ *   filas. No se pueden hacer las dos cosas, y conviene decidirlo antes.
+ * - El modulo no inventa cotizaciones: si no hay TC para la fecha del ajuste usa la mas reciente
+ *   anterior y lo DECLARA en el informe (Regla Estricta 9).
+ *
  * [2026-08-19] v0.16.1 - Celdas combinadas: el bloque de medios necesita tres formulas, no una.
  * - SINTOMA: Franco corrio la v0.16.0 y dijo "no note los cambios". Se midio en vivo por Chrome
  *   sobre la planilla productiva en vez de suponer: las formulas SI estaban escritas (AF9, AG9,
