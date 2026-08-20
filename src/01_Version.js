@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 23,
- patch: 3,
+ patch: 4,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.23.3 - La suma por tipo de medio, sobre la geometria real del Tablero',
+ releaseName: 'v0.23.4 - El bloque de tipos hereda el formato de plata',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

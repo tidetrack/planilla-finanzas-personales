@@ -306,6 +306,16 @@ function aplicarStockYFlujo() {
             SpreadsheetApp.flush();
         }
 
+        // La columna Monto del bloque de tipos hereda el formato de la columna Flujo de "Saldos
+        // Actuales": es la columna de plata mas cercana y la que Franco ya formateo.
+        //
+        // decision Franco 2026-08-20: esto tambien REPARA un destrozo propio. Un intento anterior
+        // de este mismo modulo dejo esas celdas en formato porcentaje, y con ese formato $230.000
+        // se lee "23000000,0%". El numero estaba bien; lo que mentia era como se mostraba. Un
+        // modulo que puede romper un formato tiene que poder reponerlo.
+        _heredarFormatoMontoSyf(ss, pre.nombreTablero);
+        SpreadsheetApp.flush();
+
         plan.cambios.forEach(function (c) {
             const rango = ss.getSheetByName(c.nombreHoja).getRange(c.celda);
             const errorPrevio = _errorDeCelda(rango);
@@ -654,6 +664,16 @@ function _preambuloSaldoSyf() {
         '  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; ' + rangoMedios + '; ' + colCatMedio + '; 0); ""));',
         '  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; ' + rangoMedios + '; ' + colMonMedio + '; 0); "ARS"));'
     ].join('\n');
+}
+
+/** La columna Monto del bloque de tipos toma el formato de numero de la columna Flujo de saldos. */
+function _heredarFormatoMontoSyf(ss, nombreTablero) {
+    const hoja = ss.getSheetByName(nombreTablero);
+    const t = SYF_TIPOS_TABLERO, s = SYF_SALDOS_TABLERO;
+    const modelo = hoja.getRange(s.colFlujo + s.filas[0]).getNumberFormat();
+    if (!modelo) return;
+    hoja.getRange(t.colMonto + t.filas[0] + ':' + t.colMonto + t.filas[t.filas.length - 1])
+        .setNumberFormat(modelo);
 }
 
 /** Saldo actual por moneda, de un grupo (riqueza o su complemento). Bloque "Saldos Actuales". */

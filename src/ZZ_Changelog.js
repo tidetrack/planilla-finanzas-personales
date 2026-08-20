@@ -5,6 +5,17 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.23.4 - El bloque de tipos hereda el formato de plata (y repara un destrozo propio).
+ * - SINTOMA: los montos por tipo se veian "21079101,0%", "23000000,0%". Los numeros estaban BIEN
+ *   -- Hogar daba 45.428,69, que es Efectivo + NaranjaX + YPF al centavo -- pero se mostraban en
+ *   formato porcentaje, que multiplica por 100 al mostrar.
+ * - CAUSA: un intento anterior de este mismo modulo (v0.23.0) puso ahi formato de porcentaje,
+ *   cuando creia que esa columna iba a mostrar el peso de cada tipo sobre el total. Ese intento se
+ *   revirtio en las formulas pero NO en el formato: revertir texto no revierte formato.
+ * - CORRECCION: la columna Monto hereda el formato de la columna Flujo de "Saldos Actuales", que
+ *   es la columna de plata mas cercana y la que ya estaba formateada. Un modulo que puede romper
+ *   un formato tiene que poder reponerlo.
+ *
  * [2026-08-20] v0.23.3 - La suma por tipo de medio, sobre la geometria REAL del Tablero.
  * - Lo pedido: que el Tablero muestre cuanta plata hay en cada finalidad. El bloque ya existia --
  *   "Tipo de Medios.", AE7:AH12, con los cuatro tipos escritos a mano por Franco -- y solo le
