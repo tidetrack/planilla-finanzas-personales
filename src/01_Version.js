@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 19,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-19',
- releaseName: 'v0.19.0 - Plan de Cuentas de tres niveles: cuenta, categoria, tipo',
+ releaseName: 'v0.19.1 - Dos ejes, dos catalogos: categorias de cuentas separadas de las de medios',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.19.1 (2026-08-19) - Dos ejes, dos catalogos separados
+! CORRECCION DE DISENO sobre la v0.19.0, que no llego a correrse: las categorias de CUENTAS dejan de escribirse en P:Q y pasan a su propio catalogo (columna U). P:Q queda intacto como el eje de los MEDIOS.
+* SON DOS EJES INDEPENDIENTES del mismo movimiento, no uno anidado en el otro. Medios: DONDE ESTA la plata (Ahorros / Inversiones / Financiacion / Hogar). Cuentas: POR QUE entro o salio. La nafta se puede pagar con la cuenta cotidiana o con la tarjeta: misma categoria de cuenta, distinta finalidad de medio. Si una determinara a la otra, esa diferencia no se podria representar.
++ Y ese cruce es la informacion que se busca. Medido: "Alimentacion" se pago casi toda desde medios de finalidad Hogar ($6.961.137), pero $46.300 salieron de un medio de Ahorros. Comerse los ahorros no lo dice ninguno de los dos ejes por separado.
+- La categoria de cuenta NO lleva un "tipo" propio: seria un tercer nivel redundante. El agrupamiento que cruza bloques ya sale del NOMBRE ("Vehiculo" esta en Fijos y en Variables).
++ RANGES.CATEGORIAS_CUENTA declara el bloque nuevo; el preflight avisa si una categoria de cuentas se llamara igual que una de medios.
+
 v0.19.0 (2026-08-19) - Plan de Cuentas de tres niveles
 + DEVTOOL_CategorizarCuentas: ordena las 60 cuentas en 22 CATEGORIAS y le da a cada categoria su TIPO. Las tres columnas "Categoria" de los bloques de cuentas estaban vacias (0 de 11, 0 de 15, 0 de 22).
 * EL TIPO CRUZA LOS BLOQUES, y ese cruce es todo el valor del nivel de arriba: "Vehiculo" junta Nafta y Auto (fijos) con Reparaciones y Estacionamiento (variables) -- $4.793.879 en 32 meses, $149.808 por mes, el segundo gasto mas grande despues de los negocios propios. Antes eran cuatro lineas sueltas en dos bloques distintos.

@@ -175,11 +175,25 @@ const RANGES = {
  },
     // El bloque se rotula 'Categorias' en la hoja Fix (Nombre/Tipo, con los tipos generales
     // Ahorros/Inversiones/Financiacion/Hogar). La clave interna conserva el nombre historico.
+    // Categorias de MEDIOS con su TIPO (finalidad patrimonial: Ahorros, Inversiones,
+    // Financiacion, Hogar). Contesta DONDE ESTA la plata. La clave conserva el nombre historico
+    // "PROYECTOS"; en la hoja el rotulo es "Categorias".
     PROYECTOS: {
         sheet: SHEETS.PLAN_CUENTAS,
         start: 'P',
         end: 'Q',
         columns: { nombre: 'P', tipo: 'Q' }
+    },
+    // decision Franco 2026-08-19: catalogo SEPARADO para las categorias de CUENTAS. Contesta
+    // POR QUE entro o salio la plata, que es un eje INDEPENDIENTE del anterior -- el mismo gasto
+    // de Vehiculo puede pagarse desde un medio cotidiano o desde uno de ahorro, y ese cruce es
+    // justamente la informacion que se busca. Mezclar los dos catalogos en P:Q obligaria a que
+    // uno determine al otro y esa informacion se perderia.
+    CATEGORIAS_CUENTA: {
+        sheet: SHEETS.PLAN_CUENTAS,
+        start: 'U',
+        end: 'U',
+        columns: { nombre: 'U' }
     },
     // --- Cargas: layout Fix (titulo B2, header fila 6, datos filas 7-21, numeracion B7:B21) ---
     // decision Franco 2026-08-13: la geometria de la grilla de carga entra a Config como SSOT.

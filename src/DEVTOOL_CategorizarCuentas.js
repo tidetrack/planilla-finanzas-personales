@@ -1,6 +1,7 @@
 /**
  * DEVTOOL_CategorizarCuentas.js
- * Ordena las cuentas del Plan de Cuentas en CATEGORIAS, y le da a cada categoria su TIPO.
+ * Ordena las cuentas del Plan de Cuentas en CATEGORIAS, en su propio catalogo, separado del de
+ * los medios.
  *
  * [CONCEPTO DE NEGOCIO]
  * El Plan de Cuentas tenia 60 cuentas sueltas y las tres columnas "Categoria" de los bloques de
@@ -8,35 +9,38 @@
  * Sin ese nivel intermedio no se puede leer nada por encima del detalle: "Nafta" y "Auto" son dos
  * lineas sueltas en vez de "el auto me cuesta tanto".
  *
- * decision Franco 2026-08-19: "lo que necesito es ordenar las cuentas que tengo en distintas
- * categorias y tipo de categorias".
+ * decision Franco 2026-08-19: "Categorias para mis cuentas de Ingresos - Gastos Fijos - Gastos
+ * Variables para de ahi poder diferenciar el motivo".
  *
  * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
- * Es un plan de cuentas de tres niveles, el mismo esquema de cualquier contabilidad:
- *   CUENTA (Nafta)  ->  CATEGORIA (Vehiculo)  ->  TIPO (Vehiculo)
- * La categoria agrupa cuentas dentro de su bloque; el TIPO es la macro-segmentacion y CRUZA los
- * bloques. Ese cruce es todo el valor del nivel de arriba: "Vehiculo" junta Nafta y Auto (fijos)
- * con Reparaciones y Estacionamiento (variables), y recien ahi la planilla puede contestar cuanto
- * cuesta el auto de verdad -- $4.793.879 en 32 meses, $149.808 por mes, el segundo gasto mas
- * grande despues de los negocios propios.
+ * La categoria agrupa cuentas por el MOTIVO del movimiento, y puede repetirse en mas de un
+ * bloque. Ahi esta el valor: "Vehiculo" figura en Gastos Fijos (Nafta, Auto) y en Variables
+ * (Reparaciones, Estacionamiento), y recien con eso la planilla puede contestar cuanto cuesta el
+ * auto de verdad -- $4.793.879 en 32 meses, $149.808 por mes, el segundo gasto mas grande
+ * despues de los negocios propios. Antes eran cuatro lineas sueltas en dos tablas distintas.
  *
  * ============================================================================
- * LOS DOS VOCABULARIOS DE "TIPO", Y POR QUE NO SON EL MISMO
+ * DOS EJES INDEPENDIENTES, DOS CATALOGOS SEPARADOS
  * ============================================================================
- * En P:Q ya vivian cuatro tipos -- Ahorros, Inversiones, Financiacion, Hogar -- pero fueron
- * pensados para los MEDIOS DE PAGO: contestan DONDE ESTA la plata (patrimonial). Las categorias
- * de CUENTAS contestan otra cosa: PARA QUE se usa. Tres de los cuatro sirven para las dos
- * preguntas (Financiacion, Hogar, Inversiones) y se reutilizan tal cual; "Ahorros" queda solo
- * para medios, porque ninguna cuenta de gasto o ingreso es un vehiculo de ahorro.
+ * decision Franco 2026-08-19, despues de dudarlo en voz alta y acertar: van SEPARADOS.
  *
- * Los ocho tipos que se agregan (Ingresos, Negocios, Vehiculo, Salud, Bienestar, Obligaciones,
- * Equipamiento, Otros) son los que faltaban para cubrir el lado del uso. Forzar las cuentas
- * dentro de los cuatro viejos habria puesto "Sueldo" y "Nafta" bajo etiquetas que no significan
- * nada para ellas.
+ *   EJE DE MEDIOS   -> DONDE ESTA la plata.   Medio -> Categoria (P:Q) -> Tipo/finalidad
+ *                      (Ahorros, Inversiones, Financiacion, Hogar). NO SE TOCA.
+ *   EJE DE CUENTAS  -> POR QUE entro o salio. Cuenta -> Categoria (catalogo nuevo en U).
  *
- * Ambos vocabularios conviven en la MISMA tabla P:Q sin chocar: un medio busca su propia
- * categoria y una cuenta la suya. Lo unico que no puede pasar es que dos categorias distintas se
- * llamen igual, y el preflight lo verifica.
+ * Son dimensiones INDEPENDIENTES del mismo movimiento, no una anidada en la otra. La nafta se
+ * puede pagar con la cuenta cotidiana o con la tarjeta: misma categoria de cuenta, distinta
+ * finalidad de medio. Si una determinara a la otra, esa diferencia no se podria representar.
+ *
+ * Y ese cruce es justamente la informacion que se busca. Medido sobre el ledger: "Alimentacion"
+ * se pago casi toda desde medios de finalidad Hogar ($6.961.137), pero $46.300 salieron de un
+ * medio de Ahorros. Eso -- comerse los ahorros -- no lo dice ninguno de los dos ejes por
+ * separado, solo el cruce.
+ *
+ * POR ESO LA CATEGORIA DE CUENTA NO LLEVA UN "TIPO" PROPIO: seria un tercer nivel redundante.
+ * El agrupamiento que cruza bloques ya sale del NOMBRE: "Vehiculo" figura en Gastos Fijos (Nafta,
+ * Auto) y en Variables (Reparaciones, Estacionamiento), y con eso la planilla ya puede sumar los
+ * $4.793.879 que cuesta el auto de verdad, sin inventar una capa mas.
  *
  * ============================================================================
  * QUE NO HACE
@@ -47,7 +51,7 @@
  *    dos cuentas hasta que se decida cual se queda. @see el informe de duplicados.
  * 3. NO categoriza "Compra USD", a proposito: decision Franco, pasa a ser un traspaso y deja de
  *    existir como cuenta. Categorizarla seria consagrar algo que esta por desaparecer.
- * 4. NO borra ni renombra ninguna categoria existente de P:Q.
+ * 4. NO TOCA P:Q. Ese bloque es el eje de los medios y queda exactamente como esta.
  *
  * Contrato: { ok: boolean, detalle?: string, error?: string }.
  *   estadoCategorizar()   -> solo lectura. Se corre PRIMERO.
@@ -61,7 +65,7 @@
 const CATZ_PROP_RESPALDO = 'categorizar_respaldo';
 
 /**
- * El mapa completo: bloque, categoria, tipo, y las cuentas que la componen.
+ * El mapa completo: bloque, categoria, y las cuentas que la componen.
  *
  * Derivado de 3.458 movimientos sobre 32 meses -- el agrupamiento sigue el uso real, no una
  * taxonomia de manual. Las cuentas que aparecen escritas de dos formas figuran las dos veces a
@@ -69,58 +73,59 @@ const CATZ_PROP_RESPALDO = 'categorizar_respaldo';
  * no se haya unificado.
  *
  * "Compra USD" NO esta, y es deliberado (ver la cabecera del modulo).
+ *
+ * La misma categoria puede figurar en mas de un bloque -- "Vehiculo" esta en Gastos Fijos y en
+ * Variables -- y eso NO es un error: es el cruce que se busca.
  */
 const CATZ_MAPA = [
     // --- INGRESOS ---
-    { bloque: 'INGRESOS', categoria: 'Sueldo', tipo: 'Ingresos',
+    { bloque: 'INGRESOS', categoria: 'Sueldo',
       cuentas: ['Sueldo'] },
-    { bloque: 'INGRESOS', categoria: 'Negocios propios', tipo: 'Negocios',
+    { bloque: 'INGRESOS', categoria: 'Negocios propios',
       cuentas: ['Tidetrack', 'umoh', 'Umoh', 'Ingreso Asesor', 'FF'] },
-    { bloque: 'INGRESOS', categoria: 'Ingresos extraordinarios', tipo: 'Ingresos',
+    { bloque: 'INGRESOS', categoria: 'Ingresos extraordinarios',
       cuentas: ['Ingresos Extra', 'Ingresos extra', 'Ingreso Viejo'] },
-    { bloque: 'INGRESOS', categoria: 'Prestamos recibidos', tipo: 'Financiación',
+    { bloque: 'INGRESOS', categoria: 'Prestamos recibidos',
       cuentas: ['Plata Prestada', 'Plata prestada'] },
-    { bloque: 'INGRESOS', categoria: 'Rendimientos financieros', tipo: 'Inversiones',
+    { bloque: 'INGRESOS', categoria: 'Rendimientos financieros',
       cuentas: ['Inversiones', 'Intereses bancos', 'Intereses Bancos', 'Rendimientos'] },
 
     // --- GASTOS FIJOS ---
-    { bloque: 'GASTOS_FIJOS', categoria: 'Deuda y financiacion', tipo: 'Financiación',
+    { bloque: 'GASTOS_FIJOS', categoria: 'Deuda y financiacion',
       cuentas: ['Pago tarjeta', 'Pago Tarjeta', 'Pago Tarjeta MP', 'Prestamo Galicia',
                 'Prestamo Viejo', 'Deuda Eze', 'Deuda Dima', 'Deuda Viejo', 'Deudas'] },
-    { bloque: 'GASTOS_FIJOS', categoria: 'Vehiculo', tipo: 'Vehículo',
+    { bloque: 'GASTOS_FIJOS', categoria: 'Vehiculo',
       cuentas: ['Nafta', 'Auto'] },
-    { bloque: 'GASTOS_FIJOS', categoria: 'Salud', tipo: 'Salud',
+    { bloque: 'GASTOS_FIJOS', categoria: 'Salud',
       cuentas: ['Prepaga', 'Salud'] },
-    { bloque: 'GASTOS_FIJOS', categoria: 'Impuestos', tipo: 'Obligaciones',
+    { bloque: 'GASTOS_FIJOS', categoria: 'Impuestos',
       cuentas: ['MONOTRIBUTO'] },
-    { bloque: 'GASTOS_FIJOS', categoria: 'Servicios y suscripciones', tipo: 'Hogar',
+    { bloque: 'GASTOS_FIJOS', categoria: 'Servicios y suscripciones',
       cuentas: ['Linea telefónica', 'Subscripciones', 'Seguro Compu', 'Seguro Celu'] },
-    { bloque: 'GASTOS_FIJOS', categoria: 'Bienestar', tipo: 'Bienestar',
+    { bloque: 'GASTOS_FIJOS', categoria: 'Bienestar',
       cuentas: ['SportClub', 'Sportclub'] },
-    { bloque: 'GASTOS_FIJOS', categoria: 'Mascotas', tipo: 'Hogar',
+    { bloque: 'GASTOS_FIJOS', categoria: 'Mascotas',
       cuentas: ['Gatos'] },
 
     // --- GASTOS VARIABLES ---
-    { bloque: 'GASTOS_VARIABLES', categoria: 'Alimentacion y social', tipo: 'Hogar',
+    { bloque: 'GASTOS_VARIABLES', categoria: 'Alimentacion y social',
       cuentas: ['Comidas', 'Juntadas', 'Salidas'] },
-    { bloque: 'GASTOS_VARIABLES', categoria: 'Equipamiento', tipo: 'Equipamiento',
+    { bloque: 'GASTOS_VARIABLES', categoria: 'Equipamiento',
       cuentas: ['Computación', 'Ropa'] },
-    { bloque: 'GASTOS_VARIABLES', categoria: 'Viajes', tipo: 'Bienestar',
+    { bloque: 'GASTOS_VARIABLES', categoria: 'Viajes',
       cuentas: ['Viajes'] },
-    { bloque: 'GASTOS_VARIABLES', categoria: 'Ocio y regalos', tipo: 'Bienestar',
+    { bloque: 'GASTOS_VARIABLES', categoria: 'Ocio y regalos',
       cuentas: ['Entretenimiento', 'Regalos'] },
-    { bloque: 'GASTOS_VARIABLES', categoria: 'Trabajo y negocio', tipo: 'Negocios',
+    { bloque: 'GASTOS_VARIABLES', categoria: 'Trabajo y negocio',
       cuentas: ['Trabajo', 'Gastos - TT', 'Gastos - Tidetrack'] },
-    { bloque: 'GASTOS_VARIABLES', categoria: 'Vehiculo', tipo: 'Vehículo',
+    { bloque: 'GASTOS_VARIABLES', categoria: 'Vehiculo',
       cuentas: ['Reparaciones Auto', 'Estacionamiento'] },
-    { bloque: 'GASTOS_VARIABLES', categoria: 'Cuidado personal', tipo: 'Salud',
+    { bloque: 'GASTOS_VARIABLES', categoria: 'Cuidado personal',
       cuentas: ['Corte Pelo', 'Medicamentos / Higiene', 'Medicamentos / Accesorios'] },
-    { bloque: 'GASTOS_VARIABLES', categoria: 'Formacion', tipo: 'Bienestar',
+    { bloque: 'GASTOS_VARIABLES', categoria: 'Formacion',
       cuentas: ['Facultad', 'Entrenamiento'] },
-    { bloque: 'GASTOS_VARIABLES', categoria: 'Costos de inversion', tipo: 'Inversiones',
-      cuentas: ['Impuestos compra Bonos'] },
-    { bloque: 'GASTOS_VARIABLES', categoria: 'Otros', tipo: 'Otros',
-      cuentas: ['Otros', 'Imprevistos', 'Perdidas'] }
+    { bloque: 'GASTOS_VARIABLES', categoria: 'Otros',
+      cuentas: ['Otros', 'Imprevistos', 'Perdidas', 'Impuestos compra Bonos'] }
 ];
 
 /** Cuentas que a proposito NO se categorizan, con el motivo. */
@@ -138,17 +143,18 @@ function estadoCategorizar() {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const plan = _planCategorizar(ss);
         const l = ['CATEGORIZAR CUENTAS - ESTADO (no se escribio nada)', ''];
-        l.push('Estructura: CUENTA -> CATEGORIA -> TIPO. La categoria agrupa dentro del bloque;');
-        l.push('el tipo es la macro-segmentacion y CRUZA los bloques.');
+        l.push('Eje de CUENTAS: cuenta -> categoria (por que entro o salio la plata).');
+        l.push('El eje de MEDIOS (donde esta la plata) es otro y NO se toca.');
         l.push('');
-        l.push('CATEGORIAS a dar de alta en el catalogo: ' + plan.categoriasNuevas.length);
-        plan.categoriasNuevas.forEach(function (c) { l.push('   ' + _padCatz(c.categoria, 28) + ' tipo: ' + c.tipo); });
+        l.push('CATEGORIAS a dar de alta en el catalogo de cuentas (columna ' +
+            RANGES.CATEGORIAS_CUENTA.columns.nombre + '): ' + plan.categoriasNuevas.length);
+        plan.categoriasNuevas.forEach(function (c) { l.push('   ' + c.categoria); });
         l.push('');
-        l.push('TIPOS que se usan: ' + plan.tipos.length + ' (' + plan.tiposNuevos.length + ' nuevos)');
-        plan.tipos.forEach(function (t) {
-            l.push('   ' + _padCatz(t.tipo, 16) + (t.esNuevo ? 'NUEVO    ' : 'ya existe') + '  ' + t.categorias.join(', '));
-        });
-        l.push('');
+        if (plan.cruzan.length) {
+            l.push('CATEGORIAS QUE CRUZAN MAS DE UN BLOQUE (es el cruce que se busca):');
+            plan.cruzan.forEach(function (c) { l.push('   ' + _padCatz(c.categoria, 24) + c.bloques.join(' + ')); });
+            l.push('');
+        }
         l.push('CUENTAS a categorizar: ' + plan.asignaciones.length + ' de ' + plan.cuentasCatalogo);
         if (plan.sinCategoria.length) {
             l.push('');
@@ -192,9 +198,8 @@ function aplicarCategorizar() {
             'Se va a escribir en el Plan de Cuentas:\n\n' +
             '  - ' + plan.categoriasNuevas.length + ' categoria(s) nuevas en el bloque de Categorias, con su tipo\n' +
             '  - la categoria de ' + plan.asignaciones.length + ' cuenta(s) en los tres bloques\n\n' +
-            'Tipos que se usan: ' + plan.tipos.map(function (t) { return t.tipo; }).join(', ') + '\n' +
-            '(' + plan.tiposNuevos.length + ' son nuevos; los otros ya existian en tu catalogo)\n\n' +
-            'No se toca el ledger, ni se borra ni se renombra ninguna categoria existente.\n\nContinuar?',
+            'El bloque de categorias de MEDIOS (P:Q) NO se toca: es otro eje y queda como esta.\n\n' +
+            'Tampoco se toca el ledger.\n\nContinuar?',
             ui.ButtonSet.YES_NO);
         if (conf !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se escribio nada.' };
 
@@ -202,16 +207,14 @@ function aplicarCategorizar() {
         const sello = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd_HHmm');
         const respaldo = _respaldarCatalogo(ss, hojaPC, sello);
 
-        // --- 1. Alta de las categorias nuevas en P:Q ---
-        const cfgCat = RANGES.PROYECTOS;
-        const colNombre = columnLetterToIndex(cfgCat.columns.nombre);
-        const colTipo = columnLetterToIndex(cfgCat.columns.tipo);
-        let fila = _primeraFilaLibre(hojaPC, colNombre, getDataRow(cfgCat));
+        // --- 1. Alta de las categorias en su propio catalogo (columna U) ---
+        const cfgCat = RANGES.CATEGORIAS_CUENTA;
+        const colCat = columnLetterToIndex(cfgCat.columns.nombre);
+        let fila = _primeraFilaLibre(hojaPC, colCat, getDataRow(cfgCat));
         const escritasCat = [];
         plan.categoriasNuevas.forEach(function (c) {
-            hojaPC.getRange(fila, colNombre).setValue(c.categoria);
-            hojaPC.getRange(fila, colTipo).setValue(c.tipo);
-            escritasCat.push({ fila: fila, categoria: c.categoria, tipo: c.tipo });
+            hojaPC.getRange(fila, colCat).setValue(c.categoria);
+            escritasCat.push({ fila: fila, categoria: c.categoria });
             fila++;
         });
 
@@ -237,11 +240,8 @@ function aplicarCategorizar() {
         // --- 3. Relectura ---
         const fallas = [];
         escritasCat.forEach(function (w) {
-            if (String(hojaPC.getRange(w.fila, colNombre).getValue() || '').trim() !== w.categoria) {
+            if (String(hojaPC.getRange(w.fila, colCat).getValue() || '').trim() !== w.categoria) {
                 fallas.push('la categoria "' + w.categoria + '" no quedo en la fila ' + w.fila);
-            }
-            if (String(hojaPC.getRange(w.fila, colTipo).getValue() || '').trim() !== w.tipo) {
-                fallas.push('el tipo de "' + w.categoria + '" no quedo escrito');
             }
         });
         escritasCta.forEach(function (a) {
@@ -261,15 +261,16 @@ function aplicarCategorizar() {
         const detalle = 'PLAN DE CUENTAS ORDENADO\n\n' +
             '- Categorias dadas de alta: ' + escritasCat.length + '\n' +
             '- Cuentas categorizadas: ' + escritasCta.length + '\n' +
-            '- Tipos en uso: ' + plan.tipos.length + ' (' + plan.tiposNuevos.length + ' nuevos)\n' +
+            '- Categorias que cruzan mas de un bloque: ' + plan.cruzan.length + '\n' +
             '- Respaldo del catalogo previo: "' + respaldo.nombre + '"\n\n' +
             (plan.sinCategoria.length
                 ? 'SIN CATEGORIA a proposito: ' + plan.sinCategoria.map(function (c) { return c.cuenta; }).join(', ') + '\n\n'
                 : '') +
             'QUE MIRAR: en el Plan de Cuentas, la columna Categoria de los tres bloques de cuentas\n' +
-            'deja de estar vacia, y el bloque de Categorias tiene las nuevas con su tipo.\n\n' +
-            'El TIPO cruza los bloques: "Vehiculo" junta Nafta y Auto (fijos) con Reparaciones y\n' +
-            'Estacionamiento (variables). Ese cruce es el que permite preguntar cuanto cuesta el auto.';
+            'deja de estar vacia, y la columna ' + RANGES.CATEGORIAS_CUENTA.columns.nombre +
+            ' tiene el catalogo de categorias de cuentas.\n\n' +
+            'La misma categoria puede figurar en dos bloques -- "Vehiculo" esta en Fijos y en\n' +
+            'Variables -- y eso es el cruce que permite preguntar cuanto cuesta el auto de verdad.';
 
         logSuccess('aplicarCategorizar: ' + escritasCat.length + ' categorias, ' + escritasCta.length + ' cuentas.');
         _mostrarCatz('Categorizar cuentas - listo', detalle);
@@ -292,21 +293,29 @@ function _planCategorizar(ss) {
     if (!hojaPC) throw new Error('No existe la hoja "' + SHEETS.PLAN_CUENTAS + '".');
     const avisos = [];
 
-    // Categorias que ya existen en P:Q, con su tipo.
-    const cfgCat = RANGES.PROYECTOS;
-    const colCatNombre = columnLetterToIndex(cfgCat.columns.nombre);
-    const colCatTipo = columnLetterToIndex(cfgCat.columns.tipo);
+    // Catalogo de categorias de CUENTAS (bloque propio, separado del de medios).
+    const cfgCat = RANGES.CATEGORIAS_CUENTA;
+    const colCat = columnLetterToIndex(cfgCat.columns.nombre);
     const desdeCat = getDataRow(cfgCat);
     const altoCat = hojaPC.getMaxRows() - desdeCat + 1;
-    const catExistentes = Object.create(null);
-    const tiposExistentes = Object.create(null);
+    const yaEnCatalogo = Object.create(null);
     if (altoCat > 0) {
-        const vals = hojaPC.getRange(desdeCat, colCatNombre, altoCat, colCatTipo - colCatNombre + 1).getValues();
-        vals.forEach(function (f) {
-            const nombre = String(f[0] || '').trim();
-            const tipo = String(f[f.length - 1] || '').trim();
-            if (nombre) catExistentes[_normalizarRotulo(nombre)] = { nombre: nombre, tipo: tipo };
-            if (tipo) tiposExistentes[_normalizarRotulo(tipo)] = tipo;
+        hojaPC.getRange(desdeCat, colCat, altoCat, 1).getValues().forEach(function (f) {
+            const v = String(f[0] || '').trim();
+            if (v) yaEnCatalogo[_normalizarRotulo(v)] = v;
+        });
+    }
+
+    // El bloque de medios NO se toca: solo se lee para poder avisar si un nombre choca.
+    const cfgMed = RANGES.PROYECTOS;
+    const colMedNombre = columnLetterToIndex(cfgMed.columns.nombre);
+    const desdeMed = getDataRow(cfgMed);
+    const altoMed = hojaPC.getMaxRows() - desdeMed + 1;
+    const catDeMedios = Object.create(null);
+    if (altoMed > 0) {
+        hojaPC.getRange(desdeMed, colMedNombre, altoMed, 1).getValues().forEach(function (f) {
+            const v = String(f[0] || '').trim();
+            if (v) catDeMedios[_normalizarRotulo(v)] = v;
         });
     }
 
@@ -323,61 +332,57 @@ function _planCategorizar(ss) {
             const v = String(f[0] || '').trim();
             if (!v) return;
             cuentasCatalogo++;
-            filaDe[clave + ' ' + _normalizarRotulo(v)] = { fila: desde + i, cuenta: v };
+            filaDe[clave + ' ' + _normalizarRotulo(v)] = { fila: desde + i, cuenta: v };
         });
     });
 
-    // Asignaciones y categorias nuevas.
     const asignaciones = [];
     const categoriasNuevas = [];
-    const vistasCat = Object.create(null);
+    const vistas = Object.create(null);
     const noEncontradas = [];
+    const choques = [];
     CATZ_MAPA.forEach(function (m) {
         const clave = _normalizarRotulo(m.categoria);
-        // Choque de nombre: una categoria de cuentas que se llama igual que una de medios pero
-        // con otro tipo dejaria el catalogo con dos verdades para el mismo nombre.
-        const yaEsta = catExistentes[clave];
-        if (yaEsta && _normalizarRotulo(yaEsta.tipo) !== _normalizarRotulo(m.tipo)) {
-            throw new Error('La categoria "' + m.categoria + '" ya existe en el catalogo con tipo "' +
-                yaEsta.tipo + '" y el mapa la quiere con tipo "' + m.tipo + '". Dos verdades para el ' +
-                'mismo nombre romperian toda formula que cruce por categoria. No se escribe nada.');
+        if (catDeMedios[clave]) {
+            choques.push('"' + m.categoria + '" ya existe como categoria de MEDIOS. Son dos ejes ' +
+                'distintos: conviene que no compartan nombre para no confundirse al leer.');
         }
-        if (!yaEsta && !vistasCat[clave]) {
-            vistasCat[clave] = true;
-            categoriasNuevas.push({ categoria: m.categoria, tipo: m.tipo });
+        if (!yaEnCatalogo[clave] && !vistas[clave]) {
+            vistas[clave] = true;
+            categoriasNuevas.push({ categoria: m.categoria });
         }
         m.cuentas.forEach(function (c) {
-            const ref = filaDe[m.bloque + ' ' + _normalizarRotulo(c)];
+            const ref = filaDe[m.bloque + ' ' + _normalizarRotulo(c)];
             if (!ref) { noEncontradas.push(c); return; }
-            asignaciones.push({ bloque: m.bloque, fila: ref.fila, cuenta: ref.cuenta, categoria: m.categoria, tipo: m.tipo });
+            asignaciones.push({ bloque: m.bloque, fila: ref.fila, cuenta: ref.cuenta, categoria: m.categoria });
         });
     });
     if (noEncontradas.length) {
         avisos.push('Estas cuentas del mapa no estan en el catalogo y se saltean (probablemente ' +
             'grafias que todavia no se dieron de alta): ' + noEncontradas.join(', ') + '.');
     }
+    choques.forEach(function (c) { avisos.push(c); });
 
-    // Cuentas del catalogo que quedan sin categoria.
     const asignadas = Object.create(null);
-    asignaciones.forEach(function (a) { asignadas[a.bloque + ' ' + _normalizarRotulo(a.cuenta)] = true; });
+    asignaciones.forEach(function (a) { asignadas[a.bloque + ' ' + _normalizarRotulo(a.cuenta)] = true; });
     const sinCategoria = [];
     Object.keys(filaDe).forEach(function (k) {
         if (!asignadas[k]) sinCategoria.push({ cuenta: filaDe[k].cuenta });
     });
 
-    // Resumen de tipos.
-    const porTipo = Object.create(null);
+    // Categorias que cruzan mas de un bloque: el cruce que da valor al nivel.
+    const porCat = Object.create(null);
     CATZ_MAPA.forEach(function (m) {
-        if (!porTipo[m.tipo]) porTipo[m.tipo] = { tipo: m.tipo, categorias: [], esNuevo: !tiposExistentes[_normalizarRotulo(m.tipo)] };
-        if (porTipo[m.tipo].categorias.indexOf(m.categoria) === -1) porTipo[m.tipo].categorias.push(m.categoria);
+        const k = _normalizarRotulo(m.categoria);
+        if (!porCat[k]) porCat[k] = { categoria: m.categoria, bloques: [] };
+        if (porCat[k].bloques.indexOf(m.bloque) === -1) porCat[k].bloques.push(m.bloque);
     });
-    const tipos = Object.keys(porTipo).map(function (k) { return porTipo[k]; });
-    tipos.sort(function (a, b) { return a.tipo.localeCompare(b.tipo); });
+    const cruzan = Object.keys(porCat).map(function (k) { return porCat[k]; })
+        .filter(function (c) { return c.bloques.length > 1; });
 
     return {
         asignaciones: asignaciones, categoriasNuevas: categoriasNuevas, sinCategoria: sinCategoria,
-        tipos: tipos, tiposNuevos: tipos.filter(function (t) { return t.esNuevo; }),
-        cuentasCatalogo: cuentasCatalogo, avisos: avisos
+        cruzan: cruzan, cuentasCatalogo: cuentasCatalogo, avisos: avisos
     };
 }
 

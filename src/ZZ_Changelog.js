@@ -5,6 +5,29 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.19.1 - Dos ejes, dos catalogos separados.
+ * - CORRECCION DE DISENO sobre la v0.19.0, que no llego a correrse en la planilla. Franco freno y
+ *   pregunto en voz alta si no convenia "separar las categorias de medios y las categorias de
+ *   cuentas y listo". Tenia razon, y la v0.19.0 las estaba mezclando en P:Q.
+ * - SON DOS EJES INDEPENDIENTES DEL MISMO MOVIMIENTO, no uno anidado en el otro:
+ *     MEDIOS  -> DONDE ESTA la plata. Medio -> categoria (P:Q) -> tipo/finalidad: Ahorros,
+ *                Inversiones, Financiacion, Hogar.
+ *     CUENTAS -> POR QUE entro o salio. Cuenta -> categoria (catalogo nuevo, columna U).
+ *   La nafta se puede pagar con la cuenta cotidiana o con la tarjeta: misma categoria de cuenta,
+ *   distinta finalidad de medio. Si una determinara a la otra, esa diferencia no se podria
+ *   representar.
+ * - Y ESE CRUCE ES LA INFORMACION QUE SE BUSCA, medido sobre el ledger: "Alimentacion" se pago
+ *   casi toda desde medios de finalidad Hogar ($6.961.137), pero $46.300 salieron de un medio de
+ *   Ahorros. Comerse los ahorros no lo dice ninguno de los dos ejes por separado, solo el cruce.
+ * - LA CATEGORIA DE CUENTA NO LLEVA UN "TIPO" PROPIO. Seria un tercer nivel redundante: el
+ *   agrupamiento que cruza bloques ya sale del NOMBRE. "Vehiculo" figura en Gastos Fijos (Nafta,
+ *   Auto) y en Variables (Reparaciones, Estacionamiento), y con eso alcanza para sumar los
+ *   $4.793.879 que cuesta el auto. Los ocho tipos que la v0.19.0 iba a inventar se descartan.
+ * - RANGES.CATEGORIAS_CUENTA declara el bloque nuevo (columna U del Plan de Cuentas) con su
+ *   fundamento inline. El preflight avisa -- sin abortar -- si una categoria de cuentas se
+ *   llamara igual que una de medios: no rompe nada, pero confunde al leer.
+ * - P:Q NO SE TOCA. Es el eje de los medios y queda exactamente como esta.
+ *
  * [2026-08-19] v0.19.0 - Plan de Cuentas de tres niveles: cuenta, categoria, tipo.
  * - EL PROBLEMA: 60 cuentas sueltas y las tres columnas "Categoria" de los bloques de cuentas
  *   VACIAS -- 0 de 11 en Ingresos, 0 de 15 en Gastos Fijos, 0 de 22 en Variables. Sin ese nivel
