@@ -18,24 +18,19 @@
  * no es cosmetica.
  *
  * ============================================================================
- * POR QUE LA COLUMNA Q SE VACIA Y NO SE BORRA -- llamada de criterio, no pereza
+ * LA COLUMNA Q SE BORRA, Y POR QUE HIZO FALTA
  * ============================================================================
- * Borrar fisicamente una columna CORRE todo lo que esta a su derecha: R pasa a Q, S a R, T a S,
- * U a T. Y en S vive la formula que la propia hoja rotula "fuente de validacion - no tocar": es
- * la que alimenta el desplegable de Cuenta en la hoja de Cargas.
+ * El bloque "Categorias" ocupa P:Q y solo usa P: queda una columna de aire ADENTRO del recuadro,
+ * mientras los otros cuatro bloques estan ajustados. Vaciarla no alcanza -- el recuadro la sigue
+ * abarcando y a la vista el bloque queda desprolijo. Por eso se borra de verdad.
  *
- * Sheets reacomoda las referencias de las FORMULAS al correr columnas, pero los rangos de las
- * REGLAS DE VALIDACION no siempre siguen -- y hoy ya nos costo dos corridas descubrir que las
- * validaciones se comportan distinto de lo que uno espera. Si esa referencia se rompe, el
- * desplegable de Cargas se queda sin lista y la planilla deja de poder cargar movimientos.
- *
- * El beneficio de borrarla es una columna vacia menos. Entre P y S ya hay una columna separadora
- * (R), igual que entre todos los demas bloques de la hoja: dejar Q vacia agrega una segunda
- * separadora y nada mas. No vale arriesgar la carga de datos por eso.
- *
- * Queda vacia de contenido, de titulo, de encabezado y de validacion: a la vista es una columna
- * que no existe. Si despues de verificar que todo anda se la quiere borrar de verdad, es un
- * click a mano y con la planilla ya estable.
+ * EL RIESGO ES CONCRETO: borrarla CORRE todo lo que esta a su derecha, y en S vive la formula que
+ * la hoja rotula "fuente de validacion - no tocar", la que alimenta el desplegable de Cuenta en
+ * Cargas. Sheets reacomoda las referencias al correr columnas, pero despues de un dia en el que
+ * dos corridas se cayeron por dar por sentado como se comportan las validaciones, no se le cree:
+ * el modulo GUARDA la regla de Cargas antes de borrar y COMPRUEBA despues que siga apuntando a una
+ * lista con cuentas. Si quedo rota, la repone. Sin esa red, un desplegable vacio deja la carga de
+ * movimientos muerta y sin explicacion visible.
  *
  * ============================================================================
  * QUE NO TOCA
@@ -54,7 +49,23 @@
 const LPC_PROP_RESPALDO = 'limpiar_plan_respaldo';
 
 /** Columnas a barrer por completo: contenido, titulo, encabezado y validacion. */
-const LPC_COLUMNAS_A_BARRER = ['Q', 'T', 'U', 'V', 'W'];
+const LPC_COLUMNAS_A_BARRER = ['T', 'U', 'V', 'W'];
+
+/**
+ * La columna que se BORRA fisicamente, no solo se vacia.
+ *
+ * decision Franco 2026-08-19, insistida: el bloque "Categorias" ocupa P:Q y solo usa P, asi que
+ * queda una columna de aire adentro del recuadro mientras los otros cuatro bloques estan
+ * ajustados. Vaciarla no alcanza -- el recuadro la sigue abarcando.
+ *
+ * EL RIESGO, y como se cubre: borrarla CORRE todo lo que esta a su derecha, y en S vive la
+ * formula que alimenta el desplegable de Cuenta en la hoja de Cargas. Sheets reacomoda las
+ * referencias al correr columnas, pero no hay que creerle: el modulo GUARDA la regla de
+ * validacion de Cargas antes de borrar, y despues COMPRUEBA que siga apuntando a una lista con
+ * cuentas. Si quedo rota, la repone apuntando a la nueva posicion. Sin esa red, un desplegable
+ * vacio deja a Franco sin poder cargar movimientos y sin entender por que.
+ */
+const LPC_COLUMNA_A_BORRAR = 'Q';
 
 /** La consolidada, que se verifica y no se toca. */
 const LPC_COL_CONSOLIDADA = 'S';
@@ -118,9 +129,13 @@ function aplicarLimpiarPlan() {
             (plan.aBarrer.map(function (b) { return b.col; }).join(', ') || 'ninguna') + '\n\n' +
             'La columna ' + LPC_COL_CONSOLIDADA + ' NO se toca: es la que alimenta el desplegable de ' +
             'Cargas.\n\n' +
-            'La columna Q se deja VACIA, no se borra: borrarla correria S a R y el rango de esa ' +
-            'validacion podria no seguirla, dejando la carga de movimientos sin lista. Entre P y S ' +
-            'ya hay una columna separadora, asi que a la vista queda igual.\n\nContinuar?',
+            (plan.borrarColumna
+                ? '  - BORRAR la columna ' + LPC_COLUMNA_A_BORRAR + ', que sobra dentro del bloque de\n' +
+                  '    Categorias. Todo lo que esta a su derecha se corre una posicion.\n\n' +
+                  'Antes de borrar se guarda la regla del desplegable de Cuenta en Cargas, y despues\n' +
+                  'se comprueba que siga funcionando. Si quedo rota, se repone.\n\n'
+                : '') +
+            'Continuar?',
             ui.ButtonSet.YES_NO);
         if (conf !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se escribio nada.' };
 
@@ -144,9 +159,20 @@ function aplicarLimpiarPlan() {
         hojaPC.getRange(LPC_FILA_TITULO, colP).setValue('Categorías.');
         hojaPC.getRange(HEADER_ROW, colP).setValue('Nombre');
 
+        // --- 1bis. Borrar fisicamente la columna sobrante del bloque de categorias ---
+        const colBorrar = columnLetterToIndex(LPC_COLUMNA_A_BORRAR);
+        let borrada = false;
+        if (plan.borrarColumna) {
+            hojaPC.deleteColumn(colBorrar);
+            SpreadsheetApp.flush();
+            borrada = true;
+            _reponerValidacionCargas(ss, plan.validacionCargas);
+        }
+
         // --- 2. Barrer los restos ---
         plan.aBarrer.forEach(function (b) {
-            const col = columnLetterToIndex(b.col);
+            // Si se borro una columna a la izquierda, todo lo de la derecha se corrio una posicion.
+            const col = columnLetterToIndex(b.col) - (borrada && columnLetterToIndex(b.col) > colBorrar ? 1 : 0);
             const alto = hojaPC.getMaxRows() - LPC_FILA_TITULO + 1;
             if (alto <= 0) return;
             const rango = hojaPC.getRange(LPC_FILA_TITULO, col, alto, 1);
@@ -165,15 +191,21 @@ function aplicarLimpiarPlan() {
             if (leidas[i] !== c) fallas.push('la categoria "' + c + '" no quedo en la fila ' + (desdeP + i));
         });
         plan.aBarrer.forEach(function (b) {
-            const col = columnLetterToIndex(b.col);
+            const col = columnLetterToIndex(b.col) - (borrada && columnLetterToIndex(b.col) > colBorrar ? 1 : 0);
             const alto = hojaPC.getMaxRows() - LPC_FILA_TITULO + 1;
             const resto = hojaPC.getRange(LPC_FILA_TITULO, col, alto, 1).getValues()
                 .filter(function (f) { return String(f[0] || '').trim() !== ''; }).length;
             if (resto > 0) fallas.push('la columna ' + b.col + ' quedo con ' + resto + ' celda(s) con dato');
         });
         // Y la consolidada tiene que seguir intacta.
-        if (!hojaPC.getRange(LPC_COL_CONSOLIDADA + getDataRow(RANGES.INGRESOS)).getFormula()) {
-            fallas.push('la consolidada de la columna ' + LPC_COL_CONSOLIDADA + ' perdio su formula');
+        const colCons = columnLetterToIndex(LPC_COL_CONSOLIDADA) - (borrada ? 1 : 0);
+        if (!hojaPC.getRange(getDataRow(RANGES.INGRESOS), colCons).getFormula()) {
+            fallas.push('la consolidada perdio su formula (quedo en la columna ' +
+                columnIndexToLetter(colCons) + ')');
+        }
+        const dvCargas = _leerValidacionCargas(ss);
+        if (plan.validacionCargas && !dvCargas) {
+            fallas.push('el desplegable de Cuenta en Cargas se quedo SIN lista');
         }
 
         if (fallas.length) {
@@ -189,13 +221,12 @@ function aplicarLimpiarPlan() {
         const detalle = 'PLAN DE CUENTAS EN SU FORMA FINAL\n\n' +
             '- Categorias en la columna ' + cfg.columns.nombre + ': ' + plan.categorias.length + '\n' +
             '- Columnas barridas: ' + (plan.aBarrer.map(function (b) { return b.col; }).join(', ') || 'ninguna') + '\n' +
-            '- La consolidada de ' + LPC_COL_CONSOLIDADA + ' quedo intacta y con su formula\n' +
+            '- La consolidada quedo con su formula, y el desplegable de Cargas verificado\n' +
+            (borrada ? '- Columna ' + LPC_COLUMNA_A_BORRAR + ' BORRADA: el bloque de Categorias quedo ajustado\n' : '') +
             '- Respaldo del catalogo previo: "' + respaldo.nombre + '"\n\n' +
-            'LA COLUMNA Q quedo VACIA de contenido, titulo, encabezado y validacion: a la vista es\n' +
-            'una columna que no existe. No se borro fisicamente porque eso correria S a R y el\n' +
-            'rango de esa validacion podria no seguirla, dejando el desplegable de Cargas sin lista.\n' +
-            'Si despues de verificar que todo anda la queres borrar de verdad, es un click a mano.\n\n' +
-            'QUE MIRAR: el desplegable de Cuenta en la hoja de Cargas tiene que seguir funcionando.';
+            'QUE MIRAR: el desplegable de Cuenta en la hoja de Cargas tiene que seguir ofreciendo\n' +
+            'la lista de cuentas. Es lo unico que el corrimiento de columnas podia romper, y por eso\n' +
+            'se guarda la regla antes y se comprueba despues.';
 
         logSuccess('aplicarLimpiarPlan: ' + plan.categorias.length + ' categorias, ' + plan.aBarrer.length + ' columnas barridas.');
         _mostrarLpc('Limpiar Plan de Cuentas - listo', detalle);
@@ -290,8 +321,26 @@ function _planLpc(ss) {
             '. Correr antes "Tipo de medios", que es el que las colapsa.');
     }
 
+    // Solo se borra si la columna esta REALMENTE vacia: borrar una con datos seria destruirlos.
+    const colBorrar = columnLetterToIndex(LPC_COLUMNA_A_BORRAR);
+    let borrarColumna = false;
+    if (colBorrar <= hojaPC.getMaxColumns()) {
+        const altoQ = hojaPC.getMaxRows() - LPC_FILA_TITULO + 1;
+        const conDatoQ = altoQ > 0
+            ? hojaPC.getRange(LPC_FILA_TITULO, colBorrar, altoQ, 1).getValues()
+                .filter(function (f) { return String(f[0] || '').trim() !== ''; }).length
+            : 0;
+        if (conDatoQ > 0) {
+            avisos.push('La columna ' + LPC_COLUMNA_A_BORRAR + ' tiene ' + conDatoQ + ' celda(s) con ' +
+                'dato: NO se borra. Primero hay que decidir que hacer con eso.');
+        } else {
+            borrarColumna = true;
+        }
+    }
+
     return {
         categorias: categorias, aBarrer: aBarrer, avisos: avisos,
+        borrarColumna: borrarColumna, validacionCargas: _leerValidacionCargas(ss),
         consolidada: 'viva, formula de ' + formulaCons.length + ' caracteres en ' + celdaCons
     };
 }
@@ -332,6 +381,55 @@ function _restaurarColumnasLpc(ss, foto) {
         catch (e) { logError('_restaurarColumnasLpc: no se pudo reponer la validacion de la columna ' + p.col); }
     });
     SpreadsheetApp.flush();
+}
+
+/**
+ * La regla del desplegable de Cuenta en la hoja de Cargas. Es lo unico que puede romperse al
+ * correr columnas, asi que se lee antes y se comprueba despues.
+ */
+function _leerValidacionCargas(ss) {
+    try {
+        const cfg = RANGES.CARGAS;
+        const hoja = ss.getSheetByName(cfg.sheet);
+        if (!hoja) return null;
+        const col = columnLetterToIndex(cfg.columns.cuenta);
+        const dv = hoja.getRange(cfg.dataRow, col).getDataValidation();
+        if (!dv) return null;
+        let valores = [];
+        try { valores = dv.getCriteriaValues(); } catch (e) { valores = []; }
+        return { tipo: String(dv.getCriteriaType()), valores: valores, fila: cfg.dataRow, col: col };
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Repone el desplegable de Cargas apuntando a la consolidada en su posicion NUEVA. Solo actua si
+ * la regla se perdio: si Sheets la reacomodo bien, no se toca nada.
+ */
+function _reponerValidacionCargas(ss, previa) {
+    if (!previa) return;
+    const actual = _leerValidacionCargas(ss);
+    if (actual) return;   // sobrevivio: no hay nada que reponer
+
+    const cfg = RANGES.CARGAS;
+    const hoja = ss.getSheetByName(cfg.sheet);
+    const hojaPC = ss.getSheetByName(SHEETS.PLAN_CUENTAS);
+    if (!hoja || !hojaPC) return;
+    const colCons = columnLetterToIndex(LPC_COL_CONSOLIDADA) - 1;   // se corrio una posicion
+    const desde = getDataRow(RANGES.INGRESOS);
+    const alto = hojaPC.getMaxRows() - desde + 1;
+    if (alto <= 0) return;
+    const regla = SpreadsheetApp.newDataValidation()
+        .requireValueInRange(hojaPC.getRange(desde, colCons, alto, 1), true)
+        .setAllowInvalid(true)
+        .build();
+    const col = columnLetterToIndex(cfg.columns.cuenta);
+    const filas = cfg.filas || 15;
+    hoja.getRange(cfg.dataRow, col, filas, 1).setDataValidation(regla);
+    SpreadsheetApp.flush();
+    logInfo('_reponerValidacionCargas: el desplegable de Cuenta se repuso apuntando a la columna ' +
+            columnIndexToLetter(colCons) + ' del Plan de Cuentas.');
 }
 
 function _mostrarLpc(titulo, mensaje) {

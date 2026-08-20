@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 22,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-19',
- releaseName: 'v0.22.0 - El bloque Categorias agrupa por la categoria de la cuenta',
+ releaseName: 'v0.22.1 - La columna Q se borra de verdad, con red para el desplegable de Cargas',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.22.1 (2026-08-19) - La columna Q se borra de verdad
+! Se revierte la decision de la v0.21.0 de solo vaciarla. El bloque "Categorias" ocupa P:Q y solo usa P: queda una columna de aire ADENTRO del recuadro mientras los otros cuatro bloques estan ajustados. Vaciarla no alcanza -- el recuadro la sigue abarcando.
++ LA RED QUE FALTABA: se guarda la regla del desplegable de Cuenta de Cargas ANTES de borrar y se comprueba DESPUES que siga viva; si el corrimiento de columnas la rompio, se repone apuntando a la consolidada en su posicion nueva. Era el unico riesgo real y ahora esta cubierto.
++ Solo borra si la columna esta REALMENTE vacia. Si tuviera datos, avisa y no la toca.
++ "Ajuste" deja de ser un hueco: pasa a la categoria "Conciliacion". No es un ingreso -- es una correccion de saldo contra el banco -- pero vive en el bloque de Ingresos y sin categoria quedaba a la vista como un olvido.
+
 v0.22.0 (2026-08-19) - El bloque Categorias agrupa por la categoria de la cuenta
 - El bloque "Categorias" del Tablero mostraba Hogar / Ahorros / Inversiones / Financiacion: los TIPOS DE MEDIO. Eso contesta DONDE estaba la plata, no PARA QUE se uso, que es lo que el bloque promete.
 * CONSECUENCIA NO PREVISTA DE LA v0.20.0: cuando los medios declaraban su tipo via una categoria intermedia, el mismo VLOOKUP devolvia esa categoria ("Chanchito", "Meta de Ahorro 1"). Al sacar el nivel intermedio paso a devolver el TIPO, y el bloque quedo con cuatro filas genericas.

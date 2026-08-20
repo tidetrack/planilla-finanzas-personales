@@ -5,6 +5,21 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.22.1 - La columna Q se borra de verdad, con la red que faltaba.
+ * - SE REVIERTE la decision de la v0.21.0 de solo vaciarla, y Franco tenia razon en insistir: el
+ *   bloque "Categorias" ocupa P:Q y solo usa P, asi que queda una columna de aire ADENTRO del
+ *   recuadro mientras los otros cuatro bloques estan ajustados. Vaciarla no alcanza -- el recuadro
+ *   la sigue abarcando y el bloque se ve desprolijo. Yo habia mirado celdas sueltas en vez del
+ *   bloque completo, y por eso no lo vi.
+ * - LA RED QUE FALTABA, y es lo que hacia que la decision anterior fuera razonable: se guarda la
+ *   regla del desplegable de Cuenta de Cargas ANTES de borrar, y se comprueba DESPUES que siga
+ *   viva. Si el corrimiento de columnas la rompio, se repone apuntando a la consolidada en su
+ *   posicion nueva. Con la red puesta, el riesgo que justificaba no borrar desaparece.
+ * - Solo borra si la columna esta REALMENTE vacia; si tuviera datos, avisa y no la toca.
+ * - "Ajuste" deja de ser un hueco: pasa a la categoria "Conciliacion". No es un ingreso -- es una
+ *   correccion de saldo contra el banco -- pero vive en el bloque de Ingresos, y sin categoria
+ *   quedaba a la vista como un olvido en medio de una columna completa.
+ *
  * [2026-08-19] v0.22.0 - El bloque "Categorias" agrupa por la categoria de la cuenta.
  * - SINTOMA: el bloque mostraba Hogar / Ahorros / Inversiones / Financiacion. Son los TIPOS DE
  *   MEDIO: contestan DONDE estaba la plata, no PARA QUE se uso, que es justo lo que ese bloque

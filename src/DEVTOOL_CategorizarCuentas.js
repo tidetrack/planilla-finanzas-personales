@@ -102,6 +102,11 @@ const CATZ_MAPA = [
       cuentas: ['Plata Prestada', 'Plata prestada'] },
     { bloque: 'INGRESOS', categoria: 'Rendimientos financieros',
       cuentas: ['Inversiones', 'Intereses bancos', 'Intereses Bancos', 'Rendimientos'] },
+    // "Ajuste" no es un ingreso: es una correccion de saldo contra el banco. Pero vive en el
+    // bloque de Ingresos (ahi se dio de alta, porque el signo lo lleva la columna Tipo del
+    // movimiento) y sin categoria queda como un hueco a la vista. Su motivo ES la conciliacion.
+    { bloque: 'INGRESOS', categoria: 'Conciliacion',
+      cuentas: ['Ajuste'] },
 
     // --- GASTOS FIJOS ---
     { bloque: 'GASTOS_FIJOS', categoria: 'Deuda y financiacion',
