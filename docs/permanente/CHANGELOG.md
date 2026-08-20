@@ -9,6 +9,53 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.23.0 - "Saldos Actuales" suma por tipo de medio (2026-08-20)
+
+### El bloque AE7:AG12 cambia de eje
+
+Mostraba el saldo desglosado por moneda, en dos columnas (Flujo y Capital). Pasa a mostrar
+**la suma por tipo de medio** -- Hogar, Ahorros, Inversiones, Financiacion -- con el monto
+convertido a la moneda del selector y el peso de cada uno en % sobre el total.
+
+Los tipos son cuatro y el bloque tiene cuatro filas de datos: entra justo. El desglose por
+moneda contestaba una pregunta que el bloque "Medios Bancarios" ya contesta cuenta por cuenta;
+la que faltaba era **en que finalidad esta la plata**.
+
+### La consecuencia que habia que atar
+
+"Disponibilidad de fondos" (O23:O25) leia `AF9:AF12` como si fueran las cuatro monedas y las
+convertia: `AF9 + AF10*tc + AF11*tc + AF12*tc`. Con el bloque nuevo eso multiplicaria por la
+cotizacion algo que **ya viene convertido**. Ahora la liquidez es el saldo del tipo Hogar, que
+es exactamente la plata disponible para cubrir gastos. Si ese bloque venia dando de mas, era esto.
+
+### Dos trampas cubiertas antes de escribir
+
+Las dos ya conocidas de esta campana:
+
+1. **Validacion de datos** en la columna de rotulos: si solo acepta ARS/USD/AUD/EUR, escribir
+   "Hogar" se rechaza y la celda queda **vacia sin lanzar excepcion**. Se abre el dominio antes.
+2. **Formato de numero** en la columna del peso: venia en moneda, y un ratio de 0,42 se veria
+   como "$0,42". Se pasa a porcentaje antes de escribir.
+
+### El banco de pruebas atajo un bug antes del deploy
+
+El reemplazo que reapunta la liquidez **no era idempotente**: en la segunda pasada
+`liquidez_ars;` volvia a matchear desde adentro de `liquidez_moneda; liquidez_ars;` y se comia
+la definicion de `presupuesto_ahorro`. Se anclo el patron al shape viejo (`AF9 + ...`). Es
+exactamente la razon por la que `devtools/probar_stock_flujo.js` existe.
+
+### Plan de Cuentas
+
+- **"Deudas" pasa a la categoria "Deuda y financiacion".** La categoria cruza bloques a
+  proposito: la cuota fija vive en Gastos Fijos y la deuda que se paga cuando se puede, en
+  Variables.
+- **La columna consolidada es la R, no la S:** se corrio un lugar cuando se borro la Q.
+- **El borrado de columna lleva su propia marca de hecho,** para que no pueda repetirse y correr
+  todo un lugar mas.
+
+> Los releases v0.14.0 a v0.22.1 quedaron registrados solo en `src/ZZ_Changelog.js` (historial
+> canonico). Pendiente su volcado a este archivo.
+
 ## v0.13.0 - Riqueza por lista blanca (2026-08-19)
 
 **Cambio de definicion, no correccion de bug.** Hasta hoy el capital acumulado se calculaba como

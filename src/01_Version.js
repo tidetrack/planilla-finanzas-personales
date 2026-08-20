@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 22,
- patch: 1,
+ minor: 23,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-08-19',
- releaseName: 'v0.22.1 - La columna Q se borra de verdad, con red para el desplegable de Cargas',
+ releaseDate: '2026-08-20',
+ releaseName: 'v0.23.0 - Saldos Actuales suma por tipo de medio',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

@@ -5,6 +5,32 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.23.0 - "Saldos Actuales" deja de ser un desglose por moneda.
+ * - EL BLOQUE AE7:AG12 pasa a sumar POR TIPO DE MEDIO: Hogar, Ahorros, Inversiones,
+ *   Financiacion, cada uno con su monto convertido a la moneda del selector y su peso en % sobre
+ *   el total. decision Franco 2026-08-19. Los tipos son cuatro y el bloque tiene cuatro filas de
+ *   datos: entra justo. El desglose por moneda que habia ahi contestaba una pregunta que ya
+ *   contesta el bloque "Medios Bancarios", cuenta por cuenta; la que faltaba era "en que finalidad
+ *   esta mi plata".
+ * - CONSECUENCIA QUE HABIA QUE ATAR: "Disponibilidad de fondos" (O23:O25) leia AF9:AF12 como si
+ *   fueran las cuatro monedas y las convertia (AF9 + AF10*tc + AF11*tc + AF12*tc). Con el bloque
+ *   nuevo eso multiplicaria por la cotizacion algo que ya viene convertido. Ahora la liquidez es
+ *   el saldo del tipo Hogar, que es exactamente la plata disponible para cubrir gastos. Si
+ *   "Disponibilidad de fondos" te venia dando de mas, era esto.
+ * - DOS TRAMPAS CUBIERTAS ANTES DE ESCRIBIR, las dos ya conocidas de esta campana: la validacion
+ *   de datos de la columna de rotulos (si solo acepta ARS/USD/AUD/EUR, "Hogar" se rechaza y la
+ *   celda queda VACIA sin lanzar excepcion) y el formato de numero de la columna del peso (venia
+ *   en moneda, y un ratio de 0,42 se veria "$0,42").
+ * - EL BANCO DE PRUEBAS ATAJO UN BUG ANTES DEL DEPLOY: el reemplazo de la liquidez no era
+ *   idempotente -- en la segunda pasada "liquidez_ars;" volvia a matchear desde adentro de
+ *   "liquidez_moneda; liquidez_ars;" y se comia la definicion de presupuesto_ahorro. Se anclo el
+ *   patron al shape viejo ("AF9 + ..."). Es la razon por la que el banco existe.
+ * - "Deudas" pasa a la categoria "Deuda y financiacion". La categoria cruza bloques a proposito:
+ *   la cuota fija vive en Gastos Fijos y la deuda que se paga cuando se puede, en Variables.
+ * - LPC: la columna consolidada es la R, no la S -- se corrio cuando se borro la Q. Y el borrado
+ *   de columna pasa a llevar su propia marca de hecho, para que no pueda repetirse y volver a
+ *   correr todo un lugar mas.
+ *
  * [2026-08-19] v0.22.1 - La columna Q se borra de verdad, con la red que faltaba.
  * - SE REVIERTE la decision de la v0.21.0 de solo vaciarla, y Franco tenia razon en insistir: el
  *   bloque "Categorias" ocupa P:Q y solo usa P, asi que queda una columna de aire ADENTRO del

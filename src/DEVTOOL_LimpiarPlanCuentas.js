@@ -41,12 +41,21 @@
  * 2. Los bloques de cuentas (C:D, F:G, I:J) ni el de medios (L:N).
  * 3. El ledger.
  *
- * @version 0.21.0
+ * @version 0.23.0
  * @since 2026-08-19
- * @lastModified 2026-08-19
+ * @lastModified 2026-08-20
  */
 
 const LPC_PROP_RESPALDO = 'limpiar_plan_respaldo';
+
+/**
+ * Marca de que el borrado de la columna ya ocurrio.
+ *
+ * Sin esto el modulo es peligroso al re-correrse: despues del borrado, la columna que ocupa esa
+ * letra es la separadora legitima que hay entre bloques, y borrarla otra vez correria la
+ * consolidada de nuevo. Un paso estructural de una sola vez necesita saber que ya se dio.
+ */
+const LPC_PROP_COLUMNA_BORRADA = 'limpiar_plan_columna_borrada';
 
 /** Columnas a barrer por completo: contenido, titulo, encabezado y validacion. */
 const LPC_COLUMNAS_A_BARRER = ['T', 'U', 'V', 'W'];
@@ -67,8 +76,14 @@ const LPC_COLUMNAS_A_BARRER = ['T', 'U', 'V', 'W'];
  */
 const LPC_COLUMNA_A_BORRAR = 'Q';
 
-/** La consolidada, que se verifica y no se toca. */
-const LPC_COL_CONSOLIDADA = 'S';
+/**
+ * La consolidada, que se verifica y no se toca.
+ *
+ * Vivia en S; al borrarse la columna Q (v0.22.1) se corrio a R. Queda anotado aca porque es el
+ * unico rastro de que ese corrimiento ocurrio: un modulo que sigue buscandola donde ya no esta
+ * aborta diciendo que la consolidada se rompio, cuando lo que se movio es el modulo.
+ */
+const LPC_COL_CONSOLIDADA = 'R';
 
 /** Fila del titulo de bloque en el Plan de Cuentas (los headers van en HEADER_ROW). */
 const LPC_FILA_TITULO = 6;
@@ -167,6 +182,8 @@ function aplicarLimpiarPlan() {
             SpreadsheetApp.flush();
             borrada = true;
             _reponerValidacionCargas(ss, plan.validacionCargas);
+            PropertiesService.getDocumentProperties().setProperty(LPC_PROP_COLUMNA_BORRADA,
+                Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'));
         }
 
         // --- 2. Barrer los restos ---
@@ -198,7 +215,7 @@ function aplicarLimpiarPlan() {
             if (resto > 0) fallas.push('la columna ' + b.col + ' quedo con ' + resto + ' celda(s) con dato');
         });
         // Y la consolidada tiene que seguir intacta.
-        const colCons = columnLetterToIndex(LPC_COL_CONSOLIDADA) - (borrada ? 1 : 0);
+        const colCons = columnLetterToIndex(LPC_COL_CONSOLIDADA) + (borrada ? 1 : 0);
         if (!hojaPC.getRange(getDataRow(RANGES.INGRESOS), colCons).getFormula()) {
             fallas.push('la consolidada perdio su formula (quedo en la columna ' +
                 columnIndexToLetter(colCons) + ')');
@@ -255,7 +272,10 @@ function _planLpc(ss) {
     const avisos = [];
 
     // La consolidada TIENE que seguir viva: sin ella la hoja de Cargas se queda sin desplegable.
-    const celdaCons = LPC_COL_CONSOLIDADA + getDataRow(RANGES.INGRESOS);
+    // Antes del borrado la consolidada esta una columna mas a la derecha que despues.
+    const yaCorrida = !!PropertiesService.getDocumentProperties().getProperty(LPC_PROP_COLUMNA_BORRADA);
+    const colCons0 = columnLetterToIndex(LPC_COL_CONSOLIDADA) + (yaCorrida ? 0 : 1);
+    const celdaCons = columnIndexToLetter(colCons0) + getDataRow(RANGES.INGRESOS);
     const formulaCons = hojaPC.getRange(celdaCons).getFormula();
     if (!formulaCons) {
         throw new Error('La consolidada de ' + celdaCons + ' no tiene formula. Esa columna alimenta ' +
@@ -324,7 +344,12 @@ function _planLpc(ss) {
     // Solo se borra si la columna esta REALMENTE vacia: borrar una con datos seria destruirlos.
     const colBorrar = columnLetterToIndex(LPC_COLUMNA_A_BORRAR);
     let borrarColumna = false;
-    if (colBorrar <= hojaPC.getMaxColumns()) {
+    const yaBorrada = PropertiesService.getDocumentProperties().getProperty(LPC_PROP_COLUMNA_BORRADA);
+    if (yaBorrada) {
+        avisos.push('La columna ' + LPC_COLUMNA_A_BORRAR + ' ya se borro el ' + yaBorrada +
+            '. NO se vuelve a borrar: la que ocupa esa letra ahora es la separadora legitima entre ' +
+            'bloques, y borrarla correria la consolidada otra vez.');
+    } else if (colBorrar <= hojaPC.getMaxColumns()) {
         const altoQ = hojaPC.getMaxRows() - LPC_FILA_TITULO + 1;
         const conDatoQ = altoQ > 0
             ? hojaPC.getRange(LPC_FILA_TITULO, colBorrar, altoQ, 1).getValues()
@@ -416,7 +441,7 @@ function _reponerValidacionCargas(ss, previa) {
     const hoja = ss.getSheetByName(cfg.sheet);
     const hojaPC = ss.getSheetByName(SHEETS.PLAN_CUENTAS);
     if (!hoja || !hojaPC) return;
-    const colCons = columnLetterToIndex(LPC_COL_CONSOLIDADA) - 1;   // se corrio una posicion
+    const colCons = columnLetterToIndex(LPC_COL_CONSOLIDADA);   // ya en su posicion final
     const desde = getDataRow(RANGES.INGRESOS);
     const alto = hojaPC.getMaxRows() - desde + 1;
     if (alto <= 0) return;

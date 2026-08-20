@@ -70,9 +70,9 @@
  *   estadoCategorizar()   -> solo lectura. Se corre PRIMERO.
  *   aplicarCategorizar()  -> respaldo verificado del catalogo + escritura + relectura.
  *
- * @version 0.19.0
+ * @version 0.23.0
  * @since 2026-08-19
- * @lastModified 2026-08-19
+ * @lastModified 2026-08-20
  */
 
 const CATZ_PROP_RESPALDO = 'categorizar_respaldo';
@@ -111,7 +111,7 @@ const CATZ_MAPA = [
     // --- GASTOS FIJOS ---
     { bloque: 'GASTOS_FIJOS', categoria: 'Deuda y financiacion',
       cuentas: ['Pago tarjeta', 'Pago Tarjeta', 'Pago Tarjeta MP', 'Prestamo Galicia',
-                'Prestamo Viejo', 'Deuda Eze', 'Deuda Dima', 'Deuda Viejo', 'Deudas'] },
+                'Prestamo Viejo', 'Deuda Eze', 'Deuda Dima', 'Deuda Viejo'] },
     { bloque: 'GASTOS_FIJOS', categoria: 'Vehiculo',
       cuentas: ['Nafta', 'Auto'] },
     { bloque: 'GASTOS_FIJOS', categoria: 'Salud',
@@ -142,6 +142,11 @@ const CATZ_MAPA = [
       cuentas: ['Corte Pelo', 'Medicamentos / Higiene', 'Medicamentos / Accesorios'] },
     { bloque: 'GASTOS_VARIABLES', categoria: 'Formacion',
       cuentas: ['Facultad', 'Entrenamiento'] },
+    // "Deudas" comparte categoria con el bloque de fijos pero vive en Variables: la categoria
+    // cruza bloques, que es exactamente para lo que sirve. La primera corrida la salteo porque
+    // estaba mapeada en el bloque equivocado.
+    { bloque: 'GASTOS_VARIABLES', categoria: 'Deuda y financiacion',
+      cuentas: ['Deudas'] },
     { bloque: 'GASTOS_VARIABLES', categoria: 'Otros',
       cuentas: ['Otros', 'Imprevistos', 'Perdidas', 'Impuestos compra Bonos'] }
 ];
