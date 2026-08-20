@@ -5,6 +5,17 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.26.1 - El borrado de la carga previa se hace en BLOQUES, no fila por fila.
+ * - SINTOMA: recargar el presupuesto base con 413 filas viejas adentro tardaba minutos. Se vio en
+ *   vivo el 2026-08-20: la corrida quedo "Ejecutando secuencia de comandos" un rato largo.
+ * - CAUSA: `deleteRow` una vez por fila, o sea 413 llamadas a la API de Sheets. Apps Script corta
+ *   a los 6 minutos, y un corte a mitad del borrado deja media carga vieja adentro de la hoja --
+ *   justo el estado que la marca en Nota existe para evitar.
+ * - CORRECCION: se agrupan las filas contiguas y se borra cada bloque con `deleteRows(ini, largo)`.
+ *   Como las filas generadas quedan siempre juntas, 413 filas pasan a ser UNA sola llamada.
+ *   Se sigue borrando de abajo hacia arriba: al reves, cada borrado corre los indices de lo que
+ *   sigue y termina borrando filas que no eran.
+ *
  * [2026-08-20] v0.26.0 - La capitalizacion deja de ser un residuo, y el presupuesto sigue al periodo.
  * Cuatro cosas que Franco marco mirando el Tablero, y una quinta que aparecio midiendo.
  *

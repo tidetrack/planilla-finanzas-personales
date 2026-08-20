@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 26,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.26.0 - La capitalizacion deja de ser un residuo y el presupuesto sigue al periodo',
+ releaseName: 'v0.26.1 - El borrado de la carga previa se hace en bloques, no fila por fila',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

@@ -253,14 +253,30 @@ function _filasGeneradasPb(hoja) {
 }
 
 /**
- * Borra las filas generadas previamente, de abajo hacia arriba.
+ * Borra las filas generadas previamente, de abajo hacia arriba y EN BLOQUES CONTIGUOS.
  *
  * De abajo hacia arriba a proposito: borrar de arriba corre los indices de todo lo que sigue y
  * termina borrando filas que no eran. Es el mismo error que hizo falta corregir en la restauracion
  * del Plan de Cuentas.
+ *
+ * En bloques porque una llamada por fila no escala: la carga del 2026-08-20 tenia 413 filas que
+ * borrar y `deleteRow` una por una se acercaba peligrosamente al limite de 6 minutos de Apps
+ * Script. Y un timeout a mitad del borrado deja la hoja con media carga vieja adentro. Como las
+ * filas generadas quedan siempre juntas, casi siempre es UNA sola llamada.
  */
 function _borrarGeneradasPb(hoja, filas) {
-    for (let i = filas.length - 1; i >= 0; i--) hoja.deleteRow(filas[i]);
+    if (!filas.length) return 0;
+    const ordenadas = filas.slice().sort(function (a, b) { return a - b; });
+    const bloques = [];
+    let ini = ordenadas[0], largo = 1;
+    for (let i = 1; i < ordenadas.length; i++) {
+        if (ordenadas[i] === ordenadas[i - 1] + 1) { largo++; continue; }
+        bloques.push({ ini: ini, largo: largo });
+        ini = ordenadas[i]; largo = 1;
+    }
+    bloques.push({ ini: ini, largo: largo });
+    for (let i = bloques.length - 1; i >= 0; i--) hoja.deleteRows(bloques[i].ini, bloques[i].largo);
+    return bloques.length;
 }
 
 /** Arma la matriz de filas nuevas: una por linea de cada mes de destino. */

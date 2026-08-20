@@ -9,6 +9,17 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.26.1 - El borrado de la carga previa se hace en bloques (2026-08-20)
+
+Recargar el presupuesto base con 413 filas viejas adentro tardaba minutos: `deleteRow` una vez por
+fila son 413 llamadas a la API de Sheets. Apps Script corta a los 6 minutos, y un corte a mitad del
+borrado deja media carga vieja adentro — justo el estado que la marca en la columna Nota existe
+para evitar.
+
+Ahora se agrupan las filas contiguas y se borra cada bloque con `deleteRows(ini, largo)`. Como las
+filas generadas quedan siempre juntas, **413 filas pasan a ser una sola llamada**. Se sigue
+borrando de abajo hacia arriba: al reves, cada borrado corre los indices de lo que sigue.
+
 ## v0.26.0 - La capitalizacion deja de ser un residuo (2026-08-20)
 
 Cuatro cosas que Franco marco mirando el Tablero, y una quinta que aparecio midiendo.
