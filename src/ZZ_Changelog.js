@@ -5,6 +5,33 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.20.0 - El medio declara su tipo directo: fuera el nivel intermedio.
+ * - decision Franco: "en medios bancarios utilicemos simplemente tipo". Antes la cadena era
+ *   medio -> categoria -> tipo; ahora el medio declara su TIPO en la misma columna del catalogo.
+ * - POR QUE, y la medicion es contundente: "Meta de Ahorro 1" concentraba 16 de los 28 medios,
+ *   el 57% -- no era una meta, era el cajon donde caia todo lo que no era cotidiano. Cinco de
+ *   las once categorias no tenian NINGUN medio (Tarjeta de Credito, Cambiar el Celular, Meta de
+ *   Ahorro 2, Meta de Ahorro 3 y una sin nombre) y las cuatro restantes tenian exactamente uno.
+ *   Un nivel de agrupamiento que deja el 57% en un solo grupo y el 45% de los grupos vacios no
+ *   agrega informacion: agrega un salto mas donde equivocarse.
+ * - QUEDA: Hogar 9 medios, Ahorros 11, Inversiones 7, Financiacion 1. Una distribucion real.
+ * - ES UN CAMBIO ATOMICO y por eso el modulo escribe las dos mitades en la misma corrida: el
+ *   catalogo y las nueve formulas que encadenaban dos VLOOKUP. Cambiar el catalogo sin las
+ *   formulas haria que el segundo VLOOKUP busque un tipo dentro de la tabla de categorias, no lo
+ *   encuentre, y TODA la clasificacion devuelva cadena vacia -- el capital a cero y el saldo
+ *   cotidiano comiendose todo. Se revierten juntas.
+ * - LA RIQUEZA NO SE MUEVE, y se verifica medio por medio: los unicos que cambian de tipo se
+ *   mueven DENTRO de la riqueza (IOL, CEDEARS, CRYPTO, FCI y los Galicia Fima pasan de Ahorros a
+ *   Inversiones, y las dos estan en la lista blanca). El unico que sale es Brubank, que no tiene
+ *   un solo movimiento en el ledger. El preflight marca con un aviso cualquier medio que cruce
+ *   el limite, por si en el futuro alguno lo hace de verdad.
+ * - El colapso de las formulas se probo contra las NUEVE formulas reales del gemelo antes de
+ *   desplegar: cambia todas, no deja residuos de P:Q, deja los parentesis balanceados y es
+ *   idempotente. Las dos formas de la cadena -- anidada dentro de los arrays de QUERY, y en dos
+ *   variables de LET consecutivas -- se colapsan las dos.
+ * - EL BLOQUE P:Q NO SE BORRA. Queda como esta, sin uso. Es dato de Franco y borrarlo no aporta
+ *   nada; si algun dia quiere volver a llevar objetivos de ahorro, el bloque esta ahi.
+ *
  * [2026-08-19] v0.19.1 - Dos ejes, dos catalogos separados.
  * - CORRECCION DE DISENO sobre la v0.19.0, que no llego a correrse en la planilla. Franco freno y
  *   pregunto en voz alta si no convenia "separar las categorias de medios y las categorias de

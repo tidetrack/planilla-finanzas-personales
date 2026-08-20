@@ -490,6 +490,14 @@ const MENU_CONFIG = {
             // Ordena las 60 cuentas en 22 categorias y le da a cada categoria su tipo. La
             // categoria agrupa dentro del bloque; el TIPO cruza los bloques y es lo que permite
             // preguntar cuanto cuesta el auto entre fijos y variables. @see DEVTOOL_CategorizarCuentas.js
+            // Saca el nivel intermedio del eje de medios: cada medio declara su TIPO directo.
+            // Catalogo y formulas se escriben JUNTOS -- son inseparables. @see DEVTOOL_TipoDeMedios.js
+            submenu: 'Tipo de medios', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoTipoDeMedios' },
+                { name: '2. Aplicar', function: 'aplicarTipoDeMedios' }
+            ]
+        },
+        {
             submenu: 'Categorizar cuentas', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoCategorizar' },
                 { name: '2. Aplicar', function: 'aplicarCategorizar' }

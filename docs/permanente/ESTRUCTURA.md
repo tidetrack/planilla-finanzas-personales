@@ -32,7 +32,8 @@ planilla-finanzas-personales/
 │ ├── DEVTOOL_AltaCuentas.js # Alta en el Plan de Cuentas de las cuentas que el ledger usa y el catálogo no tiene
 │ ├── DEVTOOL_ConciliarSaldos.js # Concilia saldos contra los declarados cargando movimientos de Ajuste
 │ ├── DEVTOOL_Proyeccion.js # BD de Proyección (espejo de Registros) + cableado del Presupuesto Asignado
-│ ├── DEVTOOL_CategorizarCuentas.js # Ordena las cuentas en categorías y les da su tipo
+│ ├── DEVTOOL_CategorizarCuentas.js # Ordena las cuentas en categorías (eje: por qué entró o salió)
+│ ├── DEVTOOL_TipoDeMedios.js # El medio declara su tipo directo (eje: dónde está la plata)
 │ ├── DEVTOOL_Presupuesto.js # Motor de la hoja Presupuesto - NO LISTO, fuera del menú
 │ ├── DEVTOOL_CableadoPresupuesto.js # Cableado Presupuesto <-> Tablero - NO LISTO, fuera del menú
 │ ├── DEVTOOL_RobustezVistas.js # Anclas de vistas - anclas PRE-Fix, fuera del menú
@@ -200,7 +201,8 @@ El pipeline estándar para cerrar cualquier feature:
 | `DEVTOOL_AltaCuentas.js` | Activo - alta de cuentas faltantes en el catálogo | v0.15.0 |
 | `DEVTOOL_ConciliarSaldos.js` | Activo - ajustes de conciliación contra saldos declarados | v0.17.0 |
 | `DEVTOOL_Proyeccion.js` | Activo - BD de Proyección + Presupuesto Asignado | v0.18.0 |
-| `DEVTOOL_CategorizarCuentas.js` | Activo - cuenta → categoría → tipo | v0.19.0 |
+| `DEVTOOL_CategorizarCuentas.js` | Activo - cuenta → categoría (eje del motivo) | v0.19.1 |
+| `DEVTOOL_TipoDeMedios.js` | Activo - medio → tipo (eje patrimonial) | v0.20.0 |
 | `DEVTOOL_Presupuesto.js` | **Fuera del menú** - NO LISTO, bloqueantes abiertos | v0.9.x |
 | `DEVTOOL_CableadoPresupuesto.js` | **Fuera del menú** - NO LISTO, bloqueantes abiertos | v0.9.x |
 | `DEVTOOL_RobustezVistas.js` | **Fuera del menú** - sus anclas son PRE-Fix, re-verificar | v0.9.x |

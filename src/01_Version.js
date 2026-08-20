@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 19,
- patch: 1,
+ minor: 20,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-19',
- releaseName: 'v0.19.1 - Dos ejes, dos catalogos: categorias de cuentas separadas de las de medios',
+ releaseName: 'v0.20.0 - El medio declara su tipo directo: fuera el nivel intermedio',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,14 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.20.0 (2026-08-19) - El medio declara su tipo directo
+! Se saca el nivel intermedio del eje de medios. Antes iba medio -> categoria -> tipo; ahora el medio declara su TIPO (Hogar / Ahorros / Inversiones / Financiacion) en la misma columna.
+- POR QUE, medido: "Meta de Ahorro 1" concentraba 16 de los 28 medios (57%) -- no era una meta, era un cajon de sastre; 5 de las 11 categorias no tenian NINGUN medio; y las 4 restantes tenian uno cada una. Un nivel que deja el 57% en un grupo y el 45% de los grupos vacios no clasifica: solo agrega un salto mas donde equivocarse.
++ Queda: Hogar 9 medios, Ahorros 11, Inversiones 7, Financiacion 1.
+! CAMBIO ATOMICO: el catalogo y las 9 formulas que hacian el doble VLOOKUP se escriben en la MISMA corrida y se revierten juntas. Cambiar uno sin el otro dejaria toda la clasificacion en blanco y el capital en cero.
+* LA RIQUEZA NO SE MUEVE, y se verifica: los medios que cambian de tipo (IOL, CEDEARS, CRYPTO, FCI, Galicia Fima) se mueven de Ahorros a Inversiones, que estan los dos en la lista blanca. El unico que sale es Brubank, que no tiene movimientos.
+- El bloque P:Q queda como esta, sin uso. No se borra: si algun dia vuelven los objetivos de ahorro, el bloque esta.
+
 v0.19.1 (2026-08-19) - Dos ejes, dos catalogos separados
 ! CORRECCION DE DISENO sobre la v0.19.0, que no llego a correrse: las categorias de CUENTAS dejan de escribirse en P:Q y pasan a su propio catalogo (columna U). P:Q queda intacto como el eje de los MEDIOS.
 * SON DOS EJES INDEPENDIENTES del mismo movimiento, no uno anidado en el otro. Medios: DONDE ESTA la plata (Ahorros / Inversiones / Financiacion / Hogar). Cuentas: POR QUE entro o salio. La nafta se puede pagar con la cuenta cotidiana o con la tarjeta: misma categoria de cuenta, distinta finalidad de medio. Si una determinara a la otra, esa diferencia no se podria representar.

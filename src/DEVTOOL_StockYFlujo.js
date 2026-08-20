@@ -548,13 +548,10 @@ function _colPlan(cfg, clave) {
  * de cada formula de saldo -- multiplicaba por ocho el mismo trabajo sobre 3.500 filas.
  */
 function _preambuloSaldoSyf() {
-    const pc = RANGES.PROYECTOS;
     const medios = RANGES.MEDIOS_PAGO;
     const colCatMedio = columnLetterToIndex(medios.columns.proyecto) - columnLetterToIndex(medios.start) + 1;
-    const colTipoCat = columnLetterToIndex(pc.columns.tipo) - columnLetterToIndex(pc.start) + 1;
     const colMonMedio = columnLetterToIndex(medios.columns.moneda) - columnLetterToIndex(medios.start) + 1;
     const rangoMedios = _refHoja(medios.sheet) + '!' + medios.start + ':' + medios.end;
-    const rangoCats = _refHoja(pc.sheet) + '!' + pc.start + ':' + pc.end;
     return [
         '  col_medio; ' + _colLedger('medio') + ';',
         '  col_cuenta; ' + _colLedger('cuenta') + ';',
@@ -567,8 +564,11 @@ function _preambuloSaldoSyf() {
         '  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));',
         // Vigente = el medio existe en el catalogo Y la fila es posterior a su ultima conciliacion.
         '  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));',
-        '  cat_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; ' + rangoMedios + '; ' + colCatMedio + '; 0); ""));',
-        '  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(cat_fila; ' + rangoCats + '; ' + colTipoCat + '; 0); ""));',
+        // Un solo salto desde la v0.20.0: el medio declara su tipo directamente en el catalogo.
+        // Antes iba medio -> categoria -> tipo, y ese nivel intermedio dejaba el 57% de los
+        // medios en un solo grupo y cinco grupos vacios: no clasificaba, solo agregaba un salto
+        // mas donde equivocarse.
+        '  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; ' + rangoMedios + '; ' + colCatMedio + '; 0); ""));',
         '  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; ' + rangoMedios + '; ' + colMonMedio + '; 0); "ARS"));'
     ].join('\n');
 }
