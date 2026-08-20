@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 20,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-19',
- releaseName: 'v0.20.0 - El medio declara su tipo directo: fuera el nivel intermedio',
+ releaseName: 'v0.20.1 - La validacion de la columna era parte del cambio',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,14 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.20.1 (2026-08-19) - La validacion de la columna era parte del cambio
+- LA CORRIDA DE LA v0.20.0 FALLO EN LOS 28 MEDIOS y ademas dejo la columna VACIA. Causa: la columna tiene un DESPLEGABLE con la lista de categorias. Mientras esa lista siga vigente, "Hogar" es un valor invalido -- Sheets lo rechaza, la celda queda vacia, y setValue NO lanza ninguna excepcion. Sin excepcion no hay como enterarse salvo releyendo, que es lo que salvo la situacion.
+! Cambiar lo que una columna SIGNIFICA incluye cambiar lo que esa columna ACEPTA. Ahora la validacion se reemplaza por la lista de los cuatro tipos ANTES de escribir.
+- La reversion tambien estaba mal por lo mismo: reponia los valores viejos con la regla nueva puesta y se los rechazaba. Ahora libera la validacion, escribe los valores y recien despues repone la regla vieja, en ese orden.
++ La foto de respaldo captura tambien las reglas de validacion, no solo los valores: una foto sin ellas no sirve como punto de retorno.
++ El preflight reporta la validacion que encuentra y avisa si hay medios sin tipo -- mientras esa columna este vacia, el capital del Tablero da cero y todo cae en cotidiano.
+ATENCION: la columna quedo VACIA tras la corrida fallida. Correr esta version la deja con los tipos correctos.
+
 v0.20.0 (2026-08-19) - El medio declara su tipo directo
 ! Se saca el nivel intermedio del eje de medios. Antes iba medio -> categoria -> tipo; ahora el medio declara su TIPO (Hogar / Ahorros / Inversiones / Financiacion) en la misma columna.
 - POR QUE, medido: "Meta de Ahorro 1" concentraba 16 de los 28 medios (57%) -- no era una meta, era un cajon de sastre; 5 de las 11 categorias no tenian NINGUN medio; y las 4 restantes tenian uno cada una. Un nivel que deja el 57% en un grupo y el 45% de los grupos vacios no clasifica: solo agrega un salto mas donde equivocarse.

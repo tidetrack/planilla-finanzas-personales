@@ -38,6 +38,20 @@
  * lista blanca. El unico que sale de la riqueza es "Brubank", que pasa a Hogar y no tiene NINGUN
  * movimiento en el ledger. Total de riqueza: sin cambio.
  *
+ * ============================================================================
+ * LA VALIDACION DE DATOS ES PARTE DEL CAMBIO, NO UN DETALLE
+ * ============================================================================
+ * La columna del catalogo tiene un DESPLEGABLE con la lista de valores permitidos. Mientras esa
+ * lista sea la de categorias, escribir "Hogar" es un valor invalido: Sheets lo rechaza, la celda
+ * queda VACIA, y setValue no lanza ninguna excepcion. Es exactamente lo que paso en la primera
+ * corrida de la v0.20.0 -- los 28 medios fallaron la verificacion y, peor, la columna quedo sin
+ * nada, dejando a todos los medios sin tipo.
+ *
+ * Cambiar lo que una columna significa incluye cambiar lo que esa columna ACEPTA. Por eso el
+ * modulo reemplaza la validacion por la lista de los cuatro tipos ANTES de escribir, y la
+ * restaura si algo falla. Una migracion que cambia el dominio de una columna y no toca su
+ * validacion no esta terminada: esta escribiendo contra una regla que dice lo contrario.
+ *
  * QUE NO HACE
  * 1. NO borra el bloque P:Q. Queda como estaba, sin uso: es dato de Franco y borrarlo no aporta.
  *    Si algun dia quiere volver a tener objetivos de ahorro, el bloque esta.
@@ -154,9 +168,12 @@ function aplicarTipoDeMedios() {
         const respaldoForm = _respaldarFormulerio(ss, sello);
         fotoCatalogo = _fotografiarColumnaTdm(ss);
 
-        // --- 1. El catalogo ---
+        // --- 1. El catalogo. Primero el DOMINIO de la columna, despues los valores: mientras
+        // el desplegable siga listando categorias, "Hogar" es un valor invalido y Sheets lo
+        // rechaza dejando la celda vacia, sin lanzar ninguna excepcion.
         const cfg = RANGES.MEDIOS_PAGO;
         const col = columnLetterToIndex(cfg.columns.proyecto);
+        _abrirDominioColumnaTdm(ss);
         hojaPC.getRange(HEADER_ROW, col).setValue(TDM_ROTULO_COLUMNA);
         plan.medios.forEach(function (m) { hojaPC.getRange(m.fila, col).setValue(m.tipo); });
 
@@ -280,9 +297,29 @@ function _planTdm(ss) {
             '. Verificar el capital despues de aplicar.');
     }
 
+    // La validacion de la columna: si restringe a una lista, hay que cambiarla o la escritura
+    // se rechaza en silencio. Es la cicatriz de la primera corrida de la v0.20.0.
+    let validacionPrevia = '';
+    try {
+        const dv = hojaPC.getRange(desde, colTipo).getDataValidation();
+        if (dv) validacionPrevia = String(dv.getCriteriaType());
+    } catch (e) { validacionPrevia = ''; }
+    if (validacionPrevia) {
+        avisos.push('La columna ' + cfg.columns.proyecto + ' tiene una validacion de tipo ' +
+            validacionPrevia + '. Se reemplaza por la lista de los cuatro tipos ANTES de escribir: ' +
+            'si no, cada valor nuevo se rechaza y la celda queda vacia sin avisar.');
+    }
+    const vacias = alto > 0 ? hojaPC.getRange(desde, colTipo, alto, 1).getValues()
+        .filter(function (f, i) { return i < medios.length + sinAsignar.length && String(f[0] || '').trim() === ''; }).length : 0;
+    if (vacias > 0) {
+        avisos.push(vacias + ' medio(s) estan HOY sin tipo. Mientras esa columna este vacia, ' +
+            'ningun medio clasifica: el capital del Tablero da cero y todo cae en cotidiano.');
+    }
+
     // Formulas que hacen el doble VLOOKUP.
     const formulas = _formulasConDobleLookup(ss);
-    return { medios: medios, formulas: formulas, sinAsignar: sinAsignar, avisos: avisos };
+    return { medios: medios, formulas: formulas, sinAsignar: sinAsignar,
+             validacionPrevia: validacionPrevia, avisos: avisos };
 }
 
 /**
@@ -342,6 +379,12 @@ function _colapsarDobleLookupTdm(formula, rangoCat) {
 // RESPALDO PUNTUAL DE LA COLUMNA
 // ============================================
 
+/**
+ * Fotografia la columna ENTERA: valores Y reglas de validacion.
+ *
+ * Sin las validaciones la foto no sirve como punto de retorno: restaurar los valores viejos
+ * contra una lista de valores permitidos nueva los rechazaria uno por uno, en silencio.
+ */
 function _fotografiarColumnaTdm(ss) {
     const cfg = RANGES.MEDIOS_PAGO;
     const hoja = ss.getSheetByName(cfg.sheet);
@@ -349,14 +392,56 @@ function _fotografiarColumnaTdm(ss) {
     const desde = HEADER_ROW;
     const alto = hoja.getMaxRows() - desde + 1;
     if (alto <= 0) return null;
-    return { col: col, desde: desde, valores: hoja.getRange(desde, col, alto, 1).getValues() };
+    const rango = hoja.getRange(desde, col, alto, 1);
+    let validaciones = null;
+    try { validaciones = rango.getDataValidations(); } catch (e) { validaciones = null; }
+    return { col: col, desde: desde, valores: rango.getValues(), validaciones: validaciones };
 }
 
+/**
+ * Cambia el DOMINIO de la columna: saca la validacion vieja y pone la lista de los cuatro tipos.
+ * Se corre ANTES de escribir. Sin esto, cada valor nuevo es rechazado en silencio.
+ */
+function _abrirDominioColumnaTdm(ss) {
+    const cfg = RANGES.MEDIOS_PAGO;
+    const hoja = ss.getSheetByName(cfg.sheet);
+    const col = columnLetterToIndex(cfg.columns.proyecto);
+    const desde = getDataRow(cfg);
+    const alto = hoja.getMaxRows() - desde + 1;
+    if (alto <= 0) return;
+    const rango = hoja.getRange(desde, col, alto, 1);
+    rango.clearDataValidations();
+    const tipos = [];
+    Object.keys(TDM_TIPOS).forEach(function (m) {
+        if (tipos.indexOf(TDM_TIPOS[m]) === -1) tipos.push(TDM_TIPOS[m]);
+    });
+    const regla = SpreadsheetApp.newDataValidation()
+        .requireValueInList(tipos, true)
+        .setAllowInvalid(false)
+        .setHelpText('Finalidad del medio: ' + tipos.join(', '))
+        .build();
+    rango.setDataValidation(regla);
+    SpreadsheetApp.flush();
+}
+
+/**
+ * Devuelve la columna a como estaba: primero se LIBERA la validacion, despues se escriben los
+ * valores, y recien al final se repone la regla vieja. En ese orden, porque escribir los valores
+ * viejos con la regla nueva puesta los rechazaria -- que es la trampa que rompio la primera
+ * corrida.
+ */
 function _restaurarColumnaTdm(ss, foto) {
     if (!foto) return;
     const hoja = ss.getSheetByName(RANGES.MEDIOS_PAGO.sheet);
-    hoja.getRange(foto.desde, foto.col, foto.valores.length, 1).setValues(foto.valores);
+    const rango = hoja.getRange(foto.desde, foto.col, foto.valores.length, 1);
+    rango.clearDataValidations();
+    rango.setValues(foto.valores);
     SpreadsheetApp.flush();
+    if (foto.validaciones) {
+        try { rango.setDataValidations(foto.validaciones); }
+        catch (e) { logError('_restaurarColumnaTdm: no se pudo reponer la validacion (' + e.message + ')'); }
+        SpreadsheetApp.flush();
+    }
 }
 
 function _padTdm(s, n) {

@@ -5,6 +5,28 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.20.1 - La validacion de la columna era parte del cambio.
+ * - QUE PASO: la corrida de la v0.20.0 fallo en los 28 medios -- "no quedo con su tipo en el
+ *   catalogo" -- y ademas dejo la columna VACIA, con lo que ningun medio clasificaba: capital del
+ *   Tablero en cero y todo cayendo en cotidiano.
+ * - LA CAUSA, vista en pantalla: la columna tiene un DESPLEGABLE de validacion con la lista de
+ *   categorias. Mientras esa lista siga vigente, "Hogar" es un valor INVALIDO: Sheets lo rechaza,
+ *   la celda queda vacia, y setValue NO LANZA NINGUNA EXCEPCION. Sin excepcion no hay forma de
+ *   enterarse salvo releyendo la celda -- que es justo lo que hace el verificador desde la
+ *   v0.12.1, y es lo unico que evito que esto pasara inadvertido.
+ * - LA LECCION: cambiar lo que una columna SIGNIFICA incluye cambiar lo que esa columna ACEPTA.
+ *   Una migracion que cambia el dominio de una columna y no toca su validacion no esta terminada:
+ *   esta escribiendo contra una regla que dice lo contrario. Ahora la validacion se reemplaza por
+ *   la lista de los cuatro tipos ANTES de escribir.
+ * - LA REVERSION ESTABA MAL POR EL MISMO MOTIVO, y por eso la columna quedo vacia en vez de
+ *   volver a su estado previo: reponia los valores viejos con la regla nueva ya puesta y se los
+ *   rechazaba uno por uno. Ahora libera la validacion, escribe los valores, y recien al final
+ *   repone la regla vieja. El orden importa.
+ * - La foto de respaldo captura ahora tambien las REGLAS de validacion, no solo los valores. Una
+ *   foto sin ellas no es un punto de retorno: es la mitad de uno.
+ * - El preflight reporta la validacion que encuentra en la columna y avisa cuantos medios estan
+ *   hoy sin tipo, con la consecuencia dicha en voz alta.
+ *
  * [2026-08-19] v0.20.0 - El medio declara su tipo directo: fuera el nivel intermedio.
  * - decision Franco: "en medios bancarios utilicemos simplemente tipo". Antes la cadena era
  *   medio -> categoria -> tipo; ahora el medio declara su TIPO en la misma columna del catalogo.
