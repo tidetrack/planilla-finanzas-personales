@@ -1446,3 +1446,57 @@ Pendiente además:
 Franco dejó pedido para mañana, en otro contexto (`wdwmbdb1qw`): **correcciones de search** y
 **análisis en profundidad de PMAX**. Es trabajo de Google Ads, no de esta planilla; se anota acá
 sólo para que no se pierda hasta que se registre en el proyecto que corresponda.
+
+## 2026-08-20 - La suma por tipo de medio, y el dia que el gemelo mintio
+
+Franco pidio la sumatoria por tipo de medios en el Tablero. Lo que empezo como llenar una columna
+termino siendo la leccion mas cara de la campana.
+
+**Lo entregado.** El bloque "Tipo de Medios." (`AE7:AH12`) ya existia con los cuatro tipos escritos
+a mano y la columna Monto vacia. Ahora se llena, convertido a la moneda del selector:
+
+| Tipo | Monto |
+|---|---|
+| Ahorros | $210.791,01 |
+| Financiacion | $230.000,00 |
+| Hogar | $45.428,69 |
+| Inversiones | $138.016,50 |
+| **Total** | **$624.236,20** |
+
+Cuadra al centavo contra los saldos que Franco declaro: $319.569,70 en ARS mas US$201,10 al cambio.
+
+**Lo que salio mal, que es lo que importa.** La primera version se escribio contra
+`docs/permanente/celdas.tsv` -- el gemelo digital -- que tenia el layout viejo. En el gemelo `AE7`
+era "Saldos Actuales" con las monedas en las filas 9-12. En la planilla real ese bloque esta en la
+fila 16, las filas 9-12 son otro bloque, y `AF9:AF12` son la mitad muda de celdas combinadas
+`AE:AF`. Se escribio ahi y no entro nada.
+
+> Un snapshot desactualizado es peor que no tener snapshot: da confianza falsa y miente en silencio.
+
+**Lo que quedo de defensa,** cada cosa por algo que efectivamente paso:
+
+1. **Un canario que diagnostica.** "Quedo SIN formula" tiene dos causas -- la celda no acepta
+   escritura, o la formula no parsea -- y son indistinguibles desde afuera. Ahora el verificador
+   escribe `=1+1` en la misma celda: si entra, el problema es la formula; si no, es la celda.
+2. **Verificacion por rotulos, no por coordenada.** Los dos bloques se comprueban por su titulo y
+   sus encabezados antes de escribir. Una posicion se pudre sin avisar; un rotulo no.
+3. **Ancla de combinada.** Se comprueba que la celda destino no sea la mitad muda de un merge.
+4. **Sin coordenadas de cotizacion.** La conversion pasa a `TIDETRACK_USD/AUD/EUR()`. El bloque de
+   Cotizaciones se habia mudado de la fila 17 a la 27, y una referencia que se corre **no da error:
+   da otro numero**.
+5. **El formato es parte del plan.** Un intento previo dejo esas celdas en formato porcentaje y
+   $230.000 se leia "23000000,0%" -- el valor bien, la pantalla mintiendo. Revertir formulas no
+   revierte formatos, asi que ahora el formato se propone, se verifica y se revierte igual que una
+   formula.
+
+**Ademas, en la misma sesion.** "Deudas" paso a la categoria "Deuda y financiacion" (la categoria
+cruza bloques a proposito: la cuota fija en Gastos Fijos, la deuda elastica en Variables). Y
+"Limpiar Plan de Cuentas" dejo de deducir la posicion de la consolidada de una marca en
+DocumentProperties -- que faltaba, porque el borrado que la corrio ocurrio antes de que la marca
+existiera -- y pasa a **medirla** en la hoja, con el borrado de columna decidido por geometria.
+
+**Pendiente.** Refrescar `celdas.tsv` desde el export nuevo que quedo en Drive
+(`TIDETRACK_ARQUITECTURA_ESTRICTA.json`, 40 hojas, 154.736 celdas). Mientras tanto, la fuente de
+verdad de la geometria es la planilla, medida en vivo.
+
+Versiones: v0.23.0 a v0.23.5.
