@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 23,
- patch: 4,
+ patch: 5,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.23.4 - El bloque de tipos hereda el formato de plata',
+ releaseName: 'v0.23.5 - El formato es parte del plan, y se revierte como todo lo demas',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

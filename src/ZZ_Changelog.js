@@ -5,6 +5,15 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.23.5 - El formato es parte del plan, y se revierte como todo lo demas.
+ * - La reparacion de formato de la v0.23.4 colgaba del camino de escritura, asi que cuando no
+ *   habia formulas que cambiar la corrida salia antes de llegar a ella: decia "ya estaba aplicado"
+ *   con los montos todavia mostrandose como porcentaje. Una reparacion que solo corre si ademas
+ *   hay otra cosa que hacer no es una reparacion.
+ * - Ahora el formato es un cambio del plan como cualquier otro: se propone, se cuenta en la
+ *   confirmacion, se verifica al releer, y SE REVIERTE si algo falla. Revertir formulas sin
+ *   revertir formatos es exactamente como se llego al formato porcentaje que hubo que reparar.
+ *
  * [2026-08-20] v0.23.4 - El bloque de tipos hereda el formato de plata (y repara un destrozo propio).
  * - SINTOMA: los montos por tipo se veian "21079101,0%", "23000000,0%". Los numeros estaban BIEN
  *   -- Hogar daba 45.428,69, que es Efectivo + NaranjaX + YPF al centavo -- pero se mostraban en

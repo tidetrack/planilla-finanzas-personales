@@ -306,25 +306,17 @@ function aplicarStockYFlujo() {
             SpreadsheetApp.flush();
         }
 
-        // La columna Monto del bloque de tipos hereda el formato de la columna Flujo de "Saldos
-        // Actuales": es la columna de plata mas cercana y la que Franco ya formateo.
-        //
-        // decision Franco 2026-08-20: esto tambien REPARA un destrozo propio. Un intento anterior
-        // de este mismo modulo dejo esas celdas en formato porcentaje, y con ese formato $230.000
-        // se lee "23000000,0%". El numero estaba bien; lo que mentia era como se mostraba. Un
-        // modulo que puede romper un formato tiene que poder reponerlo.
-        _heredarFormatoMontoSyf(ss, pre.nombreTablero);
-        SpreadsheetApp.flush();
-
         plan.cambios.forEach(function (c) {
             const rango = ss.getSheetByName(c.nombreHoja).getRange(c.celda);
             const errorPrevio = _errorDeCelda(rango);
-            if (c.esValor) rango.setValue(c.valorNuevo);
+            if (c.esFormato) rango.setNumberFormat(c.formatoNuevo);
+            else if (c.esValor) rango.setValue(c.valorNuevo);
             else rango.setFormula(c.formulaNueva);
             escritas.push({
-                nombreHoja: c.nombreHoja, celda: c.celda, esValor: !!c.esValor,
-                previa: c.formulaActual, previoValor: c.valorActual,
-                nueva: c.esValor ? c.valorNuevo : c.formulaNueva, errorPrevio: errorPrevio
+                nombreHoja: c.nombreHoja, celda: c.celda, esValor: !!c.esValor, esFormato: !!c.esFormato,
+                previa: c.formulaActual, previoValor: c.valorActual, previoFormato: c.formatoActual,
+                nueva: c.esFormato ? c.formatoNuevo : (c.esValor ? c.valorNuevo : c.formulaNueva),
+                errorPrevio: errorPrevio
             });
         });
         SpreadsheetApp.flush();
@@ -666,16 +658,6 @@ function _preambuloSaldoSyf() {
     ].join('\n');
 }
 
-/** La columna Monto del bloque de tipos toma el formato de numero de la columna Flujo de saldos. */
-function _heredarFormatoMontoSyf(ss, nombreTablero) {
-    const hoja = ss.getSheetByName(nombreTablero);
-    const t = SYF_TIPOS_TABLERO, s = SYF_SALDOS_TABLERO;
-    const modelo = hoja.getRange(s.colFlujo + s.filas[0]).getNumberFormat();
-    if (!modelo) return;
-    hoja.getRange(t.colMonto + t.filas[0] + ':' + t.colMonto + t.filas[t.filas.length - 1])
-        .setNumberFormat(modelo);
-}
-
 /** Saldo actual por moneda, de un grupo (riqueza o su complemento). Bloque "Saldos Actuales". */
 function _formulaSaldoPorMoneda(esRiqueza, celdaMoneda) {
     return '=LET(\n' + _preambuloSaldoSyf() + '\n' +
@@ -798,6 +780,29 @@ function _planSyf(ss, pre) {
             _formulaSaldoPorTipo(SYF_TIPOS_TABLERO.colTipo + fila, pre.selectorMoneda),
             'saldo actual de los medios de tipo ' + tipo + ', convertido a la moneda del selector');
     });
+
+    // El formato de numero de la columna Monto tambien es parte del plan: una celda con el valor
+    // correcto y el formato equivocado miente igual que una con el valor mal.
+    //
+    // decision Franco 2026-08-20: esto REPARA un destrozo propio. Un intento anterior de este
+    // mismo modulo dejo esas celdas en formato porcentaje, y con ese formato $230.000 se lee
+    // "23000000,0%". Revertir formulas no revierte formatos: el que puede romperlo tiene que
+    // poder reponerlo, y para eso tiene que estar en el plan y no colgando del camino feliz.
+    const modeloFormato = hojaT.getRange(SYF_SALDOS_TABLERO.colFlujo + SYF_SALDOS_TABLERO.filas[0])
+        .getNumberFormat();
+    if (modeloFormato) {
+        SYF_TIPOS_TABLERO.filas.forEach(function (fila) {
+            const celda = SYF_TIPOS_TABLERO.colMonto + fila;
+            const vivo = hojaT.getRange(celda).getNumberFormat();
+            if (vivo === modeloFormato) return;
+            cambios.push({
+                nombreHoja: pre.nombreTablero, celda: celda, nota: 'Formato del monto',
+                esFormato: true, formatoActual: vivo, formatoNuevo: modeloFormato,
+                formulaActual: '', formulaNueva: '',
+                resumen: 'el monto se muestra con formato "' + vivo + '" y tiene que ser plata'
+            });
+        });
+    }
 
     // --- STOCKS: saldos por moneda, sobre todo el ledger (bloque "Saldos Actuales") ---
     SYF_SALDOS_TABLERO.filas.forEach(function (fila, i) {
@@ -1008,6 +1013,10 @@ function _verificarEscrituraSyf(ss, escritas) {
     escritas.forEach(function (w) {
         const rango = ss.getSheetByName(w.nombreHoja).getRange(w.celda);
         const ref = w.nombreHoja + '!' + w.celda;
+        if (w.esFormato) {
+            if (rango.getNumberFormat() !== w.nueva) fallas.push(ref + ' no quedo con el formato escrito');
+            return;
+        }
         if (w.esValor) {
             if (String(rango.getValue() || '').trim() !== String(w.nueva).trim()) {
                 fallas.push(ref + ' no quedo con el valor escrito');
@@ -1034,7 +1043,10 @@ function _revertirEscriturasSyf(ss, escritas) {
     escritas.forEach(function (w) {
         try {
             const r = ss.getSheetByName(w.nombreHoja).getRange(w.celda);
-            if (w.esValor) r.setValue(w.previoValor === undefined ? '' : w.previoValor);
+            // Revertir un formato tambien es revertir: no hacerlo es como se llego al formato
+            // porcentaje que reparo la v0.23.4.
+            if (w.esFormato) r.setNumberFormat(w.previoFormato || 'General');
+            else if (w.esValor) r.setValue(w.previoValor === undefined ? '' : w.previoValor);
             else r.setFormula(w.previa);
         } catch (e) {
             logError('No se pudo restaurar ' + w.nombreHoja + '!' + w.celda + ': ' + e.message);
