@@ -1,6 +1,23 @@
 /**
  * 14_EventHandlers.js
  * Módulo centralizado para el ruteo de eventos simples de Apps Script (onEdit, onOpen, etc.)
+ *
+ * [CONCEPTO DE NEGOCIO]
+ * Capa de eventos de la planilla: blinda el Plan de Cuentas contra la edicion directa y
+ * autocompleta fecha y moneda en la grilla de Cargas mientras el usuario tipea.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+ * Ninguna de las dos hojas que toca este modulo migro de layout. Plan de Cuentas mantiene
+ * su header en la fila 3 (HEADER_ROW) y Cargas el suyo en la fila 4 con datos desde la 5
+ * (RANGES.CARGAS). La guardia de Cargas usa RANGES.CARGAS.dataRow y no DATA_START_ROW: ese
+ * default vale para el Plan de Cuentas (4) y dejaba la fila de encabezado de Cargas dentro
+ * del area de autocompletado.
+ *
+ * @see 00_Config.js (SHEETS, NAV_CONFIG, HEADER_ROW, RANGES.CARGAS)
+ *
+ * @version 0.9.5
+ * @since 0.1.0
+ * @lastModified 2026-08-13
  */
 
 /**
@@ -158,18 +175,27 @@ function handleCargasEdit(e) {
     const col = range.getColumn();
     const sheet = e.source.getActiveSheet();
 
-    // Solo actuamos en el área de datos
-    if (row < DATA_START_ROW) return;
+    // Solo actuamos en el área de datos de la grilla (fila 5 en adelante; la 4 es el header).
+    // decision Franco 2026-08-13: la fila sale de RANGES.CARGAS.dataRow, no de DATA_START_ROW,
+    // que es el default del Plan de Cuentas y dejaba el encabezado de Cargas como editable.
+    const cargasCfg = RANGES.CARGAS;
+    if (row < cargasCfg.dataRow) return;
 
     // Ignorar si es una multi-selección/limpieza masiva
     if (range.getNumRows() > 1 || range.getNumColumns() > 1) return;
 
     const value = e.value;
 
-    // 1. Edición en Columna "Monto" (I = 9) -> Autocompletar Fecha (N = 14)
-    if (col === 9) {
+    // Indices absolutos de la grilla, resueltos desde Config (Cargas no migro: I..O = 9..15)
+    const colMonto = columnLetterToIndex(cargasCfg.columns.monto);   // I = 9
+    const colMedio = columnLetterToIndex(cargasCfg.columns.medio);   // L = 12
+    const colMoneda = columnLetterToIndex(cargasCfg.columns.moneda); // M = 13
+    const colFecha = columnLetterToIndex(cargasCfg.columns.fecha);   // N = 14
+
+    // 1. Edición en Columna "Monto" -> Autocompletar Fecha
+    if (col === colMonto) {
         if (value) {
-            const fechaCell = sheet.getRange(row, 14);
+            const fechaCell = sheet.getRange(row, colFecha);
             if (!fechaCell.getValue()) {
                 // Formatear la fecha actual sin zona horaria confusa para hojas
                 const today = new Date();
@@ -181,9 +207,9 @@ function handleCargasEdit(e) {
     }
 
 
-    // 3. Edición en Columna "Medio" (L = 12) -> Autocompletar Moneda (M = 13)
-    if (col === 12) {
-        const monedaCell = sheet.getRange(row, 13);
+    // 3. Edición en Columna "Medio" -> Autocompletar Moneda
+    if (col === colMedio) {
+        const monedaCell = sheet.getRange(row, colMoneda);
         if (!value) {
             monedaCell.clearContent();
             return;

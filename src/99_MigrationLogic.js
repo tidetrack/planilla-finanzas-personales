@@ -1,6 +1,23 @@
 /**
  * 99_MigrationLogic.js
  * Utilidades transitorias/dev para la migración de la BD Legacy "BD antigua".
+ *
+ * [CONCEPTO DE NEGOCIO]
+ * Herramientas de ejecucion puntual para incorporar el historial de la planilla vieja al
+ * ledger vigente y para recalcular en bloque los tipos de cambio congelados de Registros.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+ * El origen (BD Antigua) conserva su layout historico (datos desde la fila 2, cols A:G).
+ * El destino (Registros) se movio ya dos veces (v0.9.5 y el swap v0.11), asi que este modulo
+ * NO repite su geometria: escribir con coordenadas viejas corrompe el ledger, y por eso toda
+ * coordenada de destino -- columnas Y fila de datos -- sale de RANGES.REGISTROS en vivo.
+ * La unica fuente de esa geometria es 00_Config.js.
+ *
+ * @see 00_Config.js (RANGES.REGISTROS)
+ *
+ * @version 0.11.1
+ * @since 0.1.0
+ * @lastModified 2026-08-18
  */
 
 /**
@@ -52,13 +69,14 @@ function analizarBdAntigua() {
     const mediosFaltantes = uniqueMedios.filter(m => !pcAllMedios.includes(m));
     if (mediosFaltantes.length > 0) {
         const mediosToAppend = mediosFaltantes.map(m => [m, 'ARS', '']); // Nombre, Moneda ARS, Proyecto vacio
-        appendMassive('MEDIOS_PAGO', mediosToAppend, 4); // Fila inicial de catalogos es 4
+        // Sin minRow explicito: MEDIOS_PAGO no declara dataRow y cae al default del Plan de Cuentas (4).
+        appendMassive('MEDIOS_PAGO', mediosToAppend);
     }
 
     SpreadsheetApp.getUi().alert(
         'Análisis Completo',
-        `📌 Medios agregados automáticamente en Plan de Cuentas: ${mediosFaltantes.length}\n` +
-        `📌 Cuentas faltantes listadas en la Columna H de "BD antigua": ${cuentasFaltantes.length}\n\n` +
+        `Medios agregados automáticamente en Plan de Cuentas: ${mediosFaltantes.length}\n` +
+        `Cuentas faltantes listadas en la Columna H de "BD antigua": ${cuentasFaltantes.length}\n\n` +
         `Por favor, agrega manualmente estas cuentas al Plan de Cuentas antes de ejecutar la Migración defintiva.`,
         SpreadsheetApp.getUi().ButtonSet.OK
     );
@@ -105,6 +123,7 @@ function migrarBdAntigua() {
 
     const registrosToAppend = [];
     let fallbackCounter = 0;
+    const fechasSinTc = [];   // fechas sin cotizacion real: si hay alguna, se aborta sin escribir
 
     oldData.forEach(row => {
         let rawDate = row[0];
@@ -143,14 +162,19 @@ function migrarBdAntigua() {
         let tcAud = cacheMap.AUD[dateStr];
         let tcEur = cacheMap.EUR[dateStr];
         
+        // decision Franco 2026-08-18: ante una cotizacion ausente se ABORTA, no se inventa.
+        // Antes se asignaban 1050/650/1100, numeros sin ningun respaldo que quedaban CONGELADOS
+        // en el registro: el TC congelado es el unico dato del ledger que despues no se puede
+        // recalcular, asi que un valor fabricado es un error permanente e invisible. Es la misma
+        // decision que ya se tomo para el hardcode 1000 de fetchArsRate (Regla Estricta 9).
         if (!tcUsd || !tcAud || !tcEur) {
             fallbackCounter++;
+            const faltan = [];
+            if (!tcUsd) faltan.push('USD');
+            if (!tcAud) faltan.push('AUD');
+            if (!tcEur) faltan.push('EUR');
+            if (fechasSinTc.length < 20) fechasSinTc.push(dateStr + ' (' + faltan.join(', ') + ')');
         }
-        
-        // Asignaciones finales si fallback
-        if (!tcUsd) tcUsd = 1050.0;
-        if (!tcAud) tcAud = 650.0;
-        if (!tcEur) tcEur = 1100.0;
 
         registrosToAppend.push([
             monto, tipo, cuenta, tipoCuenta, medio, moneda, dateObj, nota,
@@ -159,27 +183,70 @@ function migrarBdAntigua() {
     });
 
     if (registrosToAppend.length > 0) {
-        appendMassive('REGISTROS', registrosToAppend, 2);
-        
-        // Ordenar BD
+        // Datos de Registros desde la fila 6 (header en la 5) en el layout migrado.
+    // ABORTO TODO-O-NADA: si falto la cotizacion de alguna fecha, no se escribe NADA.
+        // Escribir "lo que se pudo" dejaria un ledger mezclado -- parte con TC reales y parte sin --
+        // imposible de distinguir despues sin auditar fila por fila.
+        if (fechasSinTc.length > 0) {
+            const detalle = fechasSinTc.join('\n  ') + (fallbackCounter > fechasSinTc.length
+                ? '\n  ... y ' + (fallbackCounter - fechasSinTc.length) + ' fecha(s) mas' : '');
+            logError('migrarBdAntigua: abortada, faltan cotizaciones en el Data Lake', {
+                fechasAfectadas: fallbackCounter, muestra: fechasSinTc
+            });
+            ui.alert(
+                'Faltan cotizaciones: no se escribio nada',
+                'Hay ' + fallbackCounter + ' fecha(s) sin cotizacion en la hoja de tipos de cambio.\n\n' +
+                'Primeras:\n  ' + detalle + '\n\n' +
+                'No se modifico ninguna celda. Corre primero "Tidetrack Dev > Tipos de cambio > ' +
+                'Forzar carga historica" para completar el Data Lake, y volve a intentarlo.\n\n' +
+                'Antes esta funcion rellenaba los faltantes con valores fijos (1050/650/1100). Esos ' +
+                'numeros quedaban congelados en el registro y no se pueden recalcular despues.',
+                ui.ButtonSet.OK
+            );
+            return;
+        }
+
+        appendMassive('REGISTROS', registrosToAppend, RANGES.REGISTROS.dataRow);
+
+        // Ordenar BD por Fecha descendente. Layout migrado: B:M = cols 2..13, fecha en H = 8.
+        // Sort best-effort: los registros ya estan escritos; un fallo de orden no debe empujar
+        // al usuario a re-ejecutar la migracion (duplicaria todo el historico).
         const registrosSheet = ss.getSheetByName(SHEETS.REGISTROS);
+        const dataRowReg = RANGES.REGISTROS.dataRow;
         const lastRowReg = registrosSheet.getLastRow();
-        if (lastRowReg >= 2) {
-            const baseFullRange = registrosSheet.getRange(2, 9, lastRowReg - 1, 12); // I:T
-            baseFullRange.sort({ column: 15, ascending: false }); // O = 15
+        if (lastRowReg >= dataRowReg) {
+            try {
+                const rowCount = lastRowReg - dataRowReg + 1;
+                const baseFullRange = registrosSheet.getRange(dataRowReg, 2, rowCount, 12); // B:M
+                baseFullRange.sort({ column: 8, ascending: false }); // H = 8 = Fecha
+                SpreadsheetApp.flush();
+            } catch (sortErr) {
+                logError('migrarBdAntigua: sort omitido (posibles celdas combinadas en Registros)', sortErr);
+            }
         }
     }
 
-    let msg = `Se migraron ${registrosToAppend.length} transacciones exitosamente.\n\n`;
-    if (fallbackCounter > 0) {
-        msg += `ATENCIÓN: Ciertas fechas (${fallbackCounter} registros) no encontraron cotización en el caché. Asegúrate de siempre hacer click en "[Dev] Forzar Carga Histórica TC" antes de migrar para nutrir la memoria caché al 100%.`;
-    }
-    ui.alert('Proceso Completo', msg, ui.ButtonSet.OK);
+    // Llegar aca implica fallbackCounter === 0: el aborto todo-o-nada de mas arriba retorna
+    // ante la primera fecha sin cotizacion. El aviso de "se usaron fallbacks" que vivia aca
+    // era inalcanzable desde ese cambio, y un mensaje que no puede dispararse solo confunde
+    // al proximo que lea el cierre buscando por que no aparecio.
+    ui.alert('Proceso Completo',
+             `Se migraron ${registrosToAppend.length} transacciones exitosamente, todas con cotizacion real.`,
+             ui.ButtonSet.OK);
 }
 
 /**
- * Herramienta [Dev] para recalcular todos los TC de la base de Registros en bloque.
- * Lee las fechas y sobrescribe las columnas Q:T interpolando el Caché actual (Modo ARS Base).
+ * Herramienta [Dev] para recalcular en bloque los TC congelados del ledger Registros.
+ *
+ * Lee la columna Fecha y reescribe las cuatro columnas de cotizacion con el Data Lake actual.
+ * Tres limites deliberados, todos verificados en vivo el 2026-08-18:
+ *   1. TODO-O-NADA ante cotizaciones faltantes: si alguna fecha no esta en el Data Lake no se
+ *      escribe ninguna celda (antes se rellenaba con 1050/650/1100, valores inventados que
+ *      quedaban congelados para siempre).
+ *   2. Las filas sin fecha legible se SALTEAN conservando sus cotizaciones, y se cuentan y se
+ *      nombran (antes recibian vacios en silencio y se contaban como recalculadas).
+ *   3. El alto se acota a la ultima fila con dato en la columna Fecha, no a getLastRow().
+ * Toda coordenada sale de RANGES.REGISTROS.
  */
 function recalcularTcRegistros() {
     const ui = SpreadsheetApp.getUi();
@@ -188,14 +255,38 @@ function recalcularTcRegistros() {
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const registrosSheet = ss.getSheetByName(SHEETS.REGISTROS);
-    
-    const lastRow = registrosSheet.getLastRow();
-    if (lastRow < 2) return;
 
-    // Obtener Fechas (Col O = index absoluto 15)
-    // Rango O2:O
-    const fechasRange = registrosSheet.getRange(2, 15, lastRow - 1, 1);
-    const fechasData = fechasRange.getValues();
+    const cfgReg = RANGES.REGISTROS;
+    const dataRow = cfgReg.dataRow;
+    const colFecha = columnLetterToIndex(cfgReg.columns.fecha);
+    const colTcIni = columnLetterToIndex(cfgReg.columns.tc_ars);
+    const lastRow = registrosSheet.getLastRow();
+    if (lastRow < dataRow) return;
+
+    // decision Franco 2026-08-18: el alto se acota a la ultima fila con dato en la columna
+    // FECHA, no a getLastRow(). getLastRow() devuelve la ultima fila con contenido en
+    // CUALQUIER columna de la hoja: un valor suelto lejos del ledger (verificado en vivo: un
+    // dato en T40) estiraba el rango a J7:M40 para 2 registros reales, y esas 32 filas fuera
+    // del ledger recibian escritura. La columna Fecha es la que define hasta donde llega el
+    // ledger de verdad: es obligatoria en todo registro que el pipeline escribe.
+    const fechasCrudas = registrosSheet.getRange(dataRow, colFecha, lastRow - dataRow + 1, 1).getValues();
+    let ultimaConFecha = dataRow - 1;
+    for (let i = 0; i < fechasCrudas.length; i++) {
+        if (fechasCrudas[i][0] !== '' && fechasCrudas[i][0] !== null) ultimaConFecha = dataRow + i;
+    }
+    if (ultimaConFecha < dataRow) {
+        ui.alert('Nada que recalcular',
+                 'No hay ninguna fila con Fecha en "' + SHEETS.REGISTROS + '" desde la fila ' + dataRow +
+                 '. No se modifico ninguna celda.', ui.ButtonSet.OK);
+        return;
+    }
+    const rowCount = ultimaConFecha - dataRow + 1;
+    const fechasData = fechasCrudas.slice(0, rowCount);
+
+    // Valores actuales de J:M. Son el punto de partida: las filas que no se puedan recalcular
+    // conservan EXACTAMENTE lo que ya tenian en vez de recibir vacios.
+    const tcRange = registrosSheet.getRange(dataRow, colTcIni, rowCount, 4);
+    const tcActuales = tcRange.getValues();
 
     // Diccionarios actuales de Cotizaciones
     const tcUsdData = getTableData('TC_USD');
@@ -209,17 +300,27 @@ function recalcularTcRegistros() {
 
     const newValues = [];
     let fallbackCounter = 0;
+    const fechasSinTc = [];   // fechas sin cotizacion real: si hay alguna, se aborta sin escribir
+    const filasSinFecha = []; // numeros de fila que se SALTEAN (fecha vacia o ilegible)
 
-    fechasData.forEach(row => {
+    // decision Franco 2026-08-18: una fila sin fecha legible se SALTEA conservando sus TC, no
+    // se blanquea. Antes recibia ['','','',''] en J:M -- destruccion de tipos de cambio
+    // congelados, el unico dato del ledger que despues no se puede recalcular -- sin contarse
+    // ni avisarse, y el cierre la sumaba a las "recalculadas exitosamente". Era destruccion
+    // silenciosa por fuera del guard todo-o-nada que cubre las cotizaciones faltantes.
+    fechasData.forEach((row, idx) => {
+        const nroFila = dataRow + idx;
         let rawDate = row[0];
         if (!rawDate) {
-            newValues.push(['', '', '', '']);
+            newValues.push(tcActuales[idx].slice());
+            filasSinFecha.push(nroFila + ' (Fecha vacia)');
             return;
         }
-        
+
         let dateObj = new Date(rawDate);
         if (isNaN(dateObj.getTime())) {
-            newValues.push(['', '', '', '']);
+            newValues.push(tcActuales[idx].slice());
+            filasSinFecha.push(nroFila + ' (Fecha ilegible: "' + String(rawDate) + '")');
             return;
         }
 
@@ -229,21 +330,78 @@ function recalcularTcRegistros() {
         let tcAud = cacheMap.AUD[dateStr];
         let tcEur = cacheMap.EUR[dateStr];
         
-        if (!tcUsd || !tcAud || !tcEur) fallbackCounter++;
-        
-        if (!tcUsd) tcUsd = 1050.0;
-        if (!tcAud) tcAud = 650.0;
-        if (!tcEur) tcEur = 1100.0;
+        // decision Franco 2026-08-18: misma regla que en migrarBdAntigua -- sin cotizacion real
+        // no se escribe nada. Esta funcion ademas SOBREESCRIBE J:M de todo el ledger, asi que
+        // un valor fabricado aca contamina de una vez miles de registros ya validados.
+        if (!tcUsd || !tcAud || !tcEur) {
+            fallbackCounter++;
+            const faltan = [];
+            if (!tcUsd) faltan.push('USD');
+            if (!tcAud) faltan.push('AUD');
+            if (!tcEur) faltan.push('EUR');
+            if (fechasSinTc.length < 20) fechasSinTc.push(dateStr + ' (' + faltan.join(', ') + ')');
+        }
 
-        // Q=17(ARS), R=18(USD), S=19(AUD), T=20(EUR)
+        // Layout migrado: J=10(ARS), K=11(USD), L=12(AUD), M=13(EUR)
         newValues.push([1.0, tcUsd, tcAud, tcEur]);
     });
 
-    // Sobreescribir columnas Q:T
-    const tcRange = registrosSheet.getRange(2, 17, lastRow - 1, 4);
+    // ABORTO TODO-O-NADA: si falto la cotizacion de alguna fecha, no se escribe NADA.
+    // Escribir "lo que se pudo" dejaria un ledger mezclado -- parte con TC reales y parte sin --
+    // imposible de distinguir despues sin auditar fila por fila.
+    if (fechasSinTc.length > 0) {
+        const detalle = fechasSinTc.join('\n  ') + (fallbackCounter > fechasSinTc.length
+            ? '\n  ... y ' + (fallbackCounter - fechasSinTc.length) + ' fecha(s) mas' : '');
+        logError('recalcularTcRegistros: abortada, faltan cotizaciones en el Data Lake', {
+            fechasAfectadas: fallbackCounter, muestra: fechasSinTc
+        });
+        ui.alert(
+            'Faltan cotizaciones: no se escribio nada',
+            'Hay ' + fallbackCounter + ' fecha(s) sin cotizacion en la hoja de tipos de cambio.\n\n' +
+            'Primeras:\n  ' + detalle + '\n\n' +
+            'No se modifico ninguna celda. Corre primero "Tidetrack Dev > Tipos de cambio > ' +
+            'Forzar carga historica" para completar el Data Lake, y volve a intentarlo.\n\n' +
+            'Antes esta funcion rellenaba los faltantes con valores fijos (1050/650/1100). Esos ' +
+            'numeros quedaban congelados en el registro y no se pueden recalcular despues.',
+            ui.ButtonSet.OK
+        );
+        return;
+    }
+
+    // Sobreescribir columnas J:M desde la fila de datos.
+    // decision Franco 2026-08-18: se exige confirmacion explicita nombrando cuantas filas se
+    // van a pisar. Esta funcion reescribe los TC congelados de TODO el ledger de una sola vez.
+    const filasRecalculadas = rowCount - filasSinFecha.length;
+    const muestraSinFecha = filasSinFecha.slice(0, 10).join(', ') +
+        (filasSinFecha.length > 10 ? ', ... y ' + (filasSinFecha.length - 10) + ' mas' : '');
+    const confirmar = ui.alert(
+        'Reescribir tipos de cambio del ledger',
+        'Se van a sobreescribir las columnas de cotizacion (' + cfgReg.columns.tc_ars + ':' +
+        cfgReg.columns.tc_eur + ') de ' + filasRecalculadas + ' registro(s) con los valores del ' +
+        'Data Lake actual.\n\n' +
+        'Rango: filas ' + dataRow + ' a ' + ultimaConFecha + ' (ultima fila con Fecha).\n' +
+        (filasSinFecha.length > 0
+            ? filasSinFecha.length + ' fila(s) se SALTEAN por no tener fecha legible y CONSERVAN sus ' +
+              'cotizaciones actuales: ' + muestraSinFecha + '.\n'
+            : '') +
+        '\nLos tipos de cambio congelados hoy en las filas recalculadas se PIERDEN. Continuar?',
+        ui.ButtonSet.YES_NO
+    );
+    if (confirmar !== ui.Button.YES) {
+        ui.alert('Cancelado', 'No se modifico ninguna celda.', ui.ButtonSet.OK);
+        return;
+    }
+
     tcRange.setValues(newValues);
 
-    let msg = `Se recalcularon ${newValues.length} transacciones exitosamente.\n\n`;
-    if (fallbackCounter > 0) msg += `ATENCIÓN: Hubo ${fallbackCounter} interpolaciones usando fallback.`;
+    // El cierre cuenta lo que REALMENTE se recalculo. Las salteadas se nombran aparte: darlas
+    // por recalculadas era la mentira que hacia invisible la destruccion de TC.
+    let msg = `Se recalcularon ${filasRecalculadas} transaccion(es) sobre las filas ${dataRow}-${ultimaConFecha}.\n\n`;
+    if (filasSinFecha.length > 0) {
+        msg += `${filasSinFecha.length} fila(s) NO se recalcularon por no tener fecha legible y ` +
+               `conservan sus cotizaciones anteriores: ${muestraSinFecha}.`;
+        logInfo('recalcularTcRegistros: ' + filasSinFecha.length + ' fila(s) salteadas sin fecha legible -> ' +
+                filasSinFecha.join(', '));
+    }
     ui.alert('Proceso Completo', msg, ui.ButtonSet.OK);
 }

@@ -9,6 +9,378 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.23.3 - La suma por tipo de medio, sobre la geometria real (2026-08-20)
+
+El Tablero ya tenia el bloque **"Tipo de Medios."** (`AE7:AH12`) con los cuatro tipos escritos a
+mano; le faltaba la columna Monto. Ahora se llena: cuanta plata hay en cada finalidad, convertida
+a la moneda del selector.
+
+### Lo que se aprendio en el camino, que vale mas que el bloque
+
+La v0.23.0 se escribio contra el **gemelo digital**, que tenia el layout viejo: ahi `AE7` era
+"Saldos Actuales" con las monedas en las filas 9-12. En la planilla real ese bloque esta en la
+fila 16, y las filas 9-12 son **otro bloque**. Se intento escribir ahi y no entro nada:
+`AF9:AF12` son la mitad muda de celdas combinadas `AE:AF`.
+
+> El gemelo mintio, y mintio en silencio. Un snapshot desactualizado es peor que no tener snapshot.
+
+### Tres guards nuevos, cada uno por algo que efectivamente paso
+
+1. Los dos bloques se verifican **por su titulo y sus rotulos** antes de escribir. Una posicion se
+   pudre sin avisar; un rotulo no.
+2. Se comprueba que la celda destino sea el **ancla** de su combinada, no su mitad muda.
+3. Se comprueba que el selector de moneda tenga una moneda de verdad.
+
+### Y una coordenada menos que se pueda pudrir
+
+La conversion deja de apuntar a `$AF$17/18/19` y llama a `TIDETRACK_USD/AUD/EUR()`. El bloque de
+cotizaciones se habia mudado a las filas 27-29, y **una coordenada que se pudre no da error: da
+otro numero**. Una funcion no tiene coordenada que se pueda mover.
+
+Los rotulos de los tipos no se tocan: son de Franco, el script solo suma. "Disponibilidad de
+fondos" (`O23:O25`) queda como estaba, porque el bloque por moneda sigue existiendo.
+
+## v0.23.1 - La consolidada del Plan se ubica midiendo (2026-08-20)
+
+"Limpiar Plan de Cuentas" abortaba con *"La consolidada de S8 no tiene formula"* -- cuando la
+consolidada estaba perfecta, en R.
+
+**Causa:** el modulo deducia su posicion de una marca en DocumentProperties ("ya se borro la
+columna Q?"). El borrado habia ocurrido en una corrida **anterior a que esa marca existiera**,
+asi que lo creia pendiente, aplicaba el offset de "antes del borrado" y miraba una columna vacia.
+
+> Una marca de estado puede faltar; la hoja no.
+
+**Correccion:** la consolidada se busca en la hoja -- primera columna a la derecha del bloque de
+Categorias cuya celda de datos tiene formula -- y el borrado de columna se decide por
+**geometria**: si entre la columna de nombres y la consolidada queda mas de una separadora, sobra
+una columna adentro del recuadro. Ninguna de las dos cosas depende ya de recordar nada. La marca
+queda como rastro, sin poder de decision.
+
+## v0.23.0 - "Saldos Actuales" suma por tipo de medio (2026-08-20)
+
+### El bloque AE7:AG12 cambia de eje
+
+Mostraba el saldo desglosado por moneda, en dos columnas (Flujo y Capital). Pasa a mostrar
+**la suma por tipo de medio** -- Hogar, Ahorros, Inversiones, Financiacion -- con el monto
+convertido a la moneda del selector y el peso de cada uno en % sobre el total.
+
+Los tipos son cuatro y el bloque tiene cuatro filas de datos: entra justo. El desglose por
+moneda contestaba una pregunta que el bloque "Medios Bancarios" ya contesta cuenta por cuenta;
+la que faltaba era **en que finalidad esta la plata**.
+
+### La consecuencia que habia que atar
+
+"Disponibilidad de fondos" (O23:O25) leia `AF9:AF12` como si fueran las cuatro monedas y las
+convertia: `AF9 + AF10*tc + AF11*tc + AF12*tc`. Con el bloque nuevo eso multiplicaria por la
+cotizacion algo que **ya viene convertido**. Ahora la liquidez es el saldo del tipo Hogar, que
+es exactamente la plata disponible para cubrir gastos. Si ese bloque venia dando de mas, era esto.
+
+### Dos trampas cubiertas antes de escribir
+
+Las dos ya conocidas de esta campana:
+
+1. **Validacion de datos** en la columna de rotulos: si solo acepta ARS/USD/AUD/EUR, escribir
+   "Hogar" se rechaza y la celda queda **vacia sin lanzar excepcion**. Se abre el dominio antes.
+2. **Formato de numero** en la columna del peso: venia en moneda, y un ratio de 0,42 se veria
+   como "$0,42". Se pasa a porcentaje antes de escribir.
+
+### El banco de pruebas atajo un bug antes del deploy
+
+El reemplazo que reapunta la liquidez **no era idempotente**: en la segunda pasada
+`liquidez_ars;` volvia a matchear desde adentro de `liquidez_moneda; liquidez_ars;` y se comia
+la definicion de `presupuesto_ahorro`. Se anclo el patron al shape viejo (`AF9 + ...`). Es
+exactamente la razon por la que `devtools/probar_stock_flujo.js` existe.
+
+### Plan de Cuentas
+
+- **"Deudas" pasa a la categoria "Deuda y financiacion".** La categoria cruza bloques a
+  proposito: la cuota fija vive en Gastos Fijos y la deuda que se paga cuando se puede, en
+  Variables.
+- **La columna consolidada es la R, no la S:** se corrio un lugar cuando se borro la Q.
+- **El borrado de columna lleva su propia marca de hecho,** para que no pueda repetirse y correr
+  todo un lugar mas.
+
+> Los releases v0.14.0 a v0.22.1 quedaron registrados solo en `src/ZZ_Changelog.js` (historial
+> canonico). Pendiente su volcado a este archivo.
+
+## v0.13.0 - Riqueza por lista blanca (2026-08-19)
+
+**Cambio de definicion, no correccion de bug.** Hasta hoy el capital acumulado se calculaba como
+*todo tipo de categoria que no sea Hogar*. Eso hacia que la **Financiacion** -- Tarjeta de Credito,
+Prestamo Mac -- sumara como patrimonio. Una tarjeta es un pasivo. Riqueza pasa a definirse por
+**lista blanca**: solo `Ahorros` e `Inversiones`.
+
+### Por que lista blanca y no arreglar la negra
+
+Con "todo lo que no sea Hogar", cualquier tipo nuevo del catalogo entraba a riqueza **sin que
+nadie lo decidiera**, por el solo hecho de no llamarse Hogar. Una lista blanca obliga a decidir.
+La regla vive en `TIPOS_RIQUEZA` (`00_Config.js`), no repartida por seis formulas.
+
+### La trampa de este cambio
+
+Hay **dos usos del tipo de categoria** que se parecen y no se corrigen igual. Por eso el modulo
+trabaja sobre una lista cerrada de celdas en vez de barrer la planilla reemplazando "Hogar":
+
+| Uso | Celdas | Que pasa |
+|---|---|---|
+| **(a) "es riqueza?"** | `Inicio!F8`, `Tablero!N19`, `Tablero!AG9:AG12` | pasan a lista blanca |
+| **(b) "es flujo cotidiano?"** | `Inicio!C8/C13/F13/C15/F15`, `Tablero!R9/U9/X9/AF9:AF12` | **NO se tocan** |
+
+Las (b) son los bloques que dejan entrar los arrastres `Inicio Mes` cuando el medio es de casa, y
+los saldos cotidianos -- que ademas filtran por *nombre* de categoria, no por tipo. Romperlas
+romperia el saldo cotidiano, que hoy cierra al centavo contra el ledger.
+
+### Impacto medido antes de aplicar
+
+Sobre el ledger crudo (3.458 filas): el cambio mueve meses enteros -- marzo 2026 **−$567.974**,
+abril **+$332.974**, junio **+$200.000**, agosto **−$230.000** -- aunque en el acumulado historico
+la Financiacion neta apenas +$230.000 en 7 filas. Es el efecto buscado, no un error.
+
+### Added
+
+- **`TIPOS_RIQUEZA`** en `00_Config.js`.
+- **`DEVTOOL_RiquezaYCategorias.js`**: trio estado / aplicar / revertir, bajo
+  *Tidetrack Dev > Riqueza y categorias*.
+- **`devtools/probar_riqueza.js`**: banco de pruebas contra las formulas reales del gemelo.
+
+### Fixed
+
+- **La columna del Tipo del bloque de categorias**. `Tablero!AA9` derrama AA=categoria, AB=vacia,
+  AC=monto, y el rotulo `AB8` **ya decia "Tipo"** desde el rediseno: la columna se diseno para eso
+  y quedo sin llenar, con una variable que la formula llamaba literalmente `columna_ak_vacia` y
+  devolvia `""` siempre. Ahora trae el tipo de cada categoria desde el catalogo.
+- **El bloque deja de ocultar las categorias de tipo Hogar.** Con el Tipo a la vista, mostrar todas
+  es la lectura por macrosegmento que se buscaba. Si se prefiere lo anterior, es una linea.
+
+### Decidido y no hecho
+
+- `Financiacion` **se deja como un solo tipo**; no se parte en 'Tarjetas' y 'Financiamiento'.
+
+---
+
+## v0.12.1 - Reparar la reparacion (2026-08-19)
+
+Franco corrio "Aplicar reparacion" y el modulo declaro exito. La auditoria sobre la planilla
+viva encontro que **tres celdas habian quedado peor que antes**: `Tablero!O23`, `O24` y `O25`
+pasaron de `#REF!` a `#ERROR!`. Las otras 24 quedaron bien y las siete agregaciones que se
+recalcularon contra el ledger cierran **al centavo**, pero el modulo que vino a combatir los
+falsos exitos produjo uno.
+
+### El bug
+
+```js
+out.replace(/(\$N\$10\s*-\s*)#REF!/g, '$1$N$17')   // <- string de reemplazo
+```
+
+En un string de reemplazo, `$1` es el grupo capturado, `$N` es literal y `$17` **vuelve a ser el
+grupo 1** seguido de un `7`. En vez de `$N$10 - $N$17` escribio `$N$10 - $N$N$10 - 7`. Las otras
+cuatro sustituciones de esa funcion zafaron por casualidad: dos no tienen grupos (y un `$4` sin
+grupo queda literal) y dos llevan el `$1` al final.
+
+### Lo grave no es el bug, es que paso el guard
+
+`_verificarEscrituraFormulerio` comparaba el **texto** releido contra el texto escrito, y exigia
+cero `#REF!`, cero `'Liquidez'` y cero anclas viejas. El texto corrupto cumple las cuatro
+condiciones. **Comprobar que escribiste lo que querias escribir no es comprobar que funciona.**
+Es la cicatriz 5 del arnes -- *un guard que reporta exito sin hacer el trabajo es peor que no
+tener guard* -- cometida por el modulo que la cita en su propia cabecera.
+
+### Fixed
+
+- **Todos los reemplazos van por funcion de reemplazo.** El valor devuelto se inserta tal cual y
+  esta clase de bug deja de ser posible en un proyecto donde toda formula lleva `$`.
+- **El verificador lee el VALOR resultante** de cada celda escrita y revierte el lote entero si
+  alguna quedo en error, distinguiendo "ya estaba rota" de "la rompi yo".
+- **El modulo deshace el danio**: reconoce el artefacto `$N$N$10 - 7` y lo devuelve a `$N$17`.
+  Sin eso, re-correr "Aplicar" contestaria "nada que hacer" con tres celdas rotas a la vista --
+  otra vez el mismo modo de falla.
+- **Sexto defecto** (hallado por la misma auditoria): las columnas "Valor en X" de `Inicio`
+  (`AF8` y `AT8`) **no convierten moneda**. Leen la moneda de la columna de **Cuenta** (`V` y
+  `AJ`) en vez de la de **Moneda** (`Y` y `AM`), asi que ninguna rama del `IF` se cumple,
+  `tasa_origen` cae al literal `1` y la columna es un passthrough del monto crudo: todo
+  movimiento en moneda extranjera entra a `C13`, `F13`, `C15` y `F15` **a valor nominal**. Un
+  cobro de 200 USD cuenta como 200 pesos. Medido en junio de 2026: **~$376.740 de ingreso
+  desaparecido, el 23% del mes**. `AT8` tomaba ademas la moneda de destino de `Y13` -- que no es
+  un selector sino la celda con la moneda del sexto movimiento del mes actual --, y el rotulo
+  `AT7` repetia la referencia.
+
+### Added
+
+- **`devtools/probar_formulerio.js`**: corre las transformaciones **reales** del devtool contra
+  las formulas **reales** del gemelo (`docs/permanente/celdas.tsv`) y muestra el antes y el
+  despues de cada celda. Comprueba la firma `$N$N` del bug de escape, residuos de `#REF!` /
+  `Liquidez` / anclas viejas, balanceo de parentesis y comillas, e idempotencia. Habria cortado
+  el bug en diez segundos: **no correrlo fue el error de fondo**, mas que el bug en si.
+
+### Diagnosticado, no reparado
+
+- **Quinto defecto**: `Inicio!C15`/`F15` devuelven siempre "0% respecto del mes anterior" aunque
+  la variacion real sea de +155%. Causa: cuatro condiciones se ligan a variables de `LET` sin
+  `ARRAYFORMULA`; la comparacion rango-contra-escalar se evalua por interseccion implicita,
+  `FILTER` recibe una condicion de una sola fila, tira error de tamanio, y el `IFERROR` externo
+  lo convierte en 0. La correccion seria envolver esas cuatro (dos en `F15`) en `ARRAYFORMULA`.
+  Queda para una pasada propia: es otro mecanismo de falla, no esta verificado de forma
+  independiente, y muestra un rotulo feo, no un numero equivocado en una cifra de portada.
+- **Un movimiento de $302.209 invisible** para todo el Tablero: en enero 2026 hay una fila del
+  ledger con Tipo de Cuenta y Medio vacios. Esta en el derrame pero ningun bloque la recoge. Es
+  el gap de validacion de `procesarCargas` materializado -- de las 203 filas sin Tipo de Cuenta.
+
+---
+
+## v0.12.0 - Formulerio reparado (2026-08-19)
+
+El swap v0.11 movio las celdas de las dos hojas que Franco **mira** -- "Inicio" y "Tablero" --
+y las formulas se copiaron apuntando a las direcciones viejas. El resultado no eran errores,
+que hubieran sido benignos: eran numeros plausibles calculados sobre datos mal apareados. De
+toda la superficie del producto solo cuatro celdas mostraban un error visible; el resto mentia
+en silencio.
+
+### Added
+
+- **`DEVTOOL_FormulerioV0111.js`**: trio `estadoFormulerioV0111` (solo lectura) /
+  `aplicarFormulerioV0111` / `revertirFormulerioV0111`, bajo *Tidetrack Dev > Formulerio v0.11*.
+- **`columnIndexToLetter`** en `03_SheetManager.js`, inverso de `columnLetterToIndex`.
+
+### Fixed
+
+- **Anclas corridas tres filas** -- la raiz de casi todo. `Tablero!AJ6` es el motor entero de la
+  hoja: un unico QUERY sobre `Registros!B6:M` que **derrama doce columnas desde la fila 6**
+  (AJ=Monto, AK=Tipo, AL=Cuenta, AM=Tipo de Cuenta, AN=Medio, AO=Moneda, AR/AS/AT/AU=los TC
+  congelados). Quince formulas consumidoras pedian la fila 9, asi que cada monto se apareaba con
+  el tipo, la moneda y la cotizacion del movimiento **tres filas mas abajo**. Explica que `N19`
+  declarara $63.567.848 de capitalizacion en un mes: montos en pesos multiplicados por la
+  cotizacion del dolar porque cayeron en el bucket de moneda equivocado.
+- **El selector de moneda perdido**: vivia en `$I$9` y el rediseno lo movio a `N4`; las formulas
+  portadas quedaron con `#REF!` en su lugar, **17 tokens en 8 celdas**. Donde el `#REF!` estaba
+  envuelto en `IFERROR` se degradaba en silencio -- `AV6` ("Valor en ARS") devolvia una columna
+  entera de ceros, y con ella `S7`/`V7`/`Y7`, `N16:N19` y `O16:O19`, o sea el bloque
+  "Movimientos del mes" completo. Donde no lo estaba, propagaba (`O23:O25` = `#REF!`).
+- **Bloque "Disponibilidad de fondos" rotado una posicion**: el rediseno reordeno los rotulos
+  (el orden viejo empezaba por Ahorro, el nuevo por Gastos Fijos) pero las formulas se pegaron
+  en el orden viejo. La de Capacidad de Ahorro termino en la fila de Gastos Fijos. Cada una
+  calculaba bien lo suyo, en la fila del vecino.
+- **Tipo de categoria `'Liquidez'` huerfano**: 14 celdas comparaban contra un tipo que el Plan
+  de Cuentas nuevo ya no tiene (hoy son Ahorros / Inversiones / Financiacion / **Hogar**).
+  `Hogar` es su equivalente 1:1 -- ambos con una sola categoria, "Medio Cotidiano". Al no
+  cumplirse nunca la condicion, el gasto cotidiano se contaba como capital acumulado y los
+  arrastres de "Inicio Mes" que si debian entrar quedaban todos afuera.
+
+### Decisiones de diseno
+
+- **El modulo no redacta ni una formula.** Lee cada celda con `getFormula()`, reemplaza los
+  tokens equivocados y la escribe de vuelta; el bloque rotado no se reescribe, se **intercambia**.
+  Es deliberado: evita de raiz la trampa de locale documentada en `07_MiradaInteranual.js` --
+  la planilla es es_AR y `setFormula` no traduce los arrays literales `{}`, que media docena de
+  estas formulas usan. Al no autorizar ninguna, el ida y vuelta es identidad.
+- **El re-apuntado toca unicamente rangos abiertos de dos letras** (`AK9:AK`), nunca celdas
+  sueltas. `AF9:AF12` y `$AF$17:$AF$19` son otro bloque de la hoja, hoy funcionan, y un
+  reemplazo numerico 9->6 a ciegas los habria corrompido.
+- **La rotacion se decide por el rotulo de cada fila, no por su posicion.** Si el rotulo no es
+  el esperado, no se rota nada: mover formulas a ciegas seria repetir el error original con
+  otro orden.
+- **El mapeo de columnas del motor se deriva de `RANGES.REGISTROS.columns`** y se contrasta
+  rotulo por rotulo contra el header del ledger. Un mapeo supuesto y no verificado ya costo caro
+  una vez.
+
+### Fuera de alcance (declarado, no olvidado)
+
+- `Tablero!AF9:AF12` e `Inicio!C8` filtran por el **nombre** de la categoria ("Medio Cotidiano")
+  en vez de por su tipo. Es fragil -- hardcodea un dato de catalogo -- pero hoy dan el numero
+  correcto. Fragil no es roto.
+- El Plan de Cuentas tiene una fila huerfana (`P19`/`Q19`, sin nombre y con tipo Hogar) y un
+  duplicado ("Meta de Ahorro 3" en `P17`/`P18`). Es dato de Franco, no formula.
+- `Inicio!C15`/`F15` devuelven "0% respecto del mes anterior" con `C13` en $1,27M. Es un quinto
+  defecto, no uno de estos cuatro, y merece su propio diagnostico.
+
+---
+
+## v0.11.1 - Armas descargadas (2026-08-18)
+
+Con el swap ya aplicado en produccion, la planilla quedo rodeada de codigo que sigue
+existiendo, sigue siendo invocable y escribe con la geometria vieja. Este release neutraliza
+cuatro vias de escritura peligrosas y cierra el camino lateral que encontro una auditoria
+adversarial posterior.
+
+### Fixed
+
+- **Cotizaciones inventadas fuera del sistema** (`99_MigrationLogic.js`): `migrarBdAntigua` y
+  `recalcularTcRegistros` rellenaban las fechas sin cotizacion con 1050/650/1100. Esos numeros
+  quedaban congelados en el ledger, que es el unico dato que despues no se puede recalcular.
+  Ahora ante una sola fecha faltante se aborta **todo-o-nada**, sin escribir una celda.
+- **Fallback mudo del motor FX** (`15_ExchangeRateApi.js`): `fetchArsRate` devolvia la
+  cotizacion mas reciente disponible sin dejar un solo log (verificado: `fetchArsRate('2026-12-31')`
+  devolvia la del 17 sin rastro). Ahora formato invalido y **fecha futura lanzan**, y toda
+  cotizacion devuelta fuera de su fecha queda registrada, con resumen de lote.
+- **Recalculo de TC sin aviso** (`recalcularTcRegistros`): pide confirmacion nombrando cuantas
+  filas pisa y el rango exacto; las filas sin fecha legible se **saltean conservando sus
+  cotizaciones** (antes recibian vacios en silencio y el cierre las contaba como recalculadas);
+  y el alto sale de la ultima fila con dato en la columna **Fecha**, no de `getLastRow()`, que
+  mide cualquier columna (un valor suelto en T40 hacia escribir 34 filas para 2 registros).
+- **Toast de `procesarCargas`**: contaba llamadas a la API (una por fecha distinta), asi que
+  cinco movimientos de la misma fecha decian "1 fila(s)". Ahora informa filas afectadas del lote.
+- **Precondicion de `sincronizarBDsV011`**: chequeaba las dos hojas Fix con `&&`, asi que solo
+  abortaba si faltaban las dos. Ahora aborta si falta cualquiera.
+
+### Changed
+
+- **El guard de obsolescencia de la migracion v0.9.5 pasa a estar en TODA funcion que escribe**,
+  no solo en las tres entradas publicas. La auditoria encontro que `cuerpoRevertirV095_` -- la
+  que hace el trabajo destructivo -- era invocable directa, escribia sobre Tipos de Cambio
+  pisando la fila de encabezados y las cuatro columnas de Fecha, y devolvia `ok:true` con
+  "MIGRACION v0.9.5 REVERTIDA". Las 22 escrituras del modulo viven en 7 funciones y las 7
+  abortan al entrar.
+- **Privacidad real de plataforma**: en Apps Script una funcion es privada cuando su nombre
+  **TERMINA** en guion bajo (`nombre_`), no cuando empieza (`_nombre`) -- las `_algo` aparecen
+  en el dropdown "Ejecutar" del editor. Las funciones internas que escriben de las tres
+  migraciones (v0.9.5, v0.11, v03.1) se renombraron con el guion bajo al final. Las entradas
+  publicas conservan su nombre: el menu las invoca por string.
+- **`procesarCargas` tiene un modo de falla nuevo**: una sola fecha futura tipeada en la grilla
+  aborta el **lote completo** sin escribir nada (la grilla queda intacta para corregir y
+  reprocesar). Documentado en `FUNCIONALIDADES.md`, seccion 04.
+
+### Removed
+
+- **Submenu del swap v0.11 reducido** a "Ver estado" (solo lectura) y "Purgar respaldos" (el
+  paso que le falta a Franco tras validar los tableros). Salen Sincronizar (su trabajo ya esta
+  hecho; su docstring ya lo afirmaba mientras el item seguia vivo en `00_Config.js`), Aplicar
+  (no se aplica dos veces) y Revertir, que era la unica del quinteto que funcionaba entera y no
+  pedia ninguna confirmacion. Revertir queda como salida de emergencia deliberada desde el
+  editor y ahora exige confirmar.
+
+---
+
+## v0.11.0 - Swap de hojas Fix (2026-08-18)
+
+El rediseno de Franco (hojas " - Fix" + "Presupuesto - New") pasa a ser el layout canonico.
+Incluye la re-adopcion de produccion v0.10.0 como baseline (v0.9.5-v0.10.0 se desarrollaron
+fuera del repo el 2026-08-13: layout nuevo + migracion historica desde la planilla v03.1).
+
+### Added
+
+- **`MIGRACION_v0.11_SwapHojasFix.js`**: estado / sincronizar BDs / aplicar / revertir /
+  purgar. Renombra las viejas a respaldo oculto, las Fix a canonicas, repuntea formulas
+  (con remapeo semantico R:T->L:N y V:W->P:Q para el Plan), recrea la consolidacion de
+  cuentas (columna S del Plan) y reconstruye los dropdowns de Cargas.
+- **`docs/permanente/FUNCIONALIDADES.md`**: el doc funcional de Franco validado formula
+  por formula, con estado real por funcionalidad y el checklist del formulerio.
+
+### Changed
+
+- **`00_Config.js` remapeado a la geometria Fix**: Plan C:D/F:G/I:J/L:N/P:Q (headers 7,
+  datos 8), Cargas C7:I21, Registros B:M con datos desde fila 7, TC C:D/F:G/I:J/L:M con
+  datos desde fila 8. `HEADER_ROW`/`DATA_START_ROW` globales 3/4 -> 7/8. Canonico de TC:
+  'Tipos de Cambio'.
+- **MAPA_HOJAS.md y CLAUDE.md reescritos** a la realidad post-swap (las hojas auxiliares
+  CALCU/ANUAL/Bocetos/_legacy ya no existen; ADR-005 y ADR-006 quedan superados).
+
+### Removed
+
+- **Migracion v0.9.5 fuera del menu**: incoherente con el config remapeado; el archivo se
+  conserva como historia.
+
+---
+
 ## v0.8.3 - Gobernanza Fase 1 del arnes (2026-08-12)
 
 Primera version sobre el baseline productivo v0.8.2. Cambios de gobernanza sin

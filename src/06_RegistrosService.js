@@ -1,23 +1,57 @@
 /**
  * 06_RegistrosService.js
  * Servicio para procesar el lote de Cargas, enriquecerlo y apendear en Registros.
+ *
+ * [CONCEPTO DE NEGOCIO]
+ * Pipeline batch de ingestion de transacciones. El usuario carga un lote de movimientos en
+ * la grilla de Cargas y esta funcion los enriquece con las cotizaciones del dia y los
+ * persiste en el ledger Registros con los TC congelados.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+ * ADR-004: la carga batch garantiza que cada registro quede inmutable con los tipos de
+ * cambio del momento de procesamiento; no hay consulta en vivo celda a celda.
+ * Origen (Cargas) y destinos (Registros, Tipos de Cambio) tienen layouts distintos y los tres
+ * se movieron con el swap v0.11. Este modulo no repite ninguna geometria: toda coordenada
+ * -- grilla de origen, columnas y fila de datos de los destinos -- sale de RANGES en vivo.
+ *
+ * @see 00_Config.js (RANGES.CARGAS, RANGES.REGISTROS, RANGES.TC_*)
+ * @see 03_SheetManager.js (getTableData, asegurarCapacidadFilas)
+ *
+ * @version 0.11.1
+ * @since 0.1.0
+ * @lastModified 2026-08-18
  */
 
 /**
  * Función maestra invocada desde el menú [Dev] o botón.
+ *
+ * MODO DE FALLA NUEVO desde el 2026-08-18 (v0.11.1), del habito diario y conviene conocerlo:
+ * UNA SOLA FECHA FUTURA TIPEADA EN LA GRILLA ABORTA EL LOTE COMPLETO. fetchArsRate lanza ante
+ * una fecha posterior a hoy (no existe cotizacion de un dia que no ocurrio, y antes devolvia
+ * la ultima publicada como si fuera la del dia pedido, congelandola en el registro). La
+ * excepcion sube hasta el catch de procesarCargas, que muestra "Fallo en el procesamiento" y
+ * NO escribe nada: la grilla de Cargas queda intacta con las 15 filas.
+ * Es todo-o-nada a proposito -- escribir "las que se pudo" dejaria el lote partido en dos y al
+ * operador sin saber cuales entraron --, pero significa que un dedo en la tecla del ano (2027
+ * por 2026) frena la carga entera. Se corrige la fecha en la grilla y se vuelve a procesar.
+ * El mensaje de la excepcion nombra la fecha pedida y el dia de hoy.
+ * @see 15_ExchangeRateApi.js (fetchArsRate: validacion de formato y de fecha futura)
  */
 function procesarCargas() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const cargasSheet = ss.getSheetByName(NAV_CONFIG.SHEETS.CARGAS);
+    const cargasSheet = ss.getSheetByName(RANGES.CARGAS.sheet);
     const registrosSheet = ss.getSheetByName(SHEETS.REGISTROS);
-    
+
     if (!cargasSheet || !registrosSheet) {
         SpreadsheetApp.getUi().alert('Faltan configurar las hojas Cargas o Registros.');
         return;
     }
 
-    // 1. Leer I5:O19
-    const cargasRange = cargasSheet.getRange('I5:O19');
+    // 1. Leer la grilla de carga (equivalente a I5:O19, resuelto desde RANGES.CARGAS)
+    const cargasCfg = RANGES.CARGAS;
+    const cargasStartCol = columnLetterToIndex(cargasCfg.start);
+    const cargasNumCols = columnLetterToIndex(cargasCfg.end) - cargasStartCol + 1;
+    const cargasRange = cargasSheet.getRange(cargasCfg.dataRow, cargasStartCol, cargasCfg.filas, cargasNumCols);
     const cargasData = cargasRange.getValues();
 
     // Validar y filtrar filas que tengan como mínimo un Monto cargado
@@ -35,9 +69,7 @@ function procesarCargas() {
     const tcEurData = getTableData('TC_EUR');
 
     // 2.1 Precargar categorías para deducción de Tipo de Cuenta
-    const ingresosCat = getTableData('INGRESOS').map(r => r[0]);
-    const fijosCat = getTableData('GASTOS_FIJOS').map(r => r[0]);
-    const variablesCat = getTableData('GASTOS_VARIABLES').map(r => r[0]);
+    const catalogos = leerCatalogosPlanCuentas();
 
     const cacheMap = { USD: {}, AUD: {}, EUR: {} };
     tcUsdData.forEach(r => { if (r[0]) cacheMap.USD[formatDateISO(r[0])] = r[1] });
@@ -48,6 +80,7 @@ function procesarCargas() {
     let newTcAudToAppend = [];
     let newTcEurToAppend = [];
     const registrosToAppend = [];
+    const fechasPorFila = [];   // fecha resuelta de cada registro, para contar filas afectadas al cierre
 
     const FLOOR_DATE = new Date('2024-01-01T12:00:00Z');
 
@@ -63,12 +96,9 @@ function procesarCargas() {
 
             const dateStr = formatDateISO(dateObj);
 
-            // Deducir Tipo de Cuenta (Ingreso, Gasto Fijo, Gasto Variable)
-            let tipoCuenta = '';
-            const cuentaName = row[2];
-            if (ingresosCat.includes(cuentaName)) tipoCuenta = 'Ingreso';
-            else if (fijosCat.includes(cuentaName)) tipoCuenta = 'Gasto Fijo';
-            else if (variablesCat.includes(cuentaName)) tipoCuenta = 'Gasto Variable';
+            // Deducir Tipo de Cuenta (Ingreso, Gasto Fijo, Gasto Variable).
+            // Sin opciones: comportamiento identico al historico (ver deducirTipoCuenta).
+            const tipoCuenta = deducirTipoCuenta(row[2], catalogos);
 
             // ARS Base
             const tcArs = 1.0;
@@ -100,36 +130,149 @@ function procesarCargas() {
                 row[0], row[1], row[2], tipoCuenta, row[3], row[4], dateObj, row[6],
                 tcArs, tcUsd, tcAud, tcEur
             ]);
+            fechasPorFila.push(dateStr);
         });
 
-        // 3. Escribir nuevos TCs a la hoja "Tipos de Cambio"
-        if (newTcUsdToAppend.length > 0) appendMassive('TC_USD', newTcUsdToAppend, 4);
-        if (newTcAudToAppend.length > 0) appendMassive('TC_AUD', newTcAudToAppend, 4);
-        if (newTcEurToAppend.length > 0) appendMassive('TC_EUR', newTcEurToAppend, 4);
+        // 3. Escribir nuevos TCs a la hoja de Tipos de Cambio (fila de datos segun RANGES.TC_*)
+        if (newTcUsdToAppend.length > 0) appendMassive('TC_USD', newTcUsdToAppend, RANGES.TC_USD.dataRow);
+        if (newTcAudToAppend.length > 0) appendMassive('TC_AUD', newTcAudToAppend, RANGES.TC_AUD.dataRow);
+        if (newTcEurToAppend.length > 0) appendMassive('TC_EUR', newTcEurToAppend, RANGES.TC_EUR.dataRow);
 
-        // 4. Escribir los registros en la BD Registros (Debajo del encabezado en Fila 1)
-        appendMassive('REGISTROS', registrosToAppend, 2);
+        // 4. Escribir los registros en el ledger Registros (fila de datos segun RANGES.REGISTROS)
+        appendMassive('REGISTROS', registrosToAppend, RANGES.REGISTROS.dataRow);
 
-        // 5. Ordenar la Hoja Registros por la columna O (Fecha = índice absoluto 15)
+        // 5. Ordenar la hoja Registros por Fecha (columna H = indice absoluto 8), descendente.
+        // Layout vigente: datos en B:M = columnas 2..13 (12 columnas), desde RANGES.REGISTROS.dataRow.
+        // decision Franco 2026-08-13: el sort es best-effort. Los registros YA quedaron escritos
+        // en el paso 4; si el sort falla (celdas combinadas cruzando el rango) se loguea y se
+        // sigue: dejar caer todo el pipeline invitaria a re-ejecutarlo y duplicar el lote.
+        const dataRowReg = RANGES.REGISTROS.dataRow;
         const lastRowReg = registrosSheet.getLastRow();
-        if (lastRowReg >= 2) {
-            // El rango base empieza en I (col 9) a T (col 20) = 12 columnas
-            const baseFullRange = registrosSheet.getRange(2, 9, lastRowReg - 1, 12);
-            // Ordenar descendentemente por la columna de fecha. En absolute es la col 15.
-            baseFullRange.sort({ column: 15, ascending: false });
+        if (lastRowReg >= dataRowReg) {
+            try {
+                const rowCount = lastRowReg - dataRowReg + 1;
+                const baseFullRange = registrosSheet.getRange(dataRowReg, 2, rowCount, 12);
+                baseFullRange.sort({ column: 8, ascending: false });
+                // sort() es perezoso: el flush fuerza el error dentro de este try.
+                SpreadsheetApp.flush();
+            } catch (sortErr) {
+                logError('procesarCargas: sort omitido (posibles celdas combinadas en Registros)', sortErr);
+            }
         }
 
         // 6. Limpiar la grilla de Cargas (solo las celdas utilizadas del lote)
         // en lugar de limpiar todo I5:O19 iterando, podemos limpiar los valids
         cargasRange.clearContent();
 
-        ss.toast(`Registrado exitosamente.`, '¡Éxito!', 4);
+        // 7. Cierre de la traza de fallbacks de cotizacion del lote (Regla Estricta 9).
+        // decision Franco 2026-08-18: fetchArsRate loguea la PRIMERA vez que usa cada
+        // cotizacion ancla y acumula las repeticiones; este cierre las vuelca en una linea con
+        // el rango de fechas afectadas. Va DESPUES de escribir a proposito: los TC ya quedaron
+        // congelados en el ledger y lo que el operador necesita saber es cuantas filas se
+        // llevaron el TC de otra fecha, no si conviene abortar (abortar aca ya no es opcion).
+        //
+        // decision Franco 2026-08-18: el toast cuenta FILAS DEL LOTE, no llamadas a la API.
+        // resumirFallbacksArs().total cuenta resoluciones de cotizacion -- una por fecha
+        // distinta que hubo que ir a buscar --, asi que cinco movimientos de la misma fecha en
+        // fallback informaban "1 fila(s)". El operador no decide nada con la cantidad de
+        // llamadas; decide con cuantos de SUS registros quedaron con el TC de otro dia. Se
+        // cruzan las fechas del lote contra el set de fechas que cayeron en fallback.
+        const fallbacksTc = resumirFallbacksArs();
+        if (fallbacksTc.total > 0) {
+            const enFallback = {};
+            fallbacksTc.fechasPedidas.forEach(f => { enFallback[f] = true; });
+            const filasAfectadas = fechasPorFila.filter(f => enFallback[f] === true).length;
+            ss.toast(`${filasAfectadas} de ${registrosToAppend.length} fila(s) quedaron con el TC de otra fecha ` +
+                     `(${fallbacksTc.anclas.length} cotizacion(es) de dias sin publicacion). Detalle en el log.`,
+                     'Registrado, con fallbacks de cotizacion', 8);
+        } else {
+            ss.toast(`Registrado exitosamente.`, '¡Éxito!', 4);
+        }
         logSuccess(`Batch transfer completo: ${registrosToAppend.length} iteraciones procesadas.`);
 
     } catch (err) {
         logError("Error al procesar Registros Batch", err);
         SpreadsheetApp.getUi().alert(`Fallo en el procesamiento: ${err.message}`);
     }
+}
+
+// ============================================
+// DEDUCCION DE TIPO DE CUENTA (COMPARTIDA)
+// ============================================
+
+// decision Franco 2026-08-13: la deduccion sale de adentro de procesarCargas() y pasa a ser una
+// funcion propia. Motivo: la migracion del historico de la planilla vieja
+// (MIGRACION_v031_Historico.js) tiene que clasificar exactamente igual que el pipeline, y una
+// segunda implementacion "equivalente" es la forma mas barata de que dos partes del sistema
+// clasifiquen distinto sin que nadie se entere. La extraccion PRESERVA el comportamiento
+// historico byte por byte: sin opciones, compara con igualdad estricta contra los tres
+// catalogos y en el mismo orden de precedencia. Las dos tolerancias nuevas son OPT-IN y solo
+// las pide el devtool de migracion, de modo que procesarCargas() no cambia -- lo que respeta
+// la decision de Franco de corregir los traspasos solo en las formulas de lectura.
+
+/**
+ * Lee los tres catalogos del Plan de Cuentas que definen el Tipo de Cuenta.
+ *
+ * @returns {{ingresos: string[], fijos: string[], variables: string[]}}
+ */
+function leerCatalogosPlanCuentas() {
+    return {
+        ingresos: getTableData('INGRESOS').map(r => r[0]),
+        fijos: getTableData('GASTOS_FIJOS').map(r => r[0]),
+        variables: getTableData('GASTOS_VARIABLES').map(r => r[0])
+    };
+}
+
+/**
+ * Deduce el Tipo de Cuenta buscando el nombre de la cuenta en los catalogos del Plan de Cuentas.
+ *
+ * Precedencia (la historica, no se altera): Ingreso -> Gasto Fijo -> Gasto Variable. Una cuenta
+ * que no aparece en ningun catalogo devuelve '' -- el gap de validacion conocido del pipeline:
+ * la fila se registra igual, con el Tipo de Cuenta vacio.
+ *
+ * @param {*} nombreCuenta valor de la columna Cuenta
+ * @param {{ingresos: string[], fijos: string[], variables: string[]}} catalogos
+ * @param {{tolerante?: boolean, excluirNeutras?: boolean}} [opciones]
+ *        tolerante: si no hubo match exacto, reintenta normalizando mayusculas y espacios.
+ *          Solo puede AGREGAR clasificaciones donde antes quedaba '': nunca cambia una que
+ *          ya matcheo exacto.
+ *        excluirNeutras: las cuentas de CUENTAS_NEUTRAS devuelven '' aunque figuren en un
+ *          catalogo. Hace falta porque "Traspaso" SI esta dado de alta como ingreso en el Plan
+ *          de Cuentas de produccion (por eso las 533 patas de traspaso quedaron clasificadas
+ *          como Ingreso). Es opt-in a proposito: activarlo por defecto cambiaria como escribe
+ *          procesarCargas() de aca en mas, y esa no es la decision que se tomo.
+ * @returns {string} 'Ingreso' | 'Gasto Fijo' | 'Gasto Variable' | ''
+ */
+function deducirTipoCuenta(nombreCuenta, catalogos, opciones) {
+    opciones = opciones || {};
+    const ingresos = (catalogos && catalogos.ingresos) || [];
+    const fijos = (catalogos && catalogos.fijos) || [];
+    const variables = (catalogos && catalogos.variables) || [];
+
+    if (opciones.excluirNeutras === true && esCuentaNeutra(nombreCuenta)) return '';
+
+    // --- Camino historico: igualdad estricta, mismo orden. ---
+    if (ingresos.indexOf(nombreCuenta) !== -1) return 'Ingreso';
+    if (fijos.indexOf(nombreCuenta) !== -1) return 'Gasto Fijo';
+    if (variables.indexOf(nombreCuenta) !== -1) return 'Gasto Variable';
+
+    if (opciones.tolerante !== true) return '';
+
+    // --- Reintento tolerante (mayusculas y espacios). Solo llega aca lo que ya quedaba en ''. ---
+    const buscado = normalizarNombreCuenta(nombreCuenta);
+    if (buscado === '') return '';
+    if (_catalogoContiene(ingresos, buscado)) return 'Ingreso';
+    if (_catalogoContiene(fijos, buscado)) return 'Gasto Fijo';
+    if (_catalogoContiene(variables, buscado)) return 'Gasto Variable';
+    return '';
+}
+
+/** true si el catalogo tiene un nombre que normaliza igual que el buscado (ya normalizado). */
+function _catalogoContiene(catalogo, nombreNormalizado) {
+    for (let i = 0; i < catalogo.length; i++) {
+        if (normalizarNombreCuenta(catalogo[i]) === nombreNormalizado) return true;
+    }
+    return false;
 }
 
 /**
@@ -146,33 +289,38 @@ function formatDateISO(dateObj) {
 
 /**
  * Inserción masiva de celdas. Busca eficientemente el final de una columna.
+ *
  * @param {string} tableName Identificador en RANGES
- * @param {Array} data2D Matriz
- * @param {number} minRow Fila en la que inicia la data (2 para Registros, 4 para Catalogos TCs)
+ * @param {Array} data2D Matriz de filas a insertar
+ * @param {number} [minRow] Primera fila donde puede escribir (inclusive). Debe ser >= la
+ *   dataRow de la tabla; si se omite se usa RANGES[tableName].dataRow con fallback a
+ *   DATA_START_ROW. Un valor menor pisaria el encabezado.
  */
-function appendMassive(tableName, data2D, minRow = DATA_START_ROW) {
+function appendMassive(tableName, data2D, minRow) {
     if (data2D.length === 0) return;
     const config = RANGES[tableName];
+    // Default por tabla: Registros=6, bloques TC=7, Plan de Cuentas=DATA_START_ROW (4).
+    minRow = (minRow !== undefined) ? minRow : getDataRow(config);
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(config.sheet);
-    
+
     const startColIdx = columnLetterToIndex(config.start);
     const endColIdx = columnLetterToIndex(config.end);
     const numCols = endColIdx - startColIdx + 1;
-    
+
     // Obtener todo el vector vertical de la primera columna para encontrar el último bloque lleno
     const colA1 = `${config.start}1:${config.start}`;
     const values = sheet.getRange(colA1).getValues();
-    
-    let lastDataRow = minRow - 1; 
+
+    let lastDataRow = minRow - 1;
     for (let i = values.length - 1; i >= 0; i--) {
         if (values[i][0] !== '') {
             lastDataRow = i + 1; // 1-based index
             break;
         }
     }
-    
+
     const targetRow = Math.max(minRow, lastDataRow + 1);
-    
+
     // Validar y rellenar las columnas faltantes (Padding por seguridad)
     const paddedData = data2D.map(row => {
         const nr = [...row];
@@ -180,16 +328,27 @@ function appendMassive(tableName, data2D, minRow = DATA_START_ROW) {
         return nr;
     });
 
+    // El grid puede no llegar hasta el final del lote (caso Tipos de cambio, con 6 filas
+    // libres tras la migracion). Se amplia ANTES del setValues: o entra todo, o no se escribe.
+    asegurarCapacidadFilas(sheet, targetRow + paddedData.length - 1);
+
     const range = sheet.getRange(targetRow, startColIdx, paddedData.length, numCols);
     range.setValues(paddedData);
 
-    // [ALGORITMO AUTOMÁTICO] Si la inserción es de Tipos de Cambio, ordenarla temporalmente Z-A in situ
+    // [ALGORITMO AUTOMÁTICO] Si la inserción es de Tipos de Cambio, ordenarla temporalmente Z-A in situ.
+    // Best-effort: los datos ya se escribieron, el orden es secundario (mismo criterio que el
+    // sort de Registros en procesarCargas).
     if (tableName.startsWith('TC_') && sheet.getName().toLowerCase() === SHEETS.TIPOS_CAMBIO.toLowerCase()) {
-        // Aprovechamos targetRow y la longitud real del array insertado para no depender de sheet.getLastRow() que sufre lag asíncrono
-        const finalBlockRow = targetRow + paddedData.length - 1;
-        if (finalBlockRow >= minRow) {
-            const tableRange = sheet.getRange(minRow, startColIdx, finalBlockRow - minRow + 1, numCols);
-            tableRange.sort({ column: startColIdx, ascending: false }); // Sort x fecha Z-A relativo a toda la columna
+        try {
+            // Aprovechamos targetRow y la longitud real del array insertado para no depender de sheet.getLastRow() que sufre lag asíncrono
+            const finalBlockRow = targetRow + paddedData.length - 1;
+            if (finalBlockRow >= minRow) {
+                const tableRange = sheet.getRange(minRow, startColIdx, finalBlockRow - minRow + 1, numCols);
+                tableRange.sort({ column: startColIdx, ascending: false }); // Sort x fecha Z-A relativo a toda la columna
+                SpreadsheetApp.flush();
+            }
+        } catch (sortErr) {
+            logError('appendMassive: sort omitido en ' + tableName + ' (posibles celdas combinadas)', sortErr);
         }
     }
 }

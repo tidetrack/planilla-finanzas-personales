@@ -6,6 +6,47 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-18 - Swap de hojas Fix: el rediseno de Franco pasa a ser canonico (v0.11.0)
+
+### Evento
+
+Franco rediseno la planilla completa duplicando hojas con sufijo " - Fix" (mas
+"Presupuesto - New") y entrego un documento funcional por hoja. Esta sesion: (1) re-adopto
+produccion v0.10.0 como baseline verbatim — una sesion del 2026-08-13 habia desarrollado
+v0.9.5-v0.10.0 (layout nuevo + migracion historica v03.1) fuera del repo, drift en ambos
+sentidos —; (2) valido el doc de Franco formula por formula con 8 auditores independientes
+sobre el export de la planilla viva y lo formalizo en `docs/permanente/FUNCIONALIDADES.md`;
+(3) construyo `MIGRACION_v0.11_SwapHojasFix.js` (quinteto estado / sincronizar / aplicar /
+revertir / purgar) auditado por 5 refutadores adversariales; (4) remapeo `00_Config.js` a la
+geometria Fix en el mismo release y reescribio MAPA_HOJAS.md y el CLAUDE.md.
+
+### Decisiones clave
+
+- **Repunteo semantico, no textual a ciegas**: las referencias de las vistas al Plan viejo
+  (`'Plan de Cuentas'!R:T` y `!V:W`) se remapean a la posicion nueva de los mismos bloques
+  (L:N y P:Q, columnas completas: el corrimiento de filas no las afecta). Toda referencia
+  que ningun patron cubre queda apuntando al respaldo y se lista en el informe.
+- **La ventana export->swap se cierra con `sincronizarBDsV011`**: lo cargado en las BDs
+  viejas despues de la duplicacion se copia a las Fix cruzando por AUSENCIA (multiconjunto),
+  nunca por rango. Filas presentes solo en la Fix abortan el swap.
+- **La columna Y del Plan viejo se recrea como columna S del nuevo** (consolidacion de
+  cuentas, fuente del dropdown de Cuenta en Cargas), acotada a fila 1000 por el bloque
+  residual C1005:N1033. Los dropdowns se reconstruyen por script: las fuentes de Validacion
+  de Datos siguen al objeto hoja, no al nombre.
+- **Respaldos por renombre + ocultamiento, purga aparte**: borrar hojas es irreversible;
+  la purga exige cero referencias vivas y confirmacion del operador.
+- **Migracion v0.9.5 retirada del menu**: su preflight espera la geometria pre-Fix y su
+  revertir restauraria el layout anterior al rediseno.
+
+### Pendiente (fase formulerio, hoja por hoja)
+
+Checklist completo en FUNCIONALIDADES.md ("Pendientes del formulerio"): taxonomia
+'Liquidez' huerfana en Inicio, columna 'Valor en ARS' y #REF!/#VALUE! del Tablero, motor del
+Presupuesto, realineacion de 07_MiradaInteranual, calendarios estaticos, trigger FX detenido
+desde 2026-08-13, limpieza del catalogo.
+
+---
+
 ## 2026-08-12 - Fase 1 del arnes Tidetrack: gobernanza (v0.8.3)
 
 ### Evento
@@ -1300,4 +1341,162 @@ Apps Script no tiene control de versiones nativo. El changelog viaja con el cód
 
 **Responsable de este documento**: @context-historian
 
-_Última actualización: 2026-01-17_
+_Última actualización: 2026-08-19_
+
+
+---
+
+# 2026-08-19 — Campaña Tablero v4 (sesión larga, en curso)
+
+> Registro pedido explícitamente por Franco al cierre de la jornada. Se deja acá porque es la
+> bitácora cronológica del repo; el detalle técnico de cada release está en CHANGELOG.md y el
+> estado funcional hoja por hoja en FUNCIONALIDADES.md.
+
+## Qué se desplegó (todo con drift-check, drift cero)
+
+| Versión | Qué |
+|---|---|
+| v0.12.0 | Formulerío: anclas fila 9→6, selector de moneda `#REF!`→`$N$4`, bloque Disponibilidad rotado, `'Liquidez'`→`'Hogar'` |
+| v0.12.1 | Reparar la reparación: bug de escape de `$` que rompió O23:O25, y el verificador que solo miraba texto |
+| v0.13.0 | Riqueza por lista blanca (Ahorros+Inversiones) + columna Tipo en el bloque de categorías |
+| v0.14.0 | Stock vs flujo: saldos independientes del mes, arrastres apagados, fila Flujo Cotidiano |
+| v0.14.1 | Dos defectos de escritura: comillas de más en `'Registros'!` y variable `LET` llamada `n` |
+| v0.15.0 | El saldo exige medio válido, capitalización como residuo, alta de 12 cuentas |
+
+## Los tres errores propios de la jornada, y qué se aprendió de cada uno
+
+1. **Escape de `$` en un string de reemplazo** (v0.12.0). `'$1$N$17'` produce `$N$N$10 - 7`, no
+   `$N$17`. Escribió tres fórmulas que no parsean en producción. **Todos los reemplazos pasan a
+   ir por función de reemplazo.**
+2. **Un verificador que comparaba texto, no resultado.** El texto corrupto pasaba sus cuatro
+   pruebas. **Ahora se lee el VALOR de cada celda escrita y se revierte el lote si queda en
+   error.** Es la cicatriz 5 del arnés cometida por el módulo que la cita.
+3. **No correr las transformaciones contra datos reales antes de desplegar.** Nacieron
+   `devtools/probar_formulerio.js` y `devtools/probar_stock_flujo.js`, que corren las funciones
+   REALES contra las fórmulas REALES del gemelo. Se verificó que los guards **disparan**,
+   reproduciendo los bugs históricos contra ellos: un guard que no salta es peor que no tenerlo.
+
+## El hallazgo grande: el arrastre `Inicio Mes` es un punto de corte, no un movimiento
+
+Diagnóstico equivocado en v0.14/v0.15: se apagaron los `Inicio Mes` por completo, asumiendo que
+eran redundantes. **No lo son.** Cuando Franco carga un `Inicio Mes` está diciendo "el banco dice
+que tengo esto": es una CONCILIACIÓN que salda todo lo anterior.
+
+| Regla de saldo | Medios en negativo |
+|---|---|
+| Sumar todo, incluidos arrastres | 1 (pero duplica: $8,7M) |
+| Ignorar arrastres (v0.14/v0.15) | **9** |
+| **Último arrastre del medio + todo lo posterior** | **0** |
+
+## Validación contra verdad de campo (2026-08-19)
+
+Franco pasó siete saldos reales. **Cinco coinciden AL CENTAVO** con la regla del último arrastre:
+Frascos Nx - Préstamo $230.000,00 · Frasco transitorio Nx $44.141,01 · YPF - wallet $3.494,90 ·
+Dolar Cash US$110,00 · Dolar Galicia US$91,10.
+
+Los dos que no coinciden son **exactamente los que usa todos los días**: Efectivo (delta $102.000)
+y NaranjaX (delta $29.635,41). Causa medida: **el ledger termina el 2026-08-12 y hoy es 08-19**.
+Faltan siete días de carga. No es un error de cálculo — los cinco que dan exacto son los que no
+tuvieron movimiento reciente.
+
+## Hallazgos de datos, medidos y sin resolver
+
+- **`YPF - wallet` son 5 filas y las cinco son `Inicio Mes`** (abril a agosto, siempre $3.494,90).
+  Es el arrastre de `YPF` escrito con otro nombre: se cuentan como dos medios y **duplican
+  $3.494,90**. `YPF` es el que está en el Plan de Cuentas y el que tiene la historia real.
+- **`Galicia Fina - Fran`**: una sola fila, −$259.994,57, no está en el Plan. Typo de
+  `Galicia Fima - Fran`.
+- **`Fracsos Nx - Dima`**: 2 filas, $0,50. Trivial.
+- **39 filas sin medio válido, $2.147.186.** Con el saldo exigiendo medio, quedan fuera y se
+  cuentan aparte en `Tablero!L29`.
+- **Traspasos: sanos.** 291 pares perfectos entre medios distintos, 1 solo con ambas patas en el
+  mismo medio, 45 filas sin par.
+- **12 cuentas del ledger no estaban en el Plan** (111 movimientos), la mayor `Ajuste` con 70
+  filas y $1.949.641. Alta preparada en `DEVTOOL_AltaCuentas.js`.
+
+## La planilla predecesora (auditada por Chrome)
+
+**El ID que se venía usando era el del Apps Script, no el de la planilla.** La v03.1 real es
+`1RkyL_lD97EeeoibyZs40ME-ZylFnwhi38Dm493DP-08` ("PLANILLA FINANZAS_v03.1 | Fran").
+
+Su TABLERO organiza los saldos en **tres bloques — FLUJO DE CAJA, AHORROS, DÓLARES —**, cada medio
+con un **checkbox**, y lista solo ~10 medios en Flujo de Caja, no los 28 del catálogo. Tiene un
+`Flujo mes anterior` y un `COMPROBACIÓN MOVIMIENTOS: Traspaso $0,00`. **Es una vista MENSUAL con
+arrastre, no un saldo acumulado** — de ahí que sus $51.509,27 y US$241,42 sean valores de enero
+2026, que es exactamente lo que el Tablero v4 venía reproduciendo.
+
+## Estado al cierre y qué sigue
+
+**El código desplegado (v0.15.0) todavía tiene el modelo de saldo equivocado** (ignora los
+arrastres, produce negativos). La corrección está diseñada y validada contra los cinco saldos
+reales, pero **no escrita en código todavía**. Es lo primero de la próxima sesión.
+
+Pendiente además:
+1. Unificar `YPF - wallet` → `YPF` en el ledger (quita el doble conteo de $3.494,90).
+2. Bloque de saldos con la regla validada: solo medios con saldo distinto de cero, agrupados como
+   en la v03.1.
+3. Confirmar con Franco si CRYPTO ($50.607,27) y FCI ($25.937,88) tienen saldo real.
+4. BD Proyección (espejo de Registros) para el bloque Presupuesto Asignado.
+5. Función de developer que repare cotizaciones históricas por fecha (decisión Franco: el TC vive
+   en el registro, no hace falta un data lake permanente).
+6. Quinto defecto: `Inicio!C15`/`F15` siempre en "0%" por condiciones de `LET` sin `ARRAYFORMULA`.
+
+## Nota fuera de este repo
+
+Franco dejó pedido para mañana, en otro contexto (`wdwmbdb1qw`): **correcciones de search** y
+**análisis en profundidad de PMAX**. Es trabajo de Google Ads, no de esta planilla; se anota acá
+sólo para que no se pierda hasta que se registre en el proyecto que corresponda.
+
+## 2026-08-20 - La suma por tipo de medio, y el dia que el gemelo mintio
+
+Franco pidio la sumatoria por tipo de medios en el Tablero. Lo que empezo como llenar una columna
+termino siendo la leccion mas cara de la campana.
+
+**Lo entregado.** El bloque "Tipo de Medios." (`AE7:AH12`) ya existia con los cuatro tipos escritos
+a mano y la columna Monto vacia. Ahora se llena, convertido a la moneda del selector:
+
+| Tipo | Monto |
+|---|---|
+| Ahorros | $210.791,01 |
+| Financiacion | $230.000,00 |
+| Hogar | $45.428,69 |
+| Inversiones | $138.016,50 |
+| **Total** | **$624.236,20** |
+
+Cuadra al centavo contra los saldos que Franco declaro: $319.569,70 en ARS mas US$201,10 al cambio.
+
+**Lo que salio mal, que es lo que importa.** La primera version se escribio contra
+`docs/permanente/celdas.tsv` -- el gemelo digital -- que tenia el layout viejo. En el gemelo `AE7`
+era "Saldos Actuales" con las monedas en las filas 9-12. En la planilla real ese bloque esta en la
+fila 16, las filas 9-12 son otro bloque, y `AF9:AF12` son la mitad muda de celdas combinadas
+`AE:AF`. Se escribio ahi y no entro nada.
+
+> Un snapshot desactualizado es peor que no tener snapshot: da confianza falsa y miente en silencio.
+
+**Lo que quedo de defensa,** cada cosa por algo que efectivamente paso:
+
+1. **Un canario que diagnostica.** "Quedo SIN formula" tiene dos causas -- la celda no acepta
+   escritura, o la formula no parsea -- y son indistinguibles desde afuera. Ahora el verificador
+   escribe `=1+1` en la misma celda: si entra, el problema es la formula; si no, es la celda.
+2. **Verificacion por rotulos, no por coordenada.** Los dos bloques se comprueban por su titulo y
+   sus encabezados antes de escribir. Una posicion se pudre sin avisar; un rotulo no.
+3. **Ancla de combinada.** Se comprueba que la celda destino no sea la mitad muda de un merge.
+4. **Sin coordenadas de cotizacion.** La conversion pasa a `TIDETRACK_USD/AUD/EUR()`. El bloque de
+   Cotizaciones se habia mudado de la fila 17 a la 27, y una referencia que se corre **no da error:
+   da otro numero**.
+5. **El formato es parte del plan.** Un intento previo dejo esas celdas en formato porcentaje y
+   $230.000 se leia "23000000,0%" -- el valor bien, la pantalla mintiendo. Revertir formulas no
+   revierte formatos, asi que ahora el formato se propone, se verifica y se revierte igual que una
+   formula.
+
+**Ademas, en la misma sesion.** "Deudas" paso a la categoria "Deuda y financiacion" (la categoria
+cruza bloques a proposito: la cuota fija en Gastos Fijos, la deuda elastica en Variables). Y
+"Limpiar Plan de Cuentas" dejo de deducir la posicion de la consolidada de una marca en
+DocumentProperties -- que faltaba, porque el borrado que la corrio ocurrio antes de que la marca
+existiera -- y pasa a **medirla** en la hoja, con el borrado de columna decidido por geometria.
+
+**Pendiente.** Refrescar `celdas.tsv` desde el export nuevo que quedo en Drive
+(`TIDETRACK_ARQUITECTURA_ESTRICTA.json`, 40 hojas, 154.736 celdas). Mientras tanto, la fuente de
+verdad de la geometria es la planilla, medida en vivo.
+
+Versiones: v0.23.0 a v0.23.5.

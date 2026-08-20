@@ -2,7 +2,7 @@
 
 > Propósito: Fuente de verdad sobre la organización del repositorio. Toda nueva carpeta o archivo debe registrarse aquí antes de crearse. Los agentes de IA usan este documento como referencia canónica.
 
-Versión: v0.8.3 (gobernanza Fase 1 del arnés sobre el baseline productivo v0.8.2) | Última actualización: 2026-08-12
+Versión: v0.11.0 (post swap de hojas Fix; instrumental del gemelo digital recuperado) | Última actualización: 2026-08-18
 
 ---
 
@@ -25,6 +25,23 @@ planilla-finanzas-personales/
 │ ├── 15_ExchangeRateApi.js # Fetch cotizaciones + custom functions TIDETRACK_USD/EUR/AUD
 │ ├── 98_DevTools_Scanner.js # Exportar JSON de arquitectura completa
 │ ├── 99_MigrationLogic.js # Migración desde BD antigua (legacy)
+│ ├── DEVTOOL_FormulerioV0111.js # Repara las fórmulas de Inicio/Tablero que rompió el swap v0.11
+│ ├── DEVTOOL_RiquezaYCategorias.js # Riqueza por lista blanca (Ahorros+Inversiones) + columna Tipo en categorías
+│ ├── DEVTOOL_StockYFlujo.js # Saldos bancarios reales (independientes del mes) + capitalización como residuo
+│ ├── DEVTOOL_ConciliarSaldos.js # Ajustes de conciliación contra los saldos bancarios declarados
+│ ├── DEVTOOL_AltaCuentas.js # Alta en el Plan de Cuentas de las cuentas que el ledger usa y el catálogo no tiene
+│ ├── DEVTOOL_ConciliarSaldos.js # Concilia saldos contra los declarados cargando movimientos de Ajuste
+│ ├── DEVTOOL_Proyeccion.js # BD de Proyección (espejo de Registros) + cableado del Presupuesto Asignado
+│ ├── DEVTOOL_CategorizarCuentas.js # Ordena las cuentas en categorías (eje: por qué entró o salió)
+│ ├── DEVTOOL_TipoDeMedios.js # El medio declara su tipo directo (eje: dónde está la plata)
+│ ├── DEVTOOL_LimpiarPlanCuentas.js # Deja el catálogo en su forma final: todas las categorías en P
+│ ├── DEVTOOL_BloqueCategorias.js # El bloque Categorías del Tablero agrupa por categoría de cuenta
+│ ├── DEVTOOL_Presupuesto.js # Motor de la hoja Presupuesto - NO LISTO, fuera del menú
+│ ├── DEVTOOL_CableadoPresupuesto.js # Cableado Presupuesto <-> Tablero - NO LISTO, fuera del menú
+│ ├── DEVTOOL_RobustezVistas.js # Anclas de vistas - anclas PRE-Fix, fuera del menú
+│ ├── MIGRACION_v0.9.5_LayoutNuevo.js # Adaptación al layout de junio - obsoleta, con guard
+│ ├── MIGRACION_v0.11_SwapHojasFix.js # Swap de hojas Fix a canónicas (aplicada 2026-08-18)
+│ ├── MIGRACION_v031_Historico.js # Recupera el histórico de la planilla v03.1 por ausencia
 │ ├── UI_SharedStyles.html # Design System CSS compartido (neumorphic, League Spartan)
 │ ├── UI_AbmPlanCuentas.html # ABM multi-entidad Plan de Cuentas
 │ ├── ZZ_Changelog.js # Historial de versiones in-code
@@ -50,6 +67,9 @@ planilla-finanzas-personales/
 │ │ ├── PROMPT_MAESTRO.md # Prompts de referencia para el ecosistema agéntico
 │ │ ├── RESUMEN_PROYECTO.md # Visión general de Tidetrack
 │ │ ├── ROADMAP_PRODUCTO.md # Etapas y prioridades del producto
+│ │ ├── MAPA_ARQUITECTURA_PLANILLA.md # Capa SEMÁNTICA curada del gemelo (el único que se edita a mano)
+│ │ ├── INVENTARIO_CELDAS.md # Capa MECÁNICA auto-generada (NO editar: se regenera)
+│ │ ├── celdas.tsv # Volcado aplanado para auditoría con awk/grep (NO editar)
 │ │ ├── TIDETRACK_ARQUITECTURA_ESTRICTA.json # JSON crudo generado por DevTools (para NotebookLM)
 │ │ └── database_er_diagram.png # Diagrama ER de relaciones
 │ ├── sesiones/ # Notas de sesiones de trabajo específicas
@@ -66,8 +86,9 @@ planilla-finanzas-personales/
 │ └── README.md # Índice de documentación
 │
 ├── .claude/ # Capa de gobernanza Claude Code (manda cuando se trabaja desde Claude Code)
-│ ├── agents/ # Subagentes especializados (7 agentes activos)
+│ ├── agents/ # Subagentes especializados (8 agentes activos)
 │ │ ├── tidetrack-pm.md # Dispatcher y orquestador central
+│ │ ├── gemelo-digital.md # Dueño del gemelo: scanner, snapshot, inventario, TSV, MAPA y diff de no-daño
 │ │ ├── appscript-backend.md # Experto en lógica Apps Script (src/*.js, pipelines, deploy)
 │ │ ├── appscript-ui.md # Especialista en HtmlService y UI embebida
 │ │ ├── docs-keeper.md # Coherencia documental (changelog, ADRs, estructura)
@@ -104,6 +125,14 @@ planilla-finanzas-personales/
 │ │ ├── estructura-obligatoria.md # Reglas de estructura de carpetas
 │ │ └── no-emojis.md # Regla estricta de tono profesional
 │ └── workflows/ # Flujos de trabajo reutilizables
+│
+├── devtools/ # Herramientas locales: corren en tu máquina, NO se deployan (src/ es el rootDir de clasp)
+│ ├── generar_inventario_planilla.py # Del snapshot JSON produce INVENTARIO_CELDAS.md (capa mecánica)
+│ ├── generar_tsv_celdas.py # Aplana el snapshot a celdas.tsv para auditar con awk/grep sin cargar el JSON
+│ ├── diff_snapshots.py # Prueba de no-daño: compara dos snapshots y falla si cambió una fórmula
+│ ├── probar_formulerio.js # Banco de pruebas: corre las transformaciones del formulerío contra las fórmulas reales del gemelo ANTES de deployar
+│ ├── probar_riqueza.js # Banco de pruebas de la lista blanca de riqueza y la columna Tipo
+│ └── probar_stock_flujo.js # Banco de pruebas de las fórmulas de saldo y del Flujo Cotidiano
 │
 ├── scripts/ # Herramientas de automatización local
 │ └── auto-sync.js # Watcher: commit + push automático
@@ -167,6 +196,23 @@ El pipeline estándar para cerrar cualquier feature:
 | `15_ExchangeRateApi.js` | Activo - cotizaciones + custom functions GAS | v0.6.0 |
 | `98_DevTools_Scanner.js` | Activo - exporta JSON de arquitectura completa | v0.8.0 |
 | `99_MigrationLogic.js` | Activo - migración desde BD antigua (legacy) | v0.5.0 |
+| `DEVTOOL_FormulerioV0111.js` | Activo - repara el formulerío de Inicio/Tablero post-swap | v0.12.0 |
+| `DEVTOOL_RiquezaYCategorias.js` | Activo - riqueza por lista blanca + columna Tipo | v0.13.0 |
+| `DEVTOOL_StockYFlujo.js` | Activo - saldos bancarios reales, capitalización residual | v0.14.0 |
+| `DEVTOOL_ConciliarSaldos.js` | Activo - concilia saldos por medio vía cuenta 'Ajuste' | v0.17.0 |
+| `DEVTOOL_AltaCuentas.js` | Activo - alta de cuentas faltantes en el catálogo | v0.15.0 |
+| `DEVTOOL_ConciliarSaldos.js` | Activo - ajustes de conciliación contra saldos declarados | v0.17.0 |
+| `DEVTOOL_Proyeccion.js` | Activo - BD de Proyección + Presupuesto Asignado | v0.18.0 |
+| `DEVTOOL_CategorizarCuentas.js` | Activo - cuenta → categoría (eje del motivo) | v0.19.1 |
+| `DEVTOOL_TipoDeMedios.js` | Activo - medio → tipo (eje patrimonial) | v0.20.0 |
+| `DEVTOOL_LimpiarPlanCuentas.js` | Activo - catálogo final, todas las categorías en P | v0.21.0 |
+| `DEVTOOL_BloqueCategorias.js` | Activo - bloque Categorías por categoría de cuenta | v0.22.0 |
+| `DEVTOOL_Presupuesto.js` | **Fuera del menú** - NO LISTO, bloqueantes abiertos | v0.9.x |
+| `DEVTOOL_CableadoPresupuesto.js` | **Fuera del menú** - NO LISTO, bloqueantes abiertos | v0.9.x |
+| `DEVTOOL_RobustezVistas.js` | **Fuera del menú** - sus anclas son PRE-Fix, re-verificar | v0.9.x |
+| `MIGRACION_v0.9.5_LayoutNuevo.js` | **Obsoleta** - guard derivado de RANGES en toda función que escribe | v0.9.5 |
+| `MIGRACION_v0.11_SwapHojasFix.js` | Aplicada en producción el 2026-08-18; quedan Ver estado y Purgar | v0.11.0 |
+| `MIGRACION_v031_Historico.js` | Activo - cruce por ausencia, re-ejecutable | v0.11.0 |
 | `UI_SharedStyles.html` | Activo - Design System institucional (neumorphic) | v0.4.3 |
 | `UI_AbmPlanCuentas.html` | Activo - ABM multi-entidad Plan de Cuentas | v0.4.1 |
 | `ZZ_Changelog.js` | Activo | v0.4.0 |
@@ -174,4 +220,4 @@ El pipeline estándar para cerrar cualquier feature:
 
 ---
 
-*Tidetrack - ESTRUCTURA.md - v0.8.0 - 2026-06-05*
+*Tidetrack - ESTRUCTURA.md - v0.17.0 - 2026-08-19*

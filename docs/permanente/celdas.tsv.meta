@@ -1,0 +1,14 @@
+# Procedencia de celdas.tsv - generado por devtools/generar_tsv_celdas.py
+# Archivo GENERADO. No editar a mano: se reescribe en cada regeneracion.
+snapshot_origen: docs/permanente/TIDETRACK_ARQUITECTURA_ESTRICTA.json
+fecha_exportacion: 2026-08-18T22:14:29.098318Z
+id_planilla: 1YXnN-9X1itjpuxOBBwGwH3LSMqeGBtyCrUcFK4xCcUI
+nombre_planilla: PLANILLA FINANZAS_v4 .WIP | Personal
+cobertura: total en las 11 hojas de logica y catalogo; estructura+formulas en los 4 ledgers de datos (ver meta.cobertura_hoja)
+formato_celda: scanner v0.8.4 o posterior (con valor_mostrado)
+filas: 17409
+celdas_con_formula: 196
+celdas_con_valor_mostrado: 12852
+hojas_volcadas: 15
+hojas_vacias: (ninguna)
+hojas_sin_nodo_mapa_celdas: (ninguna)
