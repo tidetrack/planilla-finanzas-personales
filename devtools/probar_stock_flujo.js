@@ -9,7 +9,7 @@
  * nadie corrio la transformacion contra una entrada real antes de deployar.
  *
  * USO:  node devtools/probar_stock_flujo.js
- * @version 0.14.0
+ * @version 0.15.0
  * @since 2026-08-19
  */
 const fs=require('fs'), vm=require('vm'), path=require('path');
@@ -30,7 +30,7 @@ vm.runInContext(
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_FormulerioV0111.js'),'utf8')+'\n'+
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_TipoDeMedios.js'),'utf8')+'\n'+
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_StockYFlujo.js'),'utf8')+
-  '\n;Object.assign(globalThis,{FORM_CELDAS,SYF_SALDOS_TABLERO,SYF_FILA_RESIDUO,SYF_ARRASTRE,SYF_BLOQUE_MEDIOS,TDM_TIPOS});', ctx);
+  '\n;Object.assign(globalThis,{FORM_CELDAS,SYF_SALDOS_TABLERO,SYF_TIPOS_TABLERO,SYF_FILA_RESIDUO,SYF_ARRASTRE,SYF_BLOQUE_MEDIOS,TDM_TIPOS});', ctx);
 
 const tsv=fs.readFileSync(path.join(RAIZ,'docs/permanente/celdas.tsv'),'utf8').split('\n');
 const F={}; for(const l of tsv){const p=l.split('\t'); if(p.length<3||!p[2])continue;
@@ -73,19 +73,35 @@ function revisar(nombre,f,opts){
   if(p.length){fallas++; console.log('\n### FALLA '+nombre+': '+p.join(', ')); console.log(f);}
   return !p.length;
 }
-console.log('=== 1. STOCKS: el bloque de saldos suma POR TIPO DE MEDIO ===');
-const s=ctx.SYF_SALDOS_TABLERO;
-const tipos=ctx._tiposDeMedioSyf();
-if(tipos.length!==s.filas.length){console.log('  !!! hay '+tipos.length+' tipos y '+s.filas.length+' filas: no entran');fallas++;}
-else console.log('  OK  '+tipos.length+' tipos para '+s.filas.length+' filas: '+tipos.join(' / '));
-if(tipos[0]!=='Hogar'){console.log('  !!! el primer tipo NO es Hogar; O23:O25 apunta a la PRIMERA fila para la liquidez');fallas++;}
-else console.log('  OK  Hogar es la primera fila: es a la que apunta la liquidez de O23:O25');
-s.filas.forEach((fila,i)=>{
-  const f = ctx._formulaSaldoPorTipo(s.colTipo+fila);
-  if(revisar(s.colMonto+fila, f)) console.log('  OK  '+(s.colMonto+fila).padEnd(6)+(tipos[i]||'').padEnd(14)+'lee su tipo de '+s.colTipo+fila);
-  if(f.indexOf('tipo_fila='+s.colTipo+fila)===-1){console.log('  !!! '+s.colMonto+fila+' no filtra por el rotulo de al lado');fallas++;}
-  if(!/tasa_destino/.test(f)){console.log('  !!! '+s.colMonto+fila+' no convierte a la moneda del selector');fallas++;}
+console.log('=== 1a. La suma POR TIPO DE MEDIO (bloque "Tipo de Medios") ===');
+const t=ctx.SYF_TIPOS_TABLERO;
+// Los rotulos los pone Franco en la hoja; el bench simula los que se midieron el 2026-08-20.
+const TIPOS_EN_HOJA=['Ahorros','Financiación','Hogar','Inversiones'];
+t.filas.forEach((fila,i)=>{
+  const celdaTipo=t.colTipo+fila;
+  const f=ctx._formulaSaldoPorTipo(celdaTipo,'$N$4');
+  if(revisar(t.colMonto+fila,f)) console.log('  OK  '+(t.colMonto+fila).padEnd(6)+TIPOS_EN_HOJA[i].padEnd(14)+'lee su tipo de '+celdaTipo);
+  if(f.indexOf('tipo_fila='+celdaTipo)===-1){console.log('  !!! '+t.colMonto+fila+' no filtra por el rotulo de al lado');fallas++;}
+  // Ni una coordenada de cotizacion: son las que se pudren cuando el bloque se mueve.
+  if(/\$AF\$\d+/.test(f)){console.log('  !!! '+t.colMonto+fila+' apunta a una celda de cotizacion por coordenada');fallas++;}
+  if(!/TIDETRACK_USD\(\)/.test(f)){console.log('  !!! '+t.colMonto+fila+' no convierte con las custom functions');fallas++;}
 });
+if(t.colMonto==='AF'){console.log('  !!! la columna Monto no puede ser AF: es la mitad muda de la combinada AE:AF');fallas++;}
+else console.log('  OK  el monto va en '+t.colMonto+' (ancla), no en la mitad muda de la combinada');
+
+console.log('\n=== 1b. STOCKS: saldos por moneda (bloque "Saldos Actuales") ===');
+const s=ctx.SYF_SALDOS_TABLERO;
+if(s.filas[0]===t.filas[0]){console.log('  !!! los dos bloques ocupan las mismas filas: uno pisa al otro');fallas++;}
+else console.log('  OK  bloques separados: tipos en filas '+t.filas.join(',')+', monedas en '+s.filas.join(','));
+s.filas.forEach(fila=>{
+  ['flujo','capital'].forEach(k=>{
+    const esRiq=k==='capital';
+    const col=esRiq?s.colCapital:s.colFlujo;
+    const f=ctx._formulaSaldoPorMoneda(esRiq,s.colMoneda+fila);
+    if(revisar(col+fila,f)) console.log('  OK  '+(col+fila).padEnd(6)+k);
+  });
+});
+
 console.log('\n=== 2. STOCKS convertidos (Inicio C8 / F8) ===');
 [['Inicio!C8',false],['Inicio!F8',true]].forEach(([c,r])=>{
   const f=ctx._formulaSaldoConvertido(r,'$G$4');
@@ -108,8 +124,8 @@ else console.log('  OK  las tres columnas derivan de la MISMA matriz ordenada (f
 const dg=ctx._formulaDiagnosticoSyf();
 if(revisar('Tablero!L29',dg)) console.log('  OK  Tablero!L29');
 // Invariantes del modelo de saldo validado contra los saldos reales de Franco (v0.16.0).
-[['AF9','AE9'],['AF10','AE10']].forEach(([c,t])=>{
-  const f=ctx._formulaSaldoPorTipo(t);
+[[t.colMonto+t.filas[0],t.colTipo+t.filas[0]],[t.colMonto+t.filas[1],t.colTipo+t.filas[1]]].forEach(([c,ct])=>{
+  const f=ctx._formulaSaldoPorTipo(ct,'$N$4');
   const chk=[
     [/corte_fila<>""/, 'exige que el medio exista en el Plan'],
     [/col_cuenta="Inicio Mes"/, 'usa el ultimo Inicio Mes como punto de corte'],
@@ -119,18 +135,6 @@ if(revisar('Tablero!L29',dg)) console.log('  OK  Tablero!L29');
   chk.forEach(([re,d])=>{ if(!re.test(f)){console.log('  !!! '+c+' NO '+d);fallas++;} });
   if(chk.every(([re])=>re.test(f))) console.log('  OK  '+c+' — corte por ultimo Inicio Mes + medio valido');
 });
-console.log('\n=== 3b. "Disponibilidad de fondos" deja de sumar las cuatro monedas ===');
-['O23','O24','O25'].forEach(c=>{
-  const antes=viva('Tablero!'+c);
-  if(!antes){console.log('  --  Tablero!'+c+' no esta en el gemelo, se saltea');return;}
-  const n=ctx._reapuntarLiquidezSyf(antes);
-  if(n===antes){console.log('  !!! '+c+' no cambio: seguiria multiplicando por la cotizacion algo ya convertido');fallas++;return;}
-  if(/AF10\s*\*/.test(n)||/AF11\s*\*/.test(n)||/AF12\s*\*/.test(n)){console.log('  !!! '+c+' todavia trata AF10:AF12 como monedas');fallas++;return;}
-  if(!/liquidez_moneda;\s*liquidez_ars;/.test(n)){console.log('  !!! '+c+' sigue dividiendo la liquidez por la tasa');fallas++;return;}
-  if(ctx._reapuntarLiquidezSyf(n)!==n){console.log('  !!! '+c+' NO es idempotente');fallas++;return;}
-  console.log('  OK  '+c+' apunta al saldo de Hogar, sin doble conversion, e idempotente');
-});
-
 const pm2=ctx._formulaSaldoPorMedio();
 if(!/con_saldo/.test(pm2)){console.log('  !!! C18 no filtra los medios en cero');fallas++;}
 else console.log('  OK  C18 muestra solo medios con saldo distinto de cero');

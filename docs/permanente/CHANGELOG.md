@@ -9,6 +9,37 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.23.3 - La suma por tipo de medio, sobre la geometria real (2026-08-20)
+
+El Tablero ya tenia el bloque **"Tipo de Medios."** (`AE7:AH12`) con los cuatro tipos escritos a
+mano; le faltaba la columna Monto. Ahora se llena: cuanta plata hay en cada finalidad, convertida
+a la moneda del selector.
+
+### Lo que se aprendio en el camino, que vale mas que el bloque
+
+La v0.23.0 se escribio contra el **gemelo digital**, que tenia el layout viejo: ahi `AE7` era
+"Saldos Actuales" con las monedas en las filas 9-12. En la planilla real ese bloque esta en la
+fila 16, y las filas 9-12 son **otro bloque**. Se intento escribir ahi y no entro nada:
+`AF9:AF12` son la mitad muda de celdas combinadas `AE:AF`.
+
+> El gemelo mintio, y mintio en silencio. Un snapshot desactualizado es peor que no tener snapshot.
+
+### Tres guards nuevos, cada uno por algo que efectivamente paso
+
+1. Los dos bloques se verifican **por su titulo y sus rotulos** antes de escribir. Una posicion se
+   pudre sin avisar; un rotulo no.
+2. Se comprueba que la celda destino sea el **ancla** de su combinada, no su mitad muda.
+3. Se comprueba que el selector de moneda tenga una moneda de verdad.
+
+### Y una coordenada menos que se pueda pudrir
+
+La conversion deja de apuntar a `$AF$17/18/19` y llama a `TIDETRACK_USD/AUD/EUR()`. El bloque de
+cotizaciones se habia mudado a las filas 27-29, y **una coordenada que se pudre no da error: da
+otro numero**. Una funcion no tiene coordenada que se pueda mover.
+
+Los rotulos de los tipos no se tocan: son de Franco, el script solo suma. "Disponibilidad de
+fondos" (`O23:O25`) queda como estaba, porque el bloque por moneda sigue existiendo.
+
 ## v0.23.1 - La consolidada del Plan se ubica midiendo (2026-08-20)
 
 "Limpiar Plan de Cuentas" abortaba con *"La consolidada de S8 no tiene formula"* -- cuando la

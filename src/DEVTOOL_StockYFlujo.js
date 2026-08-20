@@ -82,7 +82,7 @@
  * Reusa tres helpers probados de DEVTOOL_FormulerioV0111.js: _respaldarFormulerio,
  * _leerRespaldoFormulerio y _errorDeCelda.
  *
- * @version 0.15.1
+ * @version 0.16.0
  * @since 2026-08-19
  * @lastModified 2026-08-20
  * @see docs/permanente/FUNCIONALIDADES.md
@@ -99,34 +99,44 @@ const SYF_PROP_RESPALDO = 'stock_y_flujo_respaldo';
 const SYF_ARRASTRE = 'Inicio Mes';
 
 /**
- * Bloque "Saldos Actuales" del Tablero (AE7:AG12).
+ * Bloque "Tipo de Medios." del Tablero (AE7:AH12) -- lo que faltaba llenar.
  *
- * decision Franco 2026-08-19: pasa a mostrar la SUMATORIA POR TIPO DE MEDIO -- Hogar, Ahorros,
- * Inversiones, Financiacion -- en vez del desglose por moneda con dos columnas (Flujo/Capital).
+ * decision Franco 2026-08-19: el Tablero tiene que contestar EN QUE FINALIDAD esta la plata.
+ * El bloque ya existia con sus cuatro tipos escritos a mano y la columna Monto vacia; lo unico
+ * que faltaba era la suma.
  *
- * El bloque tiene exactamente cuatro filas de datos y los tipos son cuatro: entra justo. Y es la
- * lectura que faltaba: "cuanta plata tengo, y en que finalidad esta". El desglose por moneda que
- * habia antes contestaba una pregunta que ya contesta el bloque de medios, cuenta por cuenta.
+ * GEOMETRIA MEDIDA EN VIVO el 2026-08-20, no supuesta. Cada fila tiene DOS celdas combinadas:
+ * el nombre ocupa AE:AF (ancla AE) y el monto AG:AH (ancla AG). Escribir en AF es escribir en la
+ * mitad muda de una combinada: entra sin protestar y no queda. Es exactamente lo que paso al
+ * intentarlo con el gemelo digital desactualizado, que ubicaba este bloque diez filas mas abajo.
  */
-const SYF_SALDOS_TABLERO = {
+/** El selector de moneda del Tablero. Se verifica en el preflight antes de usarlo. */
+const SYF_SELECTOR_MONEDA = 'N4';
+
+const SYF_TIPOS_TABLERO = {
     filaTitulo: 7, filaHeader: 8, filas: [9, 10, 11, 12],
-    colTipo: 'AE', colMonto: 'AF', colPct: 'AG',
-    rotulos: { tipo: 'Tipo', monto: 'Monto', pct: '%' }
+    tituloEsperado: 'Tipo de Medios', colTipo: 'AE', colMonto: 'AG'
 };
 
 /**
- * Los cuatro tipos, en el orden en que se leen: primero lo disponible, despues lo guardado.
- * Se derivan del mapa de DEVTOOL_TipoDeMedios para no tener dos listas que se puedan desfasar.
+ * Bloque "Saldos Actuales" del Tablero: sigue siendo el desglose POR MONEDA, sin cambios.
+ *
+ * Vivia en las filas 9-12 y hoy vive en las 18-21 -- el rediseno lo bajo junto con todo lo demas
+ * de esa columna. Las filas se verifican contra sus rotulos antes de escribir.
  */
-function _tiposDeMedioSyf() {
-    const orden = ['Hogar', 'Ahorros', 'Inversiones', 'Financiación'];
-    const existentes = [];
-    Object.keys(TDM_TIPOS).forEach(function (m) {
-        if (existentes.indexOf(TDM_TIPOS[m]) === -1) existentes.push(TDM_TIPOS[m]);
+const SYF_SALDOS_TABLERO = {
+    filaTitulo: 16, filaHeader: 17, filas: [18, 19, 20, 21],
+    colMoneda: 'AE', colFlujo: 'AF', colCapital: 'AG'
+};
+
+/**
+ * Los cuatro tipos se leen DE LA HOJA, no de una lista propia: el bloque ya los tiene escritos y
+ * en su orden. Una segunda lista aca solo podria desfasarse de la primera.
+ */
+function _tiposEnLaHojaSyf(hojaTablero) {
+    return SYF_TIPOS_TABLERO.filas.map(function (f) {
+        return String(hojaTablero.getRange(SYF_TIPOS_TABLERO.colTipo + f).getValue() || '').trim();
     });
-    const salida = orden.filter(function (t) { return existentes.indexOf(t) !== -1; });
-    existentes.forEach(function (t) { if (salida.indexOf(t) === -1) salida.push(t); });
-    return salida;
 }
 
 /**
@@ -271,9 +281,10 @@ function aplicarStockYFlujo() {
             'Separar stock de flujo',
             'Se van a reescribir ' + plan.cambios.length + ' celda(s).\n\n' +
             'CAMBIAN NUMEROS QUE VENIS MIRANDO:\n' +
-            '  - "Saldos Actuales" (AE7:AG12) pasa a sumar POR TIPO DE MEDIO -- Hogar, Ahorros,\n' +
-            '    Inversiones, Financiacion -- con su peso en % sobre el total, en vez del desglose\n' +
-            '    por moneda con las columnas Flujo y Capital.\n' +
+            '  - El bloque "' + pre.tituloTipos + '" (' + SYF_TIPOS_TABLERO.colMonto +
+            SYF_TIPOS_TABLERO.filas[0] + ':' + SYF_TIPOS_TABLERO.colMonto +
+            SYF_TIPOS_TABLERO.filas[SYF_TIPOS_TABLERO.filas.length - 1] + ') se llena por primera\n' +
+            '    vez: cuanta plata hay en cada finalidad (' + pre.tipos.join(', ') + ').\n' +
             '  - Los saldos dejan de depender del mes seleccionado y muestran el saldo ACTUAL.\n' +
             '  - Los asientos "' + SYF_ARRASTRE + '" dejan de contar en toda la planilla (no se borran).\n' +
             '  - Los Ingresos del mes BAJAN: hasta hoy incluian los arrastres de las cuentas de casa.\n\n' +
@@ -294,15 +305,6 @@ function aplicarStockYFlujo() {
             _limpiarBloqueMedios(ss, pre.nombreTablero);
             SpreadsheetApp.flush();
         }
-
-        // El bloque de saldos cambia de SIGNIFICADO: la columna que decia monedas pasa a decir
-        // tipos, y la que mostraba capital pasa a mostrar un porcentaje. Dos cosas que hay que
-        // abrir ANTES de escribir, o el cambio se pierde en silencio:
-        //   - la validacion de datos: si AE9 solo acepta ARS/USD/AUD/EUR, "Hogar" se rechaza y la
-        //     celda queda vacia sin lanzar excepcion (cicatriz del 2026-08-19, columna N de medios).
-        //   - el formato de numero: AG venia en moneda, y un ratio de 0,42 se veria "$0,42".
-        _abrirBloqueSaldosSyf(ss, pre.nombreTablero);
-        SpreadsheetApp.flush();
 
         plan.cambios.forEach(function (c) {
             const rango = ss.getSheetByName(c.nombreHoja).getRange(c.celda);
@@ -335,17 +337,14 @@ function aplicarStockYFlujo() {
             '- Respaldo en la hoja oculta "' + respaldo.nombre + '"\n' +
             '- NO se toco ninguna fila del ledger\n\n' +
             'QUE MIRAR:\n' +
-            '  1. "Tablero"!AE9:AG12: cuatro filas, una por tipo de medio, y los cuatro % suman\n' +
-            '     100%. AF9 (Hogar) es la plata disponible para gastar, y no tiene que cambiar\n' +
-            '     cuando cambias el mes en N2: es un saldo, no un movimiento.\n' +
+            '  1. El bloque de tipos: los cuatro montos tienen que sumar lo mismo que la suma de\n' +
+            '     "Medios Bancarios", y no cambiar cuando cambias el mes en N2 -- son saldos.\n' +
             '  2. El bloque "Medios Bancarios" (C17:I31): las TRES columnas -- Medio, Moneda y\n' +
             '     Monto -- tienen que corresponderse fila por fila. Si el nombre no coincide con\n' +
             '     el monto de al lado, avisar: es el defecto que tuvo la v0.16.0.\n' +
             '  3. "Tablero"!O16 tiene que dar 100%: la capitalizacion es el residuo.\n' +
             '  4. "Tablero"!N16 (Ingresos) BAJA respecto de antes. Es correcto: ya no cuenta los\n' +
             '     arrastres de "' + SYF_ARRASTRE + '" como si fueran ingresos del mes.\n' +
-            '  5. "Disponibilidad de fondos" (O23:O25) ahora reparte el saldo de Hogar, no la suma\n' +
-            '     de las cuatro monedas. Si te daba de mas, era eso.\n\n' +
             'Si algo quedo peor: Tidetrack Dev > Stock y flujo > 3. Revertir.';
 
         logSuccess('aplicarStockYFlujo: ' + escritas.length + ' celda(s).');
@@ -464,14 +463,63 @@ function _preflightSyf(ss) {
     }
     const diagLibre = celdaDiag !== '';
 
+    // LOS DOS BLOQUES DE ESA COLUMNA SE VERIFICAN POR SUS ROTULOS, no por su posicion.
+    //
+    // decision Franco 2026-08-20: este guard existe por lo que paso hoy. El gemelo digital tenia
+    // el layout viejo -- "Saldos Actuales" en la fila 7 -- y el rediseno lo habia bajado a la 16,
+    // con un bloque "Tipo de Medios" nuevo ocupando su lugar. Escribir a ciegas ahi era pisar
+    // otro bloque. Una posicion se pudre en silencio; un rotulo, no.
+    const t = SYF_TIPOS_TABLERO;
+    const tituloTipos = String(hojaTablero.getRange(t.colTipo + t.filaTitulo).getValue() || '').trim();
+    if (tituloTipos.indexOf(t.tituloEsperado) === -1) {
+        throw new Error('En ' + t.colTipo + t.filaTitulo + ' se esperaba el titulo "' + t.tituloEsperado +
+            '" y dice "' + tituloTipos + '". El bloque de tipos se movio: hay que volver a medirlo ' +
+            'antes de escribir. No se toco nada.');
+    }
+    const tipos = _tiposEnLaHojaSyf(hojaTablero);
+    const sinTipo = tipos.filter(function (x) { return !x; }).length;
+    if (sinTipo) {
+        throw new Error('El bloque "' + tituloTipos + '" tiene ' + sinTipo + ' fila(s) sin tipo en ' +
+            t.colTipo + t.filas[0] + ':' + t.colTipo + t.filas[t.filas.length - 1] +
+            '. Esos rotulos los pone Franco, no el script: sin ellos no hay que sumar.');
+    }
+    // Y las celdas donde va el monto tienen que ser ANCLAS de su combinada. La mitad muda de una
+    // celda combinada se deja escribir y no queda: asi se perdio la primera version de esto.
+    const mudas = t.filas.filter(function (f) {
+        const r = hojaTablero.getRange(t.colMonto + f);
+        try { return r.isPartOfMerge() && r.getMergedRanges()[0].getA1Notation().indexOf(t.colMonto + f) !== 0; }
+        catch (e) { return false; }
+    });
+    if (mudas.length) {
+        throw new Error('Las celdas ' + t.colMonto + mudas.join(', ' + t.colMonto) + ' son la mitad ' +
+            'muda de una celda combinada: lo que se les escribe no queda. No se toco nada.');
+    }
+
     const s = SYF_SALDOS_TABLERO;
-    // El bloque de saldos se reescribe entero (rotulos incluidos), asi que lo unico que hay que
-    // verificar es que sea EL bloque: que su titulo siga estando donde se cree. Si el titulo se
-    // movio, escribir ahi seria pisar otra cosa.
-    const tituloSaldos = String(hojaTablero.getRange(s.colTipo + s.filaTitulo).getValue() || '').trim();
-    if (!tituloSaldos) {
-        throw new Error('No hay titulo en ' + s.colTipo + s.filaTitulo + ': ahi deberia arrancar el ' +
-            'bloque de saldos. Sin esa referencia no se puede escribir a ciegas.');
+    const tituloSaldos = String(hojaTablero.getRange(s.colMoneda + s.filaTitulo).getValue() || '').trim();
+    const rotFlujo = String(hojaTablero.getRange(s.colFlujo + s.filaHeader).getValue() || '').trim();
+    const rotCap = String(hojaTablero.getRange(s.colCapital + s.filaHeader).getValue() || '').trim();
+    if (_normalizarRotulo(rotFlujo) !== 'flujo' || _normalizarRotulo(rotCap) !== 'capital') {
+        throw new Error('Los rotulos del bloque de saldos por moneda no son los esperados: ' +
+            s.colFlujo + s.filaHeader + ' dice "' + rotFlujo + '" y ' + s.colCapital + s.filaHeader +
+            ' dice "' + rotCap + '". No se toco nada.');
+    }
+    const monedas = s.filas.map(function (f) {
+        return String(hojaTablero.getRange(s.colMoneda + f).getValue() || '').trim();
+    });
+    const desconocidas = monedas.filter(function (m) { return MONEDAS_DISPONIBLES.indexOf(m) === -1; });
+    if (desconocidas.length) {
+        throw new Error('El bloque de saldos rotula monedas desconocidas en ' + s.colMoneda + s.filas[0] +
+            ':' + s.colMoneda + s.filas[s.filas.length - 1] + ': ' + monedas.join(', ') + '. No se toco nada.');
+    }
+
+    // El selector de moneda: se mide que efectivamente tenga una moneda, no se da por sentado.
+    const selectorMoneda = '$' + SYF_SELECTOR_MONEDA.replace(/(\d+)/, '$$$1');
+    const valSelector = String(hojaTablero.getRange(SYF_SELECTOR_MONEDA).getValue() || '').trim();
+    if (MONEDAS_DISPONIBLES.indexOf(valSelector) === -1) {
+        throw new Error('El selector de moneda ' + SYF_SELECTOR_MONEDA + ' dice "' + valSelector +
+            '" y deberia tener una de ' + MONEDAS_DISPONIBLES.join('/') + '. Sin el, los montos por ' +
+            'tipo se convertirian a cualquier cosa. No se toco nada.');
     }
 
     // El bloque de medios se verifica POR SUS ROTULOS antes de escribir. Es el guard que faltaba
@@ -489,11 +537,13 @@ function _preflightSyf(ss) {
 
     return {
         bloqueMediosOk: bloqueMediosOk, bloqueMediosMotivo: bloqueMediosMotivo,
-        tituloSaldos: tituloSaldos,
+        tituloSaldos: tituloSaldos, tituloTipos: tituloTipos,
+        tipos: tipos, monedas: monedas, selectorMoneda: selectorMoneda,
         nombreInicio: nombreInicio, nombreTablero: nombreTablero,
         diagLibre: diagLibre, celdaDiag: celdaDiag,
         resumen: 'ledger "' + cfg.sheet + '" con header en la fila ' + cfg.headerRow +
-            '; bloque de saldos titulado "' + tituloSaldos + '"'
+            '; "' + tituloTipos + '" en la fila ' + t.filaTitulo + ' (' + tipos.join('/') + ')' +
+            '; "' + tituloSaldos + '" en la fila ' + s.filaTitulo + ' (' + monedas.join('/') + ')'
     };
 }
 
@@ -606,55 +656,35 @@ function _preambuloSaldoSyf() {
     ].join('\n');
 }
 
+/** Saldo actual por moneda, de un grupo (riqueza o su complemento). Bloque "Saldos Actuales". */
+function _formulaSaldoPorMoneda(esRiqueza, celdaMoneda) {
+    return '=LET(\n' + _preambuloSaldoSyf() + '\n' +
+        '  grupo; ARRAYFORMULA(' + _condTipoSyf(esRiqueza, 'tipo_fila') + ');\n' +
+        '  SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda=' + celdaMoneda + '); 0))\n)';
+}
+
 /**
  * Saldo actual de UN tipo de medio, convertido a la moneda del selector.
  *
- * `celdaTipo` trae el rotulo del tipo (AE9..AE12), asi que la formula es la misma en las cuatro
- * filas y cambiar el orden de los tipos no obliga a reescribirlas.
+ * `celdaTipo` trae el rotulo (AE9..AE12), asi que la formula es la misma en las cuatro filas.
+ *
+ * La conversion llama a TIDETRACK_USD/AUD/EUR() en vez de apuntar al bloque de Cotizaciones.
+ * decision Franco 2026-08-20: una referencia a $AF$17 fue correcta hasta que el rediseno bajo ese
+ * bloque a la fila 27, y una coordenada que se pudre no avisa -- devuelve otro numero. La funcion
+ * no tiene coordenada que se pueda mover. Es lo que ya hace el bloque de Inicio que funciona.
  */
-function _formulaSaldoPorTipo(celdaTipo) {
+function _formulaSaldoPorTipo(celdaTipo, celdaSelector) {
     return '=LET(\n' + _preambuloSaldoSyf() + '\n' +
         '  grupo; ARRAYFORMULA(tipo_fila=' + celdaTipo + ');\n' +
         '  suma_ars; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="ARS"); 0));\n' +
         '  suma_usd; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="USD"); 0));\n' +
         '  suma_aud; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="AUD"); 0));\n' +
         '  suma_eur; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="EUR"); 0));\n' +
-        '  total_ars; suma_ars + (suma_usd * $AF$17) + (suma_aud * $AF$18) + (suma_eur * $AF$19);\n' +
-        '  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; $AF$17; "AUD"; $AF$18; "EUR"; $AF$19); 1);\n' +
+        '  total_ars; suma_ars + (suma_usd * TIDETRACK_USD()) + (suma_aud * TIDETRACK_AUD()) + ' +
+        '(suma_eur * TIDETRACK_EUR());\n' +
+        '  tasa_destino; IFERROR(SWITCH(' + celdaSelector + '; "ARS"; 1; "USD"; TIDETRACK_USD(); ' +
+        '"AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n' +
         '  total_ars / tasa_destino\n)';
-}
-
-/** Saldo actual total de un grupo, convertido a la moneda del selector. */
-/**
- * Reapunta la liquidez de "Disponibilidad de fondos" al saldo del tipo Hogar.
- *
- * La formula sumaba AF9 + AF10*tc + AF11*tc + AF12*tc, que tenia sentido cuando esas cuatro
- * celdas eran monedas. Ahora son tipos, y la primera -- Hogar -- ya viene convertida: es la
- * plata disponible para cubrir gastos. Reemplazo por FUNCION, nunca por string.
- */
-/** Quita la validacion de la columna de tipos y pone formato de porcentaje en la del peso. */
-function _abrirBloqueSaldosSyf(ss, nombreTablero) {
-    const s = SYF_SALDOS_TABLERO;
-    const hoja = ss.getSheetByName(nombreTablero);
-    const desde = s.filas[0], hasta = s.filas[s.filas.length - 1];
-    hoja.getRange(s.colTipo + desde + ':' + s.colTipo + hasta).clearDataValidations();
-    hoja.getRange(s.colPct + desde + ':' + s.colPct + hasta).setNumberFormat('0.0%');
-}
-
-function _reapuntarLiquidezSyf(formula) {
-    const celdaHogar = '$' + SYF_SALDOS_TABLERO.colMonto + '$' + SYF_SALDOS_TABLERO.filas[0];
-    let out = formula;
-    // Se ancla al SHAPE VIEJO -- "AF9 + ..." -- y no a "cualquier cosa hasta el proximo ;".
-    // El banco de pruebas atajo por que: con el patron laxo, la segunda pasada volvia a matchear
-    // "liquidez_ars;" desde adentro de "liquidez_moneda; liquidez_ars;" y se comia la definicion
-    // de presupuesto_ahorro. Anclado asi, la segunda pasada no matchea: es idempotente.
-    out = out.replace(/(liquidez_ars\s*;\s*)AF9\s*\+[^;]*;/g, function (m, cabeza) {
-        return cabeza + celdaHogar + ';';
-    });
-    out = out.replace(/(liquidez_moneda\s*;\s*)liquidez_ars\s*\/\s*tasa_cambio\s*;/g, function (m, cabeza) {
-        return cabeza + 'liquidez_ars;';
-    });
-    return out;
 }
 
 function _formulaSaldoConvertido(esRiqueza, celdaSelector) {
@@ -739,57 +769,25 @@ function _planSyf(ss, pre) {
         });
     }
 
-    // --- STOCKS: el bloque de saldos pasa a sumar por TIPO DE MEDIO ---
-    const tipos = _tiposDeMedioSyf();
-    const primeraFila = SYF_SALDOS_TABLERO.filas[0];
-    const ultimaFila = SYF_SALDOS_TABLERO.filas[SYF_SALDOS_TABLERO.filas.length - 1];
-    [['colTipo', 'tipo'], ['colMonto', 'monto'], ['colPct', 'pct']].forEach(function (par) {
-        const col = SYF_SALDOS_TABLERO[par[0]];
-        const rotulo = SYF_SALDOS_TABLERO.rotulos[par[1]];
-        const celda = col + SYF_SALDOS_TABLERO.filaHeader;
-        const vivo = String(ss.getSheetByName(pre.nombreTablero).getRange(celda).getValue() || '').trim();
-        if (vivo === rotulo) return;
-        cambios.push({
-            nombreHoja: pre.nombreTablero, celda: celda, nota: 'Encabezado del bloque de saldos',
-            esValor: true, valorActual: vivo, valorNuevo: rotulo, formulaActual: '', formulaNueva: '',
-            resumen: 'el bloque pasa a leerse por tipo de medio: "' + rotulo + '"'
-        });
-    });
-    SYF_SALDOS_TABLERO.filas.forEach(function (fila, i) {
-        const tipo = tipos[i] || '';
-        const celdaTipo = SYF_SALDOS_TABLERO.colTipo + fila;
-        const vivoTipo = String(ss.getSheetByName(pre.nombreTablero).getRange(celdaTipo).getValue() || '').trim();
-        if (vivoTipo !== tipo) {
-            cambios.push({
-                nombreHoja: pre.nombreTablero, celda: celdaTipo, nota: 'Tipo de medio',
-                esValor: true, valorActual: vivoTipo, valorNuevo: tipo, formulaActual: '', formulaNueva: '',
-                resumen: 'la fila pasa a ser el tipo "' + tipo + '"'
-            });
-        }
+    // --- STOCKS: la suma por TIPO DE MEDIO. Solo la columna Monto: los rotulos ya estan en la
+    // hoja y son de Franco, no del script. ---
+    pre.tipos.forEach(function (tipo, i) {
         if (!tipo) return;
-        proponer(pre.nombreTablero, SYF_SALDOS_TABLERO.colMonto + fila, 'Saldo del tipo ' + tipo,
-            _formulaSaldoPorTipo(celdaTipo),
+        const fila = SYF_TIPOS_TABLERO.filas[i];
+        proponer(pre.nombreTablero, SYF_TIPOS_TABLERO.colMonto + fila, 'Saldo del tipo ' + tipo,
+            _formulaSaldoPorTipo(SYF_TIPOS_TABLERO.colTipo + fila, pre.selectorMoneda),
             'saldo actual de los medios de tipo ' + tipo + ', convertido a la moneda del selector');
-        proponer(pre.nombreTablero, SYF_SALDOS_TABLERO.colPct + fila, 'Peso del tipo ' + tipo,
-            '=IFERROR(' + SYF_SALDOS_TABLERO.colMonto + fila + '/SUM($' + SYF_SALDOS_TABLERO.colMonto +
-            '$' + primeraFila + ':$' + SYF_SALDOS_TABLERO.colMonto + '$' + ultimaFila + '); 0)',
-            'que porcentaje del total esta en esta finalidad');
     });
 
-    // --- "Disponibilidad de fondos" leia AF9:AF12 como si fueran monedas y las convertia. Ahora
-    // AF9 ya es el saldo del tipo Hogar en la moneda del selector: la liquidez disponible para
-    // cubrir gastos es exactamente eso, y la conversion sobra. Sin este ajuste, el bloque
-    // multiplicaria por la cotizacion algo que ya esta convertido.
-    ['O23', 'O24', 'O25'].forEach(function (celda) {
-        const actual = ss.getSheetByName(pre.nombreTablero).getRange(celda).getFormula();
-        if (!actual) return;
-        const nueva = _reapuntarLiquidezSyf(actual);
-        if (nueva === actual) return;
-        cambios.push({
-            nombreHoja: pre.nombreTablero, celda: celda, nota: 'Disponibilidad de fondos',
-            formulaActual: actual, formulaNueva: nueva,
-            resumen: 'la liquidez pasa a ser el saldo del tipo Hogar, ya convertido'
-        });
+    // --- STOCKS: saldos por moneda, sobre todo el ledger (bloque "Saldos Actuales") ---
+    SYF_SALDOS_TABLERO.filas.forEach(function (fila, i) {
+        const celdaMon = SYF_SALDOS_TABLERO.colMoneda + fila;
+        proponer(pre.nombreTablero, SYF_SALDOS_TABLERO.colFlujo + fila, 'Saldo cotidiano ' + pre.monedas[i],
+            _formulaSaldoPorMoneda(false, celdaMon),
+            'saldo cotidiano actual en ' + pre.monedas[i]);
+        proponer(pre.nombreTablero, SYF_SALDOS_TABLERO.colCapital + fila, 'Capital ' + pre.monedas[i],
+            _formulaSaldoPorMoneda(true, celdaMon),
+            'capital actual en ' + pre.monedas[i]);
     });
 
     // --- STOCKS de Inicio ---

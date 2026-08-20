@@ -5,6 +5,26 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.23.3 - La suma por tipo de medio, sobre la geometria REAL del Tablero.
+ * - Lo pedido: que el Tablero muestre cuanta plata hay en cada finalidad. El bloque ya existia --
+ *   "Tipo de Medios.", AE7:AH12, con los cuatro tipos escritos a mano por Franco -- y solo le
+ *   faltaba la columna Monto. Ahora se llena.
+ * - LO QUE SE APRENDIO EN EL CAMINO, que vale mas que el bloque: la v0.23.0 fue escrita contra el
+ *   gemelo digital, que tenia el layout viejo. En el gemelo, AE7 era "Saldos Actuales" con las
+ *   monedas en las filas 9-12. En la planilla real, ese bloque esta en la fila 16 y las filas
+ *   9-12 son OTRO bloque. Se intento escribir ahi y no entro nada: AF9:AF12 son la mitad muda de
+ *   celdas combinadas AE:AF. El gemelo mintio, y mintio en silencio.
+ * - TRES GUARDS NUEVOS, cada uno por algo que efectivamente paso:
+ *     1. Los dos bloques se verifican POR SU TITULO Y SUS ROTULOS antes de escribir. Una posicion
+ *        se pudre sin avisar; un rotulo no.
+ *     2. Se comprueba que la celda destino sea el ANCLA de su combinada, no su mitad muda.
+ *     3. Se comprueba que el selector de moneda tenga una moneda de verdad.
+ * - Y la conversion deja de apuntar a $AF$17/18/19: llama a TIDETRACK_USD/AUD/EUR(). Ese bloque de
+ *   cotizaciones se mudo a las filas 27-29, y una coordenada que se pudre no da error -- da otro
+ *   numero. Una funcion no tiene coordenada que se pueda mover.
+ * - Los rotulos de los tipos NO se tocan: son de Franco, el script solo suma.
+ * - "Disponibilidad de fondos" (O23:O25) queda como estaba: el bloque por moneda sigue existiendo.
+ *
  * [2026-08-20] v0.23.2 - El verificador dice POR QUE una celda quedo sin formula.
  * - "quedo SIN formula" es un sintoma, no un diagnostico, y esta campana ya perdio tiempo dos
  *   veces adivinando cual de las dos causas posibles era. Ahora el verificador las separa solo:
