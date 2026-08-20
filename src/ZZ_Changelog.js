@@ -5,6 +5,48 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.26.0 - La capitalizacion deja de ser un residuo, y el presupuesto sigue al periodo.
+ * Cuatro cosas que Franco marco mirando el Tablero, y una quinta que aparecio midiendo.
+ *
+ * 1. LA CAPACIDAD DE CAPITALIZACION ERA UNA RESTA DE DESCARTE. Se calculaba `Ingresos - Fijos -
+ *    Variables` en las dos columnas. Eso no mide capitalizacion: mide lo que quedo sin explicar,
+ *    y cuando los gastos superan a los ingresos da NEGATIVO. Medido en vivo el 2026-08-20 en
+ *    Julio: -$318.561,01 en el presupuesto y -$362.568,02 en la realidad. Nadie capitaliza menos
+ *    cero. Ahora es la SUMA de lo que va a los medios de tipo Ahorros e Inversiones, con la MISMA
+ *    formula en las dos columnas -- si cada una sumara distinto, el cumplimiento compararia peras
+ *    con manzanas. CONSECUENCIA A PROPOSITO: los cuatro renglones ya no suman 100%, y esa
+ *    diferencia es informacion -- la plata que entro y no se gasto ni se capitalizo. Antes se
+ *    escondia adentro del residuo y lo volvia negativo.
+ *
+ * 2. LA DISPONIBILIDAD DE FONDOS LE DABA TODO A UNA SOLA FILA cuando las tres categorias se
+ *    pasaban del 100%. Sin remanente que cubrir, la suma de remanentes daba cero y la formula
+ *    caia en un caso degenerado. Medido en vivo con 145% / 136% / 114%: $0,00 / $0,00 /
+ *    $275.428,69. Ahora, cuando no queda presupuesto por cubrir, se reparte por PESO DE
+ *    PRESUPUESTO: la misma prioridad relativa que rige entre 0% y 100%, sin caso especial.
+ *    INVARIANTE verificado sobre 4000 casos al azar: las tres filas suman la liquidez SIEMPRE,
+ *    en los tres regimenes.
+ *
+ * 3. EL PRESUPUESTO NO SE MOVIA AL CAMBIAR EL PERIODO. La formula si filtraba por $N$2/$N$3 --
+ *    se verifico leyendola en vivo --; lo que no variaba era el dato: la v0.25.0 cargaba la misma
+ *    cifra en todos los meses. Ahora cada mes se presupuesta con el promedio de los seis meses
+ *    ANTERIORES a el. Ningun mes se presupuesta con datos de su propio futuro, asi que el
+ *    cumplimiento sigue significando algo y el numero acompana al filtro.
+ *
+ * 4. EL PRESUPUESTO CONVERTIA CON CELDAS QUE YA NO SON LAS COTIZACIONES. La correccion estaba en
+ *    el codigo desde la v0.24.0 pero NUNCA SE HABIA APLICADO A LA HOJA: se detecto leyendo la
+ *    formula viva de N9, que todavia tenia $AF$17/18/19 -- hoy el texto "Flujo" y dos montos de
+ *    saldo. Un deploy no reescribe formulas; hay que volver a correr el modulo que las escribe.
+ *
+ * 5. DOS MODULOS SE PISABAN EN N19. StockYFlujo proponia el residuo y Capitalizacion propone la
+ *    suma. El numero del Tablero habria dependido del orden en que se aprietan los botones del
+ *    menu. Se saco la linea de StockYFlujo.
+ *
+ * Bancos de prueba: probar_capitalizacion.js (estructura de las formulas + la regla de reparto
+ * sobre 4000 casos) y probar_presupuesto_base.js (promedio movil). Los dos verificados por
+ * mutacion. El banco del presupuesto atajo que su propio ledger sintetico no podia distinguir
+ * julio de agosto -- todos los movimientos caian en las dos ventanas --, asi que el invariante
+ * "el presupuesto se mueve" no probaba nada hasta que se agrego un movimiento en el mes bisagra.
+ *
  * [2026-08-20] v0.25.0 - Presupuesto base: la hoja Proyeccion se siembra desde el historial real.
  * - PROBLEMA: "Proyeccion" nacia vacia, asi que "Presupuesto Asignado" (N9:N11) daba cero y
  *   "Disponibilidad de fondos" no podia decir nada. No habia con que probar el Tablero.

@@ -9,6 +9,54 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.26.0 - La capitalizacion deja de ser un residuo (2026-08-20)
+
+Cuatro cosas que Franco marco mirando el Tablero, y una quinta que aparecio midiendo.
+
+### 1. La Capacidad de Capitalizacion era una resta de descarte
+
+Se calculaba `Ingresos - Fijos - Variables` en las dos columnas. Eso no mide capitalizacion: mide
+lo que quedo sin explicar. Y cuando los gastos superan a los ingresos, **da negativo** — medido en
+vivo en Julio: `-$318.561,01` en el presupuesto y `-$362.568,02` en la realidad.
+
+> Nadie capitaliza menos cero.
+
+Ahora es la **suma de lo que va a los medios de tipo Ahorros e Inversiones**, con la misma formula
+en las dos columnas. Si cada una sumara distinto, el porcentaje de cumplimiento compararia peras
+con manzanas.
+
+**Consecuencia a proposito:** los cuatro renglones ya no suman 100%. Esa diferencia es informacion
+— la plata que entro y no se gasto ni se capitalizo. Antes se escondia adentro del residuo.
+
+### 2. La Disponibilidad de fondos le daba todo a una sola fila
+
+Cuando las tres categorias se pasaban del 100%, no quedaba remanente que cubrir, la suma de
+remanentes daba cero y la formula caia en un caso degenerado. Medido en vivo con 145% / 136% /
+114%: `$0,00` / `$0,00` / `$275.428,69`.
+
+Ahora, cuando no queda presupuesto por cubrir, se reparte por **peso de presupuesto**: la misma
+prioridad relativa que rige entre 0% y 100%, sin caso especial. **Invariante verificado sobre 4000
+casos al azar:** las tres filas suman la liquidez siempre, en los tres regimenes.
+
+### 3. El presupuesto no se movia al cambiar el periodo
+
+La formula **si** filtraba por `$N$2`/`$N$3` — se verifico leyendola en vivo. Lo que no variaba era
+el dato: la v0.25.0 cargaba la misma cifra en todos los meses. Ahora cada mes se presupuesta con el
+promedio de los **seis meses anteriores a el**. Ningun mes se presupuesta con datos de su propio
+futuro, asi que el cumplimiento sigue significando algo y el numero acompana al filtro.
+
+### 4. El presupuesto convertia con celdas que ya no son las cotizaciones
+
+La correccion estaba en el codigo desde la v0.24.0 pero **nunca se habia aplicado a la hoja**. Se
+detecto leyendo la formula viva de `N9`, que todavia tenia `$AF$17/18/19` — hoy el texto "Flujo" y
+dos montos de saldo. Un deploy no reescribe formulas: hay que volver a correr el modulo que las
+escribe.
+
+### 5. Dos modulos se pisaban en N19
+
+StockYFlujo proponia el residuo y Capitalizacion propone la suma. El numero del Tablero habria
+dependido del orden en que se aprietan los botones del menu. Se saco la linea de StockYFlujo.
+
 ## v0.25.0 - Presupuesto base desde el historial real (2026-08-20)
 
 `Proyeccion` nacia vacia, asi que "Presupuesto Asignado" daba cero y no habia con que probar el

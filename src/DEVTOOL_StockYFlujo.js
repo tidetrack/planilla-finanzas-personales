@@ -154,6 +154,9 @@ function _tiposEnLaHojaSyf(hojaTablero) {
  * porcentaje deja de avisar si algo no cuadra) y por eso el diagnostico de L29 se vuelve mas
  * importante, no menos: es el unico lugar donde queda visible lo que no clasifica.
  */
+// La fila de la Capacidad de Capitalizacion en el bloque de la realidad. El nombre quedo de
+// cuando era un residuo; hoy su formula la escribe DEVTOOL_Capitalizacion y aca solo se usa para
+// saber hasta donde suma el total del bloque.
 const SYF_FILA_RESIDUO = 19;
 
 /**
@@ -852,16 +855,24 @@ function _planSyf(ss, pre) {
             '. Escribir ahi a ciegas dejaria nombres nuevos con montos viejos al lado.');
     }
 
-    // --- FLUJO: capitalizacion como residuo, sin quinta fila ---
-    // decision Franco: los tres buckets tienen que repartir el 100% del ingreso. Con tres
-    // buckets la unica forma de que cierre es que uno sea el residuo, y el que corresponde es
-    // la capitalizacion: lo que no se gasto, se capitalizo.
-    proponer(pre.nombreTablero, 'N' + SYF_FILA_RESIDUO, 'Capacidad de Capitalizacion',
-        '=N16-N17-N18',
-        'pasa a ser el RESIDUO (Ingresos - Fijos - Variables), asi los tres reparten el 100%');
+    // --- FLUJO: la capitalizacion YA NO SE ESCRIBE ACA ---
+    //
+    // decision Franco 2026-08-20: la Capacidad de Capitalizacion dejo de ser el residuo
+    // `Ingresos - Fijos - Variables` y paso a ser la SUMA de lo que va a los medios de tipo
+    // Ahorros e Inversiones. La escribe DEVTOOL_Capitalizacion, que la calcula igual en la columna
+    // de presupuesto y en la de realidad.
+    //
+    // Esta linea se saca en vez de dejarse: dos modulos proponiendo formulas distintas para la
+    // misma celda se pisan uno al otro, y el que gana es el ultimo que corriste. Eso convierte el
+    // numero del Tablero en una funcion del orden en que se aprietan los botones del menu.
+    //
+    // Por que era un residuo y por que dejo de serlo: con tres buckets, hacer que uno sea el
+    // resto es la unica forma de que sumen 100%. Pero eso no mide capitalizacion, mide lo que
+    // quedo sin explicar -- y cuando los gastos superan a los ingresos da NEGATIVO. Se prefirio
+    // perder el 100% y ganar un numero que significa algo.
     proponer(pre.nombreTablero, 'O16', 'Total del bloque',
         '=SUM(O17:O' + SYF_FILA_RESIDUO + ')',
-        'suma las tres filas; con la capitalizacion como residuo da 100% por construccion');
+        'suma las tres filas de abajo del bloque');
 
     if (!pre.diagLibre) {
         avisos.push('NO se escribe el indicador de movimientos sin clasificar: ninguna de las ' +

@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 25,
+ minor: 26,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.25.0 - Presupuesto base desde el historial real',
+ releaseName: 'v0.26.0 - La capitalizacion deja de ser un residuo y el presupuesto sigue al periodo',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

@@ -21,13 +21,18 @@ const ok = (c, m) => { if (c) console.log('  OK  ' + m); else { console.log('  !
 
 // --- El ledger sintetico. HOY se fija al 2026-08-20, igual que la sesion. -------------------
 const HOY = new Date(2026, 7, 20);
-// Ventana = 6 meses completos: 02/2026 a 07/2026. El mes en curso (08) NO entra al promedio.
+// Con promedio movil, cada mes de destino promedia los 6 meses ANTERIORES a el.
+// Para 08/2026 la ventana es 02/2026..07/2026; para 07/2026 es 01/2026..06/2026.
 const LEDGER = [
     // cuenta         tipo_cuenta      tipo      moneda  medio       monto  fecha
     ['Comidas',       'Gasto Variable', 'Egreso', 'ARS', 'NaranjaX', 60000, new Date(2026, 1, 5)],
     ['Comidas',       'Gasto Variable', 'Egreso', 'ARS', 'NaranjaX', 60000, new Date(2026, 3, 5)],
     ['Comidas',       'Gasto Variable', 'Egreso', 'ARS', 'Efectivo', 60000, new Date(2026, 5, 5)],
-    // -> 180000 / 6 meses = 30000. Aparecio en 3 meses, pero el divisor son los 6 de la ventana.
+    ['Comidas',       'Gasto Variable', 'Egreso', 'ARS', 'NaranjaX', 60000, new Date(2026, 6, 5)],
+    // -> JULIO (mes 6) es el mes que separa las dos ventanas: entra en la de agosto (02..07) y
+    //    NO en la de julio (01..06). Sin un movimiento aca, los dos meses darian identico y el
+    //    invariante "el presupuesto se mueve" no probaria nada.
+    //    Agosto: 240000/6 = 40000.  Julio: 180000/6 = 30000.
     ['Sueldo',        'Ingreso',        'Ingreso','ARS', 'Santander', 600000, new Date(2026, 2, 1)],
     ['Sueldo',        'Ingreso',        'Ingreso','ARS', 'Santander', 600000, new Date(2026, 3, 1)],
     // -> 1200000 / 6 = 200000
@@ -131,16 +136,32 @@ console.log('=== 0. Integridad de los fuentes (sin bytes de control) ===');
 const cfg = ctx.RANGES.REGISTROS;
 const ss = { getSheetByName: (n) => (n === cfg.sheet ? hojaFalsa(n, LEDGER, cfg.headerRow, cfg.dataRow) : null) };
 
-console.log('=== 1. La ventana del promedio ===');
-const h = ctx._promediosPb(ss);
-ok(h.iniVentana.getMonth() === 1 && h.iniVentana.getFullYear() === 2026, 'arranca en 02/2026 (6 meses completos atras)');
-ok(h.finVentana.getMonth() === 7, 'termina ANTES del mes en curso (08/2026 excluido)');
+console.log('=== 1. La ventana movil de cada mes ===');
+const datos = ctx._leerLedgerPb(ss);
+const meses = ctx._mesesDestinoPb();
+const plan = ctx._planPorMesPb(datos, meses);
+const porMes = {};
+plan.forEach(m => { porMes[m.mes.getFullYear() * 100 + m.mes.getMonth()] = m; });
+const AGO = 2026 * 100 + 7, JUL = 2026 * 100 + 6;
+ok(porMes[AGO] && porMes[AGO].desde.getMonth() === 1, 'agosto promedia desde 02/2026');
+ok(porMes[JUL] && porMes[JUL].desde.getMonth() === 0, 'julio promedia desde 01/2026');
+ok(plan.every(m => m.mes > m.desde), 'ningun mes se promedia a si mismo ni a su futuro');
+
+// El mes en curso (08) tiene un movimiento de 700.000 que NO debe entrar en su propio promedio.
+const agoLineas = porMes[AGO].lineas;
+ok(!agoLineas.some(l => l.cuenta === 'DelMesEnCurso'),
+   'el gasto de agosto no entra en el presupuesto de agosto');
+
+const h = { lineas: agoLineas, neutras: datos.neutras };
 
 console.log('\n=== 2. El promedio se divide por los meses de la VENTANA, no por los meses con dato ===');
 const porCuenta = {};
 h.lineas.forEach(l => { porCuenta[l.cuenta + '|' + l.moneda] = l; });
-ok(porCuenta['Comidas|ARS'] && porCuenta['Comidas|ARS'].promedio === 30000,
-   'Comidas: 180.000 en 3 meses -> 30.000/mes (divisor 6, no 3). Dio ' + (porCuenta['Comidas|ARS'] || {}).promedio);
+ok(porCuenta['Comidas|ARS'] && porCuenta['Comidas|ARS'].promedio === 40000,
+   'Comidas en AGOSTO: 240.000 en 4 meses -> 40.000/mes (divisor 6, no 4). Dio ' + (porCuenta['Comidas|ARS'] || {}).promedio);
+const comidasJul = porMes[JUL].lineas.find(l => l.cuenta === 'Comidas' && l.moneda === 'ARS');
+ok(comidasJul && comidasJul.promedio === 30000,
+   'Comidas en JULIO: 180.000 -> 30.000/mes, sin el gasto de julio. Dio ' + (comidasJul || {}).promedio);
 ok(porCuenta['Sueldo|ARS'] && porCuenta['Sueldo|ARS'].promedio === 200000,
    'Sueldo: 1.200.000 -> 200.000/mes. Dio ' + (porCuenta['Sueldo|ARS'] || {}).promedio);
 
@@ -168,16 +189,25 @@ console.log('\n=== 5. El medio elegido es el mas frecuente de esa cuenta ===');
 ok(porCuenta['Comidas|ARS'].medio === 'NaranjaX',
    'Comidas: 2 de NaranjaX contra 1 de Efectivo -> NaranjaX. Dio "' + porCuenta['Comidas|ARS'].medio + '"');
 
-console.log('\n=== 6. La matriz que se escribe ===');
-const meses = ctx._mesesDestinoPb();
-ok(meses.length === ctx.PB_MESES_DESTINO, meses.length + ' meses de destino (ventana + mes en curso)');
-ok(meses[meses.length - 1].getMonth() === 7, 'el ultimo mes de destino es el mes en curso (08)');
-const m = ctx._matrizPb(h.lineas, meses, 'sello');
-ok(m.length === h.lineas.length * meses.length,
-   m.length + ' filas = ' + h.lineas.length + ' lineas x ' + meses.length + ' meses');
-
 const colIni = ctx.columnLetterToIndex(cfg.start);
 const pos = k => ctx.columnLetterToIndex(cfg.columns[k]) - colIni;
+
+console.log('\n=== 6. La matriz que se escribe ===');
+ok(meses.length === ctx.PB_MESES_DESTINO, meses.length + ' meses de destino');
+ok(meses[meses.length - 1].getMonth() === 7, 'el ultimo mes de destino es el mes en curso (08)');
+const m = ctx._matrizPb(plan, 'sello');
+ok(m.length === plan.reduce((a, x) => a + x.lineas.length, 0),
+   m.length + ' filas = la suma de las lineas de cada mes');
+
+// EL INVARIANTE DE ESTA VERSION: el presupuesto tiene que MOVERSE entre meses. Si dos meses
+// consecutivos dan lo mismo, el Tablero vuelve a mostrar un numero que no responde al periodo,
+// que es exactamente el defecto que esta version viene a arreglar.
+const sumaMesArs = (clave) => m
+  .filter(f => (f[pos('fecha')].getFullYear() * 100 + f[pos('fecha')].getMonth()) === clave && f[pos('moneda')] === 'ARS')
+  .reduce((a, f) => a + Number(f[pos('monto')]), 0);
+ok(sumaMesArs(AGO) !== sumaMesArs(JUL),
+   'el presupuesto de agosto (' + sumaMesArs(AGO) + ') difiere del de julio (' + sumaMesArs(JUL) + ')');
+
 ok(m.every(f => String(f[pos('nota')]).indexOf(ctx.PB_MARCA) === 0),
    'todas las filas llevan la marca en Nota: sin eso la carga no es repetible');
 ok(m.every(f => f[pos('tc_ars')] === '' && f[pos('tc_usd')] === '' && f[pos('tc_aud')] === '' && f[pos('tc_eur')] === ''),
@@ -191,8 +221,7 @@ ok(new Set(m.map(f => f[pos('cuenta')] + '|' + f[pos('moneda')] + '|' + f[pos('f
 const sumaMes = m.filter(f => f[pos('fecha')].getMonth() === 7 &&
         f[pos('tipo_cuenta')] === 'Gasto Variable' && f[pos('moneda')] === 'ARS')
     .reduce((a, f) => a + Number(f[pos('monto')]), 0);
-ok(sumaMes === 50000, 'el presupuesto de Gastos Variables en ARS de un mes da 50.000 ' +
-   '(Comidas 30.000 + Viajes 20.000). Dio ' + sumaMes);
+ok(sumaMes === 60000, 'Gastos Variables ARS de agosto = 60.000 (Comidas 40.000 + Viajes 20.000). Dio ' + sumaMes);
 
 console.log('\n' + (fallas === 0 ? '===> SIN FALLAS' : '===> ' + fallas + ' FALLA(S)'));
 process.exit(fallas === 0 ? 0 : 1);

@@ -15,10 +15,18 @@
  *
  * Tres decisiones que hacen que el numero signifique algo:
  *
- * 1. EL PRESUPUESTO ES PLANO A LO LARGO DE LOS MESES. La misma cifra se carga en cada mes de
- *    destino. Un presupuesto es una linea que uno se fija, no una prediccion mes a mes; lo que
- *    varia es la realidad. Asi el porcentaje de cumplimiento del Tablero dice algo real: cuanto
- *    se despego ESE mes de la linea.
+ * 1. CADA MES SE PRESUPUESTA CON LOS MESES ANTERIORES A EL (promedio movil).
+ *
+ *    La primera version cargaba la MISMA cifra en todos los meses. Era defendible -- un
+ *    presupuesto es una linea que uno se fija -- pero rompia el seguimiento: al cambiar el
+ *    periodo en el Tablero el presupuesto no se movia, y sin variacion no hay nada que seguir.
+ *    decision Franco 2026-08-20.
+ *
+ *    Ahora el presupuesto de agosto sale de los seis meses anteriores a agosto, el de julio de
+ *    los seis anteriores a julio, y asi. Eso es lo que uno hubiera podido presupuestar con la
+ *    informacion disponible en ese momento: ningun mes se presupuesta con datos de su propio
+ *    futuro. Y el cumplimiento sigue significando algo, porque el mes que se mide nunca entra
+ *    en su propio promedio.
  *
  * 2. SE EXCLUYEN LAS CUENTAS NEUTRAS. Los traspasos y los asientos "Inicio Mes" no son gasto ni
  *    ingreso: mueven plata de un bolsillo a otro. Presupuestarlos seria contarlos dos veces. Es
@@ -50,11 +58,11 @@
  */
 const PB_MARCA = 'Presupuesto base historico';
 
-/** Cuantos meses COMPLETOS entran al promedio. El mes en curso no cuenta: esta a medio transcurrir. */
+/** Cuantos meses ANTERIORES entran al promedio de cada mes de destino. */
 const PB_MESES_VENTANA = 6;
 
-/** Para cuantos meses se carga el presupuesto: la ventana mas el mes en curso, para poder navegar. */
-const PB_MESES_DESTINO = PB_MESES_VENTANA + 1;
+/** Para cuantos meses se carga el presupuesto, contando hacia atras desde el mes en curso. */
+const PB_MESES_DESTINO = 7;
 
 /** Debajo de esto, la cuenta no se presupuesta: es ruido de redondeo, no una linea. */
 const PB_MINIMO = 1;
@@ -76,13 +84,13 @@ function _claveMesPb(fecha) {
 }
 
 /**
- * Lee "Registros" y devuelve el promedio mensual por (cuenta, moneda) sobre la ventana.
+ * Lee "Registros" UNA vez y devuelve las filas utiles, ya normalizadas y con su mes.
  *
- * La ventana termina en el ultimo mes COMPLETO -- el anterior al actual -- y va hacia atras
- * PB_MESES_VENTANA meses. El mes en curso se excluye a proposito: promediar un mes a medio
- * transcurrir baja artificialmente todas las lineas.
+ * Se separa la lectura de la agregacion a proposito: con promedio movil hay que agregar una vez
+ * por mes de destino, y releer la hoja siete veces seria lento y ademas podria dar resultados
+ * distintos entre pasadas si algo cambia en el medio.
  */
-function _promediosPb(ss) {
+function _leerLedgerPb(ss) {
     const cfg = RANGES.REGISTROS;
     const hoja = ss.getSheetByName(cfg.sheet);
     if (!hoja) throw new Error('No existe el ledger "' + cfg.sheet + '".');
@@ -93,54 +101,66 @@ function _promediosPb(ss) {
 
     const colIni = columnLetterToIndex(cfg.start);
     const colFin = columnLetterToIndex(cfg.end);
-    const filas = hoja.getRange(desdeFila, colIni, ultima - desdeFila + 1, colFin - colIni + 1).getValues();
+    const crudas = hoja.getRange(desdeFila, colIni, ultima - desdeFila + 1, colFin - colIni + 1).getValues();
 
     const idx = {};
     ['monto', 'tipo', 'cuenta', 'tipo_cuenta', 'medio', 'moneda', 'fecha']
         .forEach(function (k) { idx[k] = columnLetterToIndex(cfg.columns[k]) - colIni; });
 
-    const hoy = new Date();
-    const finVentana = new Date(hoy.getFullYear(), hoy.getMonth(), 1);           // 1ro del mes en curso
-    const iniVentana = new Date(hoy.getFullYear(), hoy.getMonth() - PB_MESES_VENTANA, 1);
-    const claveIni = _claveMesPb(iniVentana), claveFin = _claveMesPb(finVentana);
+    const filas = [];
+    let neutras = 0, sinDatos = 0;
+    let claveMin = null, claveMax = null;
 
-    const acum = {};
-    const mesesVistos = {};
-    let leidas = 0, fueraVentana = 0, neutras = 0, sinDatos = 0;
-
-    filas.forEach(function (f) {
+    crudas.forEach(function (f) {
         const fecha = f[idx.fecha];
         if (!(fecha instanceof Date) || isNaN(fecha.getTime())) { sinDatos++; return; }
-        const clave = _claveMesPb(_mesDePb(fecha));
-        if (clave < claveIni || clave >= claveFin) { fueraVentana++; return; }
-
         const cuenta = String(f[idx.cuenta] || '').trim();
         const tipoCuenta = String(f[idx.tipo_cuenta] || '').trim();
         const monto = Number(f[idx.monto]);
         if (!cuenta || !tipoCuenta || !isFinite(monto) || monto === 0) { sinDatos++; return; }
         if (esCuentaNeutra(cuenta)) { neutras++; return; }
 
-        const moneda = String(f[idx.moneda] || 'ARS').trim() || 'ARS';
-        const tipo = String(f[idx.tipo] || '').trim();
-        const medio = String(f[idx.medio] || '').trim();
-        const k = [cuenta, moneda, tipoCuenta, tipo].join(' ');
+        const clave = _claveMesPb(_mesDePb(fecha));
+        if (claveMin === null || clave < claveMin) claveMin = clave;
+        if (claveMax === null || clave > claveMax) claveMax = clave;
+        filas.push({
+            clave: clave, cuenta: cuenta, tipoCuenta: tipoCuenta,
+            moneda: String(f[idx.moneda] || 'ARS').trim() || 'ARS',
+            tipo: String(f[idx.tipo] || '').trim(),
+            medio: String(f[idx.medio] || '').trim(),
+            monto: Math.abs(monto)
+        });
+    });
 
+    return { filas: filas, neutras: neutras, sinDatos: sinDatos, claveMin: claveMin, claveMax: claveMax };
+}
+
+/**
+ * Promedio mensual por (cuenta, moneda) sobre una ventana [claveIni, claveFin).
+ *
+ * El divisor son los meses DE LA VENTANA, no los meses en que la cuenta aparecio. Una cuenta que
+ * gasto una vez en seis meses tiene un promedio mensual bajo, y eso es correcto: es lo que hay que
+ * apartar por mes para poder pagarla cuando vuelva a caer.
+ */
+function _promediosDeVentanaPb(filas, claveIni, claveFin) {
+    const acum = {};
+    const mesesVistos = {};
+    let leidas = 0;
+
+    filas.forEach(function (f) {
+        if (f.clave < claveIni || f.clave >= claveFin) return;
+        const k = [f.cuenta, f.moneda, f.tipoCuenta, f.tipo].join(' ');
         if (!acum[k]) {
-            acum[k] = {
-                cuenta: cuenta, moneda: moneda, tipoCuenta: tipoCuenta, tipo: tipo,
-                total: 0, n: 0, medios: {}
-            };
+            acum[k] = { cuenta: f.cuenta, moneda: f.moneda, tipoCuenta: f.tipoCuenta, tipo: f.tipo,
+                        total: 0, n: 0, medios: {} };
         }
-        acum[k].total += Math.abs(monto);
+        acum[k].total += f.monto;
         acum[k].n++;
-        acum[k].medios[medio] = (acum[k].medios[medio] || 0) + 1;
-        mesesVistos[clave] = true;
+        acum[k].medios[f.medio] = (acum[k].medios[f.medio] || 0) + 1;
+        mesesVistos[f.clave] = true;
         leidas++;
     });
 
-    // El divisor son los meses DE LA VENTANA, no los meses en que la cuenta aparecio. Una cuenta
-    // que gasto una vez en seis meses tiene un promedio mensual bajo, y eso es correcto: es lo que
-    // hay que apartar por mes para poder pagarla cuando vuelva a caer.
     const lineas = Object.keys(acum).map(function (k) {
         const a = acum[k];
         const medio = Object.keys(a.medios).sort(function (x, y) { return a.medios[y] - a.medios[x]; })[0] || '';
@@ -156,12 +176,23 @@ function _promediosPb(ss) {
         return b.promedio - a.promedio;
     });
 
-    return {
-        lineas: lineas,
-        iniVentana: iniVentana, finVentana: finVentana,
-        mesesConDato: Object.keys(mesesVistos).length,
-        leidas: leidas, fueraVentana: fueraVentana, neutras: neutras, sinDatos: sinDatos
-    };
+    return { lineas: lineas, leidas: leidas, mesesConDato: Object.keys(mesesVistos).length };
+}
+
+/**
+ * El plan completo: para cada mes de destino, el promedio de los meses ANTERIORES a el.
+ *
+ * Un mes de destino sin ninguna linea no se descarta en silencio: se devuelve igual con la lista
+ * vacia, para que el reporte pueda decir cuantos meses quedaron sin presupuesto y por que.
+ */
+function _planPorMesPb(datos, meses) {
+    return meses.map(function (mes) {
+        const claveFin = _claveMesPb(mes);
+        const iniDate = new Date(mes.getFullYear(), mes.getMonth() - PB_MESES_VENTANA, 1);
+        const claveIni = _claveMesPb(iniDate);
+        const r = _promediosDeVentanaPb(datos.filas, claveIni, claveFin);
+        return { mes: mes, desde: iniDate, lineas: r.lineas, leidas: r.leidas, mesesConDato: r.mesesConDato };
+    });
 }
 
 /** Los meses de destino: los de la ventana mas el mes en curso, del mas viejo al mas nuevo. */
@@ -232,8 +263,8 @@ function _borrarGeneradasPb(hoja, filas) {
     for (let i = filas.length - 1; i >= 0; i--) hoja.deleteRow(filas[i]);
 }
 
-/** Arma la matriz de filas nuevas: una por linea y mes de destino. */
-function _matrizPb(lineas, meses, sello) {
+/** Arma la matriz de filas nuevas: una por linea de cada mes de destino. */
+function _matrizPb(planPorMes, sello) {
     const cfg = RANGES.REGISTROS;
     const colIni = columnLetterToIndex(cfg.start);
     const ancho = columnLetterToIndex(cfg.end) - colIni + 1;
@@ -242,8 +273,8 @@ function _matrizPb(lineas, meses, sello) {
         .forEach(function (k) { pos[k] = columnLetterToIndex(cfg.columns[k]) - colIni; });
 
     const filas = [];
-    meses.forEach(function (mes) {
-        lineas.forEach(function (l) {
+    planPorMes.forEach(function (m) {
+        m.lineas.forEach(function (l) {
             const fila = new Array(ancho).fill('');
             fila[pos.monto] = l.promedio;
             fila[pos.tipo] = l.tipo;
@@ -251,7 +282,7 @@ function _matrizPb(lineas, meses, sello) {
             fila[pos.tipo_cuenta] = l.tipoCuenta;
             fila[pos.medio] = l.medio;
             fila[pos.moneda] = l.moneda;
-            fila[pos.fecha] = mes;
+            fila[pos.fecha] = m.mes;
             // Las columnas J:M (los TC congelados) quedan VACIAS a proposito: un movimiento que
             // todavia no ocurrio no tiene cotizacion del dia, y el Tablero lo convierte con la
             // de hoy. Llenarlas seria inventar un dato.
@@ -271,35 +302,45 @@ function estadoPresupuestoBase() {
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const pre = _preflightPb(ss);
-        const h = _promediosPb(ss);
+        const datos = _leerLedgerPb(ss);
         const meses = _mesesDestinoPb();
+        const plan = _planPorMesPb(datos, meses);
         const previas = _filasGeneradasPb(pre.hoja);
+        const total = plan.reduce(function (a, m) { return a + m.lineas.length; }, 0);
 
         const fmt = function (d) { return Utilities.formatDate(d, Session.getScriptTimeZone(), 'MM/yyyy'); };
         const l = ['PRESUPUESTO BASE - ESTADO (no se escribio nada)', ''];
-        l.push('VENTANA DEL PROMEDIO: ' + fmt(h.iniVentana) + ' a ' +
-            fmt(new Date(h.finVentana.getFullYear(), h.finVentana.getMonth() - 1, 1)) +
-            ' (' + PB_MESES_VENTANA + ' meses completos, ' + h.mesesConDato + ' con movimientos)');
-        l.push('SE CARGA EN: ' + fmt(meses[0]) + ' a ' + fmt(meses[meses.length - 1]) +
-            ' (' + meses.length + ' meses)');
+        l.push('METODO: cada mes se presupuesta con los ' + PB_MESES_VENTANA + ' meses ANTERIORES a el.');
+        l.push('Ningun mes se presupuesta con datos de su propio futuro, asi que el cumplimiento');
+        l.push('significa algo: el mes que se mide nunca entra en su propio promedio.');
         l.push('');
-        l.push('Movimientos leidos del ledger: ' + h.leidas);
-        l.push('  descartados por estar fuera de la ventana: ' + h.fueraVentana);
-        l.push('  descartados por ser cuenta neutra (traspasos, Inicio Mes): ' + h.neutras);
-        l.push('  descartados por venir incompletos: ' + h.sinDatos);
+        l.push('Movimientos utiles en el ledger: ' + datos.filas.length);
+        l.push('  descartados por ser cuenta neutra (traspasos, Inicio Mes): ' + datos.neutras);
+        l.push('  descartados por venir incompletos: ' + datos.sinDatos);
         l.push('');
-        l.push('LINEAS DE PRESUPUESTO: ' + h.lineas.length + ' -> ' +
-            (h.lineas.length * meses.length) + ' filas a escribir');
+        l.push('PRESUPUESTO POR MES:');
+        plan.forEach(function (m) {
+            const suma = m.lineas.reduce(function (a, x) { return a + (x.moneda === 'ARS' ? x.promedio : 0); }, 0);
+            l.push('  ' + fmt(m.mes) + '  ' + String(m.lineas.length).padStart(3) + ' lineas' +
+                (m.lineas.length ? '   ~' + Math.round(suma).toLocaleString('es-AR') + ' ARS' +
+                    '   (promedia desde ' + fmt(m.desde) + ', ' + m.mesesConDato + ' meses con dato)'
+                    : '   SIN presupuesto: no hay historial anterior a ese mes'));
+        });
+        l.push('');
+        l.push('TOTAL A ESCRIBIR: ' + total + ' fila(s)');
         if (previas.length) {
             l.push('(se reemplazan ' + previas.length + ' fila(s) de una carga anterior; lo que hayas ' +
                 'cargado a mano NO se toca)');
         }
-        l.push('');
-        l.push('LAS 12 LINEAS MAS GRANDES:');
-        h.lineas.slice(0, 12).forEach(function (x) {
-            l.push('  ' + x.tipoCuenta.padEnd(15) + x.cuenta.padEnd(24) +
-                x.moneda + ' ' + x.promedio.toFixed(2) + '  (' + x.movimientos + ' mov.)');
-        });
+        const ultimo = plan[plan.length - 1];
+        if (ultimo && ultimo.lineas.length) {
+            l.push('');
+            l.push('LAS 10 LINEAS MAS GRANDES DE ' + fmt(ultimo.mes) + ':');
+            ultimo.lineas.slice(0, 10).forEach(function (x) {
+                l.push('  ' + x.tipoCuenta.padEnd(15) + x.cuenta.padEnd(24) +
+                    x.moneda + ' ' + x.promedio.toFixed(2));
+            });
+        }
 
         const t = l.join('\n');
         _mostrarPb('Presupuesto base - estado', t);
@@ -321,25 +362,35 @@ function aplicarPresupuestoBase() {
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const pre = _preflightPb(ss);
-        const h = _promediosPb(ss);
-        if (!h.lineas.length) {
-            const t = 'No hay movimientos en la ventana de los ultimos ' + PB_MESES_VENTANA +
-                ' meses completos. No se escribio nada.';
+        const datos = _leerLedgerPb(ss);
+        const meses = _mesesDestinoPb();
+        const plan = _planPorMesPb(datos, meses);
+        const conPresupuesto = plan.filter(function (m) { return m.lineas.length > 0; });
+        const totalFilas = plan.reduce(function (a, m) { return a + m.lineas.length; }, 0);
+
+        if (!totalFilas) {
+            const t = 'No hay historial suficiente para presupuestar ninguno de los ' + meses.length +
+                ' meses. No se escribio nada.';
             _mostrarPb('Presupuesto base', t);
             return { ok: false, error: t };
         }
-        const meses = _mesesDestinoPb();
+
         const previas = _filasGeneradasPb(pre.hoja);
-        const totalFilas = h.lineas.length * meses.length;
+        const fmt = function (d) { return Utilities.formatDate(d, Session.getScriptTimeZone(), 'MM/yyyy'); };
 
         const conf = ui.alert('Cargar presupuesto base en "' + pre.nombre + '"',
-            'Se van a escribir ' + totalFilas + ' fila(s): ' + h.lineas.length +
-            ' lineas de presupuesto por ' + meses.length + ' meses.\n\n' +
-            'EL METODO: el promedio mensual de cada cuenta sobre los ultimos ' + PB_MESES_VENTANA +
-            ' meses completos, cargado igual en todos los meses. Un presupuesto es una linea fija; ' +
-            'lo que varia es la realidad, y eso es lo que el Tablero compara.\n\n' +
+            'Se van a escribir ' + totalFilas + ' fila(s) repartidas en ' + conPresupuesto.length +
+            ' mes(es), de ' + fmt(meses[0]) + ' a ' + fmt(meses[meses.length - 1]) + '.\n\n' +
+            'EL METODO: cada mes se presupuesta con el promedio de los ' + PB_MESES_VENTANA +
+            ' meses ANTERIORES a el. Ningun mes se presupuesta con datos de su propio futuro, asi ' +
+            'que el presupuesto CAMBIA al cambiar el periodo en el Tablero y el cumplimiento ' +
+            'significa algo.\n\n' +
             'Se excluyen los traspasos y los "Inicio Mes": no son gasto ni ingreso.\n' +
             'Cada cuenta se presupuesta EN SU MONEDA, y el Tablero convierte con la cotizacion de hoy.\n\n' +
+            (plan.length !== conPresupuesto.length
+                ? (plan.length - conPresupuesto.length) + ' mes(es) quedan SIN presupuesto por no tener\n' +
+                  'historial anterior suficiente. Es correcto: no se puede presupuestar sin pasado.\n\n'
+                : '') +
             (previas.length
                 ? 'Se reemplazan ' + previas.length + ' fila(s) de una carga anterior de este mismo\n' +
                   'modulo. Lo que hayas cargado a mano NO se toca.\n\n'
@@ -362,7 +413,7 @@ function aplicarPresupuestoBase() {
             }
         }
 
-        const matriz = _matrizPb(h.lineas, meses, sello);
+        const matriz = _matrizPb(plan, sello);
         const cfg = RANGES.REGISTROS;
         const colIni = columnLetterToIndex(cfg.start);
         const primera = Math.max(pre.hoja.getLastRow() + 1, cfg.dataRow);
@@ -384,30 +435,41 @@ function aplicarPresupuestoBase() {
         const colMonto = columnLetterToIndex(cfg.columns.monto);
         const sumaLeida = pre.hoja.getRange(primera, colMonto, matriz.length, 1).getValues()
             .reduce(function (a, f) { return a + (Number(f[0]) || 0); }, 0);
-        const sumaPlan = h.lineas.reduce(function (a, l) { return a + l.promedio; }, 0) * meses.length;
+        const sumaPlan = plan.reduce(function (a, m) {
+            return a + m.lineas.reduce(function (b, l) { return b + l.promedio; }, 0);
+        }, 0);
         if (Math.abs(sumaLeida - sumaPlan) > 1) {
             throw new Error('La suma releida (' + sumaLeida.toFixed(2) + ') no coincide con la ' +
                 'planeada (' + sumaPlan.toFixed(2) + '): alguna celda no entro. Revisar a mano.');
         }
 
+        // Y el invariante que hace util a esta version: dos meses consecutivos con presupuesto
+        // NO pueden ser identicos, o el presupuesto volveria a no moverse con el periodo.
+        let variacion = 'no evaluable (menos de dos meses con presupuesto)';
+        if (conPresupuesto.length >= 2) {
+            const suma = function (m) { return m.lineas.reduce(function (a, l) { return a + l.promedio; }, 0); };
+            const a = suma(conPresupuesto[conPresupuesto.length - 2]);
+            const b = suma(conPresupuesto[conPresupuesto.length - 1]);
+            variacion = a === b
+                ? 'IGUALES (' + a.toFixed(2) + '): el presupuesto no se mueve entre esos dos meses'
+                : a.toFixed(2) + ' -> ' + b.toFixed(2);
+        }
+
         PropertiesService.getDocumentProperties().setProperty(PB_PROP_SELLO, sello);
 
-        const fmt = function (d) { return Utilities.formatDate(d, Session.getScriptTimeZone(), 'MM/yyyy'); };
         const detalle = 'PRESUPUESTO BASE CARGADO\n\n' +
             '- Filas escritas y verificadas: ' + matriz.length + '\n' +
-            '- Lineas de presupuesto: ' + h.lineas.length + '\n' +
-            '- Meses: ' + fmt(meses[0]) + ' a ' + fmt(meses[meses.length - 1]) + '\n' +
-            '- Promedio calculado sobre ' + PB_MESES_VENTANA + ' meses completos\n\n' +
+            '- Meses con presupuesto: ' + conPresupuesto.length + ' de ' + plan.length + '\n' +
+            '- Cada mes promedia los ' + PB_MESES_VENTANA + ' meses anteriores a el\n' +
+            '- Ultimos dos meses: ' + variacion + '\n\n' +
             'QUE MIRAR EN EL TABLERO:\n' +
             '  1. "Presupuesto Asignado" (N9:N11) deja de dar cero.\n' +
-            '  2. El % de cada fila ya significa algo: cuanto se despego ese mes de la linea.\n' +
-            '  3. Cambiando el mes en N2 los numeros NO deberian moverse mucho -- el presupuesto\n' +
-            '     es plano a proposito --, pero "Movimientos del Mes" si se mueve. Esa diferencia\n' +
-            '     entre una linea fija y una realidad que varia es justamente lo que se mira.\n' +
+            '  2. CAMBIA al cambiar el mes en N2: cada mes tiene su propio promedio.\n' +
+            '  3. El % de cada fila ya significa algo: cuanto se despego ese mes de lo que venias\n' +
+            '     gastando ANTES de ese mes.\n' +
             '  4. "Disponibilidad de fondos" (O23:O25) ya puede repartir contra algo.\n\n' +
             'Es un PUNTO DE PARTIDA, no una decision: las filas estan en "' + pre.nombre + '" y se\n' +
-            'editan como cualquier otra. Volver a correr esto reemplaza solo lo que genero el\n' +
-            'modulo y respeta lo que hayas tocado a mano... siempre que le cambies la Nota.\n\n' +
+            'editan como cualquier otra.\n\n' +
             'Para sacarlo: Tidetrack Dev > Presupuesto base > 3. Quitar la carga.';
 
         logSuccess('aplicarPresupuestoBase: ' + matriz.length + ' filas.');
