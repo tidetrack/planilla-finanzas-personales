@@ -5,6 +5,22 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.20.2 - La misma leccion, en las columnas de categoria de cuentas.
+ * - "Categorizar cuentas" murio en D8: "Los datos ingresados en la celda D8 infringen las reglas
+ *   de validacion de datos definidas en ella". Las tres columnas de Categoria de los bloques de
+ *   cuentas tienen el MISMO desplegable con la lista vieja que tenia la columna de medios.
+ * - DIFERENCIA CON EL CASO ANTERIOR, y vale registrarla: aca Sheets SI lanzo excepcion, asi que
+ *   no escribio a medias. En la columna de medios el rechazo fue SILENCIOSO -- la celda quedaba
+ *   vacia sin error. El mismo tipo de regla se comporta distinto segun como este configurada, y
+ *   por eso no alcanza con confiar en que "si falla, avisa": hay que releer.
+ * - Se aplica el tratamiento ya probado el mismo dia en la v0.20.1: la validacion de las tres
+ *   columnas se reemplaza por la lista de categorias de cuentas ANTES de escribir; la foto de
+ *   respaldo captura valores Y reglas de los cuatro rangos; y la reversion libera la validacion,
+ *   escribe los valores y recien al final repone la regla vieja.
+ * - AHORA REVIERTE TAMBIEN ANTE EXCEPCION. Antes el catch solo informaba: si moria a mitad de
+ *   camino, el catalogo de categorias quedaba escrito y las columnas no. Una planilla a medio
+ *   categorizar es peor que una sin categorizar, porque parece hecha.
+ *
  * [2026-08-19] v0.20.1 - La validacion de la columna era parte del cambio.
  * - QUE PASO: la corrida de la v0.20.0 fallo en los 28 medios -- "no quedo con su tipo en el
  *   catalogo" -- y ademas dejo la columna VACIA, con lo que ningun medio clasificaba: capital del

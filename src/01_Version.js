@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 20,
- patch: 1,
+ patch: 2,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-19',
- releaseName: 'v0.20.1 - La validacion de la columna era parte del cambio',
+ releaseName: 'v0.20.2 - La misma leccion en las columnas de categoria de cuentas',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.20.2 (2026-08-19) - La misma leccion, en las columnas de categoria de cuentas
+- "Categorizar cuentas" murio en D8: "Los datos ingresados infringen las reglas de validacion". Las tres columnas de Categoria tienen el mismo desplegable con la lista vieja que tenia la columna de medios. Esta vez SI lanzo excepcion, asi que no escribio a medias.
++ Se aplica el mismo tratamiento ya probado en la v0.20.1: la validacion de las tres columnas se reemplaza por la lista de categorias de cuentas ANTES de escribir.
++ Foto de respaldo con VALORES y REGLAS de los cuatro rangos que toca, y reversion que libera la validacion, escribe los valores y recien despues repone la regla vieja.
++ Ahora revierte tambien ante excepcion: antes, si fallaba a mitad de camino, el catalogo de categorias quedaba escrito y las columnas no. Una planilla a medio categorizar es peor que una sin categorizar.
+
 v0.20.1 (2026-08-19) - La validacion de la columna era parte del cambio
 - LA CORRIDA DE LA v0.20.0 FALLO EN LOS 28 MEDIOS y ademas dejo la columna VACIA. Causa: la columna tiene un DESPLEGABLE con la lista de categorias. Mientras esa lista siga vigente, "Hogar" es un valor invalido -- Sheets lo rechaza, la celda queda vacia, y setValue NO lanza ninguna excepcion. Sin excepcion no hay como enterarse salvo releyendo, que es lo que salvo la situacion.
 ! Cambiar lo que una columna SIGNIFICA incluye cambiar lo que esa columna ACEPTA. Ahora la validacion se reemplaza por la lista de los cuatro tipos ANTES de escribir.

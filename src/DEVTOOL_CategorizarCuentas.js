@@ -43,6 +43,19 @@
  * $4.793.879 que cuesta el auto de verdad, sin inventar una capa mas.
  *
  * ============================================================================
+ * LA VALIDACION DE LAS COLUMNAS ES PARTE DEL CAMBIO
+ * ============================================================================
+ * Las columnas de Categoria de los tres bloques tienen un DESPLEGABLE con una lista de valores
+ * permitidos. Mientras esa lista sea la vieja, escribir "Vehiculo" es un valor invalido y Sheets
+ * lo rechaza -- en la primera corrida lanzo "Los datos ingresados en la celda D8 infringen las
+ * reglas de validacion".
+ *
+ * Cambiar lo que una columna significa incluye cambiar lo que esa columna ACEPTA. Por eso la
+ * validacion se reemplaza por la lista de categorias de cuentas ANTES de escribir, y se restaura
+ * si algo falla. Es la misma leccion que dejo el eje de medios el mismo dia, en la v0.20.1: una
+ * migracion que cambia el dominio de una columna y no toca su validacion no esta terminada.
+ *
+ * ============================================================================
  * QUE NO HACE
  * ============================================================================
  * 1. NO toca el ledger. Solo escribe en el Plan de Cuentas.
@@ -181,12 +194,12 @@ function estadoCategorizar() {
 
 /** Escribe las categorias en el catalogo y la categoria de cada cuenta. */
 function aplicarCategorizar() {
-    let ui = null;
+    let ui = null, ss = null, foto = null;
     try { ui = SpreadsheetApp.getUi(); }
     catch (e) { return { ok: false, error: 'aplicarCategorizar necesita UI (menu Tidetrack Dev).' }; }
 
     try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        ss = SpreadsheetApp.getActiveSpreadsheet();
         const plan = _planCategorizar(ss);
         if (!plan.categoriasNuevas.length && !plan.asignaciones.length) {
             const t = 'El Plan de Cuentas ya esta categorizado. No se escribio nada.';
@@ -206,6 +219,11 @@ function aplicarCategorizar() {
         const hojaPC = ss.getSheetByName(SHEETS.PLAN_CUENTAS);
         const sello = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd_HHmm');
         const respaldo = _respaldarCatalogo(ss, hojaPC, sello);
+
+        // Las columnas de Categoria tienen un desplegable con la lista vieja: hasta que se
+        // reemplace, cada valor nuevo se rechaza (la primera corrida murio en D8).
+        foto = _fotografiarBloquesCatz(ss);
+        _abrirDominioCatz(ss);
 
         // --- 1. Alta de las categorias en su propio catalogo (columna U) ---
         const cfgCat = RANGES.CATEGORIAS_CUENTA;
@@ -251,6 +269,8 @@ function aplicarCategorizar() {
             }
         });
         if (fallas.length) {
+            _restaurarBloquesCatz(ss, foto);
+            foto = null;
             throw new Error('Se escribio pero NO VERIFICA al releer: ' + fallas.slice(0, 6).join('; ') +
                 (fallas.length > 6 ? ' (y ' + (fallas.length - 6) + ' mas)' : '') +
                 '. El Plan de Cuentas previo esta en el respaldo "' + respaldo.nombre + '".');
@@ -277,7 +297,14 @@ function aplicarCategorizar() {
         return { ok: true, detalle: detalle };
 
     } catch (e) {
-        const msg = 'NO APLICADO. ' + e.message;
+        // Si fallo despues de haber empezado a escribir, se devuelve todo a como estaba: una
+        // planilla a medio categorizar es peor que una sin categorizar.
+        let restaurado = '';
+        if (ss && foto) {
+            try { _restaurarBloquesCatz(ss, foto); restaurado = ' Se restauraron las columnas a su estado previo.'; }
+            catch (e2) { restaurado = ' ADEMAS fallo la restauracion (' + e2.message + '): usar el respaldo.'; }
+        }
+        const msg = 'NO APLICADO. ' + e.message + restaurado;
         logError(msg, { stack: e.stack });
         _mostrarCatz('Categorizar cuentas - ERROR', msg);
         return { ok: false, error: msg };
@@ -384,6 +411,83 @@ function _planCategorizar(ss) {
         asignaciones: asignaciones, categoriasNuevas: categoriasNuevas, sinCategoria: sinCategoria,
         cruzan: cruzan, cuentasCatalogo: cuentasCatalogo, avisos: avisos
     };
+}
+
+/**
+ * Fotografia los cuatro rangos que se van a tocar -- las tres columnas de Categoria y el catalogo
+ * nuevo -- con sus VALORES y sus REGLAS DE VALIDACION. Sin las reglas la foto no es un punto de
+ * retorno: reponer valores viejos contra una lista nueva los rechaza uno por uno.
+ */
+function _fotografiarBloquesCatz(ss) {
+    const hoja = ss.getSheetByName(SHEETS.PLAN_CUENTAS);
+    const partes = [];
+    _rangosCatz().forEach(function (r) {
+        const alto = hoja.getMaxRows() - r.desde + 1;
+        if (alto <= 0) return;
+        const rango = hoja.getRange(r.desde, r.col, alto, 1);
+        let dv = null;
+        try { dv = rango.getDataValidations(); } catch (e) { dv = null; }
+        partes.push({ col: r.col, desde: r.desde, valores: rango.getValues(), validaciones: dv });
+    });
+    return partes;
+}
+
+/** Los rangos que toca el modulo: las tres columnas de Categoria y el catalogo de categorias. */
+function _rangosCatz() {
+    const out = [];
+    ['INGRESOS', 'GASTOS_FIJOS', 'GASTOS_VARIABLES'].forEach(function (clave) {
+        const cfg = RANGES[clave];
+        out.push({ col: columnLetterToIndex(cfg.columns.proyecto), desde: getDataRow(cfg), esCategoria: true });
+    });
+    const cc = RANGES.CATEGORIAS_CUENTA;
+    out.push({ col: columnLetterToIndex(cc.columns.nombre), desde: getDataRow(cc), esCategoria: false });
+    return out;
+}
+
+/**
+ * Cambia el DOMINIO de las tres columnas de Categoria: saca la validacion vieja y pone la lista
+ * de categorias de cuentas. Se corre ANTES de escribir, o cada valor nuevo se rechaza.
+ */
+function _abrirDominioCatz(ss) {
+    const hoja = ss.getSheetByName(SHEETS.PLAN_CUENTAS);
+    const lista = [];
+    CATZ_MAPA.forEach(function (m) { if (lista.indexOf(m.categoria) === -1) lista.push(m.categoria); });
+    const regla = SpreadsheetApp.newDataValidation()
+        .requireValueInList(lista, true)
+        .setAllowInvalid(false)
+        .setHelpText('Categoria de la cuenta: agrupa por el motivo del movimiento')
+        .build();
+    _rangosCatz().forEach(function (r) {
+        if (!r.esCategoria) return;
+        const alto = hoja.getMaxRows() - r.desde + 1;
+        if (alto <= 0) return;
+        const rango = hoja.getRange(r.desde, r.col, alto, 1);
+        rango.clearDataValidations();
+        rango.setDataValidation(regla);
+    });
+    SpreadsheetApp.flush();
+}
+
+/**
+ * Devuelve los cuatro rangos a como estaban. Primero se LIBERA la validacion, despues se escriben
+ * los valores, y recien al final se repone la regla vieja: en ese orden, porque escribir los
+ * valores viejos con la regla nueva puesta los rechazaria.
+ */
+function _restaurarBloquesCatz(ss, foto) {
+    if (!foto || !foto.length) return;
+    const hoja = ss.getSheetByName(SHEETS.PLAN_CUENTAS);
+    foto.forEach(function (p) {
+        const rango = hoja.getRange(p.desde, p.col, p.valores.length, 1);
+        rango.clearDataValidations();
+        rango.setValues(p.valores);
+    });
+    SpreadsheetApp.flush();
+    foto.forEach(function (p) {
+        if (!p.validaciones) return;
+        try { hoja.getRange(p.desde, p.col, p.valores.length, 1).setDataValidations(p.validaciones); }
+        catch (e) { logError('_restaurarBloquesCatz: no se pudo reponer la validacion de la columna ' + p.col); }
+    });
+    SpreadsheetApp.flush();
 }
 
 function _padCatz(s, n) {
