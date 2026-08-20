@@ -762,13 +762,15 @@ function _planSyf(ss, pre) {
     const hojaT = ss.getSheetByName(pre.nombreTablero);
     const hojaI = ss.getSheetByName(pre.nombreInicio);
 
+    /** Encola un cambio de formula. Devuelve true si efectivamente encolo algo. */
     function proponer(nombreHoja, celda, nota, nueva, resumen) {
         const actual = ss.getSheetByName(nombreHoja).getRange(celda).getFormula();
-        if (_canonizarFormula(actual) === _canonizarFormula(nueva)) return;
+        if (_canonizarFormula(actual) === _canonizarFormula(nueva)) return false;
         cambios.push({
             nombreHoja: nombreHoja, celda: celda, nota: nota,
             formulaActual: actual, formulaNueva: nueva, resumen: resumen
         });
+        return true;
     }
 
     // --- STOCKS: la suma por TIPO DE MEDIO. Solo la columna Monto: los rotulos ya estan en la
@@ -825,13 +827,26 @@ function _planSyf(ss, pre) {
 
     // --- SALDO ACTUAL POR MEDIO: tres formulas de UNA columna, por las celdas combinadas ---
     if (pre.bloqueMediosOk) {
-        limpiar = true;
+        // El bloque se limpia SOLO si alguna de las tres formulas efectivamente va a reescribirse.
+        //
+        // decision Franco 2026-08-20: antes se marcaba `limpiar = true` incondicionalmente, y eso
+        // era una perdida de datos silenciosa esperando ocasion. Si las tres formulas ya estaban
+        // aplicadas pero quedaba pendiente CUALQUIER otro cambio -- por ejemplo uno de formato,
+        // que es justo lo que introdujo la v0.23.5 --, el plan no salia vacio, se limpiaba
+        // C18:I29 con las tres formulas adentro, y el bucle de escritura no las reponia porque
+        // `proponer` las habia descartado por iguales. El verificador solo mira lo que se
+        // escribio, asi que la corrida terminaba diciendo que salio todo bien con el bloque
+        // "Medios Bancarios" vacio. Borrar y no reescribir tiene que ser imposible por
+        // construccion: la misma condicion decide las dos cosas.
+        let algunaCambia = false;
         SYF_BLOQUE_MEDIOS.columnas.forEach(function (c) {
-            proponer(pre.nombreTablero, c.col + SYF_BLOQUE_MEDIOS.filaDatos,
+            const encolo = proponer(pre.nombreTablero, c.col + SYF_BLOQUE_MEDIOS.filaDatos,
                 'Medios Bancarios: ' + c.rotulo,
                 _formulaSaldoPorMedio(c.indice),
                 'saldo actual por cuenta, solo las que tienen saldo, de mayor a menor');
+            algunaCambia = algunaCambia || encolo;
         });
+        limpiar = algunaCambia;
     } else {
         avisos.push('NO se toca el bloque "Medios Bancarios": ' + pre.bloqueMediosMotivo +
             '. Escribir ahi a ciegas dejaria nombres nuevos con montos viejos al lado.');

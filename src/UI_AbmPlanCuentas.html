@@ -155,7 +155,10 @@
                     <option value="GASTOS_FIJOS">Gastos Fijos</option>
                     <option value="GASTOS_VARIABLES">Gastos Variables</option>
                     <option value="MEDIOS_PAGO">Medios Bancarios</option>
-                    <option value="PROYECTOS">Proyectos</option>
+                    <!-- "Proyectos" se retiro el 2026-08-20. Escribia en RANGES.PROYECTOS (P:Q),
+                         que desde el rediseno es el catalogo de CATEGORIAS DE CUENTA: dar de alta
+                         un proyecto agregaba una categoria, y darlo de baja borraba una. Las
+                         categorias se administran desde Tidetrack Dev > Categorizar cuentas. -->
                 </select>
             </div>
 
@@ -190,6 +193,9 @@
                     <input type="text" id="nombre" name="nombre" class="form-input" placeholder="Ej. Sueldo, Viajes...">
                 </div>
 
+                <!-- Inerte desde el 2026-08-20: su unica entidad ("Proyectos") se retiro del ABM.
+                     NO se elimina el input porque handleAccountSelect y el armado del payload lo
+                     leen para todas las entidades; sacarlo romperia el formulario entero. -->
                 <div id="groupTipoProyecto" class="form-group hidden">
                     <label for="tipoProyecto" class="form-label">Tipo de Proyecto</label>
                     <input type="text" id="tipoProyecto" name="tipoProyecto" class="form-input" placeholder="Ej. Ahorro">
@@ -200,8 +206,13 @@
                     <select id="monedaRelacionada" name="monedaRelacionada" class="form-select"></select>
                 </div>
 
+                <!-- Un mismo control para dos ejes DISTINTOS: para una cuenta es su Categoria
+                     (para que se movio la plata) y para un medio es su Tipo (donde esta). El
+                     rotulo y las opciones se cambian en handleEntityChange; hasta el 2026-08-20
+                     los dos se llenaban con la misma lista y se podia dejar un medio con tipo
+                     "Alimentacion y social". -->
                 <div id="groupProyectoRel" class="form-group hidden">
-                    <label for="proyectoRelacionado" class="form-label">Proyecto <span style="font-weight:300; font-size:12px; color:var(--text-secondary)">(Opcional)</span></label>
+                    <label for="proyectoRelacionado" class="form-label" id="lblProyectoRel">Categoría <span style="font-weight:300; font-size:12px; color:var(--text-secondary)">(Opcional)</span></label>
                     <select id="proyectoRelacionado" name="proyectoRelacionado" class="form-select"></select>
                 </div>
             </div>
@@ -221,7 +232,7 @@
 </div>
 
 <script>
-    let systemData = { monedas: [], proyectos: [] };
+    let systemData = { monedas: [], categoriasCuenta: [], tiposMedio: [] };
     let currentMode = null;
     let currentEntityData = [];
     let selectedAccount = null;
@@ -234,9 +245,9 @@
                 m.innerHTML = '<option value="" disabled selected>Moneda...</option>';
                 data.monedas.forEach(x => m.innerHTML += `<option value="${x}">${x}</option>`);
 
-                const p = document.getElementById('proyectoRelacionado');
-                p.innerHTML = '<option value="">Ninguno (General)</option>';
-                data.proyectos.forEach(x => p.innerHTML += `<option value="${x}">${x}</option>`);
+                // El select del tercer campo NO se llena aca: su dominio depende de la entidad
+                // elegida, asi que lo puebla handleEntityChange.
+                llenarDominioRelacionado(document.getElementById('entitySelect').value);
                 document.getElementById('loader').classList.add('hidden');
             })
             .withFailureHandler(err => {
@@ -245,6 +256,22 @@
             })
             .getAbmFormData();
     });
+
+    /**
+     * Puebla el tercer select con el dominio que corresponde a la entidad.
+     * Para MEDIOS_PAGO es el Tipo del medio; para las cuentas, su Categoria.
+     */
+    function llenarDominioRelacionado(entity) {
+        const p = document.getElementById('proyectoRelacionado');
+        const lbl = document.getElementById('lblProyectoRel');
+        if (!p) return;
+        const esMedio = entity === 'MEDIOS_PAGO';
+        const opciones = esMedio ? (systemData.tiposMedio || []) : (systemData.categoriasCuenta || []);
+        const opcional = '<span style="font-weight:300; font-size:12px; color:var(--text-secondary)">(Opcional)</span>';
+        if (lbl) lbl.innerHTML = (esMedio ? 'Tipo' : 'Categoría') + ' ' + opcional;
+        p.innerHTML = '<option value="">Ninguno (General)</option>';
+        opciones.forEach(x => p.innerHTML += `<option value="${x}">${x}</option>`);
+    }
 
     function handleEntityChange() {
         const entity = document.getElementById('entityType').value;
@@ -276,9 +303,9 @@
         const gP = document.getElementById('groupProyectoRel');
         [gT, gM, gP].forEach(x => x.classList.add('hidden'));
 
-        if(entity === 'PROYECTOS') {
-            gT.classList.remove('hidden');
-        } else if(entity === 'MEDIOS_PAGO') { 
+        llenarDominioRelacionado(entity);
+
+        if(entity === 'MEDIOS_PAGO') { 
             lbl.textContent = 'Medio Bancario'; 
             gM.classList.remove('hidden'); 
             gP.classList.remove('hidden'); 

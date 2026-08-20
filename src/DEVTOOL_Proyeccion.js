@@ -26,7 +26,8 @@
  * Un movimiento que todavia NO OCURRIO no tiene ese dato y no puede tenerlo: nadie sabe a cuanto
  * va a estar el dolar el mes que viene.
  *
- * Por eso la proyeccion se convierte con la cotizacion de HOY (AF17/AF18/AF19), no con J:M. Es la
+ * Por eso la proyeccion se convierte con la cotizacion de HOY -- via TIDETRACK_USD/AUD/EUR(),
+ * nunca apuntando a las celdas del bloque de Cotizaciones, que ya se mudo una vez --, no con J:M. Es la
  * unica opcion honesta: un presupuesto en dolares vale lo que vale hoy, y se re-evalua solo
  * cuando la cotizacion cambia. Las columnas J:M existen igual porque la hoja es un espejo exacto
  * -- si algun dia se quiere congelar un TC previsto, la columna esta.
@@ -329,9 +330,18 @@ function _formulaPresupuestoProy(tipoCuenta, nombreProyeccion) {
         '  mes_num; MATCH($N$2; SPLIT("' + PROY_MESES + '"; ","); 0);\n' +
         '  desde; DATE($N$3; mes_num; 1);\n' +
         '  hasta; EOMONTH(desde; 0);\n' +
-        // Un movimiento previsto no tiene TC congelado: se convierte con la cotizacion de hoy.
-        '  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; $AF$17; IF(moneda="AUD"; $AF$18; IF(moneda="EUR"; $AF$19; 1))));\n' +
-        '  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; $AF$17; "AUD"; $AF$18; "EUR"; $AF$19); 1);\n' +
+        // Un movimiento previsto no tiene TC congelado: se convierte con la cotizacion de hoy,
+        // y esa cotizacion se pide por FUNCION, no por coordenada.
+        //
+        // decision Franco 2026-08-20: esto apuntaba a $AF$17/18/19, que era el bloque de
+        // Cotizaciones cuando se escribio. El rediseno bajo ese bloque a las filas 27-29 y hoy
+        // AF17:AF19 es "Saldos Actuales": AF17 es el texto "Flujo" y AF18/AF19 son montos de
+        // saldo en cientos de miles de ARS. Un previsto en AUD se multiplicaba por un saldo en
+        // vez de por una cotizacion -- presupuesto inflado varios ordenes de magnitud, sin un
+        // solo aviso. Una coordenada que se pudre no da error: da otro numero. Una funcion no
+        // tiene coordenada que se pueda mover.
+        '  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n' +
+        '  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n' +
         '  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n' +
         '  del_mes; ARRAYFORMULA((tipo_cuenta="' + tipoCuenta + '") * ' + neutras +
         ' * (fecha>=desde) * (fecha<=hasta));\n' +

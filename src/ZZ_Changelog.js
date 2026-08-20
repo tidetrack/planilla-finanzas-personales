@@ -5,6 +5,33 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.24.0 - Tres fixes de la revision adversarial pre-merge.
+ *
+ * 1. STOCK Y FLUJO BORRABA "MEDIOS BANCARIOS" Y NO LO REPONIA, diciendo que salio todo bien.
+ *    El plan marcaba `limpiar = true` sin mirar si las tres formulas del bloque iban a
+ *    reescribirse. Si ya estaban aplicadas pero quedaba pendiente CUALQUIER otro cambio -- por
+ *    ejemplo uno de formato, que es exactamente lo que introdujo la v0.23.5 --, el plan no salia
+ *    vacio, se limpiaba C18:I29 con las formulas adentro, y el bucle no las reponia porque
+ *    `proponer` las habia descartado por iguales. El verificador solo mira lo que se escribio.
+ *    ESTE DEFECTO SE MATERIALIZO EN PRODUCCION: la corrida de formatos de la v0.23.5 dejo el
+ *    bloque vacio. Ahora la misma condicion decide limpiar y reescribir: borrar sin reponer es
+ *    imposible por construccion.
+ *
+ * 2. EL PRESUPUESTO CONVERTIA CON CELDAS QUE YA NO SON LAS COTIZACIONES. DEVTOOL_Proyeccion
+ *    cableaba $AF$17/18/19, que hoy son "Saldos Actuales": AF17 es el texto "Flujo" y AF18/AF19
+ *    son montos de saldo. Un previsto en AUD se multiplicaba por un saldo en vez de por una
+ *    cotizacion -- presupuesto inflado varios ordenes de magnitud, sin un solo aviso. Pasa a
+ *    TIDETRACK_USD/AUD/EUR(). Era el ultimo lugar de src/ que autoraba esas coordenadas.
+ *
+ * 3. EL ABM DEL MENU DIARIO PODIA CORROMPER EL PLAN DE CUENTAS, por dos caminos:
+ *    (a) la entidad "Proyectos" escribia en RANGES.PROYECTOS (P:Q), que desde el rediseno es el
+ *        catalogo de CATEGORIAS DE CUENTA: un alta agregaba una categoria y una baja borraba una.
+ *        Se retira del selector y los endpoints la RECHAZAN con un mensaje que dice por que.
+ *    (b) un solo desplegable alimentaba dos ejes distintos -- la Categoria de una cuenta y el
+ *        Tipo de un medio --, los dos leidos de la misma columna P. Se podia dejar un medio con
+ *        tipo "Alimentacion y social". Ahora son dos dominios: las categorias salen de
+ *        CATEGORIAS_CUENTA y los tipos de la nueva constante TIPOS_MEDIO en 00_Config.
+ *
  * [2026-08-20] v0.23.5 - El formato es parte del plan, y se revierte como todo lo demas.
  * - La reparacion de formato de la v0.23.4 colgaba del camino de escritura, asi que cuando no
  *   habia formulas que cambiar la corrida salia antes de llegar a ella: decia "ya estaba aplicado"

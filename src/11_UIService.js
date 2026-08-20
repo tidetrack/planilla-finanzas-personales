@@ -32,27 +32,37 @@ function showAbmPlanCuentas() {
 }
 
 /**
- * Obtiene Monedas y Proyectos base para poblar los Selects del Pop-Up ABM.
- * Las monedas se leen desde la constante MONEDAS_DISPONIBLES (backend).
- * Los proyectos se leen desde la tabla PROYECTOS de la hoja de cálculo.
+ * Obtiene los dominios para poblar los Selects del Pop-Up ABM.
+ *
+ * Son TRES dominios distintos y cada uno tiene su fuente:
+ *   - monedas          -> MONEDAS_DISPONIBLES, constante de backend (ADR-003)
+ *   - categoriasCuenta -> la columna P del Plan, que es el catalogo de categorias de cuenta
+ *   - tiposMedio       -> TIPOS_MEDIO, constante de backend
+ *
+ * decision Franco 2026-08-20: antes habia UN solo desplegable ("proyectos") que se leia de la
+ * tabla PROYECTOS y alimentaba dos campos con semanticas distintas: la Categoria de una cuenta
+ * (correcto) y el Tipo de un medio (incorrecto). Como la tabla PROYECTOS apunta a la misma
+ * columna P que el catalogo de categorias, el ABM del menu diario permitia dejar un medio con
+ * tipo "Alimentacion y social". Son dos ejes independientes y ahora tienen dos dominios.
  */
 function getAbmFormData() {
  try {
  // Monedas: servidas desde constante de backend (ADR-003)
  const monedas = MONEDAS_DISPONIBLES;
 
- // Proyectos: leídos desde la tabla de la hoja
- let dataProyectos = [];
- try { dataProyectos = getTableData('PROYECTOS'); } catch(e) {}
- const proyectosActivos = dataProyectos.map(row => row[0]).filter(p => p);
- 
+ // Categorias de cuenta: leidas de su propia tabla, no de la legacy PROYECTOS.
+ let dataCategorias = [];
+ try { dataCategorias = getTableData('CATEGORIAS_CUENTA'); } catch(e) {}
+ const categoriasCuenta = dataCategorias.map(row => row[0]).filter(x => x);
+
  return {
  monedas: monedas,
- proyectos: proyectosActivos
+ categoriasCuenta: categoriasCuenta,
+ tiposMedio: TIPOS_MEDIO
  };
  } catch (e) {
  Logger.log('Error getAbmFormData: ' + e.toString());
- return { monedas: MONEDAS_DISPONIBLES, proyectos: [] };
+ return { monedas: MONEDAS_DISPONIBLES, categoriasCuenta: [], tiposMedio: TIPOS_MEDIO };
  }
 }
 
@@ -97,12 +107,17 @@ function saveAbmRecord(payload) {
                 ];
                 break;
             
+            // "PROYECTOS" se retiro del ABM el 2026-08-20 y aca se RECHAZA explicitamente en vez
+            // de simplemente no estar: RANGES.PROYECTOS sigue apuntando a P:Q, que desde el
+            // rediseno es el catalogo de CATEGORIAS DE CUENTA. Un alta escribia el nombre al
+            // final de ese catalogo y el tipo suelto en una columna que ya no pertenece a
+            // ninguna tabla; una baja borraba una categoria de cuenta. Sin este case, un cliente
+            // viejo con la entidad cacheada caeria en el default -- que tambien lanza -- pero el
+            // mensaje no diria por que. Que lo diga.
             case 'PROYECTOS':
-                rowData = [
-                    payload.nombre.trim(),
-                    payload.tipoProyecto || 'General'
-                ];
-                break;
+                throw new Error('La entidad "Proyectos" ya no se administra desde este ABM: esa ' +
+                    'tabla es hoy el catalogo de Categorias de Cuenta. Usar Tidetrack Dev > ' +
+                    'Categorizar cuentas.');
             
             default:
                 throw new Error('Entidad desconocida: ' + entity);
@@ -201,9 +216,17 @@ function updateAbmRecord(payload) {
             case 'MEDIOS_PAGO':
                 rowData = [payload.nombre.trim(), payload.monedaRelacionada || '', payload.proyectoRelacionado || ''];
                 break;
+            // "PROYECTOS" se retiro del ABM el 2026-08-20 y aca se RECHAZA explicitamente en vez
+            // de simplemente no estar: RANGES.PROYECTOS sigue apuntando a P:Q, que desde el
+            // rediseno es el catalogo de CATEGORIAS DE CUENTA. Un alta escribia el nombre al
+            // final de ese catalogo y el tipo suelto en una columna que ya no pertenece a
+            // ninguna tabla; una baja borraba una categoria de cuenta. Sin este case, un cliente
+            // viejo con la entidad cacheada caeria en el default -- que tambien lanza -- pero el
+            // mensaje no diria por que. Que lo diga.
             case 'PROYECTOS':
-                rowData = [payload.nombre.trim(), payload.tipoProyecto || 'General'];
-                break;
+                throw new Error('La entidad "Proyectos" ya no se administra desde este ABM: esa ' +
+                    'tabla es hoy el catalogo de Categorias de Cuenta. Usar Tidetrack Dev > ' +
+                    'Categorizar cuentas.');
             default: 
                 throw new Error('Entidad desconocida: ' + entity);
         }

@@ -292,6 +292,18 @@ const MONEDAS_DISPONIBLES = ['ARS', 'USD', 'AUD', 'EUR'];
 // @see DEVTOOL_RiquezaYCategorias.js
 const TIPOS_RIQUEZA = ['Ahorros', 'Inversiones'];
 
+// Los cuatro tipos que puede declarar un MEDIO: donde esta la plata, no para que se movio.
+//
+// decision Franco 2026-08-20: entran como constante de backend, mismo criterio que
+// MONEDAS_DISPONIBLES (ADR-003), porque son un dominio cerrado que se decide y no una tabla que
+// el usuario administre. Existe porque el ABM del menu diario llenaba el desplegable del Tipo de
+// un medio con el catalogo de CATEGORIAS DE CUENTA -- las dos cosas se leian de la misma columna
+// P --, y con eso se podia dejar un medio con tipo "Alimentacion y social". Son dos ejes
+// independientes: el medio dice DONDE, la cuenta dice PARA QUE, y cada uno tiene su dominio.
+//
+// TIPOS_RIQUEZA es un SUBCONJUNTO de esta lista: los que componen patrimonio.
+const TIPOS_MEDIO = ['Hogar', 'Ahorros', 'Inversiones', 'Financiación'];
+
 // ============================================
 // CUENTAS NEUTRAS (MOVIMIENTOS PERMUTATIVOS)
 // ============================================

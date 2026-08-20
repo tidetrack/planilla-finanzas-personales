@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 23,
- patch: 5,
+ minor: 24,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.23.5 - El formato es parte del plan, y se revierte como todo lo demas',
+ releaseName: 'v0.24.0 - Tres fixes de la revision pre-merge: coordenadas podridas, borrado silencioso y dominios del ABM',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

@@ -9,6 +9,44 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.24.0 - Tres fixes de la revision adversarial pre-merge (2026-08-20)
+
+Una revision multi-agente de los 28 archivos de `src/` que entraron a `main` devolvio 55 hallazgos
+unicos; se verificaron adversarialmente los 9 mas severos y sobrevivieron 7. Estos son los tres
+primeros.
+
+### 1. Stock y flujo borraba "Medios Bancarios" y no lo reponia — diciendo que salio todo bien
+
+El plan marcaba `limpiar = true` sin mirar si las tres formulas del bloque iban a reescribirse. Si
+ya estaban aplicadas pero quedaba pendiente **cualquier** otro cambio — por ejemplo uno de formato,
+que es exactamente lo que introdujo la v0.23.5 — el plan no salia vacio, se limpiaba `C18:I29` con
+las formulas adentro, y el bucle no las reponia porque `proponer` las habia descartado por iguales.
+El verificador solo mira lo que se escribio, asi que la corrida terminaba en verde.
+
+> **Se materializo en produccion.** La corrida de formatos de la v0.23.5 dejo el bloque vacio.
+
+Ahora la misma condicion decide limpiar y reescribir: borrar sin reponer es imposible por
+construccion.
+
+### 2. El presupuesto convertia con celdas que ya no son las cotizaciones
+
+`DEVTOOL_Proyeccion` cableaba `$AF$17/18/19`, que hoy son "Saldos Actuales": `AF17` es el texto
+"Flujo" y `AF18`/`AF19` son montos de saldo. Un previsto en AUD se multiplicaba por un saldo en
+lugar de por una cotizacion — presupuesto inflado varios ordenes de magnitud, sin un solo aviso.
+Pasa a `TIDETRACK_USD/AUD/EUR()`. Era el ultimo lugar de `src/` que autoraba esas coordenadas.
+
+### 3. El ABM del menu diario podia corromper el Plan de Cuentas
+
+Por dos caminos:
+
+- La entidad **"Proyectos"** escribia en `RANGES.PROYECTOS` (P:Q), que desde el rediseno es el
+  catalogo de **categorias de cuenta**: un alta agregaba una categoria, una baja borraba una. Se
+  retira del selector y los endpoints la rechazan con un mensaje que explica por que.
+- **Un solo desplegable alimentaba dos ejes distintos** — la Categoria de una cuenta y el Tipo de
+  un medio — los dos leidos de la misma columna P. Se podia dejar un medio con tipo "Alimentacion
+  y social". Ahora son dos dominios separados: las categorias salen de `CATEGORIAS_CUENTA` y los
+  tipos de la nueva constante `TIPOS_MEDIO` en `00_Config.js`.
+
 ## v0.23.3 - La suma por tipo de medio, sobre la geometria real (2026-08-20)
 
 El Tablero ya tenia el bloque **"Tipo de Medios."** (`AE7:AH12`) con los cuatro tipos escritos a
