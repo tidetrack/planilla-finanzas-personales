@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 21,
+ minor: 22,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-19',
- releaseName: 'v0.21.0 - Plan de Cuentas en su forma final: un solo catalogo en P',
+ releaseName: 'v0.22.0 - El bloque Categorias agrupa por la categoria de la cuenta',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.22.0 (2026-08-19) - El bloque Categorias agrupa por la categoria de la cuenta
+- El bloque "Categorias" del Tablero mostraba Hogar / Ahorros / Inversiones / Financiacion: los TIPOS DE MEDIO. Eso contesta DONDE estaba la plata, no PARA QUE se uso, que es lo que el bloque promete.
+* CONSECUENCIA NO PREVISTA DE LA v0.20.0: cuando los medios declaraban su tipo via una categoria intermedia, el mismo VLOOKUP devolvia esa categoria ("Chanchito", "Meta de Ahorro 1"). Al sacar el nivel intermedio paso a devolver el TIPO, y el bloque quedo con cuatro filas genericas.
++ Ahora agrupa por la CATEGORIA DE LA CUENTA, buscada en los tres bloques del Plan con una cascada de tres IFERROR (una cuenta esta en uno y solo uno).
+- Es UNA sola celda y se conserva el nombre de la variable a proposito: cambiarlo obligaria a tocar todas sus apariciones mas abajo, y cada token de mas es una chance de romper la formula.
+
 v0.21.0 (2026-08-19) - Plan de Cuentas en su forma final
 + DEVTOOL_LimpiarPlanCuentas: deja TODAS las categorias en la columna P y barre los restos de las migraciones del dia (contenido, titulos, encabezados y validaciones de Q, T, U, V, W).
 ! RANGES.CATEGORIAS_CUENTA pasa de U a P. Nacio en U para no pisar el bloque de categorias de medios; ese bloque quedo sin uso cuando los medios pasaron a declarar su tipo directo, asi que P quedo libre y es el lugar natural. Un solo catalogo, una sola columna.

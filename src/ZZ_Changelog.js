@@ -5,6 +5,23 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.22.0 - El bloque "Categorias" agrupa por la categoria de la cuenta.
+ * - SINTOMA: el bloque mostraba Hogar / Ahorros / Inversiones / Financiacion. Son los TIPOS DE
+ *   MEDIO: contestan DONDE estaba la plata, no PARA QUE se uso, que es justo lo que ese bloque
+ *   promete. Cuatro filas genericas donde deberia haber "Vehiculo", "Alimentacion y social",
+ *   "Deuda y financiacion".
+ * - CAUSA: consecuencia no prevista de la v0.20.0. Cuando los medios declaraban su tipo A TRAVES
+ *   de una categoria intermedia, el VLOOKUP de esa formula devolvia la categoria del medio -- al
+ *   menos un nombre propio, "Chanchito", "Meta de Ahorro 1". Al sacar el nivel intermedio, el
+ *   MISMO VLOOKUP pasa a devolver el tipo. La formula no cambio; cambio lo que hay del otro lado.
+ *   Es el modo de falla mas silencioso que hay: nada se rompe, solo empieza a decir otra cosa.
+ * - CORRECCION: no volver atras, sino apuntar al eje correcto. La categoria de la CUENTA vive en
+ *   los tres bloques del Plan (C:D, F:G, I:J), asi que la busqueda es una cascada de tres IFERROR
+ *   -- una cuenta esta en uno y solo uno de los tres.
+ * - Es UNA sola celda, y se conserva el nombre de la variable a proposito: cambiarlo obligaria a
+ *   tocar todas sus apariciones mas abajo en la misma formula, y cada token de mas es una chance
+ *   de romperla.
+ *
  * [2026-08-19] v0.21.0 - Plan de Cuentas en su forma final.
  * - decision Franco: "necesito que en la columna P esten todas las categorias, que la columna Q
  *   la elimines, y que revises porque quedaron cosas escritas en las columnas STU".
