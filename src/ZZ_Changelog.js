@@ -5,6 +5,20 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.17.1 - El bloque de medios termina en la fila 29.
+ * - decision Franco: "en medios bancarios la formula debe llegar hasta la fila 29, no 30". Marca
+ *   DOS limites a la vez y los dos importaban:
+ *     (a) hasta donde se LIMPIA el area antes de escribir. Estaba en 45, heredado de una
+ *         estimacion mia, o sea que la limpieza podia pisar lo que hubiera debajo del bloque --
+ *         que no es nuestro. Un area de limpieza mas grande que el bloque es un destructor
+ *         silencioso esperando a que alguien ponga algo ahi.
+ *     (b) cuantas filas puede ocupar el resultado. El derrame se acota con ARRAY_CONSTRAIN a 12
+ *         filas (18 a 29). Si alguna vez hubiera mas medios con saldo que filas disponibles, se
+ *         muestran los 12 mayores en vez de derramar sobre el bloque de abajo.
+ * - El alto se DERIVA de las constantes del bloque (filaFin - filaDatos + 1) en vez de escribirse
+ *   a mano en dos lugares: mover el limite es cambiar un numero, no dos que se pueden
+ *   desincronizar.
+ *
  * [2026-08-19] v0.17.0 - Limpiar antes de derramar, y conciliar contra los saldos declarados.
  * - EL #REF! DE F18 Y H18: un derrame NO se expande si tiene que pisar contenido, y debajo de las
  *   columnas Moneda y Monto quedaban los valores estaticos viejos ("ARS", "42327,35"...). C18 no

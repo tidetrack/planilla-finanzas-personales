@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 17,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-19',
- releaseName: 'v0.17.0 - Limpiar antes de derramar, y conciliar contra los saldos declarados',
+ releaseName: 'v0.17.1 - El bloque de medios termina en la fila 29',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,11 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.17.1 (2026-08-19) - El bloque de medios termina en la fila 29
+! decision Franco: el bloque "Medios Bancarios" llega hasta la fila 29, no mas abajo. Marca dos limites y los dos importaban: hasta donde se LIMPIA antes de escribir (estaba en 45, o sea que podia pisar lo que hubiera debajo del bloque, que no es nuestro) y cuantas filas puede ocupar el resultado.
+- El derrame se acota con ARRAY_CONSTRAIN a 12 filas (18 a 29). Si alguna vez hubiera mas medios con saldo que filas, se muestran los 12 mayores en vez de romper el diseno de la hoja.
+NOTA: el limite se deriva de las constantes del bloque (filaFin - filaDatos + 1), no se escribe a mano en dos lugares.
+
 v0.17.0 (2026-08-19) - Limpiar antes de derramar, y conciliar contra los saldos declarados
 - #REF! EN F18 Y H18: un derrame NO se expande si tiene que pisar algo, y debajo de esas dos columnas quedaban los valores estaticos viejos (ARS, 42327,35...). C18 no fallo solo porque su columna ya la habia pisado la corrida anterior. Ahora el area del bloque se limpia antes de escribir.
 ! El respaldo de FORMULAS no alcanzaba: lo que hay que sacar de en medio son VALORES. Se fotografia el area completa -- valores y formulas, celda por celda -- antes de limpiar, y se restaura entera si algo falla.

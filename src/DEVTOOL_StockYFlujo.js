@@ -138,10 +138,15 @@ const SYF_FILA_RESIDUO = 19;
 const SYF_BLOQUE_MEDIOS = {
     filaHeader: 17,
     filaDatos: 18,
-    // Hasta donde se limpia el area de datos antes de escribir. Un derrame NO se expande si
-    // tiene que pisar algo: las columnas Moneda y Monto tenian valores estaticos viejos debajo
-    // y por eso F18 y H18 daban #REF!. Se limpia C:I desde la fila de datos hasta aca.
-    filaFin: 45,
+    // decision Franco 2026-08-19: el bloque termina en la fila 29, no mas abajo. Marca dos
+    // limites a la vez y los dos importan:
+    //   - hasta donde se LIMPIA antes de escribir (un derrame no se expande si tiene que pisar
+    //     algo, y ese fue el #REF! de F18/H18). Limpiar de mas pisaria lo que haya debajo del
+    //     bloque, que no es nuestro.
+    //   - cuantas filas puede ocupar el resultado. El derrame se acota con ARRAY_CONSTRAIN a
+    //     filaFin - filaDatos + 1 = 12 medios. Si algun dia hubiera mas medios con saldo que
+    //     filas, se muestran los 12 mayores en vez de romper el diseno de la hoja.
+    filaFin: 29,
     colIni: 'C',
     colFin: 'I',
     columnas: [
@@ -595,6 +600,11 @@ function _formulaSaldoConvertido(esRiqueza, celdaSelector) {
  * saldo a la fecha." Se filtran los que quedan en cero -- de 28 medios del catalogo, muestra los
  * que efectivamente tienen plata. Un listado con veinte ceros no es informacion.
  */
+/** Filas disponibles para el derrame del bloque de medios, derivadas de sus limites. */
+function _altoBloqueMedios() {
+    return SYF_BLOQUE_MEDIOS.filaFin - SYF_BLOQUE_MEDIOS.filaDatos + 1;
+}
+
 function _formulaSaldoPorMedio(indiceColumna) {
     return '=LET(\n' + _preambuloSaldoSyf() + '\n' +
         '  saldos; MAP(lista; LAMBDA(un_medio;\n' +
@@ -602,8 +612,10 @@ function _formulaSaldoPorMedio(indiceColumna) {
         '  con_saldo; ARRAYFORMULA(ROUND(saldos; 2)<>0);\n' +
         // La MISMA matriz ordenada en las tres columnas: cada una toma la suya con INDEX y las
         // filas se corresponden siempre, aun con saldos empatados.
-        '  tabla; IFERROR(SORT(FILTER(HSTACK(lista; mon_lista; saldos); con_saldo); 3; FALSE);\n' +
+        '  ordenada; IFERROR(SORT(FILTER(HSTACK(lista; mon_lista; saldos); con_saldo); 3; FALSE);\n' +
         '    HSTACK("(sin saldos)"; ""; 0));\n' +
+        // Acotado al alto del bloque: el diseno de la hoja manda sobre la cantidad de datos.
+        '  tabla; ARRAY_CONSTRAIN(ordenada; ' + _altoBloqueMedios() + '; 3);\n' +
         '  INDEX(tabla; 0; ' + indiceColumna + ')\n)';
 }
 
