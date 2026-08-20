@@ -82,7 +82,7 @@
  * Reusa tres helpers probados de DEVTOOL_FormulerioV0111.js: _respaldarFormulerio,
  * _leerRespaldoFormulerio y _errorDeCelda.
  *
- * @version 0.15.0
+ * @version 0.15.1
  * @since 2026-08-19
  * @lastModified 2026-08-20
  * @see docs/permanente/FUNCIONALIDADES.md
@@ -940,6 +940,51 @@ function _restaurarBloqueMedios(ss, nombreHoja, foto) {
     SpreadsheetApp.flush();
 }
 
+/**
+ * "Quedo SIN formula" es un sintoma, no un diagnostico. Hay exactamente dos causas y hay que
+ * poder distinguirlas sin adivinar:
+ *
+ *   a) LA CELDA no acepta formulas -- es parte de una celda combinada sin ser su ancla, o esta
+ *      protegida. Lo escrito se traga sin excepcion. Asi se perdio L29 el 2026-08-19.
+ *   b) LA FORMULA no parsea. Sheets la rechaza y deja la celda vacia, sin error visible. Asi se
+ *      perdio una formula entera por usar "n" como variable de LET, que choca con la funcion N().
+ *
+ * El canario las separa: se escribe "=1+1" en la MISMA celda. Si entra, la celda esta sana y el
+ * problema es la formula; si no entra, el problema es la celda. Despues se limpia el canario.
+ */
+function _porQueNoEntroSyf(rango, formulaIntentada) {
+    let comb = false;
+    try { comb = rango.isPartOfMerge(); } catch (e) { comb = false; }
+    if (comb) return 'La celda es parte de una celda COMBINADA sin ser su ancla: lo que se le escribe no queda.';
+
+    let canario = '';
+    try {
+        rango.setFormula('=1+1');
+        SpreadsheetApp.flush();
+        canario = rango.getFormula();
+        rango.clearContent();
+        SpreadsheetApp.flush();
+    } catch (e) {
+        return 'La celda rechaza cualquier escritura (' + e.message + '): puede estar protegida.';
+    }
+
+    if (!canario) return 'La celda no acepta ni un "=1+1": el problema es la CELDA, no la formula.';
+    return 'La celda acepta formulas (el canario "=1+1" entro bien), asi que Sheets RECHAZO ESTA ' +
+        'formula por no poder parsearla. Suele ser un nombre de variable de LET que choca con una ' +
+        'funcion de la planilla. Variables usadas: ' + _variablesLetSyf(formulaIntentada).join(', ') + '.';
+}
+
+/** Los nombres declarados como variables dentro de un LET, para poder nombrarlos en el error. */
+function _variablesLetSyf(formula) {
+    const vistos = [];
+    const re = /(^|[(;\n])\s*([A-Za-z_][A-Za-z0-9_]*)\s*;/g;
+    let m;
+    while ((m = re.exec(String(formula || ''))) !== null) {
+        if (vistos.indexOf(m[2]) === -1) vistos.push(m[2]);
+    }
+    return vistos.length ? vistos : ['(ninguna)'];
+}
+
 function _verificarEscrituraSyf(ss, escritas) {
     const fallas = [];
     escritas.forEach(function (w) {
@@ -952,7 +997,7 @@ function _verificarEscrituraSyf(ss, escritas) {
             return;
         }
         const leida = rango.getFormula();
-        if (!leida) { fallas.push(ref + ' quedo SIN formula'); return; }
+        if (!leida) { fallas.push(ref + ' quedo SIN formula. ' + _porQueNoEntroSyf(rango, w.nueva)); return; }
         if (_canonizarFormula(leida) !== _canonizarFormula(w.nueva)) {
             fallas.push(ref + ' no coincide con lo que se le escribio');
             return;

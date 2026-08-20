@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 23,
- patch: 1,
+ patch: 2,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.23.1 - La consolidada del Plan se ubica midiendo, no por marca de estado',
+ releaseName: 'v0.23.2 - El verificador dice POR QUE una celda quedo sin formula',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

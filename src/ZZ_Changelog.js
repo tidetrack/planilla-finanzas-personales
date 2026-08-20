@@ -5,6 +5,18 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.23.2 - El verificador dice POR QUE una celda quedo sin formula.
+ * - "quedo SIN formula" es un sintoma, no un diagnostico, y esta campana ya perdio tiempo dos
+ *   veces adivinando cual de las dos causas posibles era. Ahora el verificador las separa solo:
+ *     a) LA CELDA no acepta formulas -- parte de una combinada sin ser su ancla, o protegida. Lo
+ *        escrito se traga sin excepcion (asi se perdio L29 el 2026-08-19).
+ *     b) LA FORMULA no parsea. Sheets la rechaza y deja la celda VACIA, sin error visible (asi se
+ *        perdio una formula entera por usar "n" de variable de LET, que choca con la funcion N()).
+ * - El canario las distingue: se escribe "=1+1" en la MISMA celda. Si entra, la celda esta sana y
+ *   el problema es la formula; si no entra, el problema es la celda. Despues se limpia.
+ * - Cuando el problema es la formula, el mensaje ademas lista las variables de LET declaradas,
+ *   que es donde vive la colision en la practica.
+ *
  * [2026-08-20] v0.23.1 - La consolidada del Plan se ubica MIDIENDO, no por marca de estado.
  * - SINTOMA: "Limpiar Plan de Cuentas" abortaba con "La consolidada de S8 no tiene formula",
  *   cuando la consolidada estaba perfecta -- en R.
