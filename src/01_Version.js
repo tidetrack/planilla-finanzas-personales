@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 18,
+ minor: 19,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-19',
- releaseName: 'v0.18.0 - BD de Proyeccion: el presupuesto deja de estar tipeado a mano',
+ releaseName: 'v0.19.0 - Plan de Cuentas de tres niveles: cuenta, categoria, tipo',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,14 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.19.0 (2026-08-19) - Plan de Cuentas de tres niveles
++ DEVTOOL_CategorizarCuentas: ordena las 60 cuentas en 22 CATEGORIAS y le da a cada categoria su TIPO. Las tres columnas "Categoria" de los bloques de cuentas estaban vacias (0 de 11, 0 de 15, 0 de 22).
+* EL TIPO CRUZA LOS BLOQUES, y ese cruce es todo el valor del nivel de arriba: "Vehiculo" junta Nafta y Auto (fijos) con Reparaciones y Estacionamiento (variables) -- $4.793.879 en 32 meses, $149.808 por mes, el segundo gasto mas grande despues de los negocios propios. Antes eran cuatro lineas sueltas en dos bloques distintos.
+* DOS VOCABULARIOS DE "TIPO" QUE NO SON EL MISMO: los cuatro que ya existian (Ahorros, Inversiones, Financiacion, Hogar) fueron pensados para los MEDIOS y contestan DONDE esta la plata. Las categorias de cuentas contestan PARA QUE se usa. Tres se reutilizan tal cual; Ahorros queda solo para medios; se agregan ocho para cubrir el lado del uso. Forzar las cuentas dentro de los cuatro viejos habria puesto "Sueldo" y "Nafta" bajo etiquetas que no significan nada para ellas.
+- El agrupamiento sale de 3.458 movimientos sobre 32 meses: sigue el uso real, no una taxonomia de manual.
+! "Compra USD" NO se categoriza a proposito (decision Franco): pasa a ser un traspaso y deja de existir como cuenta. Es la unica del catalogo que queda sin categoria.
++ Preflight que aborta si una categoria del mapa ya existe con OTRO tipo: dos verdades para el mismo nombre romperian toda formula que cruce por categoria.
+
 v0.18.0 (2026-08-19) - BD de Proyeccion
 + DEVTOOL_Proyeccion: crea la hoja "Proyeccion", espejo exacto de "Registros" (se clona con copyTo para heredar diseno, formatos y validaciones de una sola vez, y despues se le borran los datos y se VERIFICA que quedo vacia).
 ! Tablero N9/N10/N11 dejan de ser constantes tipeadas a mano y pasan a sumar lo cargado en la proyeccion para el mes, anio y moneda seleccionados. Usan EL MISMO criterio que los bloques de la realidad -- filtro por Tipo de Cuenta y exclusion de cuentas neutras -- porque si el presupuesto se sumara distinto que lo real, el porcentaje de cumplimiento compararia peras con manzanas.

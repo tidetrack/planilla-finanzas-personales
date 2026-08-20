@@ -5,6 +5,37 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.19.0 - Plan de Cuentas de tres niveles: cuenta, categoria, tipo.
+ * - EL PROBLEMA: 60 cuentas sueltas y las tres columnas "Categoria" de los bloques de cuentas
+ *   VACIAS -- 0 de 11 en Ingresos, 0 de 15 en Gastos Fijos, 0 de 22 en Variables. Sin ese nivel
+ *   intermedio no se puede leer nada por encima del detalle: "Nafta" y "Auto" son dos lineas
+ *   sueltas en vez de "el auto me cuesta tanto".
+ * - LA ESTRUCTURA: CUENTA -> CATEGORIA -> TIPO. La categoria agrupa dentro de su bloque; el TIPO
+ *   es la macro-segmentacion y CRUZA los bloques. Ese cruce es todo el valor del nivel de arriba:
+ *   "Vehiculo" junta Nafta y Auto (fijos) con Reparaciones y Estacionamiento (variables) y da
+ *   $4.793.879 en 32 meses, $149.808 por mes -- el segundo gasto mas grande de Franco despues de
+ *   sus propios negocios, y hasta hoy invisible porque estaba partido en dos bloques.
+ * - LOS DOS VOCABULARIOS DE "TIPO", que es la parte que hubo que aclarar: los cuatro que ya
+ *   vivian en P:Q (Ahorros, Inversiones, Financiacion, Hogar) fueron pensados para los MEDIOS DE
+ *   PAGO y contestan DONDE ESTA la plata. Las categorias de CUENTAS contestan otra cosa: PARA QUE
+ *   se usa. Tres de los cuatro sirven para las dos preguntas y se reutilizan tal cual; "Ahorros"
+ *   queda solo para medios, porque ninguna cuenta de gasto o ingreso es un vehiculo de ahorro; y
+ *   se agregan ocho (Ingresos, Negocios, Vehiculo, Salud, Bienestar, Obligaciones, Equipamiento,
+ *   Otros) para cubrir el lado del uso. Forzar las cuentas dentro de los cuatro viejos habria
+ *   puesto "Sueldo" y "Nafta" bajo etiquetas que no significan nada para ellas.
+ * - Ambos vocabularios conviven en la MISMA tabla P:Q sin chocar: un medio busca su propia
+ *   categoria y una cuenta la suya. Lo unico que no puede pasar es que dos categorias distintas
+ *   se llamen igual con tipos distintos, y el preflight ABORTA si eso ocurre -- dos verdades para
+ *   el mismo nombre romperian toda formula que cruce por categoria.
+ * - EL AGRUPAMIENTO SALE DE LOS DATOS: 3.458 movimientos sobre 32 meses. Sigue el uso real de
+ *   Franco, no una taxonomia de manual.
+ * - "Compra USD" NO se categoriza, a proposito (decision Franco): pasa a ser un traspaso y deja
+ *   de existir como cuenta. Categorizarla seria consagrar algo que esta por desaparecer. Es la
+ *   unica cuenta del catalogo que queda sin categoria, y el informe lo dice con su motivo.
+ * - NO unifica las cuentas escritas de dos formas ("Pago tarjeta" / "Pago Tarjeta"): las mapea a
+ *   la misma categoria, asi que el agrupamiento ya sale bien, pero el par sigue existiendo hasta
+ *   que se decida cual se queda. Son seis pares y el mayor parte $2.123.503 en dos mitades.
+ *
  * [2026-08-19] v0.18.0 - BD de Proyeccion: el presupuesto deja de estar tipeado a mano.
  * - EL PROBLEMA: el Tablero compara lo que PASO contra lo que estaba PREVISTO. La mitad de "lo
  *   que paso" sale del ledger desde siempre; la mitad de "lo previsto" eran TRES CONSTANTES
