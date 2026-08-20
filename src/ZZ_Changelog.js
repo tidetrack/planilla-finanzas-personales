@@ -5,6 +5,34 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.18.0 - BD de Proyeccion: el presupuesto deja de estar tipeado a mano.
+ * - EL PROBLEMA: el Tablero compara lo que PASO contra lo que estaba PREVISTO. La mitad de "lo
+ *   que paso" sale del ledger desde siempre; la mitad de "lo previsto" eran TRES CONSTANTES
+ *   escritas a mano en N9, N10 y N11 que nadie podia auditar ni cambiar sin abrir la celda.
+ * - LA HOJA: "Proyeccion", espejo exacto de "Registros". Se clona con copyTo y no se reconstruye
+ *   por codigo: un copyTo trae de una el ancho de las columnas, los formatos numericos, las
+ *   validaciones, el formato condicional y las filas congeladas. Reponer todo eso a mano es
+ *   superficie para equivocarse en silencio, y el pedido de Franco fue explicito -- "desde la
+ *   arquitectura hasta el diseno".
+ * - Y SE LE BORRAN LOS DATOS, con verificacion de que quedo vacia. Un espejo que arranca con los
+ *   3.500 movimientos del ledger adentro seria un presupuesto identico a la realidad: daria 100%
+ *   de cumplimiento siempre, que es el peor error posible en esta hoja porque es invisible.
+ * - EL CABLEADO usa EL MISMO CRITERIO que los bloques de la realidad (filtro por Tipo de Cuenta,
+ *   exclusion de las cuentas neutras). Si el presupuesto se sumara distinto que lo real, el
+ *   porcentaje de cumplimiento compararia peras con manzanas y nadie lo notaria.
+ * - DECISION DE DISENO, la mas importante del modulo: un movimiento proyectado NO TIENE
+ *   cotizacion congelada, y no puede tenerla -- nadie sabe a cuanto va a estar el dolar el mes que
+ *   viene. Por eso la proyeccion se convierte con la cotizacion de HOY (AF17/AF18/AF19) y no con
+ *   las columnas J:M del espejo. Un presupuesto en dolares vale lo que vale hoy y se re-evalua
+ *   solo cuando la cotizacion cambia. Las columnas J:M existen igual porque la hoja es un espejo
+ *   exacto: si algun dia se quiere congelar un TC previsto, la columna esta.
+ * - SHEETS.PROYECCION entra como GETTER DE ALIAS ('Proyeccion' / 'Proyección') y no como string
+ *   estatico. El nombre natural en castellano lleva tilde, ninguna otra pestania de la planilla
+ *   usa acentos, y esa clase exacta de ambiguedad ya costo caro tres veces en este repo.
+ * - La hoja nace VACIA: N9:N11 dan cero hasta que Franco cargue movimientos previstos. Es
+ *   correcto y hay que decirlo, porque un cero puede leerse como "se rompio": hasta hoy esos tres
+ *   numeros no salian de ningun lado.
+ *
  * [2026-08-19] v0.17.1 - El bloque de medios termina en la fila 29.
  * - decision Franco: "en medios bancarios la formula debe llegar hasta la fila 29, no 30". Marca
  *   DOS limites a la vez y los dos importaban:

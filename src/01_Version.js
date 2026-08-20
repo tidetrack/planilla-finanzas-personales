@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 17,
- patch: 1,
+ minor: 18,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-19',
- releaseName: 'v0.17.1 - El bloque de medios termina en la fila 29',
+ releaseName: 'v0.18.0 - BD de Proyeccion: el presupuesto deja de estar tipeado a mano',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.18.0 (2026-08-19) - BD de Proyeccion
++ DEVTOOL_Proyeccion: crea la hoja "Proyeccion", espejo exacto de "Registros" (se clona con copyTo para heredar diseno, formatos y validaciones de una sola vez, y despues se le borran los datos y se VERIFICA que quedo vacia).
+! Tablero N9/N10/N11 dejan de ser constantes tipeadas a mano y pasan a sumar lo cargado en la proyeccion para el mes, anio y moneda seleccionados. Usan EL MISMO criterio que los bloques de la realidad -- filtro por Tipo de Cuenta y exclusion de cuentas neutras -- porque si el presupuesto se sumara distinto que lo real, el porcentaje de cumplimiento compararia peras con manzanas.
+* DECISION DE DISENO: un movimiento proyectado NO TIENE cotizacion congelada -- nadie sabe a cuanto va a estar el dolar el mes que viene --, asi que la proyeccion se convierte con la cotizacion de HOY (AF17/18/19) y no con las columnas J:M. Las columnas existen igual porque la hoja es un espejo exacto.
++ SHEETS.PROYECCION entra como getter de alias ('Proyeccion' / 'Proyección'): el nombre natural lleva tilde y esa ambiguedad ya costo caro tres veces en este repo.
+NOTA: la hoja nace VACIA, asi que N9:N11 dan cero hasta que se carguen movimientos previstos. Es correcto: hasta hoy esos numeros no salian de ningun lado.
+
 v0.17.1 (2026-08-19) - El bloque de medios termina en la fila 29
 ! decision Franco: el bloque "Medios Bancarios" llega hasta la fila 29, no mas abajo. Marca dos limites y los dos importaban: hasta donde se LIMPIA antes de escribir (estaba en 45, o sea que podia pisar lo que hubiera debajo del bloque, que no es nuestro) y cuantas filas puede ocupar el resultado.
 - El derrame se acota con ARRAY_CONSTRAIN a 12 filas (18 a 29). Si alguna vez hubiera mas medios con saldo que filas, se muestran los 12 mayores en vez de romper el diseno de la hoja.
