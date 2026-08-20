@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 24,
+ minor: 25,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.24.0 - Tres fixes de la revision pre-merge: coordenadas podridas, borrado silencioso y dominios del ABM',
+ releaseName: 'v0.25.0 - Presupuesto base desde el historial real',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

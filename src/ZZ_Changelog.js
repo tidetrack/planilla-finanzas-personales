@@ -5,6 +5,30 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.25.0 - Presupuesto base: la hoja Proyeccion se siembra desde el historial real.
+ * - PROBLEMA: "Proyeccion" nacia vacia, asi que "Presupuesto Asignado" (N9:N11) daba cero y
+ *   "Disponibilidad de fondos" no podia decir nada. No habia con que probar el Tablero.
+ * - METODO, que es el mas viejo y el mas honesto para un primer presupuesto: PROMEDIO HISTORICO
+ *   POR CUENTA. Se toman los ultimos 6 meses COMPLETOS, se suma lo de cada cuenta y se divide por
+ *   6. El mes en curso no entra al promedio: esta a medio transcurrir y bajaria todas las lineas.
+ * - TRES DECISIONES que hacen que el numero signifique algo:
+ *     1. El presupuesto es PLANO a lo largo de los meses. Una linea que uno se fija; lo que varia
+ *        es la realidad, y esa diferencia es justo lo que el Tablero mide.
+ *     2. Se excluyen las CUENTAS NEUTRAS (traspasos, "Inicio Mes"): no son gasto ni ingreso.
+ *        Mismo criterio que los bloques de la realidad -- si difirieran, el cumplimiento
+ *        compararia peras con manzanas.
+ *     3. Se respeta la MONEDA DE ORIGEN: una cuenta que se paga en dolares se presupuesta en
+ *        dolares. Promediar montos de monedas distintas produce un numero que no existe.
+ * - REPETIBLE SIN DUPLICAR: cada fila generada queda marcada en la columna Nota, y al recargar se
+ *   borran solo esas. Lo cargado a mano no se toca. Hay un "3. Quitar la carga" que la saca entera.
+ * - BANCO DE PRUEBAS con ledger sintetico de respuesta conocida, y VERIFICADO POR MUTACION: se
+ *   rompio la logica a proposito de cinco formas distintas y las cinco murieron. La cuarta --
+ *   agrupar sin la moneda -- no la detectaba la primera version del banco, porque ninguna cuenta
+ *   del ledger de prueba se pagaba en dos monedas. Se agrego el caso.
+ * - EL BANCO CHEQUEA ADEMAS QUE NO HAYA BYTES DE CONTROL en src/ ni devtools/. Aparecio un NUL
+ *   dentro de un .join() -- inyectado por una herramienta de edicion, no por un humano. No rompe
+ *   la sintaxis, no lo muestra ningun editor y viaja al deploy sin que nadie lo note.
+ *
  * [2026-08-20] v0.24.0 - Tres fixes de la revision adversarial pre-merge.
  *
  * 1. STOCK Y FLUJO BORRABA "MEDIOS BANCARIOS" Y NO LO REPONIA, diciendo que salio todo bien.

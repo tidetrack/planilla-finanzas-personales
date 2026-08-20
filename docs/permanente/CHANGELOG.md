@@ -9,6 +9,42 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.25.0 - Presupuesto base desde el historial real (2026-08-20)
+
+`Proyeccion` nacia vacia, asi que "Presupuesto Asignado" daba cero y no habia con que probar el
+Tablero. Ahora se puede sembrar con un presupuesto derivado de lo que realmente paso.
+
+**El metodo** es el mas viejo y el mas honesto para un primer presupuesto: el **promedio mensual
+por cuenta** sobre los ultimos 6 meses completos. El mes en curso no entra — esta a medio
+transcurrir y bajaria todas las lineas.
+
+**Tres decisiones que hacen que el numero signifique algo:**
+
+1. **El presupuesto es plano** a lo largo de los meses. Es una linea que uno se fija; lo que varia
+   es la realidad, y esa diferencia es justo lo que el Tablero mide.
+2. **Se excluyen las cuentas neutras** (traspasos, "Inicio Mes"): no son gasto ni ingreso. Mismo
+   criterio que los bloques de la realidad — si difirieran, el cumplimiento compararia peras con
+   manzanas.
+3. **Se respeta la moneda de origen.** Una cuenta que se paga en dolares se presupuesta en
+   dolares. Promediar montos de monedas distintas produce un numero que no existe.
+
+**Repetible sin duplicar:** cada fila generada queda marcada en la columna Nota y al recargar se
+borran solo esas. Lo cargado a mano no se toca.
+
+### Verificado por mutacion
+
+El banco de pruebas corre contra un ledger sintetico de respuesta conocida. Se rompio la logica a
+proposito de cinco formas y las cinco murieron — pero **la primera version del banco no detectaba
+una de ellas**: agrupar sin la moneda pasaba limpio porque ninguna cuenta del ledger de prueba se
+pagaba en dos monedas. Se agrego el caso, y ahora esa mutacion produce `20015`, que es 20.000 ARS
+mezclados con 15 USD: exactamente el numero inventado que el guard tiene que atajar.
+
+### Y un byte que casi viaja al deploy
+
+El banco chequea ademas que no haya **bytes de control** en `src/` ni `devtools/`. Aparecio un NUL
+dentro de un `.join()`, inyectado por una herramienta de edicion. No rompe la sintaxis, no lo
+muestra ningun editor, y viaja al deploy sin que nadie lo note.
+
 ## v0.24.0 - Tres fixes de la revision adversarial pre-merge (2026-08-20)
 
 Una revision multi-agente de los 28 archivos de `src/` que entraron a `main` devolvio 55 hallazgos

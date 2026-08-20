@@ -504,6 +504,17 @@ const MENU_CONFIG = {
             ]
         },
         {
+            // Siembra la hoja Proyeccion con un presupuesto base derivado del historial real:
+            // el promedio mensual de cada cuenta sobre los ultimos meses completos. Sin esto la
+            // hoja nace vacia y "Presupuesto Asignado" no tiene contra que comparar.
+            // @see DEVTOOL_PresupuestoBase.js
+            submenu: 'Presupuesto base (desde el historial)', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoPresupuestoBase' },
+                { name: '2. Cargar', function: 'aplicarPresupuestoBase' },
+                { name: '3. Quitar la carga', function: 'quitarPresupuestoBase' }
+            ]
+        },
+        {
             // Ordena las 60 cuentas en 22 categorias y le da a cada categoria su tipo. La
             // categoria agrupa dentro del bloque; el TIPO cruza los bloques y es lo que permite
             // preguntar cuanto cuesta el auto entre fijos y variables. @see DEVTOOL_CategorizarCuentas.js
