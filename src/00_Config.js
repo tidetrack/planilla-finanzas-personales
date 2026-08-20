@@ -175,9 +175,10 @@ const RANGES = {
  },
     // El bloque se rotula 'Categorias' en la hoja Fix (Nombre/Tipo, con los tipos generales
     // Ahorros/Inversiones/Financiacion/Hogar). La clave interna conserva el nombre historico.
-    // Categorias de MEDIOS con su TIPO (finalidad patrimonial: Ahorros, Inversiones,
-    // Financiacion, Hogar). Contesta DONDE ESTA la plata. La clave conserva el nombre historico
-    // "PROYECTOS"; en la hoja el rotulo es "Categorias".
+    // LEGACY, sin uso desde la v0.20.0. Era el catalogo de categorias de MEDIOS con su tipo;
+    // los medios ahora declaran su tipo directo en la columna N y este bloque quedo vacio. Se
+    // conserva la entrada porque varios devtools historicos la leen en sus preflights -- todos
+    // ya aplicados -- y quitarla los dejaria sin poder arrancar. No escribir aca.
     PROYECTOS: {
         sheet: SHEETS.PLAN_CUENTAS,
         start: 'P',
@@ -189,11 +190,15 @@ const RANGES = {
     // de Vehiculo puede pagarse desde un medio cotidiano o desde uno de ahorro, y ese cruce es
     // justamente la informacion que se busca. Mezclar los dos catalogos en P:Q obligaria a que
     // uno determine al otro y esa informacion se perderia.
+    // decision Franco 2026-08-19 (segunda vuelta): TODAS las categorias van en la columna P.
+    // Nacio en U para no pisar el bloque de categorias de medios, pero ese bloque quedo sin uso
+    // cuando los medios pasaron a declarar su tipo directo (v0.20.0): P quedo libre y es el lugar
+    // natural. Un solo catalogo de categorias, en una sola columna.
     CATEGORIAS_CUENTA: {
         sheet: SHEETS.PLAN_CUENTAS,
-        start: 'U',
-        end: 'U',
-        columns: { nombre: 'U' }
+        start: 'P',
+        end: 'P',
+        columns: { nombre: 'P' }
     },
     // --- Cargas: layout Fix (titulo B2, header fila 6, datos filas 7-21, numeracion B7:B21) ---
     // decision Franco 2026-08-13: la geometria de la grilla de carga entra a Config como SSOT.
@@ -492,6 +497,14 @@ const MENU_CONFIG = {
             // preguntar cuanto cuesta el auto entre fijos y variables. @see DEVTOOL_CategorizarCuentas.js
             // Saca el nivel intermedio del eje de medios: cada medio declara su TIPO directo.
             // Catalogo y formulas se escriben JUNTOS -- son inseparables. @see DEVTOOL_TipoDeMedios.js
+            // Deja el Plan de Cuentas en su forma final: todas las categorias en P y los restos
+            // de las migraciones barridos. @see DEVTOOL_LimpiarPlanCuentas.js
+            submenu: 'Limpiar Plan de Cuentas', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoLimpiarPlan' },
+                { name: '2. Aplicar', function: 'aplicarLimpiarPlan' }
+            ]
+        },
+        {
             submenu: 'Tipo de medios', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoTipoDeMedios' },
                 { name: '2. Aplicar', function: 'aplicarTipoDeMedios' }

@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 20,
- patch: 2,
+ minor: 21,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-19',
- releaseName: 'v0.20.2 - La misma leccion en las columnas de categoria de cuentas',
+ releaseName: 'v0.21.0 - Plan de Cuentas en su forma final: un solo catalogo en P',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.21.0 (2026-08-19) - Plan de Cuentas en su forma final
++ DEVTOOL_LimpiarPlanCuentas: deja TODAS las categorias en la columna P y barre los restos de las migraciones del dia (contenido, titulos, encabezados y validaciones de Q, T, U, V, W).
+! RANGES.CATEGORIAS_CUENTA pasa de U a P. Nacio en U para no pisar el bloque de categorias de medios; ese bloque quedo sin uso cuando los medios pasaron a declarar su tipo directo, asi que P quedo libre y es el lugar natural. Un solo catalogo, una sola columna.
+* RANGES.PROYECTOS queda marcado LEGACY: sin uso, pero se conserva porque varios devtools historicos lo leen en sus preflights y quitarlo los dejaria sin arrancar.
+- LA COLUMNA Q SE VACIA, NO SE BORRA, y es una decision explicita: borrarla correria S a R, y en S vive la formula que la hoja rotula "fuente de validacion - no tocar" (la que alimenta el desplegable de Cargas). Sheets reacomoda las formulas al correr columnas, pero los rangos de las validaciones no siempre siguen -- y hoy ya nos costo dos corridas descubrir que las validaciones no se comportan como uno espera. El beneficio de borrarla es una columna vacia menos; entre P y S ya hay una separadora. No vale arriesgar la carga de datos por eso.
++ El preflight ABORTA si la consolidada de S perdio su formula, y avisa si quedan formulas apuntando al bloque viejo.
+
 v0.20.2 (2026-08-19) - La misma leccion, en las columnas de categoria de cuentas
 - "Categorizar cuentas" murio en D8: "Los datos ingresados infringen las reglas de validacion". Las tres columnas de Categoria tienen el mismo desplegable con la lista vieja que tenia la columna de medios. Esta vez SI lanzo excepcion, asi que no escribio a medias.
 + Se aplica el mismo tratamiento ya probado en la v0.20.1: la validacion de las tres columnas se reemplaza por la lista de categorias de cuentas ANTES de escribir.

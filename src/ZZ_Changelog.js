@@ -5,6 +5,30 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-19] v0.21.0 - Plan de Cuentas en su forma final.
+ * - decision Franco: "necesito que en la columna P esten todas las categorias, que la columna Q
+ *   la elimines, y que revises porque quedaron cosas escritas en las columnas STU".
+ * - QUE HABIA, medido en vivo: P y Q con titulo y encabezado pero SIN datos (el catalogo de
+ *   categorias de medios se vacio al pasar los medios a tipo directo); S con la consolidada viva;
+ *   U con dos categorias sueltas que dejo la corrida que murio en D8; y algo en V7. Nada de eso
+ *   rompia nada, y justamente por eso se queda para siempre si no se barre a proposito.
+ * - TODAS LAS CATEGORIAS PASAN A LA COLUMNA P. Nacieron en U para no pisar el bloque de
+ *   categorias de medios; ese bloque quedo sin uso en la v0.20.0, asi que P quedo libre y es el
+ *   lugar natural. Un catalogo con restos de versiones anteriores al lado deja de ser confiable:
+ *   el que lo lee tiene que adivinar que parte esta viva.
+ * - LA COLUMNA Q SE VACIA, NO SE BORRA, y la razon es concreta, no pereza. Borrar una columna
+ *   CORRE todo lo que esta a su derecha: R pasa a Q, S a R. Y en S vive la formula que la propia
+ *   hoja rotula "fuente de validacion - no tocar", la que alimenta el desplegable de Cuenta en
+ *   Cargas. Sheets reacomoda las referencias de las FORMULAS al correr columnas, pero los rangos
+ *   de las REGLAS DE VALIDACION no siempre siguen -- y hoy dos corridas seguidas se cayeron
+ *   justamente por dar por sentado como se comportan las validaciones. El beneficio de borrarla
+ *   es una columna vacia menos, y entre P y S ya hay una separadora (R) igual que entre todos los
+ *   demas bloques. No vale arriesgar la carga de movimientos por eso. Queda sin contenido, sin
+ *   titulo, sin encabezado y sin validacion: a la vista es una columna que no existe, y borrarla
+ *   de verdad despues es un click a mano con la planilla ya estable.
+ * - EL PREFLIGHT ABORTA si la consolidada de S perdio su formula: si esa columna ya esta rota,
+ *   hay que arreglarla ANTES de barrer nada a su alrededor, no despues.
+ *
  * [2026-08-19] v0.20.2 - La misma leccion, en las columnas de categoria de cuentas.
  * - "Categorizar cuentas" murio en D8: "Los datos ingresados en la celda D8 infringen las reglas
  *   de validacion de datos definidas en ella". Las tres columnas de Categoria de los bloques de
