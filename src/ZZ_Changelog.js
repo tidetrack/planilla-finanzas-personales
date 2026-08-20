@@ -5,6 +5,19 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.23.1 - La consolidada del Plan se ubica MIDIENDO, no por marca de estado.
+ * - SINTOMA: "Limpiar Plan de Cuentas" abortaba con "La consolidada de S8 no tiene formula",
+ *   cuando la consolidada estaba perfecta -- en R.
+ * - CAUSA: el modulo deducia su posicion de una marca en DocumentProperties ("ya se borro la
+ *   columna Q?"). El borrado habia ocurrido en una corrida ANTERIOR a que esa marca existiera,
+ *   asi que lo creia pendiente, aplicaba el offset de "antes del borrado" y miraba una columna
+ *   vacia. Una marca de estado puede faltar; la hoja no.
+ * - CORRECCION: la consolidada se busca en la hoja -- primera columna a la derecha del bloque de
+ *   Categorias cuya celda de datos tiene formula -- y el borrado de columna se decide por
+ *   GEOMETRIA: si entre la columna de nombres y la consolidada queda mas de una separadora, sobra
+ *   una columna adentro del recuadro. Ninguna de las dos cosas depende ya de recordar nada.
+ * - La marca queda como rastro, sin poder de decision.
+ *
  * [2026-08-20] v0.23.0 - "Saldos Actuales" deja de ser un desglose por moneda.
  * - EL BLOQUE AE7:AG12 pasa a sumar POR TIPO DE MEDIO: Hogar, Ahorros, Inversiones,
  *   Financiacion, cada uno con su monto convertido a la moneda del selector y su peso en % sobre

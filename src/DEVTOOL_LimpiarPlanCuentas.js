@@ -41,7 +41,7 @@
  * 2. Los bloques de cuentas (C:D, F:G, I:J) ni el de medios (L:N).
  * 3. El ledger.
  *
- * @version 0.23.0
+ * @version 0.23.1
  * @since 2026-08-19
  * @lastModified 2026-08-20
  */
@@ -49,11 +49,13 @@
 const LPC_PROP_RESPALDO = 'limpiar_plan_respaldo';
 
 /**
- * Marca de que el borrado de la columna ya ocurrio.
+ * Registro de que el borrado de la columna ya ocurrio. Es una ANOTACION, no una decision.
  *
- * Sin esto el modulo es peligroso al re-correrse: despues del borrado, la columna que ocupa esa
- * letra es la separadora legitima que hay entre bloques, y borrarla otra vez correria la
- * consolidada de nuevo. Un paso estructural de una sola vez necesita saber que ya se dio.
+ * Empezo siendo la guarda contra re-borrar, y no alcanzo: el 2026-08-20 el borrado ya habia
+ * pasado en una corrida anterior a que esta marca existiera, asi que el modulo lo creyo pendiente
+ * y busco la consolidada un lugar mas a la derecha -- en una columna vacia -- y aborto diciendo
+ * que estaba rota. Una marca de estado puede faltar; la hoja no. Hoy la guarda es geometrica
+ * (cuantas columnas separan la de nombres de la consolidada) y esto queda solo como rastro.
  */
 const LPC_PROP_COLUMNA_BORRADA = 'limpiar_plan_columna_borrada';
 
@@ -77,11 +79,9 @@ const LPC_COLUMNAS_A_BARRER = ['T', 'U', 'V', 'W'];
 const LPC_COLUMNA_A_BORRAR = 'Q';
 
 /**
- * La consolidada, que se verifica y no se toca.
- *
- * Vivia en S; al borrarse la columna Q (v0.22.1) se corrio a R. Queda anotado aca porque es el
- * unico rastro de que ese corrimiento ocurrio: un modulo que sigue buscandola donde ya no esta
- * aborta diciendo que la consolidada se rompio, cuando lo que se movio es el modulo.
+ * Donde SE ESPERA la consolidada, solo para los mensajes. La posicion real se mide con
+ * _ubicarConsolidadaLpc: vivia en S, al borrarse la Q (v0.22.1) se corrio a R, y una constante
+ * que se desactualiza de nuevo no puede volver a abortar una corrida.
  */
 const LPC_COL_CONSOLIDADA = 'R';
 
@@ -108,7 +108,7 @@ function estadoLimpiarPlan() {
             l.push('   columna ' + b.col + ': ' + b.detalle);
         });
         l.push('');
-        l.push('LA CONSOLIDADA (columna ' + LPC_COL_CONSOLIDADA + '): ' + plan.consolidada);
+        l.push('LA CONSOLIDADA: ' + plan.consolidada);
         l.push('   No se toca. Es la que alimenta el desplegable de Cuenta en Cargas.');
         if (plan.avisos.length) {
             l.push('');
@@ -142,8 +142,8 @@ function aplicarLimpiarPlan() {
             RANGES.CATEGORIAS_CUENTA.columns.nombre + ', con su desplegable\n' +
             '  - barrer ' + plan.aBarrer.length + ' columna(s): ' +
             (plan.aBarrer.map(function (b) { return b.col; }).join(', ') || 'ninguna') + '\n\n' +
-            'La columna ' + LPC_COL_CONSOLIDADA + ' NO se toca: es la que alimenta el desplegable de ' +
-            'Cargas.\n\n' +
+            'La consolidada (' + plan.colConsolidada + ') NO se toca: es la que alimenta el ' +
+            'desplegable de Cargas.\n\n' +
             (plan.borrarColumna
                 ? '  - BORRAR la columna ' + LPC_COLUMNA_A_BORRAR + ', que sobra dentro del bloque de\n' +
                   '    Categorias. Todo lo que esta a su derecha se corre una posicion.\n\n' +
@@ -215,11 +215,10 @@ function aplicarLimpiarPlan() {
             if (resto > 0) fallas.push('la columna ' + b.col + ' quedo con ' + resto + ' celda(s) con dato');
         });
         // Y la consolidada tiene que seguir intacta.
-        const colCons = columnLetterToIndex(LPC_COL_CONSOLIDADA) + (borrada ? 1 : 0);
-        if (!hojaPC.getRange(getDataRow(RANGES.INGRESOS), colCons).getFormula()) {
-            fallas.push('la consolidada perdio su formula (quedo en la columna ' +
-                columnIndexToLetter(colCons) + ')');
-        }
+        // Si ya no se la encuentra, eso ES la falla -- no una excepcion que se escape del
+        // camino que restaura. La restauracion es justo lo que hay que disparar en ese caso.
+        try { _ubicarConsolidadaLpc(hojaPC); }
+        catch (eCons) { fallas.push('la consolidada perdio su formula: ' + eCons.message); }
         const dvCargas = _leerValidacionCargas(ss);
         if (plan.validacionCargas && !dvCargas) {
             fallas.push('el desplegable de Cuenta en Cargas se quedo SIN lista');
@@ -262,6 +261,30 @@ function aplicarLimpiarPlan() {
     }
 }
 
+/**
+ * Ubica la columna consolidada MIDIENDO la hoja, en vez de deducirla de una marca de estado.
+ *
+ * Es la columna a la derecha del bloque de Categorias cuya celda de datos tiene formula: no hay
+ * otra formula suelta en esa zona del Plan. Se busca desde la columna de nombres hacia la derecha
+ * y se devuelve la PRIMERA que califica.
+ */
+function _ubicarConsolidadaLpc(hojaPC) {
+    const fila = getDataRow(RANGES.INGRESOS);
+    const desde = columnLetterToIndex(RANGES.CATEGORIAS_CUENTA.start) + 1;
+    const hasta = Math.min(desde + 6, hojaPC.getMaxColumns());
+    const miradas = [];
+    for (let c = desde; c <= hasta; c++) {
+        const letra = columnIndexToLetter(c);
+        const f = hojaPC.getRange(fila, c).getFormula();
+        miradas.push(letra + (f ? ' (con formula)' : ' (vacia)'));
+        if (f) return { indice: c, letra: letra, formula: f };
+    }
+    throw new Error('No se encontro la consolidada de cuentas a la derecha de ' +
+        RANGES.CATEGORIAS_CUENTA.start + '. Se miro ' + miradas.join(', ') + ' en la fila ' + fila +
+        '. Esa columna alimenta el desplegable de Cuenta en Cargas: si esta rota, hay que ' +
+        'arreglarla ANTES de barrer nada alrededor. No se toco nada.');
+}
+
 // ============================================
 // PLAN
 // ============================================
@@ -272,16 +295,14 @@ function _planLpc(ss) {
     const avisos = [];
 
     // La consolidada TIENE que seguir viva: sin ella la hoja de Cargas se queda sin desplegable.
-    // Antes del borrado la consolidada esta una columna mas a la derecha que despues.
-    const yaCorrida = !!PropertiesService.getDocumentProperties().getProperty(LPC_PROP_COLUMNA_BORRADA);
-    const colCons0 = columnLetterToIndex(LPC_COL_CONSOLIDADA) + (yaCorrida ? 0 : 1);
-    const celdaCons = columnIndexToLetter(colCons0) + getDataRow(RANGES.INGRESOS);
-    const formulaCons = hojaPC.getRange(celdaCons).getFormula();
-    if (!formulaCons) {
-        throw new Error('La consolidada de ' + celdaCons + ' no tiene formula. Esa columna alimenta ' +
-            'el desplegable de Cuenta en Cargas: si ya esta rota, hay que arreglarla ANTES de barrer ' +
-            'nada alrededor. No se toco nada.');
-    }
+    // Su posicion se MIDE, no se calcula. Antes se deducia de una marca en DocumentProperties
+    // ("ya se borro la columna?") y eso fallo el 2026-08-20: el borrado habia ocurrido en una
+    // corrida anterior a que la marca existiera, asi que el modulo la creia sin borrar y buscaba
+    // la consolidada un lugar mas a la derecha -- en una columna vacia. Aborto diciendo que la
+    // consolidada estaba rota cuando estaba perfecta. Una marca de estado puede faltar; la hoja no.
+    const cons = _ubicarConsolidadaLpc(hojaPC);
+    const celdaCons = cons.letra + getDataRow(RANGES.INGRESOS);
+    const formulaCons = cons.formula;
 
     // Las categorias salen del mapa de DEVTOOL_CategorizarCuentas: una sola fuente, sin copiar.
     const categorias = [];
@@ -342,13 +363,17 @@ function _planLpc(ss) {
     }
 
     // Solo se borra si la columna esta REALMENTE vacia: borrar una con datos seria destruirlos.
+    // Si sobra una columna DENTRO del bloque de Categorias se ve en la distancia entre la columna
+    // de nombres y la consolidada: con el bloque ajustado hay exactamente una separadora en medio
+    // (igual que entre todos los otros bloques). Dos o mas es aire adentro del recuadro.
+    const colCategorias = columnLetterToIndex(RANGES.CATEGORIAS_CUENTA.start);
+    const separadoras = cons.indice - colCategorias - 1;
     const colBorrar = columnLetterToIndex(LPC_COLUMNA_A_BORRAR);
     let borrarColumna = false;
-    const yaBorrada = PropertiesService.getDocumentProperties().getProperty(LPC_PROP_COLUMNA_BORRADA);
-    if (yaBorrada) {
-        avisos.push('La columna ' + LPC_COLUMNA_A_BORRAR + ' ya se borro el ' + yaBorrada +
-            '. NO se vuelve a borrar: la que ocupa esa letra ahora es la separadora legitima entre ' +
-            'bloques, y borrarla correria la consolidada otra vez.');
+    if (separadoras <= 1) {
+        avisos.push('El bloque de Categorias ya esta ajustado: entre la columna de nombres (' +
+            RANGES.CATEGORIAS_CUENTA.start + ') y la consolidada (' + cons.letra + ') queda una sola ' +
+            'columna separadora, como entre todos los otros bloques. No hay nada que borrar.');
     } else if (colBorrar <= hojaPC.getMaxColumns()) {
         const altoQ = hojaPC.getMaxRows() - LPC_FILA_TITULO + 1;
         const conDatoQ = altoQ > 0
@@ -366,6 +391,7 @@ function _planLpc(ss) {
     return {
         categorias: categorias, aBarrer: aBarrer, avisos: avisos,
         borrarColumna: borrarColumna, validacionCargas: _leerValidacionCargas(ss),
+        colConsolidada: cons.letra,
         consolidada: 'viva, formula de ' + formulaCons.length + ' caracteres en ' + celdaCons
     };
 }

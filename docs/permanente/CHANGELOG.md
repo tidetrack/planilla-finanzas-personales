@@ -9,6 +9,23 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.23.1 - La consolidada del Plan se ubica midiendo (2026-08-20)
+
+"Limpiar Plan de Cuentas" abortaba con *"La consolidada de S8 no tiene formula"* -- cuando la
+consolidada estaba perfecta, en R.
+
+**Causa:** el modulo deducia su posicion de una marca en DocumentProperties ("ya se borro la
+columna Q?"). El borrado habia ocurrido en una corrida **anterior a que esa marca existiera**,
+asi que lo creia pendiente, aplicaba el offset de "antes del borrado" y miraba una columna vacia.
+
+> Una marca de estado puede faltar; la hoja no.
+
+**Correccion:** la consolidada se busca en la hoja -- primera columna a la derecha del bloque de
+Categorias cuya celda de datos tiene formula -- y el borrado de columna se decide por
+**geometria**: si entre la columna de nombres y la consolidada queda mas de una separadora, sobra
+una columna adentro del recuadro. Ninguna de las dos cosas depende ya de recordar nada. La marca
+queda como rastro, sin poder de decision.
+
 ## v0.23.0 - "Saldos Actuales" suma por tipo de medio (2026-08-20)
 
 ### El bloque AE7:AG12 cambia de eje

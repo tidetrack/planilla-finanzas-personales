@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 23,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.23.0 - Saldos Actuales suma por tipo de medio',
+ releaseName: 'v0.23.1 - La consolidada del Plan se ubica midiendo, no por marca de estado',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
