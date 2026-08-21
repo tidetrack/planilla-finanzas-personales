@@ -82,6 +82,17 @@
  * - C8:E9 y F8:H9 NO se tocan: Franco pidio revisarlas, no reescribirlas. El preflight verifica
  *   que tengan formula y el dialogo reporta su estado. Sus formulas son de DEVTOOL_StockYFlujo.
  *
+ * v0.38.1 (2026-08-21) -- LA CORRIDA DE v0.37.0 SALIO MAL EN LA PLANILLA, revertida con
+ * revertirInicioPresupuesto(), y se arreglaron los dos defectos:
+ *   1. LOS PATRONES DE TEXT() ESTABAN AL REVES. IP_PATRON_PORCENTAJE/IP_PATRON_MONEDA pasan de
+ *      '0,0%'/'$#.##0,00' (coma decimal) a '0.0%'/'$ #,##0.00' (canonico, punto decimal). El
+ *      comentario que justificaba la coma ("TEXT() SI es sensible al locale") era FALSO -- ver
+ *      la medicion literal en "EL TEXTO DE LOS TRES DELTAS" mas abajo. Es la TERCERA vez en el
+ *      mismo dia que una afirmacion sobre locale sin medir cuesta un bug (v0.32.2, v0.33.0).
+ *   2. LAS AUXILIARES (AV:AW) QUEDABAN VISIBLES. Ahora aplicarInicioPresupuesto() las oculta
+ *      (_ocultarAuxiliaresIp, mismo tratamiento que los otros dos motores de la hoja) y
+ *      revertirInicioPresupuesto() las destapa solo si fue este modulo el que las oculto.
+ *
  * QUE NO HACE
  * 1. NO toca el ledger, la Proyeccion, el Plan de Cuentas ni ninguna celda del Tablero.
  * 2. NO cambia rotulos ni selectores: son de Franco.
@@ -99,7 +110,7 @@
  * F10 no se llama de nuevo: se REFERENCIA la celda E22 que ya la usa (ver mas abajo).
  *
  * @see docs/permanente/FUNCIONALIDADES.md
- * @version 0.37.0
+ * @version 0.38.1
  * @since 2026-08-20
  * @lastModified 2026-08-21
  */
@@ -204,6 +215,15 @@ const IP_CLAVES_DELTA = ['deltaCapital', 'deltaIngresos', 'deltaEgresos'];
  * en blanco como separador del ultimo motor (misma convencion que el propio AG) y AV/AW alojan
  * las tres auxiliares, una por fila (8=capital, 9=ingresos, 10=egresos, calcando las filas del
  * resumen visible).
+ *
+ * QUEDAN OCULTAS, igual que los otros dos motores. Bug reportado en la corrida de v0.37.0: AV/AW
+ * se veian como numeros sueltos a la derecha del lienzo de Inicio, rompiendo el diseno. Medido
+ * el 2026-08-21 con una funcion de diagnostico temporal (_DIAG_medirPatronYAuxIp, ya retirada
+ * del codigo): T:U, AF:AI y AH:AT (los dos motores existentes) estan TODOS con
+ * isColumnHiddenByUser()=true, mientras que AV/AW daban false -- ahi estaba el agujero.
+ * _ocultarAuxiliaresIp() les da el mismo tratamiento (hoja.hideColumns), aplicarIp() la llama
+ * despues de escribir y verificar, y revertirIp() la deshace SOLO si este modulo fue quien las
+ * oculto (si Franco ya las tenia ocultas por su cuenta, revertir no las destapa).
  */
 const IP_AUX = {
     deltaCapital:  { tendencia: 'AV8' },
@@ -220,6 +240,32 @@ const IP_AUX = {
 function _celdaPromedioIp(celdaTendencia) {
     const m = String(celdaTendencia).match(/^([A-Z]+)([0-9]+)$/);
     return columnIndexToLetter(columnLetterToIndex(m[1]) + 1) + m[2];
+}
+
+/**
+ * La columna de las auxiliares (hoy 'AV'), DERIVADA de IP_AUX.deltaCapital.tendencia -- nunca
+ * hardcodeada: si algun dia la trastienda se corre de columna, esta funcion la sigue sola. El
+ * promedio siempre cae una columna a la derecha (_celdaPromedioIp), asi que ocultar DOS columnas
+ * a partir de esta alcanza para tapar las seis celdas (tres tendencias + tres promedios).
+ */
+function _colAuxiliaresIp() {
+    return String(IP_AUX.deltaCapital.tendencia).match(/^[A-Z]+/)[0];
+}
+
+/**
+ * Oculta las dos columnas de las auxiliares (tendencia + promedio derramado), el MISMO
+ * tratamiento que ya reciben los otros dos motores de la hoja (T:AG, AH:AT -- medidos ocultos el
+ * 2026-08-21 con la misma funcion de diagnostico temporal, ya retirada). Sin esto, los numeros
+ * de trastienda quedan a la vista a la derecha del lienzo: el bug reportado en la corrida de
+ * v0.37.0. Idempotente: ocultar una columna que ya esta oculta no hace nada.
+ */
+function _ocultarAuxiliaresIp(hoja) {
+    hoja.hideColumns(columnLetterToIndex(_colAuxiliaresIp()), 2);
+}
+
+/** Muestra de nuevo las dos columnas de las auxiliares (usado SOLO al revertir). */
+function _mostrarAuxiliaresIp(hoja) {
+    hoja.showColumns(columnLetterToIndex(_colAuxiliaresIp()), 2);
 }
 
 /**
@@ -307,16 +353,39 @@ const IP_FLECHA_PLANA = '\u2013';   // raya: la tendencia no se movio
  *      reglas pasan a apuntar a la celda AUXILIAR numerica de IP_AUX, nunca al texto visible
  *      (ver "EL COLOR DE LOS DELTAS" mas abajo).
  *
- * POR QUE TEXT() Y NO setNumberFormat: sin numero no hay patron de numero que aplicar. Y OJO,
- * porque es la trampa de locale al REVES de la de v0.34.0: TEXT() SI es sensible al locale (la
- * planilla es es_AR, decimal ","), mientras que setNumberFormat NO lo es (decimal "." siempre en
- * el patron, aunque se VEA con coma). Los patrones de aca abajo van dentro de un TEXT() de una
- * formula (setFormula, no setNumberFormat), asi que se escriben en es_AR -- coma decimal, punto
- * de miles -- que es como Sheets los interpreta cuando se los escribe por codigo, igual que
- * cualquier otro string de formula (separador ";").
+ * POR QUE TEXT() Y NO setNumberFormat: sin numero no hay patron de numero que aplicar.
+ *
+ * EL COMENTARIO QUE ESTABA ACA ERA FALSO, y salio a la planilla en v0.37.0: afirmaba que TEXT()
+ * "SI es sensible al locale" y que por eso el patron iba con coma decimal (al reves que
+ * setNumberFormat). Es la MISMA superficie de error que ya habia costado v0.32.2 y v0.33.0 --
+ * una afirmacion sobre locale sin medir -- y esta vez la corrida en vivo del 2026-08-21 la
+ * contradijo de punta a punta: "82,0%" salio "133%" (perdio el decimal) y "$211.073,04" salio
+ * "$211.073,04333" (cinco decimales de mas). NO HAY EXCEPCION a la regla de locale documentada
+ * en DEVTOOL_FormatoMedios.js: TEXT() se comporta EXACTAMENTE como setNumberFormat en este
+ * punto -- el patron va SIEMPRE canonico (punto decimal, coma de miles),
+ * sea que viaje dentro de un TEXT() de una formula o directo a setNumberFormat, sin importar el
+ * locale de la hoja. Lo que SI sigue el locale es el RENDERIZADO final: un patron canonico
+ * "0.0%" se ve en pantalla como "82,0%", igual que cualquier celda con setNumberFormat.
+ *
+ * MEDIDO en la planilla real el 2026-08-21, escribiendo las dos variantes por setFormula (nunca
+ * tipeadas a mano: la UI traduce al tipear y la API no) sobre numeros conocidos, con
+ * _DIAG_medirPatronYAuxIp: una funcion de diagnostico temporal (corrida por Franco desde una
+ * entrada de menu igualmente temporal, las dos retiradas del codigo despues de leer el
+ * resultado):
+ *   TEXT(0,82; "0,0%")                     -> "82%"           (el patron con coma PIERDE el decimal)
+ *   TEXT(0,82; "0.0%")                     -> "82,0%"         (el patron canonico, correcto)
+ *   TEXT(211073,043333; "$ #.##0,00")      -> "$ 211.073,04333"  (el patron con coma AGREGA decimales de sobra)
+ *   TEXT(211073,043333; "$ #,##0.00")      -> "$ 211.073,04"     (el patron canonico, correcto)
+ *   TEXT(16725,6; "$ #.##0,00")            -> "$ 16.725,6000"
+ *   TEXT(16725,6; "$ #,##0.00")            -> "$ 16.725,60"
+ * Los patrones de aca abajo van dentro de un TEXT() de una formula (setFormula), y por lo de
+ * arriba se escriben CANONICOS -- igual que cualquier setNumberFormat del repo, sin excepcion.
+ * El espacio despues del "$" no es cosmetica suelta: es el mismo patron que usan las 93 formulas
+ * propias de Franco en esta hoja (setNumberFormat con "$ #,##0.00"); sin el espacio, el monto se
+ * veria distinto al resto de la pantalla.
  */
-const IP_PATRON_PORCENTAJE = '0,0%';
-const IP_PATRON_MONEDA = '$#.##0,00';
+const IP_PATRON_PORCENTAJE = '0.0%';
+const IP_PATRON_MONEDA = '$ #,##0.00';
 /** El separador visual entre pedazos del texto: tendencia, promedio y (solo capital) flujo. */
 const IP_SEPARADOR = ' \u00B7 ';    // espacio, punto medio (U+00B7), espacio -- tipografia, no emoji
 
@@ -1471,6 +1540,10 @@ function aplicarInicioPresupuesto() {
         const pre = _preflightIp(ss);
         const plan = _planIp(ss, pre);
         const tocarReglas = _reglasHacenFaltaIp(plan.reglas);
+        // Se mide ANTES de escribir nada: si Franco ya las tenia ocultas por su cuenta, revertir
+        // no tiene que destaparlas -- solo deshace lo que este modulo hizo.
+        const colAux = columnLetterToIndex(_colAuxiliaresIp());
+        const auxYaOcultaAntes = pre.hoja.isColumnHiddenByUser(colAux) && pre.hoja.isColumnHiddenByUser(colAux + 1);
         if (!plan.cambios.length && !tocarReglas) {
             const t = 'El bloque, los tres deltas y sus colores ya estan como corresponde. No se escribio nada.';
             _mostrarIp('Inicio: presupuesto', t);
@@ -1501,7 +1574,8 @@ function aplicarInicioPresupuesto() {
             '    pasado. OJO: F8 (Capital Acumulado) sigue anclado a HOY -- no es de este modulo.\n' +
             '  - La serie pesada de cada delta se calcula UNA sola vez, en una celda auxiliar de\n' +
             '    trastienda (AV8/AV9/AV10, a la derecha del motor de la hoja); las celdas visibles\n' +
-            '    solo la leen.\n' +
+            '    solo la leen. Esas columnas QUEDAN OCULTAS, igual que los otros dos motores de\n' +
+            '    la hoja: no se ven numeros sueltos a la derecha del lienzo.\n' +
             '  - Y EL COLOR LO DECIDE ESTE MODULO, con una regla NUMERICA por celda que apunta a\n' +
             '    la auxiliar (nunca al texto visible): verde si la noticia es buena, rojo si es\n' +
             '    mala. Ojo que no es lo mismo que la direccion: en Egresos una flecha para ARRIBA\n' +
@@ -1559,6 +1633,12 @@ function aplicarInicioPresupuesto() {
                 superadas: plan.reglas.superadas.map(function (x) { return x.foto; })
             };
         }
+
+        // LAS AUXILIARES (AV:AW) QUEDAN OCULTAS, igual que los otros dos motores de la hoja (ver
+        // "QUEDAN OCULTAS" en la cabecera de IP_AUX). previos.auxOcultaPorModulo solo es true si
+        // ESTE modulo fue quien las oculto: si Franco ya las tenia ocultas, revertir no las toca.
+        _ocultarAuxiliaresIp(pre.hoja);
+        previos.auxOcultaPorModulo = !auxYaOcultaAntes;
         SpreadsheetApp.flush();
 
         // Texto y estado de cada celda escrita, MAS los invariantes sobre los valores releidos.
@@ -1608,7 +1688,8 @@ function aplicarInicioPresupuesto() {
             '  4. F10, C15 y F15 muestran flecha + x,x% de tendencia a ' + IP_MESES_TENDENCIA + ' meses + el\n' +
             '     promedio de la ventana. F10 suma cuanto capital se inyecto/retiro en el mes\n' +
             '     elegido. Si alguna muestra "Loading..." es la cotizacion todavia resolviendo,\n' +
-            '     no un error -- se corrige sola al reabrir o recalcular la hoja.\n\n' +
+            '     no un error -- se corrige sola al reabrir o recalcular la hoja.\n' +
+            '  5. Las columnas AV:AW (la trastienda de los tres deltas) tienen que quedar OCULTAS.\n\n' +
             'Si algo quedo peor: revertirInicioPresupuesto (menu Tidetrack Dev).';
 
         logSuccess('aplicarInicioPresupuesto: ' + escritas.length + ' celda(s).');
@@ -1679,6 +1760,15 @@ function revertirInicioPresupuesto() {
             reglasRepuestas = repuestas2.length;
             hoja.setConditionalFormatRules(clases.ajenas.concat(repuestas2));
         }
+
+        // LAS AUXILIARES: se destapan SOLO si fue este modulo el que las oculto (previos.
+        // auxOcultaPorModulo). Si Franco ya las tenia ocultas por su cuenta antes de aplicar,
+        // revertir no le toca esa decision.
+        let auxDestapadas = false;
+        if (previos.auxOcultaPorModulo) {
+            _mostrarAuxiliaresIp(hoja);
+            auxDestapadas = true;
+        }
         SpreadsheetApp.flush();
         props.deleteProperty(IP_PROP_PREVIOS);
 
@@ -1687,6 +1777,7 @@ function revertirInicioPresupuesto() {
                 ? '- Reglas de color quitadas: ' + reglasQuitadas +
                   '; reglas viejas repuestas: ' + reglasRepuestas + '\n'
                 : '') +
+            (auxDestapadas ? '- Columnas auxiliares (AV:AW) repuestas visibles (este modulo las habia ocultado)\n' : '') +
             (faltantes.length ? '- SIN respaldo (quedaron como estan): ' + faltantes.join(', ') + '\n' : '') +
             '- Respaldo usado: "' + previos.respaldo + '"' + (resp ? '' : ' (la hoja ya no existe)');
         logSuccess('revertirInicioPresupuesto: ' + repuestas + ' celda(s).');

@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 38,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-21',
- releaseName: 'v0.38.0 - Cuatro direcciones se corrieron una fila; los bancos ahora lo notan solos',
+ releaseName: 'v0.38.1 - El patron con coma decimal era al reves; las auxiliares se veian',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.38.1 (2026-08-21) - El patron con coma decimal era al reves; las auxiliares se veian
+! La corrida de v0.37.0 salio mal en la planilla real: "82,0%" se vio "133%", "$211.073,04" se vio "$211.073,04333", "$16.725,60 inyectados" se vio "$16.725,6000". Revertida con revertirInicioPresupuesto(); esta version arregla los dos defectos.
+- El comentario que justificaba el patron con coma decimal ("TEXT() SI es sensible al locale") era FALSO -- tercera vez en el dia que una afirmacion sobre locale sin medir cuesta un bug (v0.32.2, v0.33.0). Medido en vivo por setFormula: TEXT() se comporta EXACTAMENTE como setNumberFormat, patron SIEMPRE canonico (punto decimal, coma de miles), sin excepcion. IP_PATRON_PORCENTAJE '0,0%'->'0.0%'; IP_PATRON_MONEDA '$#.##0,00'->'$ #,##0.00'.
+- Las auxiliares de los tres deltas (AV8:AW10) quedaban visibles a la derecha del lienzo de Inicio. _ocultarAuxiliaresIp() les da el mismo tratamiento que los otros dos motores de la hoja (columnas ocultas); revertir las destapa solo si fue este modulo el que las oculto.
+! probar_inicio_presupuesto.js daba SIN FALLAS con el patron equivocado: solo comprobaba que la constante fuera igual a si misma. Aserciones nuevas verifican la PROPIEDAD (sin coma en el porcentaje, punto decimal en la moneda). Verificado por mutacion: revertir al patron con coma hace fallar el banco en las 4 lineas correctas.
+
 v0.38.0 (2026-08-21) - Cuatro direcciones se corrieron una fila; los bancos ahora lo notan solos
 ! Franco reacomodo el Tablero a mano para dejar lugar al "Faltante proyectado" (v0.36.0): el header de los cuatro bloques de agregacion bajo de la fila 8 a la 9 y el derrame de datos de la 9 a la 10. Corregido por rotulo (nunca por coordenada memorizada) en FORM_CELDAS/RIQ_BLOQUE_CATEGORIAS/BCAT_CELDA: R9->R10, U9->U10, X9->X10, AA9->AA10, AB8->AB9, L28->L29.
 + Preflight por rotulo nuevo en DEVTOOL_FormulerioV0111.js (_verificarRotulosFormulerio) y DEVTOOL_BloqueCategorias.js (_preflightRotuloBcat): abortan ruidosamente si el rotulo vivo no coincide con lo esperado. Verificado por mutacion.

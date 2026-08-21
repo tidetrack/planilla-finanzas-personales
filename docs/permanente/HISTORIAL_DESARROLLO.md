@@ -6,6 +6,94 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-21 - El patron con coma decimal estaba al reves; las auxiliares quedaban visibles (v0.38.1)
+
+### Evento
+
+La v0.37.0 (deltas de la hoja Inicio con tendencia + promedio concatenados en un solo texto) se
+desplego con `sync_targets.command` y se corrio en la planilla real con
+`aplicarInicioPresupuesto()`. Salio mal: `"82,0%"` se vio `"133%"` (perdio el decimal),
+`"promedio $211.073,04"` se vio `"$211.073,04333"` (5 decimales de mas), `"$16.725,60
+inyectados"` se vio `"$16.725,6000"` (4 decimales de mas), y las celdas auxiliares de trastienda
+(`AV8:AW10`) quedaron visibles a la derecha del lienzo, rompiendo el diseno. Se revirtio en el
+momento con `revertirInicioPresupuesto()` (la hoja volvio a formulas y colores de v0.34.0) y esta
+sesion arregla los dos defectos.
+
+### Defecto 1 — el patron de `TEXT()` estaba al reves de lo que decia el comentario
+
+El comentario de `DEVTOOL_InicioPresupuesto.js` afirmaba que `TEXT()` "SI es sensible al locale"
+(a diferencia de `setNumberFormat`, que "NO lo es") y que por eso el patron de formato tenia que
+ir con coma decimal. La afirmacion nunca se habia medido, y es la **tercera vez en el mismo dia**
+que una suposicion sobre locale sin medir cuesta un bug — antes v0.32.2 (el patron con coma de
+`setNumberFormat` se comia el decimal en silencio) y v0.33.0 (`DEVTOOL_FormatoMedios`
+documentaba una "excepcion" a la regla de locale que era falsa).
+
+Medicion: se agrego una funcion de diagnostico temporal (`_DIAG_medirPatronYAuxIp`) que escribe,
+**por `setFormula` desde Apps Script** (nunca tipeado a mano en la UI, que traduce el separador
+al escribir y falsearia la prueba), las dos variantes del patron sobre numeros conocidos en una
+hoja temporal descartable. Se desplego con `sync_targets.command` y Franco la corrio desde una
+entrada de menu igualmente temporal. Resultado literal:
+
+```
+TEXT(0,82; "0,0%")                  -> "82%"              (coma: PIERDE el decimal)
+TEXT(0,82; "0.0%")                  -> "82,0%"             (punto: correcto)
+TEXT(211073,043333; "$ #.##0,00")   -> "$ 211.073,04333"   (coma: decimales de sobra)
+TEXT(211073,043333; "$ #,##0.00")   -> "$ 211.073,04"      (punto: correcto)
+TEXT(16725,6; "$ #.##0,00")         -> "$ 16.725,6000"
+TEXT(16725,6; "$ #,##0.00")         -> "$ 16.725,60"
+```
+
+Conclusion: `TEXT()` se comporta **exactamente como `setNumberFormat`** — el patron va siempre
+canonico (punto decimal, coma de miles), sin excepcion de locale. Lo que sigue el locale de la
+hoja (es_AR) es el *renderizado* final en pantalla, no el patron que se escribe por codigo. No
+hay excepcion a la regla de locale documentada en `DEVTOOL_FormatoMedios.js`: es la misma regla,
+sin matices. `IP_PATRON_PORCENTAJE` pasa de `'0,0%'` a `'0.0%'`; `IP_PATRON_MONEDA` de
+`'$#.##0,00'` a `'$ #,##0.00'` (con el espacio despues del `$`, igual que las 93 formulas propias
+de Franco ya presentes en la hoja Inicio — mantenerlo evita que el monto se vea distinto al resto
+de la pantalla). El comentario falso se corrigio explicitamente en el codigo con la medicion
+literal, siguiendo el mismo estilo de `_formulaReglaFmt` en `DEVTOOL_FormatoMedios.js`.
+
+### Defecto 2 — las celdas auxiliares quedaban visibles
+
+`IP_AUX` ubica la formula pesada de cada delta (tendencia + promedio derramado) en `AV8:AW10`, a
+la derecha del motor de la hoja. La misma funcion de diagnostico midio el estado de visibilidad
+de las tres zonas de infraestructura de Inicio: los dos motores existentes (`T:AG`, columnas del
+mes en curso, y `AH:AT`, columnas del mes anterior) estan **todos** con
+`isColumnHiddenByUser()=true`; `AV` y `AW` daban `false` — ahi estaba el agujero que producia los
+"numeros sueltos" que Franco vio en la corrida.
+
+Solucion: `_ocultarAuxiliaresIp(hoja)` nuevo, que llama a `hoja.hideColumns()` sobre la columna
+que `_colAuxiliaresIp()` deriva de `IP_AUX.deltaCapital.tendencia` (nunca hardcodeada) y su
+vecina (donde derrama el promedio). `aplicarInicioPresupuesto()` la llama despues de escribir y
+verificar las formulas. `revertirInicioPresupuesto()` destapa las columnas con
+`_mostrarAuxiliaresIp()` **solo si fue este modulo el que las oculto** (capturado ANTES de
+escribir nada, con `isColumnHiddenByUser`): si Franco ya las tenia ocultas por su cuenta, revertir
+no le toca esa decision.
+
+### Agujero de banco tapado (verificado por mutacion)
+
+`devtools/probar_inicio_presupuesto.js` daba **SIN FALLAS con el patron equivocado** en produccion:
+las dos aserciones que fijaban `IP_PATRON_PORCENTAJE`/`IP_PATRON_MONEDA` solo comprobaban que la
+constante fuera igual a si misma (`=== '0,0%'`), nunca que la convencion fuera la correcta — un
+banco que se limita a repetir el valor que el propio modulo declara no puede detectar que ese
+valor este mal desde el origen. Se agregaron dos aserciones que verifican la PROPIEDAD en vez del
+literal (el patron de porcentaje no tiene coma; el de moneda tiene el punto como separador
+decimal), y se de-hardcodeo el patron de moneda en los tests de `F10` (usaban un regex con el
+literal viejo escapado, que hubiera quedado silenciosamente obsoleto con el cambio). Mutacion
+verificada a mano: revertir las dos constantes al patron con coma hace fallar el banco en
+exactamente las 4 lineas nuevas (confirmado corriendo el banco con la mutacion aplicada, y
+restaurado despues). Se agrego ademas la seccion 13, que verifica por espia que
+`_ocultarAuxiliaresIp`/`_mostrarAuxiliaresIp` llaman a `hideColumns`/`showColumns` sobre el mismo
+rango derivado de `IP_AUX`.
+
+### Estado de los bancos
+
+`node devtools/probar_*.js`: todos en verde salvo los dos ya rojos a proposito desde v0.38.0
+(`probar_formulerio.js`, 5 fallas; `probar_riqueza.js`, 7 fallas — declaraciones de propiedad
+obsoletas ya diagnosticadas, sin tocar) y el hallazgo pre-existente de `probar_tablero_faltante.js`
+(colision R10/U10/X10 entre `DEVTOOL_FormulerioV0111.js` y `DEVTOOL_TableroFaltanteProyectado.js`,
+documentado en v0.38.0 como "queda para que Franco decida" — no forma parte de esta sesion).
+
 ## 2026-08-21 - Realineacion post-reacomodo del Tablero + bancos endurecidos contra el silencio (v0.38.0)
 
 ### Evento

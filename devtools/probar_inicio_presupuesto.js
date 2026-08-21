@@ -414,9 +414,12 @@ console.log('\n=== 8b. F10 (visible): LEE la auxiliar, no la recalcula, y agrega
 
     // "inyectados" si es positivo, "retirados" si es negativo, EN ESE ORDEN -- la palabra
     // invertida es una de las mutaciones que Franco pidio cubrir explicitamente.
-    ok(/flujo>0; TEXT\(flujo; "\$#\.##0,00"\) & " inyectados en " & \$I\$2/.test(f),
+    // El patron va por la CONSTANTE (ctx.IP_PATRON_MONEDA), nunca hardcodeado: hardcodear el
+    // string exacto es justo el agujero que dejo pasar el patron con coma decimal de v0.37.0
+    // (ver seccion 10 mas abajo, donde SI se fija el valor correcto de la constante).
+    ok(f.indexOf('flujo>0; TEXT(flujo; "' + ctx.IP_PATRON_MONEDA + '") & " inyectados en " & $I$2') !== -1,
        'F10: flujo POSITIVO dice "inyectados", SIN ABS() -- ahi el signo ya es positivo');
-    ok(/flujo<0; TEXT\(ABS\(flujo\); "\$#\.##0,00"\) & " retirados en " & \$I\$2/.test(f),
+    ok(f.indexOf('flujo<0; TEXT(ABS(flujo); "' + ctx.IP_PATRON_MONEDA + '") & " retirados en " & $I$2') !== -1,
        'F10: flujo NEGATIVO dice "retirados" y usa ABS() -- la palabra ya dice el signo, no se repite con un "-"');
     ok(f.indexOf('"sin movimientos de capital en " & $I$2') !== -1,
        'F10: flujo en CERO tiene su propia frase (ni "inyectados" ni "retirados" describen a cero)');
@@ -548,11 +551,29 @@ console.log('\n=== 10. Coherencia con las constantes del modulo ===');
     ok(ctx._celdaPromedioIp('Z99') === 'AA99',
        '_celdaPromedioIp generaliza mas alla de la columna AV: no hardcodea la letra');
 
-    // LOS PATRONES DE TEXT(): van adentro de una FORMULA (setFormula), asi que se escriben en
-    // es_AR -- coma decimal, punto de miles -- al REVES de setNumberFormat (que es independiente
-    // del locale). Ver la cabecera "EL TEXTO DE LOS TRES DELTAS".
-    ok(ctx.IP_PATRON_PORCENTAJE === '0,0%', 'el patron de porcentaje usa coma decimal. Dio ' + ctx.IP_PATRON_PORCENTAJE);
-    ok(ctx.IP_PATRON_MONEDA === '$#.##0,00', 'el patron de moneda usa punto de miles y coma decimal. Dio ' + ctx.IP_PATRON_MONEDA);
+    // LOS PATRONES DE TEXT(): MEDIDO en la planilla real el 2026-08-21 (ver "EL TEXTO DE LOS
+    // TRES DELTAS" en DEVTOOL_InicioPresupuesto.js) -- van CANONICOS (punto decimal, coma de
+    // miles), la MISMA convencion que setNumberFormat, sin excepcion de locale. Un comentario
+    // que afirmaba lo contrario (coma decimal "porque TEXT() si sigue el locale") salio a la
+    // planilla en v0.37.0 y produjo exactamente esto: "82,0%" se vio "133%" (perdio el decimal)
+    // y "$211.073,04" se vio "$211.073,04333" (decimales de sobra).
+    //
+    // ESTE ES EL AGUJERO DEL BANCO. Hasta esta version, las dos lineas de abajo pineaban el
+    // patron VIEJO ('0,0%' / '$#.##0,00') -- el banco daba SIN FALLAS con el bug adentro, porque
+    // solo comprobaba que la constante fuera igual a si misma, nunca que la convencion fuera la
+    // correcta. MUTACION VERIFICADA a mano el 2026-08-21: revertir IP_PATRON_PORCENTAJE a '0,0%'
+    // (o IP_PATRON_MONEDA a '$#.##0,00') hace fallar ESTAS CUATRO lineas -- las dos ok() de mas
+    // abajo no alcanzaban solas, porque solo miran la CONSTANTE; la falla real la dan las dos
+    // reglas de "sin coma fuera de comillas" y "con punto decimal", que no dependen de que
+    // literal se haya escrito antes.
+    ok(ctx.IP_PATRON_PORCENTAJE === '0.0%', 'el patron de porcentaje es CANONICO (punto decimal). Dio ' + ctx.IP_PATRON_PORCENTAJE);
+    ok(ctx.IP_PATRON_MONEDA === '$ #,##0.00', 'el patron de moneda es CANONICO (coma de miles, punto decimal, espacio despues del $ -- igual que las 93 formulas propias de Franco en la hoja). Dio ' + ctx.IP_PATRON_MONEDA);
+    // Las dos de abajo son la red que de verdad mata la mutacion "volver a la coma decimal": no
+    // pinean un literal, verifican la PROPIEDAD que hace que el patron sea correcto o no.
+    ok(ctx.IP_PATRON_PORCENTAJE.indexOf(',') === -1,
+       'el patron de porcentaje NO tiene coma: si la tuviera, seria el patron viejo que se comia el decimal');
+    ok(/^\$ #,##0\.0+$/.test(ctx.IP_PATRON_MONEDA),
+       'el patron de moneda tiene el PUNTO como separador decimal (y la coma como separador de miles, dentro de "#,##0"). Dio ' + ctx.IP_PATRON_MONEDA);
     ok(ctx.IP_SEPARADOR.indexOf('·') !== -1, 'el separador visual es un punto medio (U+00B7), tipografia y no emoji');
 
     // LAS FLECHAS siguen vivas: se concatenan a mano ahora (ya no van en un formato de numero).
@@ -851,6 +872,35 @@ console.log('\n=== 12. El verificador distingue PENDIENTE de FALLA (auxiliares n
        'la realidad NO tiene que cerrar la identidad: E22 se mide, no es el residuo');
     ok(r.avisos.some(a => /sin asignar/.test(a)),
        'y la diferencia se reporta como informacion: la plata que entro y no se gasto ni capitalizo');
+}
+
+console.log('\n=== 13. Las auxiliares (AV:AW) se ocultan, igual que los otros dos motores de la hoja ===');
+{
+    // Bug reportado en la corrida de v0.37.0: los numeros de AV8:AW10 se veian sueltos a la
+    // derecha del lienzo de Inicio. Medido el 2026-08-21: los otros dos motores (T:AG, AH:AT)
+    // estan TODOS ocultos y AV/AW no. _colAuxiliaresIp deriva la columna de IP_AUX (nunca
+    // hardcodeada), y _ocultarAuxiliaresIp/_mostrarAuxiliaresIp son las dos puntas que
+    // aplicarInicioPresupuesto/revertirInicioPresupuesto usan para curarlo y deshacerlo.
+    ok(ctx._colAuxiliaresIp() === 'AV',
+       '_colAuxiliaresIp deriva AV de IP_AUX.deltaCapital.tendencia. Dio ' + ctx._colAuxiliaresIp());
+
+    const llamadas = [];
+    const hojaEspia = {
+        hideColumns: (idx, cant) => llamadas.push(['hide', idx, cant]),
+        showColumns: (idx, cant) => llamadas.push(['show', idx, cant])
+    };
+    ctx._ocultarAuxiliaresIp(hojaEspia);
+    ok(llamadas.length === 1 && llamadas[0][0] === 'hide',
+       '_ocultarAuxiliaresIp llama a hideColumns exactamente una vez');
+    ok(llamadas[0][1] === ctx.columnLetterToIndex('AV') && llamadas[0][2] === 2,
+       '_ocultarAuxiliaresIp arranca en AV y cubre 2 columnas (tendencia + su promedio derramado ' +
+       'en AW). Dio indice ' + llamadas[0][1] + ', cantidad ' + llamadas[0][2]);
+
+    llamadas.length = 0;
+    ctx._mostrarAuxiliaresIp(hojaEspia);
+    ok(llamadas.length === 1 && llamadas[0][0] === 'show' &&
+       llamadas[0][1] === ctx.columnLetterToIndex('AV') && llamadas[0][2] === 2,
+       '_mostrarAuxiliaresIp destapa el MISMO rango que oculta _ocultarAuxiliaresIp');
 }
 
 console.log('\n' + (fallas === 0 ? '===> SIN FALLAS' : '===> ' + fallas + ' FALLA(S)'));

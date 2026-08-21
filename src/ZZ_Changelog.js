@@ -5,6 +5,48 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-21] v0.38.1 - El patron con coma decimal era al reves; las auxiliares se veian.
+ * - LA CORRIDA DE v0.37.0 SALIO MAL EN LA PLANILLA REAL: "82,0%" se vio "133%" (perdio el
+ *   decimal), "promedio $211.073,04" se vio "$211.073,04333" (5 decimales de mas), "$16.725,60
+ *   inyectados" se vio "$16.725,6000" (4 decimales de mas). Revertido en el momento con
+ *   revertirInicioPresupuesto() (la hoja volvio a formulas y colores de v0.34.0); esta version
+ *   arregla los dos defectos y deja el modulo listo para volver a correr.
+ * - DEFECTO 1 (decimales): el comentario de DEVTOOL_InicioPresupuesto.js afirmaba que TEXT() "SI
+ *   es sensible al locale" y que por eso el patron de formato iba con coma decimal (al reves de
+ *   setNumberFormat). ERA FALSO. Medido en la planilla real el 2026-08-21, escribiendo las dos
+ *   variantes por setFormula (nunca tipeadas a mano: la UI traduce al tipear, la API no) sobre
+ *   numeros conocidos:
+ *     TEXT(0,82; "0,0%")                -> "82%"              (coma: PIERDE el decimal)
+ *     TEXT(0,82; "0.0%")                -> "82,0%"            (punto: correcto)
+ *     TEXT(211073,043333; "$ #.##0,00") -> "$ 211.073,04333"  (coma: decimales de sobra)
+ *     TEXT(211073,043333; "$ #,##0.00") -> "$ 211.073,04"     (punto: correcto)
+ *   TEXT() se comporta EXACTAMENTE como setNumberFormat: el patron va SIEMPRE canonico (punto
+ *   decimal, coma de miles), sin excepcion de locale -- lo que sigue el locale es el RENDERIZADO
+ *   final, no el patron que se escribe. Es la TERCERA vez en el mismo dia que una afirmacion
+ *   sobre locale sin medir cuesta un bug (v0.32.2, v0.33.0): el comentario se corrigio con la
+ *   medicion literal en vez de solo cambiar el valor. IP_PATRON_PORCENTAJE pasa de '0,0%' a
+ *   '0.0%'; IP_PATRON_MONEDA de '$#.##0,00' a '$ #,##0.00' (con el espacio despues del "$" que
+ *   ya usan las 93 formulas propias de Franco en la hoja).
+ * - DEFECTO 2 (auxiliares visibles): las celdas de trastienda de los tres deltas (AV8:AW10)
+ *   quedaban VISIBLES -- numeros sueltos a la derecha del lienzo de Inicio, rompiendo el diseno.
+ *   Medido: los otros dos motores de la hoja (T:AG, AH:AT) estan TODOS con
+ *   isColumnHiddenByUser()=true; AV/AW daban false. _ocultarAuxiliaresIp() les da el mismo
+ *   tratamiento (hoja.hideColumns, columna derivada de IP_AUX, nunca hardcodeada);
+ *   aplicarInicioPresupuesto() la llama despues de escribir y verificar, y
+ *   revertirInicioPresupuesto() destapa las columnas SOLO si fue este modulo el que las oculto
+ *   (si Franco ya las tenia ocultas por su cuenta, revertir no le toca esa decision).
+ * - AGUJERO DE BANCO TAPADO: probar_inicio_presupuesto.js daba SIN FALLAS con el patron
+ *   equivocado -- solo comprobaba que la constante fuera igual a si misma, nunca la convencion.
+ *   Las dos aserciones nuevas (sin coma en el patron de porcentaje; patron de moneda con punto
+ *   decimal) verifican la PROPIEDAD, no un literal. Verificado por mutacion: revertir las dos
+ *   constantes al patron con coma hace fallar el banco en las 4 lineas correctas (confirmado y
+ *   restaurado). Se agrego ademas la seccion 13 (estructura de _ocultarAuxiliaresIp/
+ *   _mostrarAuxiliaresIp) y se de-hardcodeo el patron de moneda en los tests de F10 (usaban el
+ *   literal viejo escapado en un regex, que hubiera quedado obsoleto con el cambio).
+ * - Diagnostico temporal: la medicion se hizo con una funcion agregada solo para esto
+ *   (_DIAG_medirPatronYAuxIp), corrida por Franco desde una entrada de menu igualmente temporal.
+ *   Las dos se retiraron del codigo apenas se leyo el resultado; no tocan produccion.
+ *
  * [2026-08-21] v0.38.0 - Cuatro direcciones se corrieron una fila; los bancos ahora lo notan solos.
  * - CONTEXTO: Franco reacomodo el Tablero a mano el 2026-08-21 para dejar lugar al bloque
  *   "Faltante proyectado" (DEVTOOL_TableroFaltanteProyectado.js, v0.36.0): en los cuatro bloques
