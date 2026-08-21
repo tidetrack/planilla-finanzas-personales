@@ -9,6 +9,28 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.31.0 - El plan asigna, la realidad se mide (2026-08-20)
+
+> "N19 no debe ser una resta de descarte. Aca si va el valor registrado del mes: lo que se haya
+> realmente ahorrado y/o invertido." — Franco
+
+El modelo completo, que cierra el ciclo de todo el dia:
+
+| Celda | Bloque | Que es |
+|---|---|---|
+| `N12` | Plan | El **residuo** `Ingresos - Fijos - Variables`. Un presupuesto asigna, y el residuo cierra la asignacion en 100%. Nunca negativo: el plan se recorta antes que proyectar desahorro. |
+| `N19` | Realidad | La **capitalizacion efectiva**: el flujo neto del mes hacia los medios de Ahorros e Inversiones, traspasos incluidos, con signo. Negativo = ese mes se saco de los frascos. |
+
+La formula de `N19` es la que la v0.26.0 construyo, la v0.29.0 retiro a git — *"para cuando tenga
+su propio lugar"* — y esta version trae de vuelta **a su lugar**.
+
+**Consecuencia asumida:** el bloque de la realidad no suma 100%. La diferencia entre los ingresos
+reales y la suma de los tres destinos es la plata que quedo sin asignar, o el gasto por encima del
+ingreso. En el plan esa diferencia no existe por construccion; en la realidad **es el dato**.
+
+La Disponibilidad de fondos sale ganando sin tocarla: su remanente de capitalizacion (`N12 - N19`)
+pasa a significar *"cuanto de lo planeado falta efectivamente capitalizar"*.
+
 ## v0.30.1 - La pata de traspaso pierde su Tipo de Cuenta (2026-08-20)
 
 Con el recorte v0.30.0 aplicado, `N12` quedo igual en `-$196.914`: el ajuste recorto 122 mil

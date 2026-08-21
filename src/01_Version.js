@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 30,
- patch: 1,
+ minor: 31,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.30.1 - La pata de traspaso pierde su Tipo de Cuenta: no es ingreso de ningun bloque',
+ releaseName: 'v0.31.0 - El plan asigna, la realidad se mide: N19 es la capitalizacion efectiva',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

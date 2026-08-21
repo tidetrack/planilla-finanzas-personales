@@ -5,6 +5,27 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.31.0 - El plan asigna, la realidad se mide.
+ * - decision Franco 2026-08-20: "N19 no debe ser una resta de descarte. Aca si va el valor
+ *   registrado del mes: lo que se haya realmente ahorrado y/o invertido".
+ * - EL MODELO COMPLETO, que cierra el ciclo de todo el dia:
+ *     N12 (PLAN): el residuo Ingresos - Fijos - Variables. Un presupuesto ASIGNA y el residuo es
+ *       lo unico que cierra la asignacion en 100% (v0.29.0). Nunca negativo: el plan se recorta
+ *       antes que proyectar desahorro (v0.30.0).
+ *     N19 (REALIDAD): la capitalizacion EFECTIVA -- el flujo neto del mes hacia los medios de
+ *       Ahorros e Inversiones, traspasos incluidos, neteado con signo. Negativo significa que ese
+ *       mes se saco de los frascos. La realidad no asigna: SE MIDE.
+ * - La formula de N19 es la que la v0.26.0 construyo, la v0.29.0 retiro a git ("para cuando tenga
+ *   su propio lugar") y esta version trae de vuelta A SU LUGAR. Sin piso, neteando.
+ * - CONSECUENCIA ASUMIDA: el bloque de la realidad NO suma 100%. La diferencia entre los ingresos
+ *   reales y (fijos + variables + capitalizacion efectiva) es la plata que quedo sin asignar o el
+ *   gasto por encima del ingreso. En el plan esa diferencia no existe por construccion; en la
+ *   realidad ES el dato. Los dialogos lo explican.
+ * - La Disponibilidad de fondos sale ganando sin tocarla: su remanente de capitalizacion
+ *   (N12 - N19) pasa a significar "cuanto de lo planeado falta efectivamente capitalizar".
+ * - Verificado por mutacion (3/3): volver N19 al residuo, leer la Proyeccion en vez del ledger,
+ *   y contar solo entradas (esconderia los retiros).
+ *
  * [2026-08-20] v0.30.1 - La pata de traspaso pierde su Tipo de Cuenta.
  * - SINTOMA: con el recorte v0.30.0 aplicado, N12 quedo igual en -$196.914. El ajuste recorto
  *   122 mil cuando el deficit real era 319 mil.

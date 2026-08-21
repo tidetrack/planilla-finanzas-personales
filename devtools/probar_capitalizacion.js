@@ -99,19 +99,36 @@ console.log('=== 1. LA IDENTIDAD: los tres destinos suman el 100% de los ingreso
     ok(peor < 1e-12, '5000 casos al azar: la identidad se cumple siempre (peor desvio ' + peor.toExponential(1) + ')');
 }
 
-console.log('\n=== 1b. Las formulas del residuo ===');
+console.log('\n=== 1b. El modelo mixto: el plan asigna, la realidad se mide ===');
 {
     const presu = ctx._formulaResiduoCap('N9', 'N10', 'N11');
-    const real = ctx._formulaResiduoCap('N16', 'N17', 'N18');
-    ok(presu === '=N9-N10-N11', 'presupuesto: ' + presu);
-    ok(real === '=N16-N17-N18', 'realidad: ' + real);
-    [presu, real].forEach(f => {
-        ok(!/MAX\(0/.test(f), 'sin piso en cero: taparlo esconde el sobrecompromiso  (' + f + ')');
-        ok(!/Proyecc|Registros/.test(f), 'no lee ninguna hoja: solo resta celdas del propio bloque  (' + f + ')');
-        ok(f.indexOf('{') === -1 && f.indexOf(',') === -1, 'sin arrays literales ni comas  (' + f + ')');
+    ok(presu === '=N9-N10-N11', 'N12 (plan): el residuo que cierra el 100%. Dio ' + presu);
+    ok(!/MAX\(0/.test(presu) && presu.indexOf('{') === -1 && presu.indexOf(',') === -1,
+       'el residuo: sin piso, sin arrays, sin comas');
+
+    // N19: la capitalizacion EFECTIVA -- decision Franco 2026-08-20: "aca si va el valor
+    // registrado del mes". Todas las trampas de una formula larga aplican.
+    const real = ctx._formulaHaciaRiqueza(ctx.RANGES.REGISTROS.sheet);
+    ok(real[0] === '=' && real.indexOf('{') === -1, 'N19: sin arrays literales (es_AR)');
+    ok(!/,(?![^(]*\))/.test('') && !/\$AF\$\d+/.test(real), 'N19: ninguna coordenada de cotizacion');
+    ok(/TIDETRACK_USD\(\)/.test(real) && /TIDETRACK_EUR\(\)/.test(real), 'N19: convierte por funcion');
+    ok(/\$N\$2/.test(real) && /\$N\$3/.test(real), 'N19: filtra por el periodo del Tablero');
+    ok(real.indexOf('Inicio Mes') !== -1, 'N19: excluye el arrastre');
+    ctx.TIPOS_RIQUEZA.forEach(t => ok(real.indexOf('"' + t + '"') !== -1, 'N19: incluye el tipo ' + t));
+    ok(!/"Hogar"|"Financ/.test(real), 'N19: NO incluye Hogar ni Financiacion');
+    ok(!/Traspaso/.test(real), 'N19: NO excluye los traspasos (capitalizar es traspasar a un frasco)');
+    ok(/IF\(tipo_mov="Egreso"; -1; 1\)/.test(real),
+       'N19: NETEA con signo -- negativo significa que se saco de los frascos');
+    ok(!/MAX\(0/.test(real), 'N19: sin piso -- la realidad se muestra como es');
+    let par = 0, com = 0;
+    for (const ch of real) { if (ch === '(') par++; else if (ch === ')') par--; else if (ch === '"') com++; }
+    ok(par === 0 && com % 2 === 0, 'N19: parentesis y comillas balanceados');
+    (real.match(/\n\s*([A-Za-z_][A-Za-z0-9_]*)\s*;/g) || []).forEach(x => {
+        const v = x.trim().replace(';', '');
+        ok(v.length > 2, 'N19: variable LET "' + v + '" no choca con funciones');
     });
-    ok(typeof ctx._formulaHaciaRiqueza === 'undefined',
-       'la formula de flujo hacia riqueza se retiro: no puede vivir en la fila que cierra el bloque');
+    ok(real.indexOf(ctx.RANGES.REGISTROS.sheet + '!') !== -1, 'N19: lee el LEDGER, no la proyeccion');
+    ok(real.indexOf('Proyecc') === -1, 'N19: no toca la hoja de proyeccion ni por accidente');
 }
 
 console.log('\n=== 2. Las tres filas de la disponibilidad ===');
@@ -217,14 +234,12 @@ console.log('\n=== 3b. El CABLEADO: que formula va a cada celda ===');
     const presu = porCelda[ctx.CAP_BLOQUES.presupuesto.celda] || '';
     const real = porCelda[ctx.CAP_BLOQUES.realidad.celda] || '';
     ok(presu === '=N9-N10-N11',
-       ctx.CAP_BLOQUES.presupuesto.celda + ' es el residuo del bloque de presupuesto. Dio ' + presu);
-    ok(real === '=N16-N17-N18',
-       ctx.CAP_BLOQUES.realidad.celda + ' es el residuo del bloque de realidad. Dio ' + real);
+       ctx.CAP_BLOQUES.presupuesto.celda + ' (plan) es el residuo. Dio ' + presu);
+    ok(real.length > 400 && real.indexOf(ctx.RANGES.REGISTROS.sheet + '!') !== -1,
+       ctx.CAP_BLOQUES.realidad.celda + ' (realidad) es la formula MEDIDA sobre el ledger, no un residuo');
+    ok(!/=N16-N17-N18/.test(real), 'N19 ya NO es la resta de descarte (decision Franco 2026-08-20)');
     ok(!/MAX\(0;/.test(presu) && !/MAX\(0;/.test(real), 'ninguna lleva piso en cero');
-    // Cada residuo tiene que restar las celdas de SU bloque. Cruzarlos daria un numero que no
-    // cierra con ninguno de los dos, y nada en la planilla lo delataria.
-    ok(!/N1[6789]/.test(presu), 'el residuo del presupuesto no toca celdas de la realidad');
-    ok(!/N9|N10|N11/.test(real), 'el residuo de la realidad no toca celdas del presupuesto');
+    ok(!/N1[6789]/.test(presu), 'el residuo del plan no toca celdas de la realidad');
 }
 
 console.log('\n=== 3c. El porcentaje de la fila de Ingresos ===');
