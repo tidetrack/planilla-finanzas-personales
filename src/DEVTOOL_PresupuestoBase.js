@@ -28,10 +28,20 @@
  *    futuro. Y el cumplimiento sigue significando algo, porque el mes que se mide nunca entra
  *    en su propio promedio.
  *
- * 2. SE EXCLUYEN LAS CUENTAS NEUTRAS. Los traspasos y los asientos "Inicio Mes" no son gasto ni
- *    ingreso: mueven plata de un bolsillo a otro. Presupuestarlos seria contarlos dos veces. Es
- *    el mismo criterio que usan los bloques de la realidad del Tablero -- si difirieran, el
- *    cumplimiento compararia peras con manzanas.
+ * 2. LOS TRASPASOS SE EXCLUYEN, SALVO LOS QUE CRUZAN UN MEDIO DE RIQUEZA.
+ *
+ *    Un traspaso comun mueve plata de un bolsillo a otro: no es gasto ni ingreso, y
+ *    presupuestarlo seria contarlo dos veces. Pero un traspaso HACIA un frasco de ahorro o una
+ *    inversion SI es un acto economico -- es exactamente como se capitaliza.
+ *    decision Franco 2026-08-20: "los traspasos indican capitalizacion si se cruza con un medio".
+ *
+ *    Como en este ledger un traspaso son DOS filas -- un Egreso del medio origen y un Ingreso al
+ *    medio destino, verificado en el gemelo: $7.000 sale de Efectivo y $7.000 entra a Mercado
+ *    Pago --, filtrar por "el medio de esta fila es de riqueza" hace lo correcto solo: de un
+ *    traspaso de Hogar a un frasco entra la pata de Ingreso y no la de Egreso, y de un traspaso
+ *    entre dos cuentas de casa no entra ninguna.
+ *
+ *    Los asientos "Inicio Mes" se excluyen siempre: son puntos de corte de conciliacion.
  *
  * 3. SE RESPETA LA MONEDA DE ORIGEN. Una cuenta que se paga en dolares se presupuesta en dolares,
  *    y el Tablero la convierte con la cotizacion del dia como hace con cualquier previsto. Promediar
@@ -107,8 +117,11 @@ function _leerLedgerPb(ss) {
     ['monto', 'tipo', 'cuenta', 'tipo_cuenta', 'medio', 'moneda', 'fecha']
         .forEach(function (k) { idx[k] = columnLetterToIndex(cfg.columns[k]) - colIni; });
 
+    // El tipo de cada medio, para decidir que traspasos entran. Se lee una vez.
+    const tipoDeMedio = _tiposDeMedioPb(ss);
+
     const filas = [];
-    let neutras = 0, sinDatos = 0;
+    let neutras = 0, sinDatos = 0, traspasosRiqueza = 0;
     let claveMin = null, claveMax = null;
 
     crudas.forEach(function (f) {
@@ -117,8 +130,20 @@ function _leerLedgerPb(ss) {
         const cuenta = String(f[idx.cuenta] || '').trim();
         const tipoCuenta = String(f[idx.tipo_cuenta] || '').trim();
         const monto = Number(f[idx.monto]);
-        if (!cuenta || !tipoCuenta || !isFinite(monto) || monto === 0) { sinDatos++; return; }
-        if (esCuentaNeutra(cuenta)) { neutras++; return; }
+        const medioCrudo = String(f[idx.medio] || '').trim();
+        if (!cuenta || !isFinite(monto) || monto === 0) { sinDatos++; return; }
+
+        // Los arrastres nunca. Los traspasos, solo si esta fila toca un medio de riqueza.
+        const esTraspaso = esCuentaNeutra(cuenta) && normalizarNombreCuenta(cuenta) !== normalizarNombreCuenta(CUENTA_ARRASTRE);
+        if (esCuentaNeutra(cuenta)) {
+            const t = tipoDeMedio[normalizarNombreCuenta(medioCrudo)] || '';
+            if (!esTraspaso || TIPOS_RIQUEZA.indexOf(t) === -1) { neutras++; return; }
+            traspasosRiqueza++;
+        } else if (!tipoCuenta) {
+            // Un gasto o ingreso sin Tipo de Cuenta no se puede ubicar en ningun bloque.
+            // Un traspaso NO lo necesita: no vive en ninguno de los tres.
+            sinDatos++; return;
+        }
 
         const clave = _claveMesPb(_mesDePb(fecha));
         if (claveMin === null || clave < claveMin) claveMin = clave;
@@ -132,7 +157,27 @@ function _leerLedgerPb(ss) {
         });
     });
 
-    return { filas: filas, neutras: neutras, sinDatos: sinDatos, claveMin: claveMin, claveMax: claveMax };
+    return { filas: filas, neutras: neutras, sinDatos: sinDatos, traspasosRiqueza: traspasosRiqueza,
+             claveMin: claveMin, claveMax: claveMax };
+}
+
+/** El tipo de cada medio del Plan de Cuentas, indexado por nombre normalizado. */
+function _tiposDeMedioPb(ss) {
+    const cfg = RANGES.MEDIOS_PAGO;
+    const hoja = ss.getSheetByName(cfg.sheet);
+    if (!hoja) throw new Error('No existe la hoja "' + cfg.sheet + '".');
+    const colNom = columnLetterToIndex(cfg.columns.nombre);
+    const colTipo = columnLetterToIndex(cfg.columns.proyecto);
+    const desde = getDataRow(cfg);
+    const alto = hoja.getLastRow() - desde + 1;
+    const out = {};
+    if (alto <= 0) return out;
+    const anchoCols = colTipo - colNom + 1;
+    hoja.getRange(desde, colNom, alto, anchoCols).getValues().forEach(function (f) {
+        const nom = normalizarNombreCuenta(f[0]);
+        if (nom) out[nom] = String(f[anchoCols - 1] || '').trim();
+    });
+    return out;
 }
 
 /**

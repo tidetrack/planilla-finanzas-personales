@@ -9,6 +9,46 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.27.0 - Los traspasos a un frasco son capitalizacion (2026-08-20)
+
+> "Los traspasos indican capitalizacion si se cruza con un medio." — Franco, 2026-08-20
+
+La realidad ya los contaba; el **presupuesto no podia**, porque el presupuesto base excluia todas
+las cuentas neutras. Esa asimetria hacia que el cumplimiento comparara dos cosas distintas.
+
+### El dato que lo hizo simple
+
+En este ledger **un traspaso son dos filas**: un Egreso del medio origen y un Ingreso al medio
+destino. Verificado en el gemelo — `$7.000` salen de Efectivo y `$7.000` entran a Mercado Pago.
+
+Con eso, filtrar por *"el medio de esta fila es de tipo Ahorros o Inversiones"* hace lo correcto
+solo: de un traspaso de casa a un frasco entra la pata que suma y no la que resta, y de un traspaso
+entre dos cuentas de casa no entra ninguna. **No hizo falta ninguna regla especial de signo.**
+
+El arrastre sigue afuera aunque toque un frasco: `Inicio Mes` no mueve plata, declara cuanta habia.
+Si contara, el saldo de apertura de cada frasco se leeria como capitalizacion del mes.
+
+### Piso en cero, pero solo en el plan
+
+En la proyeccion la capitalizacion no puede dar negativo: planear apartar menos que cero no
+significa nada. En la **realidad** si puede, y ahi quiere decir que ese mes se saco plata de los
+frascos. Una es una intencion; la otra, un hecho.
+
+### Dos cosas que aparecieron en el camino
+
+- **Las filas de traspaso no traen "Tipo de Cuenta"** — no viven en ninguno de los tres bloques — y
+  el lector del presupuesto las descartaba por eso. Ahora ese campo solo se exige a los gastos e
+  ingresos, que si necesitan un bloque donde caer.
+- **`Inicio Mes` pasa a `00_Config` como `CUENTA_ARRASTRE`.** Vivia dentro de `DEVTOOL_StockYFlujo`
+  y otros dos modulos lo tomaban de ahi por el scope global de Apps Script: funciona, pero es una
+  dependencia invisible que ningun banco puede cargar sin arrastrar un modulo ajeno.
+
+### El banco tenia un agujero
+
+Probaba el generador de formulas pero **no que bandera le pasa el plan a cada celda**. Una mutacion
+que le ponia piso en cero a la realidad pasaba invisible. Se agrego una prueba sobre el plan
+armado; ahora las cuatro mutaciones mueren.
+
 ## v0.26.1 - El borrado de la carga previa se hace en bloques (2026-08-20)
 
 Recargar el presupuesto base con 413 filas viejas adentro tardaba minutos: `deleteRow` una vez por

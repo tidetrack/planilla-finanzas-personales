@@ -72,9 +72,9 @@ function revisar(nombre, f) {
 }
 
 console.log('=== 1. La suma hacia los medios de riqueza ===');
-[['Proyeccion (presupuesto)', ctx.SHEETS.PROYECCION], ['Registros (realidad)', ctx.RANGES.REGISTROS.sheet]]
-    .forEach(([etiqueta, hoja]) => {
-        const f = ctx._formulaHaciaRiqueza(hoja);
+[['Proyeccion (presupuesto)', ctx.SHEETS.PROYECCION, true], ['Registros (realidad)', ctx.RANGES.REGISTROS.sheet, false]]
+    .forEach(([etiqueta, hoja, piso]) => {
+        const f = ctx._formulaHaciaRiqueza(hoja, piso);
         if (revisar(etiqueta, f)) console.log('  OK  ' + etiqueta);
         ok(!/\$AF\$\d+/.test(f), etiqueta + ': ninguna coordenada de cotizacion (esas se pudren)');
         ok(/TIDETRACK_USD\(\)/.test(f), etiqueta + ': convierte con las custom functions');
@@ -82,14 +82,21 @@ console.log('=== 1. La suma hacia los medios de riqueza ===');
         ok(/Inicio Mes/.test(f), etiqueta + ': excluye los arrastres "Inicio Mes"');
         ctx.TIPOS_RIQUEZA.forEach(t => ok(f.indexOf('"' + t + '"') !== -1, etiqueta + ': incluye el tipo ' + t));
         ok(!/"Hogar"|"Financ/.test(f), etiqueta + ': NO incluye Hogar ni Financiacion');
+        // Los traspasos SI cuentan: la unica cuenta excluida es el arrastre.
+        ok(!/Traspaso/.test(f), etiqueta + ': NO excluye los traspasos (capitalizar es traspasar a un frasco)');
+        ok(/signo; ARRAYFORMULA\(IF\(tipo_mov="Egreso"/.test(f),
+           etiqueta + ': aplica signo por Ingreso/Egreso, que es como se registra un traspaso (dos filas)');
+        ok(piso === /MAX\(0; neto\)/.test(f),
+           etiqueta + (piso ? ': tiene piso en cero (es un plan)' : ': SIN piso, puede dar negativo (es un hecho)'));
     });
 
 // Las dos columnas tienen que medir IGUAL, o el porcentaje de cumplimiento compara varas distintas.
-const fProy = ctx._formulaHaciaRiqueza(ctx.SHEETS.PROYECCION);
-const fReg = ctx._formulaHaciaRiqueza(ctx.RANGES.REGISTROS.sheet);
-ok(fProy.replace(new RegExp(ctx.SHEETS.PROYECCION, 'g'), 'X') ===
+const fProy = ctx._formulaHaciaRiqueza(ctx.SHEETS.PROYECCION, true);
+const fReg = ctx._formulaHaciaRiqueza(ctx.RANGES.REGISTROS.sheet, false);
+// Miden lo mismo: la unica diferencia permitida es la hoja y el piso en cero del plan.
+ok(fProy.replace(new RegExp(ctx.SHEETS.PROYECCION, 'g'), 'X').replace('MAX(0; neto)', 'neto') ===
    fReg.replace(new RegExp(ctx.RANGES.REGISTROS.sheet, 'g'), 'X'),
-   'presupuesto y realidad son LA MISMA formula: solo cambia la hoja');
+   'presupuesto y realidad miden IGUAL: solo cambian la hoja y el piso en cero');
 
 console.log('\n=== 2. Las tres filas de la disponibilidad ===');
 const claves = ['fijos', 'variables', 'capitalizacion'];
@@ -176,6 +183,34 @@ for (let i = 0; i < 4000; i++) {
     peor = Math.max(peor, Math.abs(suma(repartir(liq, p, q)) - liq));
 }
 ok(peor < 0.000001, '4000 casos al azar: las tres siempre suman la liquidez (peor desvio ' + peor.toExponential(1) + ')');
+
+console.log('\n=== 3b. El CABLEADO: que formula va a cada celda ===');
+// Probar el generador no alcanza: hay que probar que el plan le pase la bandera correcta a cada
+// celda. Una mutacion que le ponia piso en cero a la REALIDAD pasaba invisible sin esto, porque
+// el banco llamaba al generador con su propia bandera en vez de mirar lo que arma el modulo.
+{
+    const hojaFalsa = {
+        getRange: () => ({ getFormula: () => '', getValue: () => '', getDisplayValue: () => '' })
+    };
+    const ssFalso = { getSheetByName: () => hojaFalsa };
+    const plan = ctx._planCap(ssFalso, { hoja: hojaFalsa, nombre: 'Tablero' });
+    const porCelda = {};
+    plan.cambios.forEach(c => { porCelda[c.celda] = c.formulaNueva; });
+
+    ok(Object.keys(porCelda).length === 5, 'el plan propone las 5 celdas. Propuso ' + Object.keys(porCelda).length);
+    const presu = porCelda[ctx.CAP_BLOQUES.presupuesto.celda] || '';
+    const real = porCelda[ctx.CAP_BLOQUES.realidad.celda] || '';
+    ok(/MAX\(0; neto\)/.test(presu),
+       ctx.CAP_BLOQUES.presupuesto.celda + ' (presupuesto) SI lleva piso en cero: es un plan');
+    ok(!/MAX\(0; neto\)/.test(real),
+       ctx.CAP_BLOQUES.realidad.celda + ' (realidad) NO lleva piso: negativo significa que sacaste plata');
+    ok(presu.indexOf(ctx.SHEETS.PROYECCION + '!') !== -1,
+       ctx.CAP_BLOQUES.presupuesto.celda + ' lee la hoja de proyeccion');
+    ok(real.indexOf(ctx.RANGES.REGISTROS.sheet + '!') !== -1,
+       ctx.CAP_BLOQUES.realidad.celda + ' lee el ledger');
+    ok(presu.indexOf(ctx.RANGES.REGISTROS.sheet + '!B') === -1,
+       'el presupuesto NO lee el ledger por accidente');
+}
 
 console.log('\n=== 4. Coherencia con el resto de la planilla ===');
 ok(ctx.CAP_REFS.presu.capitalizacion === '$N$12' && ctx.CAP_REFS.real.capitalizacion === '$N$19',

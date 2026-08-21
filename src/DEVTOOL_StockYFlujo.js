@@ -96,7 +96,7 @@ const SYF_PROP_APLICADO = 'stock_y_flujo_aplicado';
 const SYF_PROP_RESPALDO = 'stock_y_flujo_respaldo';
 
 /** La cuenta neutra cuyo efecto se apaga en toda la planilla. */
-const SYF_ARRASTRE = 'Inicio Mes';
+const SYF_ARRASTRE = CUENTA_ARRASTRE;   // el nombre historico; la verdad esta en 00_Config
 
 /**
  * Bloque "Tipo de Medios." del Tablero (AE7:AH12) -- lo que faltaba llenar.

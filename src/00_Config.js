@@ -348,6 +348,21 @@ const TIPOS_MEDIO = ['Hogar', 'Ahorros', 'Inversiones', 'Financiación'];
 const CUENTAS_NEUTRAS = ['Traspaso', 'Inicio Mes'];
 
 /**
+ * La cuenta que marca un PUNTO DE CORTE de conciliacion, no un movimiento.
+ *
+ * Es neutra como el traspaso, pero por una razon distinta y eso importa: un traspaso mueve plata
+ * de un bolsillo a otro, y cuando el bolsillo de destino es un frasco ESO SI ES capitalizar. Un
+ * "Inicio Mes" no mueve nada -- declara cuanto habia. Por eso hay modulos que aceptan traspasos y
+ * rechazan arrastres, y necesitan poder nombrar a este por separado.
+ *
+ * decision Franco 2026-08-20: entra a Config porque ya lo usan tres modulos. Antes vivia como
+ * SYF_ARRASTRE dentro de DEVTOOL_StockYFlujo y los demas lo tomaban de ahi por el scope global de
+ * Apps Script -- funciona, pero es una dependencia invisible que ningun banco de pruebas puede
+ * cargar sin arrastrar un modulo que no tiene nada que ver.
+ */
+const CUENTA_ARRASTRE = 'Inicio Mes';
+
+/**
  * Normaliza un nombre de cuenta o de medio para poder compararlo.
  *
  * Recorta los extremos, colapsa los espacios internos (incluidos tabulaciones, saltos y el

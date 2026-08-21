@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 26,
- patch: 1,
+ minor: 27,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.26.1 - El borrado de la carga previa se hace en bloques, no fila por fila',
+ releaseName: 'v0.27.0 - Los traspasos a un frasco son capitalizacion, y el plan tiene piso en cero',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

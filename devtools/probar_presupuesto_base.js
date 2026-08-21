@@ -39,9 +39,16 @@ const LEDGER = [
     ['Servidor',      'Gasto Fijo',     'Egreso', 'USD', 'Dolar Cash', 30, new Date(2026, 4, 10)],
     ['Servidor',      'Gasto Fijo',     'Egreso', 'USD', 'Dolar Cash', 30, new Date(2026, 5, 10)],
     // -> 60 USD / 6 = 10 USD. NO se mezcla con las lineas en ARS.
-    ['Traspaso',      'Gasto Variable', 'Egreso', 'ARS', 'NaranjaX', 999999, new Date(2026, 3, 9)],
-    ['Inicio Mes',    'Ingreso',        'Ingreso','ARS', 'Efectivo', 888888, new Date(2026, 3, 1)],
-    // -> las dos neutras se excluyen enteras
+    // Un traspaso son DOS filas (verificado en el gemelo: sale de un medio, entra en otro).
+    // El de casa a casa no cuenta por ninguna de sus dos patas.
+    ['Traspaso',      '',               'Egreso', 'ARS', 'Efectivo',  999999, new Date(2026, 3, 9)],
+    ['Traspaso',      '',               'Ingreso','ARS', 'NaranjaX',  999999, new Date(2026, 3, 9)],
+    // El de casa a un FRASCO si: entra la pata de Ingreso, cuyo medio es de tipo Ahorros.
+    ['Traspaso',      '',               'Egreso', 'ARS', 'Efectivo',  150000, new Date(2026, 2, 4)],
+    ['Traspaso',      '',               'Ingreso','ARS', 'Frasco',    150000, new Date(2026, 2, 4)],
+    // -> 150000/6 = 25000/mes de capitalizacion presupuestada.
+    ['Inicio Mes',    'Ingreso',        'Ingreso','ARS', 'Frasco',   888888, new Date(2026, 3, 1)],
+    // -> el arrastre NUNCA entra, ni siquiera tocando un medio de riqueza
     ['Viejo',         'Gasto Variable', 'Egreso', 'ARS', 'Efectivo', 500000, new Date(2025, 11, 3)],
     // -> anterior a la ventana, se descarta
     ['DelMesEnCurso', 'Gasto Variable', 'Egreso', 'ARS', 'Efectivo', 700000, new Date(2026, 7, 3)],
@@ -134,7 +141,15 @@ console.log('=== 0. Integridad de los fuentes (sin bytes de control) ===');
 }
 
 const cfg = ctx.RANGES.REGISTROS;
-const ss = { getSheetByName: (n) => (n === cfg.sheet ? hojaFalsa(n, LEDGER, cfg.headerRow, cfg.dataRow) : null) };
+// El catalogo de medios: solo "Frasco" es de riqueza.
+const MEDIOS = [['NaranjaX','ARS','Hogar'],['Efectivo','ARS','Hogar'],['Santander','ARS','Hogar'],
+                ['Dolar Cash','USD','Ahorros'],['Frasco','ARS','Ahorros']];
+const hojaMedios = () => ({
+  getLastRow: () => 7 + MEDIOS.length - 1,
+  getRange: (fila, col, nf, nc) => ({ getValues: () => MEDIOS.map(m => [m[0], m[1], m[2]].slice(0, nc)) })
+});
+const ss = { getSheetByName: (n) => n === cfg.sheet ? hojaFalsa(n, LEDGER, cfg.headerRow, cfg.dataRow)
+                                 : (n === ctx.RANGES.MEDIOS_PAGO.sheet ? hojaMedios() : null) };
 
 console.log('=== 1. La ventana movil de cada mes ===');
 const datos = ctx._leerLedgerPb(ss);
@@ -178,12 +193,18 @@ ok(h.lineas.filter(l => l.cuenta === 'Viajes').length === 2,
    h.lineas.filter(l => l.cuenta === 'Viajes').length);
 
 console.log('\n=== 4. Lo que NO entra ===');
-ok(!porCuenta['Traspaso|ARS'], 'Traspaso excluido: es cuenta neutra, no gasto');
-ok(!porCuenta['Inicio Mes|ARS'], '"Inicio Mes" excluido: es un punto de corte, no un ingreso');
+ok(porCuenta['Traspaso|ARS'] && porCuenta['Traspaso|ARS'].promedio === 25000,
+   'el traspaso a un FRASCO se presupuesta: 150.000 -> 25.000/mes. Dio ' + (porCuenta['Traspaso|ARS'] || {}).promedio);
+ok(porCuenta['Traspaso|ARS'] && porCuenta['Traspaso|ARS'].medio === 'Frasco',
+   'entra la pata que ENTRA al frasco, no la que sale de Efectivo. Dio "' + (porCuenta['Traspaso|ARS']||{}).medio + '"');
+ok(!agoLineas.some(l => l.cuenta === 'Traspaso' && l.medio === 'Efectivo'),
+   'el traspaso de casa a casa (999.999) NO se presupuesta por ninguna de sus dos patas');
+ok(!porCuenta['Inicio Mes|ARS'],
+   '"Inicio Mes" excluido AUNQUE toque un frasco: es un punto de corte, no una capitalizacion');
 ok(!porCuenta['Viejo|ARS'], 'un movimiento anterior a la ventana no entra');
 ok(!porCuenta['DelMesEnCurso|ARS'], 'el mes en curso no entra al promedio');
 ok(!porCuenta['Centavos|ARS'], 'una linea por debajo de PB_MINIMO no se presupuesta');
-ok(h.neutras === 2, 'se contaron las 2 filas neutras descartadas. Dio ' + h.neutras);
+ok(h.neutras === 4, 'se descartaron 4 filas neutras (2 del traspaso de casa, 1 pata de salida, 1 arrastre). Dio ' + h.neutras);
 
 console.log('\n=== 5. El medio elegido es el mas frecuente de esa cuenta ===');
 ok(porCuenta['Comidas|ARS'].medio === 'NaranjaX',

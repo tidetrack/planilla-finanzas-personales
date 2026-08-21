@@ -5,6 +5,32 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.27.0 - Los traspasos a un frasco SON capitalizacion, y el plan tiene piso en cero.
+ * - decision Franco 2026-08-20: "los traspasos indican capitalizacion si se cruza con un medio".
+ *   La realidad ya los contaba; el PRESUPUESTO no podia, porque el presupuesto base excluia todas
+ *   las cuentas neutras. Esa asimetria hacia que el cumplimiento comparara dos cosas distintas.
+ * - COMO SE RESOLVIO, y el dato que lo hizo simple: en este ledger UN TRASPASO SON DOS FILAS --
+ *   un Egreso del medio origen y un Ingreso al medio destino. Se verifico en el gemelo: $7.000
+ *   salen de Efectivo y $7.000 entran a Mercado Pago. Con eso, filtrar por "el medio de ESTA fila
+ *   es de tipo Ahorros o Inversiones" hace lo correcto solo: de un traspaso de casa a un frasco
+ *   entra la pata que suma y no la que resta, y de un traspaso entre dos cuentas de casa no entra
+ *   ninguna. No hizo falta ninguna regla especial de signo.
+ * - EL ARRASTRE SIGUE AFUERA aunque toque un frasco: "Inicio Mes" no mueve plata, declara cuanta
+ *   habia. Si contara, el saldo de apertura de cada frasco se leeria como capitalizacion del mes.
+ * - PISO EN CERO SOLO EN EL PLAN. decision Franco: en la proyeccion la capitalizacion no puede dar
+ *   negativo -- planear apartar menos que cero no significa nada. En la REALIDAD si puede, y ahi
+ *   quiere decir que ese mes se saco plata de los frascos. Son dos cosas distintas: una es una
+ *   intencion y la otra un hecho.
+ * - DE PASO: las filas de traspaso no traen "Tipo de Cuenta" -- no viven en ninguno de los tres
+ *   bloques --, y el lector del presupuesto las descartaba por eso. Ahora ese campo solo se exige
+ *   a los gastos e ingresos, que si necesitan un bloque donde caer.
+ * - SSOT: "Inicio Mes" pasa a 00_Config como CUENTA_ARRASTRE. Vivia dentro de DEVTOOL_StockYFlujo
+ *   y otros dos modulos lo tomaban de ahi por el scope global de Apps Script: funciona, pero es
+ *   una dependencia invisible que ningun banco puede cargar sin arrastrar un modulo ajeno.
+ * - EL BANCO TENIA UN AGUJERO: probaba el generador de formulas pero no QUE BANDERA LE PASA EL
+ *   PLAN A CADA CELDA. Una mutacion que le ponia piso en cero a la realidad pasaba invisible.
+ *   Se agrego una prueba sobre el plan armado; ahora las cuatro mutaciones mueren.
+ *
  * [2026-08-20] v0.26.1 - El borrado de la carga previa se hace en BLOQUES, no fila por fila.
  * - SINTOMA: recargar el presupuesto base con 413 filas viejas adentro tardaba minutos. Se vio en
  *   vivo el 2026-08-20: la corrida quedo "Ejecutando secuencia de comandos" un rato largo.

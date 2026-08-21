@@ -111,7 +111,7 @@ function _esRiquezaCap(variable) {
  * numerador y el denominador del cumplimiento usen la misma vara. El ledger es casi todo ARS, asi
  * que la diferencia practica es despreciable; la de comparar con varas distintas, no.
  */
-function _formulaHaciaRiqueza(nombreHoja) {
+function _formulaHaciaRiqueza(nombreHoja, pisoCero) {
     const cfg = RANGES.REGISTROS;
     const medios = RANGES.MEDIOS_PAGO;
     const col = function (clave) {
@@ -129,15 +129,26 @@ function _formulaHaciaRiqueza(nombreHoja) {
         '  fecha; ' + col('fecha') + ';\n' +
         '  tipo_medio; ARRAYFORMULA(IFERROR(VLOOKUP(medio; ' + rangoMedios + '; ' + idxTipo + '; 0); ""));\n' +
         '  es_riqueza; ARRAYFORMULA(' + _esRiquezaCap('tipo_medio') + ');\n' +
-        // "Inicio Mes" es un punto de corte de conciliacion, no un movimiento: si contara, el
-        // arrastre de cada frasco se leeria como si uno hubiera capitalizado ese monto ese mes.
-        '  no_corte; ARRAYFORMULA(cuenta <> "' + SYF_ARRASTRE + '");\n' +
+        // Se excluye SOLO el arrastre. Los traspasos SI cuentan -- decision Franco 2026-08-20:
+        // "los traspasos indican capitalizacion si se cruza con un medio" --, y como en este
+        // ledger un traspaso son dos filas (Egreso del origen, Ingreso al destino), filtrar por
+        // "el medio de esta fila es de riqueza" hace lo correcto solo: de un traspaso de casa a
+        // un frasco entra la pata que suma y no la que resta.
+        //
+        // "Inicio Mes" no: es un punto de corte de conciliacion. Si contara, el arrastre de cada
+        // frasco se leeria como si uno hubiera capitalizado ese monto ese mes.
+        '  no_corte; ARRAYFORMULA(cuenta <> "' + CUENTA_ARRASTRE + '");\n' +
         '  signo; ARRAYFORMULA(IF(tipo_mov="Egreso"; -1; 1));\n' +
         _rangoMesCap() +
         _conversionCap('moneda') +
         '  convertido; ARRAYFORMULA(monto * signo * tasa_origen / tasa_destino);\n' +
         '  del_mes; ARRAYFORMULA(es_riqueza * no_corte * (fecha>=desde) * (fecha<=hasta));\n' +
-        '  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)';
+        '  neto; SUM(IFERROR(FILTER(convertido; del_mes); 0));\n' +
+        // decision Franco 2026-08-20: en la PROYECCION la capitalizacion no puede dar negativo.
+        // Un plan de capitalizar es cuanto pensas apartar; planear apartar menos que cero no
+        // significa nada. En la REALIDAD si puede: negativo ahi quiere decir que ese mes sacaste
+        // plata de los frascos, y eso es un hecho que hay que poder ver.
+        (pisoCero ? '  MAX(0; neto)\n)' : '  neto\n)');
 }
 
 /** La liquidez disponible: el bucket cotidiano de "Saldos Actuales", convertido al selector. */
@@ -260,12 +271,13 @@ function _planCap(ss, pre) {
     };
 
     proponer(CAP_BLOQUES.presupuesto.celda, 'Presupuesto de capitalizacion',
-        _formulaHaciaRiqueza(SHEETS.PROYECCION),
-        'lo proyectado hacia medios de tipo ' + TIPOS_RIQUEZA.join(' e '));
+        _formulaHaciaRiqueza(SHEETS.PROYECCION, true),
+        'lo proyectado hacia medios de tipo ' + TIPOS_RIQUEZA.join(' e ') + ', con piso en cero');
 
     proponer(CAP_BLOQUES.realidad.celda, 'Realidad de capitalizacion',
-        _formulaHaciaRiqueza(RANGES.REGISTROS.sheet),
-        'lo que realmente fue a medios de tipo ' + TIPOS_RIQUEZA.join(' e '));
+        _formulaHaciaRiqueza(RANGES.REGISTROS.sheet, false),
+        'lo que realmente fue a medios de tipo ' + TIPOS_RIQUEZA.join(' e ') +
+        '; puede dar negativo, y eso significa que ese mes sacaste plata de los frascos');
 
     const d = CAP_BLOQUES.disponibilidad;
     ['fijos', 'variables', 'capitalizacion'].forEach(function (k) {
@@ -299,8 +311,8 @@ function estadoCapitalizacion() {
             l.push('');
             l.push('QUE CAMBIA:');
             l.push('  - La Capacidad de Capitalizacion deja de ser Ingresos - Fijos - Variables y');
-            l.push('    pasa a sumar lo que va a los medios de tipo ' + TIPOS_RIQUEZA.join(' e ') + '.');
-            l.push('    Por eso deja de poder dar negativo.');
+            l.push('    pasa a sumar lo que va a los medios de tipo ' + TIPOS_RIQUEZA.join(' e ') + ',');
+            l.push('    traspasos incluidos. El presupuesto tiene piso en cero; la realidad no.');
             l.push('  - Los cuatro renglones YA NO suman 100%. La diferencia es la plata que entro');
             l.push('    y no se gasto ni se capitalizo: antes se escondia adentro del residuo.');
             l.push('  - Cuando las tres categorias se pasan del 100%, la disponibilidad se reparte');
@@ -338,8 +350,10 @@ function aplicarCapitalizacion() {
             'Se van a reescribir ' + plan.cambios.length + ' celda(s) del Tablero.\n\n' +
             'CAMBIAN NUMEROS QUE VENIS MIRANDO:\n' +
             '  - "Capacidad de Capitalizacion" deja de ser Ingresos - Fijos - Variables y pasa a\n' +
-            '    sumar lo que va a los medios de tipo ' + TIPOS_RIQUEZA.join(' e ') + '. Por eso\n' +
-            '    deja de poder dar negativo.\n' +
+            '    sumar lo que va a los medios de tipo ' + TIPOS_RIQUEZA.join(' e ') + ', traspasos\n' +
+            '    incluidos. En el PRESUPUESTO tiene piso en cero: planear apartar menos que cero\n' +
+            '    no significa nada. En la REALIDAD puede dar negativo, y ahi quiere decir que ese\n' +
+            '    mes sacaste plata de los frascos.\n' +
             '  - Los cuatro renglones YA NO SUMAN 100%, y eso es a proposito: la diferencia es la\n' +
             '    plata que entro y no se gasto ni se capitalizo. Antes se escondia en el residuo.\n' +
             '  - Cuando las tres categorias se pasan del 100%, "Disponibilidad de fondos" reparte\n' +
@@ -393,7 +407,8 @@ function aplicarCapitalizacion() {
             '- Respaldo en la hoja oculta "' + respaldo.nombre + '"\n' +
             '- Se repartieron ' + repartido.toFixed(2) + ' entre las tres categorias\n\n' +
             'QUE MIRAR:\n' +
-            '  1. "Capacidad de Capitalizacion" (N12 y N19) ya no puede dar negativo.\n' +
+            '  1. "Capacidad de Capitalizacion": N12 (presupuesto) nunca da negativo; N19\n' +
+            '     (realidad) si puede, y significa que sacaste plata de los frascos.\n' +
             '  2. Los cuatro renglones ya no suman 100%: esa diferencia es la plata que entro y no\n' +
             '     se gasto ni se capitalizo. Es informacion, no un error.\n' +
             '  3. En un mes con las tres categorias arriba del 100%, "Disponibilidad de fondos"\n' +
