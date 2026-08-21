@@ -864,17 +864,35 @@ console.log('\n=== 9. Ninguna otra celda del repo escribe donde este modulo escr
         misCeldas.push(b.rotuloFaltante.celda, ctx._celdaAnclaTfp(b), b.totalReal, b.totalFaltante,
             b.colCuenta + b.filaFin, b.colMonto + b.filaFin);
     });
+    // CONVIVENCIAS YA DECIDIDAS -- decision Franco 2026-08-21 (duenio unico de R10/U10/X10).
+    // TFP es el duenio: es el que REESCRIBE esas celdas, empotrando la QUERY original de Franco.
+    // DEVTOOL_StockYFlujo.js se queda nombrandolas a proposito: `_apagarArrastreSyf` hace CIRUGIA
+    // DE TOKEN -- reemplaza un patron y devuelve el resto de la formula intacta --, asi que respeta
+    // el envoltorio de TFP corra en el orden que corra. Es compatible por construccion, no por
+    // casualidad, y por eso no cuenta como choque.
+    // DEVTOOL_FormulerioV0111.js SI se retiro de esas tres (aquel `_repararFormula` reescribia por
+    // patron y podia pisar el envoltorio si el patron viejo reaparecia).
+    // Esta lista es un permiso EXPLICITO, no un silenciador: cualquier modulo que no este aca sigue
+    // saliendo como choque, y agregar uno obliga a escribir por que es compatible.
+    const CONVIVENCIA_OK = {
+        'DEVTOOL_StockYFlujo.js': ['R10', 'U10', 'X10']
+    };
     const dir = path.join(RAIZ, 'src');
     const choques = [];
+    const convive = [];
     fs.readdirSync(dir).filter(f => f.indexOf('DEVTOOL_') === 0 && f !== 'DEVTOOL_TableroFaltanteProyectado.js')
         .forEach(f => {
             const src = fs.readFileSync(path.join(dir, f), 'utf8');
             misCeldas.forEach(c => {
                 if (src.indexOf("'" + c + "'") !== -1 || src.indexOf('"' + c + '"') !== -1) {
-                    choques.push(c + ' <- ' + f);
+                    if ((CONVIVENCIA_OK[f] || []).indexOf(c) !== -1) { convive.push(c + ' <- ' + f); }
+                    else { choques.push(c + ' <- ' + f); }
                 }
             });
         });
+    if (convive.length) {
+        console.log('  (convivencia decidida el 2026-08-21, no es choque: ' + convive.join('; ') + ')');
+    }
     ok(choques.length === 0, choques.length
         ? 'CELDAS QUE OTRO MODULO TAMBIEN NOMBRA: ' + choques.join('; ') +
           ' (revisar si son escrituras activas o referencias historicas/diagnosticas)'

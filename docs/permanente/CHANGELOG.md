@@ -38,6 +38,77 @@ son DOS SECCIONES (todo lo real arriba, todo lo faltante abajo repitiendo el nom
 
 Detalle completo, incluido el diagnostico del bug y las mutaciones probadas, en
 `docs/permanente/HISTORIAL_DESARROLLO.md` y `src/ZZ_Changelog.js`.
+## v0.39.1 - Dueno unico por celda: se retiran 9 coordenadas stale, los 8 bancos en verde (2026-08-21)
+
+Dos decisiones de Franco tomadas juntas: **retirar** toda coordenada que un modulo declara
+administrar y que hoy administra otro, y fijar **dueno unico** para las celdas que tres modulos se
+disputaban. Ninguna es correccion de bug: es sacar ambiguedad del contrato.
+
+### Por que importaba
+
+`probar_formulerio` arrancaba con 5 fallas fijas y `probar_riqueza` con 7. **Doce lineas rojas
+permanentes** que habia que aprender a ignorar — y un banco con rojo de fondo es exactamente donde
+se esconde el rojo nuevo. Es la leccion de `v0.38.4`, donde un banco en verde tapo que StockYFlujo
+apuntaba a la celda equivocada.
+
+### Retiradas, con el dueno verificado contra el gemelo
+
+`FORM_CELDAS` pasa de **13 a 7** entradas; `RIQ_CELDAS`, de **6 a 0**.
+
+| Coordenada retirada | Por que | Dueno real |
+|---|---|---|
+| `Inicio!F8` | otra estructura | `DEVTOOL_StockYFlujo.js` |
+| `Tablero!AF9:AF12` | **vacias** | `StockYFlujo` → `AF18:AF21` |
+| `Tablero!AG9:AG12` | hoy son "Tipo de Medios" (`AG8`="Monto") | `StockYFlujo` → `AG18:AG21` |
+| `Tablero!N19` | **vacia** | `DEVTOOL_Capitalizacion.js` → `O19` |
+| `Tablero!R10/U10/X10` | dueno unico | `DEVTOOL_TableroFaltanteProyectado.js` |
+| `Tablero!AA10` | dueno unico | `DEVTOOL_BloqueCategorias.js` |
+
+`AG9:AG12` **no era ruido inocuo**: con `literal:true`, Formulerio le aplicaba su reemplazo a una
+formula viva y ajena.
+
+### Dueno unico
+
+- **`R10/U10/X10` → TFP**, que las reescribe empotrando la QUERY original de Franco. Sale
+  `FormulerioV0111` (su `_repararFormula` reescribe por patron y podia pisar el envoltorio).
+  **Se queda `StockYFlujo`**: `_apagarArrastreSyf` hace cirugia de token — reemplaza un patron y
+  devuelve el resto intacto —, asi que respeta el envoltorio corra en el orden que corra.
+  Compatible por construccion, no por casualidad.
+- **`AA10` → `BloqueCategorias`**, el unico con trabajo vigente ahi. Lo que hacia
+  `RiquezaYCategorias` ya esta aplicado: el `AA10` vivo no contiene `columna_ak_vacia`.
+
+### Consecuencia que se reporta, no se oculta
+
+Con `RIQ_CELDAS` vacia y `AA10` fuera, **`DEVTOOL_RiquezaYCategorias.js` no administra ninguna
+celda**. Sus tres publicas ahora lo dicen explicito (`MODULO SIN CELDAS A CARGO`, con el dueno de
+cada una) en vez de contestar el mismo "nada que hacer" que daban cuando si tenian trabajo.
+**Retirarlo del menu y del repo queda pendiente de Franco**: es sacar un modulo, no reapuntar una
+coordenada.
+
+Tambien se corrigio un **comentario falso**: la cabecera de `RiquezaYCategorias` afirmaba que
+`AA10` era *"EXCLUSIVA de este modulo (ningun otro la escribe)"* mientras otros dos la declaraban.
+
+### Bancos: los 8 en verde por primera vez
+
+`probar_formulerio` 5 → **SIN FALLAS**; `probar_riqueza` 7 → **SIN FALLAS**;
+`probar_tablero_faltante` 1 → **TODO OK**.
+
+Dos guards nuevos, los dos verificados **por mutacion** antes de darlos por buenos:
+
+1. **Tripwire en `probar_riqueza`**: si vuelve a entrar una coordenada a `RIQ_CELDAS`, es falla. El
+   loop que verifica celda por celda sigue existiendo (se comprobo); lo que la falla agrega es que
+   reabrir una retirada decidida no pueda pasar en silencio.
+2. **`CONVIVENCIA_OK`** en la barrida anti-colision: permiso **explicito por modulo Y por celda**.
+   Se probo que un modulo no autorizado que nombre `R10` sigue saliendo como choque, y que el
+   autorizado sobre una celda fuera de su permiso (`S8`) tambien. No es un silenciador.
+
+### Reportado, no resuelto
+
+`Inicio!C13/F13` las comparten `FORM_CELDAS` y `SYF_ARRASTRE`; `Inicio!C15/F15`, `FORM_CELDAS` y
+`DEVTOOL_InicioPresupuesto.js`. Conviven hoy (las tres transformaciones son de token) pero no
+entraron en esta decision de dueno unico.
+
+---
 
 ## v0.39.0 - El bloque de faltante proyectado sube a 30 filas y deja de abortar por falta de lugar (2026-08-21)
 

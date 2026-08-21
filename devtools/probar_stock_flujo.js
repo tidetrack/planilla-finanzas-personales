@@ -169,9 +169,17 @@ console.log('\n=== 5. Apagar el arrastre en las formulas vivas ===');
 // SYF_ARRASTRE eso no puede volver a pasar: si el modulo apunta mal, el banco apunta mal y lo dice.
 const HOJA_DE={TABLERO:'Tablero',INICIO:'Inicio'};
 const ARRASTRE_A_PROBAR=ctx.SYF_ARRASTRE.map(s=>HOJA_DE[s.hoja]+'!'+s.celda)
-  // C15/F15 ya no las toca este modulo (las reescribe DEVTOOL_InicioPresupuesto), pero la
-  // transformacion tiene que seguir siendo correcta contra ellas: se prueban aparte, a proposito.
-  .concat(['Inicio!C15','Inicio!F15']);
+  // Los deltas de Inicio ya no los toca este modulo (los reescribe DEVTOOL_InicioPresupuesto),
+  // pero la transformacion tiene que seguir siendo correcta contra ellos: se prueban aparte, a
+  // proposito, como chequeo cruzado entre modulos.
+  //
+  // OJO CON CUAL ES LA CELDA. Hasta el 2026-08-21 esto apuntaba a C15/F15, y desde v0.37.0 esas
+  // celdas son SOLO PRESENTACION: leen $AV$9/$AW$9 y concatenan flecha, porcentaje y promedio.
+  // No tocan el ledger, asi que no pueden excluir el arrastre, y el banco las acusaba de algo
+  // que no les corresponde. Quien SI lee Registros -- y quien SI tiene que excluir "Inicio Mes"
+  // -- son las auxiliares numericas. Verificado contra el gemelo: AV9 y AV10 lo excluyen, C15 y
+  // F15 ni lo mencionan.
+  .concat(['Inicio!AV9','Inicio!AV10']);
 ARRASTRE_A_PROBAR.forEach((c)=>{
   const antes=viva(c);
   if(!antes){

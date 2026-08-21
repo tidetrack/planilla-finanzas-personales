@@ -98,9 +98,18 @@
  * DEVTOOL_Capitalizacion.js con su propia geometria medida en vivo. Se documenta aca para que la
  * proxima persona que mida "por que RIQ_CELDAS no cambia nada" no repita la investigacion.
  *
- * LO QUE SI SE CORRIGIO: RIQ_BLOQUE_CATEGORIAS. Esa celda es EXCLUSIVA de este modulo (ningun
- * otro la escribe) y se corrio de fila por el mismo rediseno del 2026-08-21 (ver
+ * RIQ_BLOQUE_CATEGORIAS se corrio de fila por el mismo rediseno del 2026-08-21 (ver
  * DEVTOOL_FormulerioV0111.js, "EL RECORRIDO DEL 2026-08-21"): AA9 -> AA10, AB8 -> AB9.
+ *
+ * CORRECCION 2026-08-21: hasta hoy esta cabecera afirmaba que AA10 era "EXCLUSIVA de este modulo
+ * (ningun otro la escribe)". ERA FALSO: la declaraban tambien DEVTOOL_FormulerioV0111.js
+ * (FORM_CELDAS) y DEVTOOL_BloqueCategorias.js (BCAT_CELDA). Por decision de Franco del 2026-08-21
+ * el duenio unico es DEVTOOL_BloqueCategorias.js, y este modulo dejo de tocarla (ver _planRiqueza).
+ *
+ * CONSECUENCIA: con RIQ_CELDAS retirada y AA10 fuera de jurisdiccion, ESTE MODULO NO ADMINISTRA
+ * NINGUNA CELDA. Sus tres publicas siguen existiendo y contestan explicitamente que no les queda
+ * trabajo. Retirarlo del menu (00_Config.js, submenu "Riqueza y categorias") y del repo es una
+ * decision aparte, pendiente de Franco: es sacar un modulo, no reapuntar una coordenada.
  *
  * @version 0.13.1
  * @since 2026-08-19
@@ -119,14 +128,26 @@ const RIQ_PROP_RESPALDO = 'riqueza_categorias_respaldo';
  * Grupo (a): las celdas que responden "esto es riqueza?". Son las UNICAS que cambian de
  * criterio. La lista es explicita y cerrada a proposito (ver cabecera).
  */
-const RIQ_CELDAS = [
-    { hoja: 'INICIO', celda: 'F8', nota: 'Capital Acumulado' },
-    { hoja: 'TABLERO', celda: 'N19', nota: 'Capitalizacion real del mes' },
-    { hoja: 'TABLERO', celda: 'AG9', nota: 'Capital ARS' },
-    { hoja: 'TABLERO', celda: 'AG10', nota: 'Capital USD' },
-    { hoja: 'TABLERO', celda: 'AG11', nota: 'Capital AUD' },
-    { hoja: 'TABLERO', celda: 'AG12', nota: 'Capital EUR' }
-];
+/**
+ * RETIRADA COMPLETA EL 2026-08-21 -- decision Franco. La lista queda VACIA a proposito.
+ *
+ * Las seis coordenadas que vivian aca (Inicio!F8, Tablero!N19 y Tablero!AG9:AG12) no se sacaron
+ * por estar rotas: las seis tienen hoy otro duenio, verificado contra el gemelo celda por celda
+ * (el detalle esta en la cabecera de este archivo, seccion "ESTADO AL 2026-08-21"). Se dejaban
+ * declaradas "para no decidir por Franco"; el costo era que devtools/probar_riqueza.js arrancaba
+ * con seis fallas fijas que habia que aprender a ignorar -- y un banco con rojo de fondo es
+ * exactamente donde se esconde el rojo nuevo. Esa es la leccion cara de la v0.38.4, donde un banco
+ * en verde tapo que StockYFlujo apuntaba a la celda equivocada.
+ *
+ * Los duenios reales: Inicio!F8 -> DEVTOOL_StockYFlujo.js; Tablero!N19 -> DEVTOOL_Capitalizacion.js
+ * (en O19); Tablero!AG9:AG12 -> DEVTOOL_StockYFlujo.js (esas filas son hoy "Tipo de Medios",
+ * SYF_TIPOS_TABLERO; el "Capital" que esta lista describia vive en AG18:AG21, SYF_SALDOS_TABLERO).
+ *
+ * La lista se deja declarada y vacia en vez de borrarse: si alguna vez vuelve a haber una celda de
+ * riqueza que sea de este modulo, entra aca. `_aListaBlanca` se conserva por la misma razon y
+ * porque devtools/probar_riqueza.js la sigue probando como regresion.
+ */
+const RIQ_CELDAS = [];
 
 /**
  * El bloque de categorias del Tablero: donde vive la columna del Tipo.
@@ -170,8 +191,17 @@ function estadoRiquezaCategorias() {
         lineas.push('');
 
         if (!plan.cambios.length) {
-            lineas.push('NADA QUE HACER: las ' + (RIQ_CELDAS.length + 1) + ' celdas ya estan en su');
-            lineas.push('forma nueva. Nada que reescribir.');
+            // Con RIQ_CELDAS vacia y AA10 fuera de jurisdiccion, este modulo quedo SIN CELDAS.
+            // Decirlo explicito en vez de "nada que hacer": un modulo que contesta lo mismo cuando
+            // ya trabajo y cuando no le queda nada que hacer no le sirve a nadie.
+            lineas.push('MODULO SIN CELDAS A CARGO. Las seis celdas de RIQ_CELDAS y el bloque de');
+            lineas.push('categorias (' + RIQ_BLOQUE_CATEGORIAS.celda + ') se retiraron el 2026-08-21');
+            lineas.push('(decision Franco): cada una tiene hoy otro duenio.');
+            lineas.push('  Inicio!F8 y Tablero!AG9:AG12  -> DEVTOOL_StockYFlujo.js');
+            lineas.push('  Tablero!N19 (hoy O19)         -> DEVTOOL_Capitalizacion.js');
+            lineas.push('  Tablero!' + RIQ_BLOQUE_CATEGORIAS.celda + ' (categorias)      -> DEVTOOL_BloqueCategorias.js');
+            lineas.push('');
+            lineas.push('No hay nada que aplicar ni que revertir desde aca.');
             const t = lineas.join('\n');
             _mostrarRiqueza('Riqueza y categorias - estado', t);
             return { ok: true, detalle: t };
@@ -489,28 +519,24 @@ function _planRiqueza(ss, pre) {
         });
     });
 
-    // --- El bloque de categorias ---
-    const b = RIQ_BLOQUE_CATEGORIAS;
-    if (!pre.rotuloTipoOk) {
-        avisos.push('NO se toca el bloque de categorias: ' + b.celdaRotuloTipo + ' dice "' +
-            pre.rotuloTipoVivo + '" y se esperaba "' + b.rotuloTipoEsperado + '". Sin ese rotulo ' +
-            'no hay evidencia de que esa columna sea la del Tipo.');
-    } else {
-        const actual = ss.getSheetByName(pre.nombreTablero).getRange(b.celda).getFormula();
-        if (!actual) {
-            avisos.push(pre.nombreTablero + '!' + b.celda + ' no tiene formula: se saltea.');
-        } else {
-            const nueva = _conTipoEnCategorias(actual);
-            if (nueva !== actual) {
-                cambios.push({
-                    nombreHoja: pre.nombreTablero, celda: b.celda, nota: 'Bloque de categorias',
-                    formulaActual: actual, formulaNueva: nueva,
-                    resumen: 'la columna del Tipo deja de estar vacia (VLOOKUP al catalogo), y el ' +
-                        'bloque deja de ocultar las categorias de tipo Hogar'
-                });
-            }
-        }
-    }
+    // --- El bloque de categorias (Tablero!AA10): YA NO SE TOCA DESDE ACA ---
+    // decision Franco 2026-08-21, duenio unico: TRES modulos declaraban AA10 -- este,
+    // DEVTOOL_FormulerioV0111.js y DEVTOOL_BloqueCategorias.js -- mientras la cabecera de este
+    // archivo afirmaba que la celda era "EXCLUSIVA de este modulo (ningun otro la escribe)". Esa
+    // frase era falsa y esta corregida arriba.
+    //
+    // Gana DEVTOOL_BloqueCategorias.js: es el unico con trabajo VIGENTE ahi (cambia el eje de
+    // agrupacion al de la categoria de la CUENTA, con su propio preflight por rotulo contra AA9
+    // "Nombre" y su propio respaldo). Lo que hacia este modulo -- `columna_ak_vacia` ->
+    // `columna_tipo` -- ya esta aplicado: medido contra el gemelo del 2026-08-21, el AA10 vivo no
+    // contiene `columna_ak_vacia`. Por eso el banco lo reportaba como "SIN CAMBIO" en cada corrida.
+    //
+    // `_conTipoEnCategorias` y RIQ_BLOQUE_CATEGORIAS se conservan (no se borran) porque
+    // devtools/probar_riqueza.js los sigue probando como regresion y porque documentan la
+    // transformacion historica.
+    avisos.push('El bloque de categorias (' + pre.nombreTablero + '!' + RIQ_BLOQUE_CATEGORIAS.celda +
+        ') NO lo administra mas este modulo: su duenio unico es DEVTOOL_BloqueCategorias.js ' +
+        '(decision Franco 2026-08-21). Para tocarlo, usar el menu "Bloque Categorias".');
 
     return { cambios: cambios, avisos: avisos };
 }

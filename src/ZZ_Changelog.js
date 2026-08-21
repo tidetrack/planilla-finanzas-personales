@@ -1,8 +1,6 @@
 /**
- * ============================================
- * REGISTRO DE ACTUALIZACIONES (CHANGELOG)
- * ============================================
- * Historial descendente de cambios sincronizados al entorno Apps Script.
+ * ===================================== * REGISTRO DE ACTUALIZACIONES (CHANGELOG)
+ * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
  * [2026-08-21] v0.40.0 - Faltante proyectado: dos secciones (no fila intercalada), totales por construccion.
@@ -75,6 +73,54 @@
  * (src/DEVTOOL_DIAG_Desplegables.js nuevo, una entrada de menu temporal agregada a
  * MENU_CONFIG en 00_Config.js, y docs/permanente/celdas.tsv refrescado) -- ninguno de esos
  * archivos fue tocado por este cambio; se reporta a Franco en vez de reconciliarlo en silencio.
+ * [2026-08-21] v0.39.1 - Duenio unico por celda: se retiran 9 coordenadas stale, los 8 bancos en verde.
+ * - DOS DECISIONES DE FRANCO tomadas juntas: (1) retirar toda coordenada que un modulo declara
+ *   administrar y que hoy administra otro, y (2) duenio unico para las celdas que tres modulos se
+ *   disputaban. Ninguna de las dos es una correccion de bug: es sacar ambiguedad del contrato.
+ * - POR QUE IMPORTABA: probar_formulerio arrancaba con 5 FALLA(S) fijas y probar_riqueza con 7.
+ *   Doce lineas rojas permanentes que habia que aprender a ignorar -- y un banco con rojo de fondo
+ *   es exactamente donde se esconde el rojo nuevo. Es la leccion de la v0.38.4, donde un banco en
+ *   verde tapo que StockYFlujo apuntaba a la celda equivocada.
+ * - FORM_CELDAS: 13 -> 7 entradas. Cada retiro con su duenio verificado contra el gemelo:
+ *     Inicio!F8 y Tablero!AG9:AG12 -> DEVTOOL_StockYFlujo.js. AG9:AG12 NO eran ruido inocuo: esas
+ *       filas son hoy el bloque "Tipo de Medios" (AG8 = "Monto") y, con literal:true, este modulo
+ *       le aplicaba su reemplazo a una formula viva y ajena. El "Capital" real vive en AG18:AG21.
+ *     Tablero!AF9:AF12 -> ESTAN VACIAS; el bloque real se corrio a AF18:AF21 (headers AF17/AG17).
+ *     Tablero!N19 -> ESTA VACIA; la escribe DEVTOOL_Capitalizacion.js en O19.
+ *     Tablero!R10/U10/X10 y AA10 -> por la decision de duenio unico (abajo).
+ * - RIQ_CELDAS: 6 -> 0. CONSECUENCIA QUE SE REPORTA, NO SE OCULTA: con AA10 tambien fuera,
+ *   DEVTOOL_RiquezaYCategorias.js no administra ninguna celda. Sus tres publicas ahora lo dicen
+ *   explicito ("MODULO SIN CELDAS A CARGO", con el duenio de cada una) en vez de contestar el
+ *   mismo "nada que hacer" que daban cuando si tenian trabajo. Retirarlo del menu (00_Config.js)
+ *   y del repo QUEDA PENDIENTE DE FRANCO: es sacar un modulo, no reapuntar una coordenada.
+ * - DUENIO UNICO:
+ *     R10/U10/X10 -> DEVTOOL_TableroFaltanteProyectado.js, que las REESCRIBE empotrando la QUERY
+ *       original de Franco. Sale DEVTOOL_FormulerioV0111.js (su _repararFormula reescribe por
+ *       patron y podia pisar el envoltorio si el patron viejo reaparecia). SE QUEDA
+ *       DEVTOOL_StockYFlujo.js: _apagarArrastreSyf hace cirugia de token -- reemplaza un patron y
+ *       devuelve el resto intacto --, asi que respeta el envoltorio corra en el orden que corra.
+ *       Compatible por construccion, no por casualidad.
+ *     AA10 -> DEVTOOL_BloqueCategorias.js, el unico con trabajo VIGENTE ahi (cambia el eje de
+ *       agrupacion al de la categoria de la CUENTA, con preflight por rotulo propio). Lo que hacia
+ *       RiquezaYCategorias (columna_ak_vacia -> columna_tipo) ya esta aplicado: medido en el
+ *       gemelo, el AA10 vivo no contiene columna_ak_vacia. Por eso el banco daba "SIN CAMBIO".
+ * - COMENTARIO FALSO CORREGIDO: la cabecera de DEVTOOL_RiquezaYCategorias.js afirmaba que AA10 era
+ *   "EXCLUSIVA de este modulo (ningun otro la escribe)" mientras DEVTOOL_FormulerioV0111.js y
+ *   DEVTOOL_BloqueCategorias.js tambien la declaraban. Un comentario que miente cuesta lo mismo
+ *   que un guard que miente.
+ * - BANCOS -- LOS 8 EN VERDE POR PRIMERA VEZ: probar_formulerio 5 -> SIN FALLAS; probar_riqueza
+ *   7 -> SIN FALLAS; probar_tablero_faltante 1 -> TODO OK. Dos guards nuevos, los dos verificados
+ *   POR MUTACION antes de darlos por buenos:
+ *     (a) tripwire en probar_riqueza: si vuelve a entrar una coordenada a RIQ_CELDAS es FALLA. El
+ *         loop que verifica celda por celda sigue existiendo (se comprobo); lo que la falla agrega
+ *         es que reabrir una retirada decidida no pueda pasar en silencio.
+ *     (b) CONVIVENCIA_OK en la barrida anti-colision de probar_tablero_faltante: permiso EXPLICITO
+ *         por modulo Y por celda. Probado que un modulo no autorizado que nombre R10 sigue saliendo
+ *         como choque, Y que el autorizado sobre una celda fuera de su permiso (S8) tambien. No es
+ *         un silenciador.
+ * - REPORTADO, NO RESUELTO: Inicio!C13/F13 las comparten FORM_CELDAS y SYF_ARRASTRE; Inicio!C15/F15
+ *   FORM_CELDAS y DEVTOOL_InicioPresupuesto.js. Las tres transformaciones son de token y hoy
+ *   conviven, pero no entraron en esta decision de duenio unico.
  *
  * [2026-08-21] v0.39.0 - El bloque de faltante proyectado sube a 30 filas y deja de abortar por falta de lugar.
  * - EL SINTOMA, medido en la planilla real: Franco corrio estadoTableroFaltanteProyectado() y

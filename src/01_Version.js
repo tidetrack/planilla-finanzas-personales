@@ -45,6 +45,35 @@ v0.40.0 (2026-08-21) - Faltante proyectado: dos secciones, no una fila intercala
 * Sin cambios de principio: la QUERY real de Franco se reusa verbatim, lo proyectado se calcula fresco desde "Proyeccion" agrupado por cuenta, faltante = MAX(0; proyectado - real), una cuenta proyectada sin movimiento real sigue apareciendo (razon de ser del modulo, confirmado explicitamente para el layout nuevo), nunca se aborta por falta de lugar (trunca a la vista y avisa en la fila 30, en cursiva).
 ! devtools/probar_tablero_faltante.js: reescrito para las dos secciones. Incluye el diagnostico permanente del bug real (evaluador SUMIF-like que reproduce el sintoma exacto medido en la planilla), la prueba de reuso byte-a-byte del bloque comun entre la ancla y el total de faltantes, la extraccion de la QUERY embebida para una segunda corrida (_extraerTablaRealTfp), y el simulador del algoritmo (simularSeccionesTfp) que prueba por mutacion la senal del gris: confirma que ISTEXT marca correctamente a una cuenta sin movimiento real y que la alternativa descartada (COUNTIF de duplicados) NO la habria marcado. 1 falla preexistente sin cambios (colision R10/U10/X10 con DEVTOOL_FormulerioV0111.js y DEVTOOL_StockYFlujo.js, aceptada desde v0.38.0).
 NOTA: sesion en paralelo detectada en el mismo worktree (src/DEVTOOL_DIAG_Desplegables.js, entrada de menu temporal en 00_Config.js, celdas.tsv refrescado) -- no tocada por este cambio, reportada a Franco sin intentar reconciliarla.
+v0.39.1 (2026-08-21) - Duenio unico por celda: se retiran 9 coordenadas stale, 8 bancos en verde
+- decision Franco 2026-08-21, dos decisiones tomadas juntas: (1) retirar las coordenadas que un
+  modulo declara administrar y ya administra otro, y (2) duenio unico para las celdas que tres
+  modulos se disputaban.
+- FORM_CELDAS pasa de 13 a 7 entradas. Retiradas: Inicio!F8 y Tablero!AG9:AG12 (las escribe
+  DEVTOOL_StockYFlujo.js), Tablero!AF9:AF12 (vacias; el bloque real vive en AF18:AF21),
+  Tablero!N19 (vacia; la escribe DEVTOOL_Capitalizacion.js en O19), Tablero!R10/U10/X10 y AA10
+  (por duenio unico). AG9:AG12 no era ruido: con literal:true este modulo le aplicaba su reemplazo
+  a una formula VIVA y AJENA (el bloque "Tipo de Medios").
+- RIQ_CELDAS pasa de 6 a 0. Con AA10 tambien retirada, DEVTOOL_RiquezaYCategorias.js NO ADMINISTRA
+  NINGUNA CELDA: sus publicas lo dicen explicito en vez de contestar "nada que hacer". Sacarlo del
+  menu y del repo es una decision aparte, PENDIENTE de Franco -- es retirar un modulo, no reapuntar
+  una coordenada.
+- Duenio unico: R10/U10/X10 -> DEVTOOL_TableroFaltanteProyectado.js (las reescribe empotrando la
+  QUERY de Franco). DEVTOOL_StockYFlujo.js se queda a proposito: hace cirugia de token y respeta el
+  envoltorio de TFP corra en el orden que corra. AA10 -> DEVTOOL_BloqueCategorias.js, el unico con
+  trabajo vigente ahi.
+- CORREGIDO un comentario falso: la cabecera de DEVTOOL_RiquezaYCategorias.js afirmaba que AA10 era
+  "EXCLUSIVA de este modulo (ningun otro la escribe)" mientras otros dos la declaraban.
+- BANCOS: probar_formulerio 5 FALLA(S) -> SIN FALLAS; probar_riqueza 7 -> SIN FALLAS;
+  probar_tablero_faltante 1 -> TODO OK. Los 8 en verde por primera vez. Dos guards nuevos, ambos
+  verificados por mutacion: un tripwire que falla si vuelve a entrar una coordenada a RIQ_CELDAS, y
+  CONVIVENCIA_OK en la barrida anti-colision -- permiso EXPLICITO por modulo Y por celda, no un
+  silenciador (se probo que un modulo no autorizado, y el autorizado sobre una celda fuera de su
+  permiso, siguen saliendo como choque).
+- REPORTADO, NO RESUELTO: Inicio!C13/F13 las comparten FORM_CELDAS y SYF_ARRASTRE, e Inicio!C15/F15
+  FORM_CELDAS y DEVTOOL_InicioPresupuesto.js. Conviven hoy (las tres transformaciones son de token)
+  pero no entraron en la decision de duenio unico.
+
 v0.39.0 (2026-08-21) - El bloque de faltante proyectado sube a 30 filas y deja de abortar por falta de lugar
 ! El preflight de DEVTOOL_TableroFaltanteProyectado.js abortaba si habia mas cuentas reales que lugar ("Agrandar el bloque antes de correr esto"). Medido en la planilla: Gastos Variables tenia 10 cuentas para una capacidad de 9 -- Franco se quedaba sin la funcionalidad entera por una cuenta de mas. Ahora la formula TRUNCA sola a las cuentas de mayor monto y la ultima fila del bloque avisa (en cursiva) cuantas quedaron afuera y por cuanta plata. Esa fila desaparece sola cuando todo entra.
 + TFP_FILA_FIN (30) es la unica fuente de la geometria del bloque (antes cada uno de los tres bloques repetia "filaFin: 28" por separado): 21 filas -> 10 pares cuenta/faltante y sobra exactamente una, la que ocupa el aviso.
