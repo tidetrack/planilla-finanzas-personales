@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 36,
- patch: 0,
+ minor: 37,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-21',
- releaseName: 'v0.36.0 - Cada cuenta dice tambien cuanto le falta',
+ releaseName: 'v0.37.0 - Los deltas dicen cuanto, no solo cuanto por ciento',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

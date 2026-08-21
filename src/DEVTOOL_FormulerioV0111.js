@@ -782,6 +782,14 @@ function _planFormulerio(ss, pre) {
  * es_AR salgan exactamente como entraron (@see cabecera del modulo).
  */
 function _repararFormula(formula, spec, pre) {
+    // UNA CELDA SIN FORMULA NO ES UN ERROR, ES UN ESTADO. Pasa cada vez que la geometria de la
+    // hoja se mueve y una direccion declarada en FORM_CELDAS queda apuntando a un rotulo o a una
+    // celda vacia. Hasta el 2026-08-21 esto tiraba "Cannot read properties of undefined (reading
+    // 'replace')" y volteaba la corrida entera: dos bancos (probar_stock_flujo, probar_riqueza)
+    // quedaron sin poder correr, y el crash TAPO justamente la senal que importaba -- que cuatro
+    // celdas del Tablero se habian corrido una fila. Un modulo cuyo trabajo es detectar formulas
+    // desalineadas no puede morirse al encontrar la primera.
+    if (typeof formula !== 'string' || !formula) return formula;
     let out = formula;
 
     // --- Defecto 1: anclas de la fila 9 a la fila del derrame ---

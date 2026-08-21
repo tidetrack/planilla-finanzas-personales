@@ -9,51 +9,7 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
-## v0.36.0 - Cada cuenta dice tambien cuanto le falta (2026-08-21)
-
-Los bloques de cuentas del Tablero (Ingresos, Gastos Fijos, Gastos Variables) mostraban solo lo
-REALMENTE registrado en el mes. Ahora cada cuenta ocupa dos filas: arriba el nombre y lo real
-(oscuro), abajo sin nombre el faltante proyectado del mes (gris). Franco eligio esta opcion sobre
-agregar una columna nueva o mostrar solo un total.
-
-### Como se hizo, sin tocar lo que ya funcionaba
-
-- **La formula "real" de Franco se reusa VERBATIM.** El preflight lee la QUERY que ya agrupaba
-  cada bloque por cuenta (R10/U10/X10), verifica su forma y la empotra tal cual dentro de una
-  formula nueva. Reconstruirla en JS arriesgaba perder una cuenta que el ledger tiene y el
-  catalogo del Plan de Cuentas no -- la QUERY de Franco es data-driven y la captura igual.
-- **Lo proyectado se calcula fresco**, cuenta por cuenta, desde la hoja "Proyeccion" (mismo
-  criterio que el bloque "Presupuesto Asignado": selectores del Tablero, exclusion de cuentas
-  neutras, conversion en vivo porque un previsto no tiene tipo de cambio congelado). Faltante =
-  `MAX(0; proyectado - real)`: nunca negativo, y una cuenta proyectada sin ningun movimiento real
-  aparece igual, con su faltante completo.
-- **El bloque no crece.** La capacidad viva (19 filas, 9 pares cuenta/faltante) se deriva de la
-  misma geometria que ya definia el total; si algun dia hay mas cuentas con actividad que lugar,
-  se muestran las mas importantes en vez de invadir lo que hay debajo. El preflight aborta si las
-  cuentas con movimiento real de HOY ya superan la capacidad: una cuenta real nunca se recorta en
-  silencio.
-- **Los totales de la fila 7 se reescriben** de `SUM` (que ahora sumaria real y faltante
-  mezclados) a `SUMIF` sobre las filas con nombre; el nuevo total de faltantes de la fila 8 es el
-  espejo exacto sobre las filas sin nombre. Se verifica al releer que el total real no se movio
-  ni un centavo.
-- **El gris es formato condicional**, no pintura: el bloque es un derrame que se reordena en cada
-  recalculo. Separador `;` siempre -- con coma la regla no parsea en es_AR y no pinta nada, sin
-  avisar (la misma trampa medida en v0.33.0 sobre el color de los medios).
-- **Idempotencia real:** una formula ya aplicada se reconoce y no se vuelve a envolver. El banco
-  demuestra que sin esa deteccion, aplicar dos veces anidaria la formula dentro de si misma.
-
-`DEVTOOL_TableroFaltanteProyectado.js` (trio estado/aplicar/revertir, en el menu Tidetrack Dev
-como "Faltante proyectado (Tablero)"). Banco `probar_tablero_faltante.js` con mutaciones
-dirigidas: total real convertido en SUM ciego, separador coma en la regla gris, formula gris en
-el rango de otro bloque, faltante negativo, cuenta real perdida.
-
-**De paso:** `SYF_BLOQUE_MEDIOS.filaFin` pasa de 29 a 30 (Franco abrio una fila mas en "Medios
-Bancarios" para poder sumar un medio 13). Es el unico punto de verdad del borde: el alto y el
-`ARRAY_CONSTRAIN` de la formula de saldos por medio se derivan de esta constante.
-
----
-
-## v0.35.0 - Los deltas dicen cuanto, no solo cuanto por ciento (2026-08-21)
+## v0.37.0 - Los deltas dicen cuanto, no solo cuanto por ciento (2026-08-21)
 
 > "Podes ponerme ingresos / egresos y capitalizacion promedio? Como para entender valores y por
 > que estamos para arriba o para abajo en el mes." — Franco, aclarando despues: "va concatenado
@@ -72,7 +28,7 @@ Eso rompe dos cosas a la vez, y las dos se reparan juntas:
    en la formula, con la misma logica de signo (reemplaza al signo, no lo acompana).
 2. Las seis reglas de color de v0.34.0 miraban `=$F$10>0`. Sobre un **texto** esa condicion no se
    cumple nunca, y las reglas mueren en silencio — la misma superficie del bug que Franco reporto
-   esta manana (una regla mirando el numero equivocado). No se repite: las reglas pasan a apuntar
+   esa manana (una regla mirando el numero equivocado). No se repite: las reglas pasan a apuntar
    a una celda **auxiliar numerica**, nunca al texto visible.
 
 ### Celdas auxiliares, en la trastienda de la hoja
@@ -127,10 +83,91 @@ vez de arriesgar un texto con forma de dato pero sin serlo.
 ### El banco, por mutacion dirigida
 
 Ademas de las mutaciones heredadas de v0.33.0/v0.34.0, este banco mata: la regla de color
-apuntando al texto en vez de a la auxiliar (el bug de esta manana, reconstruido a proposito), la
+apuntando al texto en vez de a la auxiliar (el bug de esa manana, reconstruido a proposito), la
 serie pesada calculada dos veces, `F10` anclado a `TODAY()` en vez del selector, el flujo del
 periodo reimplementado en vez de leer `E22`, el monto del flujo con signo *y* con la palabra a la
 vez, y la palabra invertida (positivo mostrando "retirados").
+
+### Nota de concurrencia
+
+Esta version se escribio en paralelo a la v0.36.0 (Tablero, sesion distinta sobre
+`DEVTOOL_TableroFaltanteProyectado.js`). La v0.36.0 llego primero a `VERSION` y se llevo ese
+numero; esta entrada nacio como "v0.35.0" mientras las dos convivian en el mismo archivo, y se
+renumero a v0.37.0 para no chocar. No toca ninguno de los archivos de esa otra sesion
+(`00_Config.js`, `DEVTOOL_StockYFlujo.js`, `DEVTOOL_FormatoMedios.js`).
+
+---
+
+## v0.36.1 - Un modulo que busca formulas rotas no puede morir en la primera (2026-08-21)
+
+`_repararFormula` tiraba `Cannot read properties of undefined (reading 'replace')` cuando la
+celda que le tocaba no tenia formula. Una celda sin formula **no es un error, es un estado**:
+pasa cada vez que la geometria de la hoja se mueve y una direccion declarada en `FORM_CELDAS`
+queda apuntando a un rotulo o a una celda vacia.
+
+### El crash tapaba la senal
+
+Dos bancos quedaron sin poder correr — `probar_stock_flujo.js` y `probar_riqueza.js` — y por eso
+nadie vio lo que estaban por decir: que despues del reacomodo manual del Tablero del 2026-08-21,
+**cuatro direcciones de `FORM_CELDAS` quedaron una fila corridas**.
+
+| Declarada | Que hay hoy ahi | Donde esta la formula |
+|---|---|---|
+| `Tablero!R9` | el header "Cuenta" | `R10` |
+| `Tablero!U9` | el header "Cuenta" | `U10` |
+| `Tablero!X9` | el header "Cuenta" | `X10` |
+| `Tablero!AA9` | el header "Nombre" | `AA10` |
+
+Un modulo cuyo trabajo es detectar formulas desalineadas no puede morirse al encontrar la
+primera. Con el arreglo, `probar_riqueza` vuelve a correr y reporta 5 hallazgos reales, y
+`probar_stock_flujo` llega hasta el final.
+
+Las direcciones en si **no se corrigen aca**: eso es un cambio de geometria y va con su propia
+verificacion contra la planilla viva.
+
+---
+
+## v0.36.0 - Cada cuenta dice tambien cuanto le falta (2026-08-21)
+
+Los bloques de cuentas del Tablero (Ingresos, Gastos Fijos, Gastos Variables) mostraban solo lo
+REALMENTE registrado en el mes. Ahora cada cuenta ocupa dos filas: arriba el nombre y lo real
+(oscuro), abajo sin nombre el faltante proyectado del mes (gris). Franco eligio esta opcion sobre
+agregar una columna nueva o mostrar solo un total.
+
+### Como se hizo, sin tocar lo que ya funcionaba
+
+- **La formula "real" de Franco se reusa VERBATIM.** El preflight lee la QUERY que ya agrupaba
+  cada bloque por cuenta (R10/U10/X10), verifica su forma y la empotra tal cual dentro de una
+  formula nueva. Reconstruirla en JS arriesgaba perder una cuenta que el ledger tiene y el
+  catalogo del Plan de Cuentas no -- la QUERY de Franco es data-driven y la captura igual.
+- **Lo proyectado se calcula fresco**, cuenta por cuenta, desde la hoja "Proyeccion" (mismo
+  criterio que el bloque "Presupuesto Asignado": selectores del Tablero, exclusion de cuentas
+  neutras, conversion en vivo porque un previsto no tiene tipo de cambio congelado). Faltante =
+  `MAX(0; proyectado - real)`: nunca negativo, y una cuenta proyectada sin ningun movimiento real
+  aparece igual, con su faltante completo.
+- **El bloque no crece.** La capacidad viva (19 filas, 9 pares cuenta/faltante) se deriva de la
+  misma geometria que ya definia el total; si algun dia hay mas cuentas con actividad que lugar,
+  se muestran las mas importantes en vez de invadir lo que hay debajo. El preflight aborta si las
+  cuentas con movimiento real de HOY ya superan la capacidad: una cuenta real nunca se recorta en
+  silencio.
+- **Los totales de la fila 7 se reescriben** de `SUM` (que ahora sumaria real y faltante
+  mezclados) a `SUMIF` sobre las filas con nombre; el nuevo total de faltantes de la fila 8 es el
+  espejo exacto sobre las filas sin nombre. Se verifica al releer que el total real no se movio
+  ni un centavo.
+- **El gris es formato condicional**, no pintura: el bloque es un derrame que se reordena en cada
+  recalculo. Separador `;` siempre -- con coma la regla no parsea en es_AR y no pinta nada, sin
+  avisar (la misma trampa medida en v0.33.0 sobre el color de los medios).
+- **Idempotencia real:** una formula ya aplicada se reconoce y no se vuelve a envolver. El banco
+  demuestra que sin esa deteccion, aplicar dos veces anidaria la formula dentro de si misma.
+
+`DEVTOOL_TableroFaltanteProyectado.js` (trio estado/aplicar/revertir, en el menu Tidetrack Dev
+como "Faltante proyectado (Tablero)"). Banco `probar_tablero_faltante.js` con mutaciones
+dirigidas: total real convertido en SUM ciego, separador coma en la regla gris, formula gris en
+el rango de otro bloque, faltante negativo, cuenta real perdida.
+
+**De paso:** `SYF_BLOQUE_MEDIOS.filaFin` pasa de 29 a 30 (Franco abrio una fila mas en "Medios
+Bancarios" para poder sumar un medio 13). Es el unico punto de verdad del borde: el alto y el
+`ARRAY_CONSTRAIN` de la formula de saldos por medio se derivan de esta constante.
 
 ---
 
