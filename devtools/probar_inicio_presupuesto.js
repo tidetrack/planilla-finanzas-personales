@@ -2,7 +2,7 @@
  * devtools/probar_inicio_presupuesto.js
  * Banco de pruebas de DEVTOOL_InicioPresupuesto.js.
  *
- * Cuatro mitades:
+ * Cinco mitades:
  *
  * 1. ESTRUCTURA DE LAS FORMULAS que el modulo emite: cero arrays literales {} (setFormula no
  *    los traduce en es_AR), cero comas fuera de strings (el separador es ;, y un decimal 0,5
@@ -29,8 +29,18 @@
  *    TODAY() en vez del selector, el flujo reimplementado en vez de leer E22, el monto del
  *    flujo con signo Y con la palabra a la vez, y la palabra invertida (positivo="retirados").
  *
+ * 5. DESDE v0.38.3: que el guard de las celdas AUXILIARES (preflight, paso 8) distinga contenido
+ *    PROPIO (la salida de una corrida anterior de este mismo modulo) de contenido AJENO, por la
+ *    FORMULA de la celda ancla y no por el valor derramado en el promedio -- el bug reportado por
+ *    Franco (aplicar dos veces seguidas abortaba contra su propio resultado, AW8/AW9/AW10 "no
+ *    estan vacias"). Cubre, por mutacion dirigida: reconocer "mia" por TEXTO EXACTO en vez de por
+ *    presencia de formula (fragil a que la formula pesada cambie de forma), y quitar el chequeo
+ *    de que el promedio nunca tenga una formula propia (deja sin detectar una formula ajena
+ *    escrita ahi encima). Tambien reproduce el guard VIEJO (valor-only) contra el Caso 2 para
+ *    probar que SI reproduce el bug reportado, y que el fix lo resuelve.
+ *
  * USO:  node devtools/probar_inicio_presupuesto.js
- * @version 0.37.0
+ * @version 0.38.3
  * @since 2026-08-20
  */
 const fs = require('fs'), vm = require('vm'), path = require('path');
@@ -943,6 +953,150 @@ console.log('\n=== 13. Las auxiliares (AV:AW) se ocultan, igual que los otros do
     ok(llamadas.length === 1 && llamadas[0][0] === 'show' &&
        llamadas[0][1] === ctx.columnLetterToIndex('AV') && llamadas[0][2] === 2,
        '_mostrarAuxiliaresIp destapa el MISMO rango que oculta _ocultarAuxiliaresIp');
+}
+
+console.log('\n=== 14. El guard de las auxiliares distingue "mia" de "ajena" (aplicar dos veces seguidas) ===');
+{
+    // EL BUG REPORTADO el 2026-08-21: con el modulo ya aplicado, correr "2. Aplicar" de nuevo
+    // abortaba en el preflight (paso 8) con "las celdas auxiliares (AW8, AW9, AW10) no estan
+    // vacias". La causa: AW8:AW10 no tenian ningun intruso -- tenian el PROMEDIO que la propia
+    // corrida anterior habia calculado (el derrame del HSTACK de _tendenciaYPromedioIp, ver la
+    // cabecera de IP_AUX). El guard pedia la zona VACIA sin excepcion y se bloqueaba contra su
+    // propio resultado.
+    //
+    // _auxAjenaIp / _auxiliaresAjenasIp reemplazan ese chequeo: reconocen "mia" por la FORMULA de
+    // la celda ANCLA, nunca por el valor del promedio.
+    const hojaAux = (mapa) => ({
+        getRange: (celda) => ({
+            getFormula: () => (mapa[celda] && mapa[celda].formula) || '',
+            getValue: () => (mapa[celda] && ('valor' in mapa[celda]) ? mapa[celda].valor : '')
+        })
+    });
+    const A = ctx.IP_AUX;
+
+    // --- Caso 1: primera corrida, zona completamente vacia -> nada que objetar ---
+    ok(ctx._auxiliaresAjenasIp(hojaAux({})).length === 0,
+       'zona vacia (primera corrida): ninguna celda se reporta ajena');
+
+    // --- Caso 2 (EL CASO DEL BUG): segunda corrida, con las FORMULAS REALES que el modulo ---
+    // --- escribe hoy en el ancla y el numero que ese HSTACK derramo en el promedio -- ---
+    // --- exactamente lo que queda en la hoja despues de una corrida de aplicarInicioPresupuesto ---
+    const zonaSegundaCorrida = {};
+    zonaSegundaCorrida[A.deltaCapital.tendencia] = { formula: ctx._formulaAuxCapitalIp() };
+    zonaSegundaCorrida[ctx._celdaPromedioIp(A.deltaCapital.tendencia)] = { valor: 1610284.12 };
+    zonaSegundaCorrida[A.deltaIngresos.tendencia] = { formula: ctx._formulaAuxFlujoIp(true) };
+    zonaSegundaCorrida[ctx._celdaPromedioIp(A.deltaIngresos.tendencia)] = { valor: 1546662 };
+    zonaSegundaCorrida[A.deltaEgresos.tendencia] = { formula: ctx._formulaAuxFlujoIp(false) };
+    zonaSegundaCorrida[ctx._celdaPromedioIp(A.deltaEgresos.tendencia)] = { valor: 980000 };
+    const ajenasSegunda = ctx._auxiliaresAjenasIp(hojaAux(zonaSegundaCorrida));
+    ok(ajenasSegunda.length === 0,
+       'EL CASO DEL BUG: con la salida real de una corrida anterior en las seis celdas, el guard ' +
+       'NO bloquea. Reporto ajenas: ' + JSON.stringify(ajenasSegunda));
+
+    // --- Caso 3: robustez a que la formula pesada CAMBIE DE FORMA manana. El ancla se ---
+    // --- reconoce como propia por TENER formula, no por el TEXTO exacto de hoy -- una formula ---
+    // --- futura cualquiera, con el mismo patron de derrame, se sigue reconociendo sola. ---
+    const zonaFormulaFutura = { AV8: { formula: '=LET(otra_forma; 1; HSTACK(otra_forma; 2))' } };
+    zonaFormulaFutura[ctx._celdaPromedioIp('AV8')] = { valor: 999 };
+    ok(ctx._auxAjenaIp(hojaAux(zonaFormulaFutura), 'AV8').length === 0,
+       'una formula de forma DISTINTA a la de hoy en el ancla se sigue reconociendo como propia: ' +
+       'el guard no ata la deteccion al texto exacto de _formulaAuxCapitalIp/_formulaAuxFlujoIp');
+
+    // --- Caso 4: contenido AJENO de verdad -- ancla vacia, promedio con un numero suelto. ---
+    // --- Nada de este modulo pudo haberlo puesto ahi (el ancla no tiene formula que derrame). ---
+    const promedioSuelto = {};
+    promedioSuelto[ctx._celdaPromedioIp(A.deltaIngresos.tendencia)] = { valor: 42 };
+    const ajenasProm = ctx._auxAjenaIp(hojaAux(promedioSuelto), A.deltaIngresos.tendencia);
+    ok(ajenasProm.indexOf(ctx._celdaPromedioIp(A.deltaIngresos.tendencia)) !== -1,
+       'un numero suelto en el promedio SIN formula en el ancla SI se reporta ajeno');
+
+    // --- Caso 5: contenido AJENO en el ancla -- un VALOR estatico (alguien tipeo un numero), ---
+    // --- no una formula. ---
+    const anclaValorSuelto = {};
+    anclaValorSuelto[A.deltaEgresos.tendencia] = { valor: 7 };
+    const ajenasAncla = ctx._auxAjenaIp(hojaAux(anclaValorSuelto), A.deltaEgresos.tendencia);
+    ok(ajenasAncla.indexOf(A.deltaEgresos.tendencia) !== -1,
+       'un VALOR estatico en el ancla (sin formula) SI se reporta ajeno');
+
+    // --- Caso 6: el promedio tiene una FORMULA PROPIA (no un derrame) -- ajeno SIEMPRE, ---
+    // --- incluso con el ancla en su formula real de hoy. Un HSTACK jamas deja una formula en ---
+    // --- la celda de al lado; si hay una, alguien la escribio a mano ahi encima. ---
+    const promedioConFormulaPropia = {};
+    promedioConFormulaPropia[A.deltaCapital.tendencia] = { formula: ctx._formulaAuxCapitalIp() };
+    promedioConFormulaPropia[ctx._celdaPromedioIp(A.deltaCapital.tendencia)] = { formula: '=1+1' };
+    const ajenasPromFormula = ctx._auxAjenaIp(hojaAux(promedioConFormulaPropia), A.deltaCapital.tendencia);
+    ok(ajenasPromFormula.indexOf(ctx._celdaPromedioIp(A.deltaCapital.tendencia)) !== -1,
+       'una formula PROPIA en el promedio (no un derrame) SI es ajena, aunque el ancla sea mia');
+
+    // ================================================================
+    // VERIFICADO POR MUTACION: si el guard se afloja de mas, deja de proteger.
+    // ================================================================
+    // MUTACION A -- reconocer "mia" por el TEXTO EXACTO de la formula de hoy (comparacion contra
+    // un literal) en vez de por la sola PRESENCIA de una formula. Contra el Caso 3 (formula de
+    // forma futura) esta variante sigue viendo el ancla como ajena y vuelve a bloquear
+    // exactamente el escenario que este fix tiene que resolver -- confirma que "presencia de
+    // formula" (y no "texto exacto") es la parte que hace al guard resistente a que la formula
+    // pesada cambie de forma (ya paso dos veces en un solo dia, del lado del color).
+    const aflojadaPorTextoExacto = (hoja, celdaTendencia) => {
+        const cProm = ctx._celdaPromedioIp(celdaTendencia);
+        const rTend = hoja.getRange(celdaTendencia);
+        const rProm = hoja.getRange(cProm);
+        const anclaEsMia = rTend.getFormula() === ctx._formulaAuxCapitalIp(); // texto exacto de HOY
+        const ajenas = [];
+        if (!anclaEsMia && String(rTend.getValue()) !== '') ajenas.push(celdaTendencia);
+        if (!anclaEsMia && String(rProm.getValue()) !== '') ajenas.push(cProm);
+        return ajenas;
+    };
+    ok(aflojadaPorTextoExacto(hojaAux(zonaFormulaFutura), 'AV8').length > 0,
+       'MUTACION A confirmada: comparar por TEXTO EXACTO (en vez de por presencia de formula) ' +
+       'vuelve a bloquear una formula de forma futura -- es la fragilidad que este fix elimina');
+
+    // MUTACION B -- quitar la regla 3 (promedio con formula PROPIA es ajeno siempre). Sin ella,
+    // el Caso 6 (alguien escribio una formula de verdad en el promedio) queda SIN DETECTAR en
+    // cuanto el ancla es propia -- confirma que la regla 3 es la que protege ese caso, no un
+    // efecto colateral de las otras dos.
+    const aflojadaSinReglaTres = (hoja, celdaTendencia) => {
+        const cProm = ctx._celdaPromedioIp(celdaTendencia);
+        const rTend = hoja.getRange(celdaTendencia);
+        const rProm = hoja.getRange(cProm);
+        const anclaEsMia = !!rTend.getFormula();
+        const ajenas = [];
+        if (!anclaEsMia && String(rTend.getValue()) !== '') ajenas.push(celdaTendencia);
+        if (!anclaEsMia && String(rProm.getValue()) !== '') ajenas.push(cProm);
+        return ajenas; // sin el chequeo de rProm.getFormula()
+    };
+    ok(aflojadaSinReglaTres(hojaAux(promedioConFormulaPropia), A.deltaCapital.tendencia).length === 0,
+       'MUTACION B confirmada: sin la regla 3, una formula propia ajena en el promedio queda SIN ' +
+       'PROTECCION en cuanto el ancla es propia -- confirma que _auxAjenaIp (que SI la detecta, ' +
+       'Caso 6) no es redundante');
+
+    // MUTACION C -- el guard VIEJO (valor-only en las dos celdas, sin mirar la formula del ancla:
+    // el que de verdad vivia en el preflight hasta v0.38.2). Reproducido a proposito contra el
+    // Caso 2 (la salida real de una corrida anterior) para probar que SI reproduce el bug
+    // reportado -- y que el fix (Caso 2, arriba) es lo que lo resuelve.
+    const guardViejo = (hoja, celdaTendencia) => {
+        const cProm = ctx._celdaPromedioIp(celdaTendencia);
+        return [celdaTendencia, cProm].filter((celda) => {
+            const r = hoja.getRange(celda);
+            return !r.getFormula() && String(r.getValue()) !== '';
+        });
+    };
+    const ajenasViejoSegunda = ['deltaCapital', 'deltaIngresos', 'deltaEgresos'].reduce((acc, k) =>
+        acc.concat(guardViejo(hojaAux(zonaSegundaCorrida), A[k].tendencia)), []);
+    ok(ajenasViejoSegunda.length === 3,
+       'MUTACION C confirmada: el guard viejo (valor-only) SI se bloquea contra la salida de su ' +
+       'propia corrida anterior -- reproduce el bug reportado. Reporto: ' + ajenasViejoSegunda.join(', '));
+    ok(ajenasViejoSegunda.every((c) => c === 'AW8' || c === 'AW9' || c === 'AW10'),
+       'y las tres celdas que bloquea son justo AW8/AW9/AW10 -- los promedios, el mismo sintoma ' +
+       'que Franco reporto (AW8, AW9, AW10 "no estan vacias")');
+
+    // --- Y que el sitio de llamada real (preflight, paso 8) haya quedado enganchado a la ---
+    // --- funcion nueva -- no solo que la funcion exista suelta y nadie la use. ---
+    const fuente = fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_InicioPresupuesto.js'), 'utf8');
+    ok(/const conValorAux = _auxiliaresAjenasIp\(hoja\);/.test(fuente),
+       'el preflight (paso 8) llama a _auxiliaresAjenasIp -- el fix esta CABLEADO, no solo escrito');
+    ok(!/String\(r\.getValue\(\)\) !== ''\) conValorAux\.push\(celda\)/.test(fuente),
+       'el chequeo viejo (valor-only, sin mirar la formula del ancla) ya no esta en el archivo');
 }
 
 console.log('\n' + (fallas === 0 ? '===> SIN FALLAS' : '===> ' + fallas + ' FALLA(S)'));

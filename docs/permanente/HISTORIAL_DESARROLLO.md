@@ -6,6 +6,95 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-21 - El guard de las auxiliares se bloqueaba a si mismo en la segunda corrida (v0.38.3)
+
+### Evento
+
+Con `v0.38.2` ya verificado en la planilla (los tres deltas con flecha, decimales y colores
+correctos, auxiliares ocultas), Franco corrio `aplicarInicioPresupuesto()` una segunda vez sobre
+la hoja ya aplicada y el modulo abortó de entrada, en el preflight, con:
+
+```
+NO APLICADO. Las celdas auxiliares de los deltas (AW8, AW9, AW10) no estan vacias.
+Medido contra el gemelo el 2026-08-21: esa zona (columnas AV/AW, a la derecha del
+motor de la hoja) no tenia ninguna celda con contenido. Si algo la ocupo desde
+entonces, hay que volver a medir antes de escribir. No se toco nada.
+```
+
+Franco tuvo que correr `3. Revertir` y recien despues `2. Aplicar` para poder repetir la corrida.
+El mensaje manda a "volver a medir" una invasion que no existe: el modulo iba a chocarse contra
+esto la primera vez que alguien lo corriera dos veces seguidas.
+
+### Causa
+
+`AV8`/`AV9`/`AV10` (la celda ancla de cada delta) llevan la formula pesada
+`HSTACK(tendencia; promedio)` de `_tendenciaYPromedioIp` (ver la cabecera de `IP_AUX` en
+`DEVTOOL_InicioPresupuesto.js`): la tendencia queda en el ancla y el promedio **derrama** una
+columna a la derecha, en `AW8`/`AW9`/`AW10`. Un derrame nunca deja una formula propia en la celda
+donde cae — solo un valor — asi que `AW8:AW10` estaban ocupadas por un numero sin formula, y el
+preflight (paso 8) exigia la zona **vacia** sin excepcion. En la primera corrida eso es cierto; en
+la segunda, nunca lo es — el guard se bloqueaba contra el resultado de su propia corrida anterior.
+No era un guard de mas ni de menos: confundia "vacia" con "libre para escribir", que solo coinciden
+la primera vez.
+
+### El arreglo
+
+Se agregan `_auxAjenaIp` / `_auxiliaresAjenasIp` (`DEVTOOL_InicioPresupuesto.js`), que reemplazan
+el chequeo "sin formula y con valor" por uno que distingue **PROPIO** de **AJENO**:
+
+- La celda **ancla** es la unica de toda la hoja que puede tener una formula que derrame HSTACK a
+  su derecha — esa zona es exclusiva de este modulo, medida sin ningun contenido antes de la
+  primera corrida (misma medicion que ya documentaba la cabecera de `IP_AUX`). Por eso
+  **cualquier formula** en el ancla, sea cual sea su texto, solo pudo haberla puesto una corrida
+  anterior de este mismo modulo: alcanza con preguntar "tiene formula", sin comparar esa formula
+  contra lo que `_formulaAuxCapitalIp`/`_formulaAuxFlujoIp` generan hoy.
+- La celda de **promedio** nunca tiene una formula propia (es pura celda de derrame). Si el ancla
+  es mia y el promedio no tiene formula propia, su contenido es justamente ese derrame: nada que
+  objetar. Si el ancla NO es mia (vacia, o un valor estatico) y cualquiera de las dos celdas tiene
+  contenido, es ajeno. Y si el promedio tuviera una formula **propia** (no un derrame), es ajeno
+  **siempre**, sin importar el estado del ancla.
+
+Reconocer por la **presencia** de una formula en el ancla — y no por su texto exacto — es la misma
+leccion que `_esFormulaDeDeltaIp` ya aplico del lado del color de los deltas en `v0.38.2`:
+identificar por lo que NO cambia entre generaciones, no por la forma de HOY, para que el guard no
+se rompa de nuevo el dia que la formula pesada cambie de forma (ya paso dos veces en un solo dia,
+del lado de los patrones `TEXT()` y de las reglas de color). El preflight sigue abortando, con el
+mismo mensaje detallado, ante contenido genuinamente ajeno — solo dejo de confundir el resultado
+de su propia corrida anterior con una invasion.
+
+### Agujero de banco tapado (verificado por mutacion)
+
+`probar_inicio_presupuesto.js` nunca ejercitaba el preflight en una segunda corrida — probaba las
+formulas que el plan propone sobre una hoja vacia, nunca el guard de las auxiliares contra su
+propio resultado. Se agrega la seccion 14, que:
+
+- reproduce **el caso del bug**: las seis celdas auxiliares con las formulas reales que el modulo
+  escribe (`_formulaAuxCapitalIp()` / `_formulaAuxFlujoIp()`) en el ancla y el numero que ese
+  HSTACK derramaria en el promedio, y confirma que `_auxiliaresAjenasIp` no reporta ninguna celda
+  ajena;
+- confirma que una formula de **forma futura** en el ancla (no el texto de hoy) se sigue
+  reconociendo como propia;
+- confirma los tres casos de contenido genuinamente ajeno (valor suelto en el ancla, valor suelto
+  en el promedio sin ancla, formula propia en el promedio aunque el ancla sea mia);
+- y verifica **por mutacion** que aflojar la deteccion rompe la proteccion: reconocer por **texto
+  exacto** en vez de por presencia de formula vuelve a bloquear la formula de forma futura (la
+  fragilidad que este fix elimina), y quitar el chequeo de la formula propia del promedio deja sin
+  detectar exactamente el caso que ese chequeo cubre. Se suma la reconstruccion del guard **viejo**
+  (valor-only en las dos celdas, sin mirar la formula del ancla): aplicado sobre la salida real de
+  una corrida anterior, bloquea las tres celdas de promedio (`AW8`, `AW9`, `AW10`) — reproduce el
+  sintoma exacto que reporto Franco, confirmando que el fix es lo que lo resuelve. Dos asserts
+  finales leen el archivo fuente y confirman que el preflight quedo cableado a la funcion nueva y
+  que el chequeo viejo ya no esta en el codigo.
+
+### Verificacion
+
+`node devtools/probar_inicio_presupuesto.js` da `SIN FALLAS` con las nuevas aserciones (seccion
+14). El resto de los bancos del repo se corrio completo: todos verdes salvo los tres ya
+diagnosticados y dejados en rojo a proposito (`probar_formulerio.js`, 5; `probar_riqueza.js`, 7;
+`probar_tablero_faltante.js`, 1) — sin cambios respecto del estado previo a esta sesion.
+
+---
+
 ## 2026-08-21 - Dos deltas quedaban con el color invertido: reglas de v0.34.0 sobrevivian mudas (v0.38.2)
 
 ### Evento

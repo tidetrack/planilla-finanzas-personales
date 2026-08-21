@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 38,
- patch: 2,
+ patch: 3,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-21',
- releaseName: 'v0.38.2 - Dos deltas quedaban con el color invertido: reglas de v0.34.0 sobrevivian mudas',
+ releaseName: 'v0.38.3 - El guard de las auxiliares se bloqueaba a si mismo en la segunda corrida',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.38.3 (2026-08-21) - El guard de las auxiliares se bloqueaba a si mismo en la segunda corrida
+! Con el modulo ya aplicado, correr "2. Aplicar" de nuevo abortaba en el preflight con "las celdas auxiliares (AW8, AW9, AW10) no estan vacias". Medido contra el gemelo: esa zona no tenia ningun intruso -- tenia el PROMEDIO que la propia corrida anterior habia calculado (el derrame del HSTACK de _tendenciaYPromedioIp). El guard pedia la zona VACIA sin excepcion y se mordia la cola contra su propio resultado.
+- _auxAjenaIp / _auxiliaresAjenasIp (nuevas, DEVTOOL_InicioPresupuesto.js) reemplazan el chequeo "sin formula y con valor" por uno que distingue PROPIO de AJENO: reconocen "mia" por la FORMULA de la celda ANCLA (AV8/AV9/AV10), nunca por el valor derramado en el promedio (AW8/AW9/AW10). Esta zona es exclusiva de este modulo, asi que CUALQUIER formula en el ancla -- sea cual sea su texto -- solo pudo haberla puesto una corrida anterior propia; no hace falta comparar contra el texto exacto de _formulaAuxCapitalIp/_formulaAuxFlujoIp de HOY. Misma leccion que _esFormulaDeDeltaIp ya aplico del lado del color en v0.38.2.
+* El promedio NUNCA tiene formula propia (HSTACK no la deja): si la tuviera, es ajeno SIEMPRE, sin importar el estado del ancla. El preflight sigue abortando, con el mismo detalle, ante contenido genuinamente ajeno.
+! probar_inicio_presupuesto.js (14, nueva): reproduce el bug (guard viejo bloqueado contra la salida real de una corrida anterior), confirma que el fix no bloquea ese caso ni el de una formula pesada de forma futura, y verifica por mutacion que aflojar la deteccion a "texto exacto" o quitar el chequeo del promedio deja de proteger contra contenido ajeno de verdad.
+
 v0.38.2 (2026-08-21) - Dos deltas quedaban con el color invertido: reglas de v0.34.0 sobrevivian mudas
 ! Ingresos cayo 52,7% y se pintaba VERDE; Egresos cayo 50,5% y se pintaba ROJO -- las dos al reves (Capital bien). Causa: sobre C15/F15 convivian CUATRO reglas de color en vez de dos, dos de v0.34.0 (=$C$15>0/<0, evaluaban la celda visible) mas las dos correctas de hoy (=$AV$9>0/<0, evaluan la auxiliar). En Sheets un texto compara SIEMPRE mayor que cualquier numero: desde que C15/F15 son texto (v0.37.0), "=$C$15>0" da VERDADERO sin condicion y, por ir primera en el orden, le gana a la regla correcta.
 - _clasificarReglasIp solo reconocia como "propia" la lista EXACTA de las seis formulas de la generacion vigente; las de v0.34.0 no matcheaban, caian en "ajenas" y aplicarIp las reponia intactas en cada corrida -- huerfanas para siempre. Mismo bug de identificacion que _esReglaPropiaFmt ya documenta en DEVTOOL_FormatoMedios.js, mismo dia, otro modulo.

@@ -5,6 +5,40 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-21] v0.38.3 - El guard de las auxiliares se bloqueaba a si mismo en la segunda corrida.
+ * - EL SINTOMA, reportado por Franco: con DEVTOOL_InicioPresupuesto.js ya aplicado, correr
+ *   "2. Aplicar" de nuevo abortaba en el preflight con "las celdas auxiliares de los deltas
+ *   (AW8, AW9, AW10) no estan vacias". Franco tuvo que "3. Revertir" y volver a aplicar para
+ *   poder correr el modulo una segunda vez.
+ * - LA CAUSA: AW8:AW10 no tenian ningun intruso -- tenian el PROMEDIO que la propia corrida
+ *   anterior habia calculado, el derrame del HSTACK(tendencia; promedio) de
+ *   _tendenciaYPromedioIp que vive en la celda ancla AV8/AV9/AV10 (ver la cabecera de IP_AUX,
+ *   DEVTOOL_InicioPresupuesto.js). El preflight (paso 8) exigia esa zona VACIA sin excepcion, y
+ *   en la SEGUNDA corrida nunca lo esta: el guard se bloqueaba contra su propio resultado.
+ * - EL ARREGLO: _auxAjenaIp / _auxiliaresAjenasIp (nuevas) reemplazan el chequeo "sin formula y
+ *   con valor" en las dos celdas por igual, por uno que distingue PROPIO de AJENO. La celda
+ *   ANCLA (AV8/AV9/AV10) es la UNICA de toda la hoja que puede tener una formula que derrame
+ *   HSTACK a su derecha -- esa zona es exclusiva de este modulo, medida sin ningun contenido
+ *   antes de la primera corrida --, asi que CUALQUIER formula ahi, sea cual sea su TEXTO, solo
+ *   pudo haberla puesto una corrida anterior de este mismo modulo. No hace falta comparar esa
+ *   formula contra lo que _formulaAuxCapitalIp/_formulaAuxFlujoIp generan HOY: es la misma
+ *   leccion que _esFormulaDeDeltaIp ya aplico del lado del color en v0.38.2 (reconocer por lo que
+ *   NO cambia entre generaciones, no por la forma exacta de hoy), evitando que el guard vuelva a
+ *   romperse el dia que la formula pesada cambie de forma.
+ * - LA CELDA DE PROMEDIO (_celdaPromedioIp) en cambio NUNCA tiene una formula propia -- HSTACK no
+ *   deja formula en la celda de al lado, solo el valor derramado. Si la tuviera, es ajena
+ *   SIEMPRE, sin importar el estado del ancla: alguien escribio una formula de verdad justo
+ *   donde el HSTACK necesita derramar. El preflight sigue abortando, con el mismo mensaje
+ *   detallado, ante contenido genuinamente ajeno -- solo dejo de confundir el resultado de su
+ *   propia corrida anterior con una invasion.
+ * - devtools/probar_inicio_presupuesto.js (seccion 14, nueva): reproduce el bug con las FORMULAS
+ *   REALES que el modulo escribe (una segunda corrida ya no bloquea), prueba la robustez ante una
+ *   formula pesada de forma futura (se reconoce por presencia de formula, no por texto exacto), y
+ *   verifica por mutacion que aflojar la deteccion a "texto exacto" o quitar el chequeo de la
+ *   formula propia del promedio deja de proteger contra contenido ajeno de verdad -- incluida la
+ *   reconstruccion del guard VIEJO (valor-only), que SI reproduce el bug reportado contra la
+ *   salida de su propia corrida anterior, confirmando que el fix es lo que lo resuelve.
+ *
  * [2026-08-21] v0.38.2 - Dos deltas quedaban con el color invertido: reglas de v0.34.0 sobrevivian mudas.
  * - EL SINTOMA, visto en la planilla: Ingresos cayo 52,7% y se pintaba EN VERDE; Egresos cayo
  *   50,5% y se pintaba EN ROJO -- las dos al reves (Capital estaba bien). Diagnosticado leyendo

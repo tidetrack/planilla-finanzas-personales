@@ -9,6 +9,46 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.38.3 - El guard de las auxiliares se bloqueaba a si mismo en la segunda corrida (2026-08-21)
+
+Con `v0.38.2` ya verificado en la planilla, correr `aplicarInicioPresupuesto()` una segunda vez
+sobre la hoja ya aplicada abortaba en el preflight:
+
+```
+NO APLICADO. Las celdas auxiliares de los deltas (AW8, AW9, AW10) no estan vacias.
+```
+
+### La causa
+
+`AV8`/`AV9`/`AV10` (la celda ancla de cada delta) llevan la formula `HSTACK(tendencia; promedio)`
+de `_tendenciaYPromedioIp`: la tendencia queda en el ancla y el promedio **derrama** una columna a
+la derecha (`AW8`/`AW9`/`AW10`). Un derrame nunca deja formula propia en la celda donde cae, solo
+un valor — y el preflight (paso 8) exigia esa zona **vacia** sin excepcion. Cierto en la primera
+corrida, falso en la segunda: el guard se bloqueaba contra el resultado de su propia corrida
+anterior. Confundia "vacia" con "libre para escribir", que solo coinciden la primera vez.
+
+### El arreglo
+
+`_auxAjenaIp` / `_auxiliaresAjenasIp` (`DEVTOOL_InicioPresupuesto.js`) distinguen PROPIO de AJENO
+por la **formula de la celda ancla**, nunca por el valor derramado en el promedio: esa zona es
+exclusiva de este modulo, asi que cualquier formula en el ancla — sea cual sea su texto — solo
+pudo haberla puesto una corrida anterior propia. El promedio, en cambio, nunca tiene formula
+propia; si la tuviera, es ajeno siempre, sin importar el ancla. Misma leccion que
+`_esFormulaDeDeltaIp` ya aplico del lado del color en v0.38.2: reconocer por lo que NO cambia
+entre generaciones, no por la forma exacta de hoy, para que el guard no se rompa de nuevo el dia
+que la formula pesada cambie de forma.
+
+### Agujero de banco tapado
+
+`probar_inicio_presupuesto.js` (seccion 14, nueva) reproduce el caso del bug con las formulas
+reales del modulo (una segunda corrida ya no bloquea), confirma robustez ante una formula futura
+de forma distinta, y verifica por mutacion que aflojar la deteccion a "texto exacto" o quitar el
+chequeo de la formula propia del promedio deja de proteger — incluida la reconstruccion del guard
+viejo (valor-only), que si reproduce el sintoma exacto que reporto Franco (bloquea `AW8`, `AW9`,
+`AW10`) contra la salida de su propia corrida anterior.
+
+---
+
 ## v0.38.2 - Dos deltas quedaban con el color invertido: reglas de v0.34.0 sobrevivian mudas (2026-08-21)
 
 Ingresos cayo 52,7% y se pintaba **VERDE**; Egresos cayo 50,5% y se pintaba **ROJO** — las dos al

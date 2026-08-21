@@ -93,6 +93,24 @@
  *      (_ocultarAuxiliaresIp, mismo tratamiento que los otros dos motores de la hoja) y
  *      revertirInicioPresupuesto() las destapa solo si fue este modulo el que las oculto.
  *
+ * v0.38.3 (2026-08-21) -- EL GUARD DE LAS AUXILIARES SE BLOQUEABA A SI MISMO EN LA SEGUNDA
+ * CORRIDA. Reportado por Franco: con el modulo ya aplicado, correr "2. Aplicar" de nuevo abortaba
+ * en el preflight con "las celdas auxiliares (AW8, AW9, AW10) no estan vacias" -- medido contra el
+ * gemelo, esa zona no tenia ningun intruso: tenia el PROMEDIO que la propia corrida anterior
+ * habia calculado (el derrame del HSTACK de _tendenciaYPromedioIp, ver la cabecera de IP_AUX).
+ * El preflight (paso 8) pedia la zona VACIA sin excepcion, y en la segunda corrida nunca lo esta.
+ * EL ARREGLO (_auxAjenaIp / _auxiliaresAjenasIp, junto a _ocultarAuxiliaresIp): distingue "propio"
+ * de "ajeno" por la FORMULA de la celda ANCLA (AV8/AV9/AV10), no por el valor derramado en el
+ * promedio (AW8/AW9/AW10). Esta zona es exclusiva de este modulo (medida sin contenido antes de
+ * la primera corrida), asi que CUALQUIER formula en el ancla -- sea cual sea su texto -- solo
+ * pudo haberla puesto una corrida anterior de este mismo modulo: no hace falta comparar esa
+ * formula contra lo que _formulaAuxCapitalIp/_formulaAuxFlujoIp generan hoy. Misma leccion que
+ * _esFormulaDeDeltaIp ya aplico del lado del color en v0.38.2: reconocer por lo que NO cambia
+ * entre generaciones, no por la forma exacta de hoy, para que el guard no se rompa de nuevo el
+ * dia que la formula pesada cambie de forma. El promedio en cambio NUNCA tiene formula propia
+ * (HSTACK no deja formula en la celda de al lado): si tuviera una, es ajeno sin importar el
+ * ancla. El preflight sigue abortando, con el mismo detalle, ante contenido genuinamente ajeno.
+ *
  * QUE NO HACE
  * 1. NO toca el ledger, la Proyeccion, el Plan de Cuentas ni ninguna celda del Tablero.
  * 2. NO cambia rotulos ni selectores: son de Franco.
@@ -110,7 +128,7 @@
  * F10 no se llama de nuevo: se REFERENCIA la celda E22 que ya la usa (ver mas abajo).
  *
  * @see docs/permanente/FUNCIONALIDADES.md
- * @version 0.38.1
+ * @version 0.38.3
  * @since 2026-08-20
  * @lastModified 2026-08-21
  */
@@ -266,6 +284,56 @@ function _ocultarAuxiliaresIp(hoja) {
 /** Muestra de nuevo las dos columnas de las auxiliares (usado SOLO al revertir). */
 function _mostrarAuxiliaresIp(hoja) {
     hoja.showColumns(columnLetterToIndex(_colAuxiliaresIp()), 2);
+}
+
+/**
+ * DISTINGUE "MIO" DE "AJENO" en la zona auxiliar de UN delta -- el guard que hasta v0.38.2 se
+ * mordia la cola: preguntaba si AV8:AW10 estaba VACIA, y en la SEGUNDA corrida no lo esta -- esta
+ * ocupada por el DERRAME del propio HSTACK que la corrida anterior de ESTE MISMO modulo dejo ahi
+ * (ver la cabecera de IP_AUX). Medido el 2026-08-21: correr "2. Aplicar" dos veces seguidas
+ * abortaba en el preflight con "las celdas auxiliares... no estan vacias" contra AW8:AW10, que no
+ * tenian ningun intruso -- tenian el promedio que la propia corrida anterior habia calculado.
+ *
+ * LA SENAL: la celda ANCLA (celdaTendencia, p.ej. AV8) es la UNICA celda de toda la hoja que
+ * puede tener una formula que empiece en ella y derrame HSTACK a su derecha -- este par de
+ * columnas es EXCLUSIVO de este modulo, medido sin ningun contenido antes de la primera corrida
+ * (cabecera de IP_AUX). Por eso CUALQUIER formula en el ancla, sea cual sea su TEXTO, solo pudo
+ * haberla puesto una corrida anterior de este modulo: "tiene formula" alcanza como prueba de "es
+ * mia", sin comparar esa formula contra lo que _formulaAuxCapitalIp/_formulaAuxFlujoIp generan
+ * HOY. Es la misma leccion que _esFormulaDeDeltaIp ya aplica del lado del color (ver su cabecera):
+ * reconocer por lo que NO cambia entre generaciones, no por la forma exacta de hoy -- para que el
+ * dia que la formula pesada cambie de forma (ya paso dos veces en un solo dia, con las reglas de
+ * color) este guard no se rompa de nuevo.
+ *
+ * La celda de PROMEDIO (_celdaPromedioIp) en cambio NUNCA puede tener una formula propia: HSTACK
+ * no deja una formula en la celda de al lado, solo un valor derramado. De ahi las tres reglas:
+ *   1. ancla CON formula (mia) y promedio SIN formula propia -> el contenido del promedio es
+ *      justamente ese derrame. Nada que objetar: es el estado normal de una segunda corrida.
+ *   2. ancla SIN formula (vacia, o un VALOR estatico) y cualquiera de las dos celdas tiene
+ *      contenido -> ajeno. Nada de este modulo pudo haberlo puesto ahi.
+ *   3. promedio CON formula PROPIA (no un derrame) -> ajeno SIEMPRE, sin importar el ancla:
+ *      alguien escribio una formula de verdad justo donde el HSTACK necesita derramar.
+ *
+ * Devuelve la lista de celdas ajenas de este delta (0, 1 o 2). Vacia = la zona esta libre para
+ * escribir: vacia de verdad, o es el resultado de la propia corrida anterior.
+ */
+function _auxAjenaIp(hoja, celdaTendencia) {
+    const cProm = _celdaPromedioIp(celdaTendencia);
+    const rTend = hoja.getRange(celdaTendencia);
+    const rProm = hoja.getRange(cProm);
+    const anclaEsMia = !!rTend.getFormula();
+    const ajenas = [];
+    if (!anclaEsMia && String(rTend.getValue()) !== '') ajenas.push(celdaTendencia);
+    if (rProm.getFormula()) ajenas.push(cProm);
+    else if (!anclaEsMia && String(rProm.getValue()) !== '') ajenas.push(cProm);
+    return ajenas;
+}
+
+/** Las celdas ajenas de las TRES auxiliares juntas (lo que el preflight necesita reportar). */
+function _auxiliaresAjenasIp(hoja) {
+    return IP_CLAVES_DELTA.reduce(function (acc, k) {
+        return acc.concat(_auxAjenaIp(hoja, IP_AUX[k].tendencia));
+    }, []);
 }
 
 /**
@@ -1134,24 +1202,18 @@ function _preflightIp(ss) {
             'formula) antes de correr. No se toco nada.');
     }
 
-    // --- 8. Las celdas AUXILIARES (trastienda AV/AW) tienen que estar libres. Cada delta ---
-    // --- escribe en su celda de tendencia (IP_AUX) y el HSTACK derrama el promedio una ---
-    // --- columna a la derecha (_celdaPromedioIp): las dos tienen que estar vacias, o el ---
-    // --- derrame fallaria con "el resultado de la formula se superpone con datos". ---
-    const conValorAux = [];
-    IP_CLAVES_DELTA.forEach(function (k) {
-        const cTend = IP_AUX[k].tendencia;
-        const cProm = _celdaPromedioIp(cTend);
-        [cTend, cProm].forEach(function (celda) {
-            const r = hoja.getRange(celda);
-            if (!r.getFormula() && String(r.getValue()) !== '') conValorAux.push(celda);
-        });
-    });
+    // --- 8. Las celdas AUXILIARES (trastienda AV/AW) tienen que estar LIBRES -- que no es lo ---
+    // --- mismo que VACIAS. Una corrida anterior de ESTE modulo deja el ancla con formula y el ---
+    // --- promedio con el derrame del HSTACK: es el estado normal de una segunda corrida, no ---
+    // --- una invasion, y _auxiliaresAjenasIp distingue una cosa de la otra (ver su cabecera). ---
+    // --- Antes de v0.38.3 este paso exigia la zona VACIA sin excepcion, y se mordia la cola en ---
+    // --- la segunda corrida: bloqueaba contra su propio resultado. ---
+    const conValorAux = _auxiliaresAjenasIp(hoja);
     if (conValorAux.length) {
-        throw new Error('Las celdas auxiliares de los deltas (' + conValorAux.join(', ') + ') no ' +
-            'estan vacias. Medido contra el gemelo el 2026-08-21: esa zona (columnas AV/AW, a la ' +
-            'derecha del motor de la hoja) no tenia ninguna celda con contenido. Si algo la ocupo ' +
-            'desde entonces, hay que volver a medir antes de escribir. No se toco nada.');
+        throw new Error('Las celdas auxiliares de los deltas (' + conValorAux.join(', ') + ') tienen ' +
+            'contenido AJENO a este modulo (no es el resultado de una corrida anterior propia: esa ' +
+            'zona -- columnas AV/AW, a la derecha del motor de la hoja -- es exclusiva de este ' +
+            'modulo). Si algo la ocupo, hay que volver a medir antes de escribir. No se toco nada.');
     }
 
     return { hoja: hoja, nombre: nombre, estadoResumen: estadoResumen, avisos: avisos };
