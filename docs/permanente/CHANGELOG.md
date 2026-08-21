@@ -11,6 +11,29 @@ Historial de versiones y cambios significativos del proyecto.
 
 ## v0.38.4 - El modulo seguia leyendo R9/U9/X9 mientras su banco probaba R10/U10/X10 (2026-08-21)
 
+> **DESPLEGADO el 2026-08-21** via `sync_targets.command`, drift-check posterior: *sin drift*.
+> Reemplaza la linea "NO SE DESPLEGO" de la seccion original. `src/ZZ_Changelog.js` conserva esa
+> nota a proposito: no se toca `src/` despues de un deploy verificado, porque cualquier edicion
+> reabre drift contra el remoto que se acaba de dejar limpio.
+
+### Dos hallazgos del deploy (no son de v0.38.4, los destapo el deploy)
+
+**1. El drift-check del propio `sync_targets.command` estaba roto.** `clasp` 3.x anida `rootDir` y
+deja el pull en `$tmp/src/src`; el script comparaba contra `$tmp/src`, un directorio que solo
+contiene un subdirectorio `src`. Resultado: reportaba **los 38 archivos** como drift en cada
+corrida. Un guard que grita siempre no informa nada y entrena a tipear `pisar` sin mirar — que es
+exactamente lo que ese guard existe para impedir. Corregido: el directorio pulleado se **busca**
+por donde quedo `appsscript.json` (viene en todo pull, en cualquier version de clasp) en vez de
+asumir una ruta fija; si no aparece, es `error`, nunca "sin drift". Con el arreglo el chequeo
+reporto los 3 archivos que de verdad diferian.
+
+**2. `targets.yaml` declaraba `version_desplegada: "0.23.5"` y el remoto estaba en `0.38.3`.**
+Las corridas v0.24-v0.38.3 se deployaron sin actualizar el campo. Verificado por `clasp pull` a
+directorio temporal: los 38 archivos remotos eran identicos a `1b7e35c` — **sin ediciones a mano
+en el editor de Apps Script**, drift solo en la direccion segura (el repo adelante). Corregido a
+`0.38.4`.
+
+
 Dos bancos (`probar_stock_flujo.js`, `probar_riqueza.js`) reventaban con
 `Cannot read properties of undefined (reading 'replace')`. Ese crash y las referencias
 `R9/U9/X9` de `FORM_CELDAS` ya se habian corregido en `v0.38.0`. Lo que quedo sin corregir es lo
