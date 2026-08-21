@@ -15,11 +15,19 @@ Franco rediseno a mano `L7:O19`: movio los **montos** de la columna N a la O, de
 N como formulas suyas, y **elimino** el % del bloque de la realidad — *"nunca me iba a dar 100% y
 era irrelevante"*, que es exactamente correcto desde la v0.31.0.
 
-### Lo que estaba roto en la hoja, sin un solo error visible
+### Una correccion de diagnostico, anotada porque el error de razonamiento importa mas que el fix
 
-La Disponibilidad de fondos leia `$N$10`/`$N$17` para sus remanentes. Con la mudanza, eso es
-`MAX(0; 0,4643 - "")` en vez de `MAX(0; 925.178 - 506.851)`: numeros sin sentido, cero errores. La
-clase de falla mas silenciosa que tiene esta planilla, y la tercera vez que aparece en el dia.
+Se anuncio que la Disponibilidad de fondos habia quedado **rota** leyendo `$N$10`/`$N$17`. **Era
+falso**, y se comprobo midiendo `O23:O25` en vivo: ya referenciaban `$O$10`/`$O$17`.
+
+Cuando se **mueve** contenido de una columna a otra, Sheets reajusta solas todas las formulas que
+lo referencian — exactamente lo contrario de lo que pasa cuando un bloque se **reconstruye a
+mano**, que fue el caso de `$AF$17` en la v0.24.0 y quedo como analogia equivocada.
+
+**El reanclaje igual era necesario, por el motivo inverso:** los modulos *generan* las formulas con
+las referencias viejas, asi que la proxima corrida de "Aplicar" habria **deshecho** el reajuste que
+Sheets hizo bien. El riesgo no estaba en la hoja: estaba en el codigo esperando a correr. Tras el
+reanclaje, "Aplicar" reporta "ya estan como corresponde" y no escribe nada.
 
 `DEVTOOL_Proyeccion` escribe `O9:O11`; `DEVTOOL_Capitalizacion` escribe `O12` y `O19`. **El modulo
 ya no escribe ningun porcentaje** — esa columna es de Franco, y un modulo que la escribiera pisaria

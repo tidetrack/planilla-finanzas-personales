@@ -9,10 +9,16 @@
  * - Franco rediseno a mano L7:O19: movio los MONTOS de la columna N a la O, dejo los % del plan
  *   en N como formulas suyas (=IFERROR(O9/$O$9;0)) y ELIMINO el % del bloque de la realidad --
  *   "nunca me iba a dar 100% y era irrelevante", que es exactamente correcto desde la v0.31.0.
- * - LO QUE ESTABA ROTO EN LA HOJA, sin un solo error visible: la Disponibilidad de fondos leia
- *   $N$10/$N$17 para sus remanentes. Con la mudanza, eso es MAX(0; 0,4643 - "") en vez de
- *   MAX(0; 925.178 - 506.851): numeros sin sentido, cero errores. La clase de falla mas silenciosa
- *   que tiene esta planilla, y la tercera vez que aparece en el dia.
+ * - CORRECCION DE UN DIAGNOSTICO PROPIO, anotada porque el error de razonamiento importa mas que
+ *   el fix: se anuncio que la Disponibilidad de fondos habia quedado ROTA leyendo $N$10/$N$17.
+ *   ERA FALSO, y se comprobo midiendo O23:O25 en vivo: ya referenciaban $O$10/$O$17. Cuando se
+ *   MUEVE contenido de una columna a otra, Sheets reajusta solas todas las formulas que lo
+ *   referencian -- exactamente lo contrario de lo que pasa cuando un bloque se reconstruye a mano,
+ *   que fue el caso de $AF$17 en la v0.24.0 y quedo como analogia equivocada.
+ * - EL REANCLAJE IGUAL ERA NECESARIO, por el motivo inverso: los modulos GENERAN las formulas con
+ *   las referencias viejas, asi que la proxima corrida de "Aplicar" habria DESHECHO el reajuste
+ *   que Sheets hizo bien. El riesgo no estaba en la hoja: estaba en el codigo esperando a correr.
+ *   Tras el reanclaje, "Aplicar" reporta "ya estan como corresponde" y no escribe nada.
  * - REANCLADO: DEVTOOL_Proyeccion escribe O9:O11; DEVTOOL_Capitalizacion escribe O12 y O19 y sus
  *   CAP_REFS enteras apuntan a O. El modulo YA NO ESCRIBE NINGUN PORCENTAJE: se retiro
  *   CAP_PORCENTAJE_BASE. Esa columna es de Franco y un modulo que la escribiera pisaria su

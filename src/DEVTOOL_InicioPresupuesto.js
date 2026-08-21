@@ -485,7 +485,7 @@ function _preflightIp(ss) {
     }
     if (desvios.length) {
         throw new Error('El motor de "' + nombre + '" no mapea 1:1 contra el ledger: ' +
-            desvios.join('; ') + '. Leerlo asi apararia montos con la columna equivocada. No se toco nada.');
+            desvios.join('; ') + '. Leerlo asi aparearia montos con la columna equivocada. No se toco nada.');
     }
 
     // --- 5. La BD de Proyeccion existe y espeja al ledger ---

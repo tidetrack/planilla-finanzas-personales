@@ -24083,8 +24083,8 @@ Tablero	G8		J
 Tablero	H8		V
 Tablero	I8		S
 Tablero	L8		Categoría
-Tablero	N8		Presupuesto
-Tablero	O8		%
+Tablero	N8		%
+Tablero	O8		Presupuesto
 Tablero	R8		Cuenta
 Tablero	S8		Monto
 Tablero	U8		Cuenta
@@ -24116,8 +24116,8 @@ Tablero	G9		30
 Tablero	H9		31
 Tablero	I9		1
 Tablero	L9		Ingresos
-Tablero	N9	=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Ingreso") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	$1.992.582,67
-Tablero	O9	=IFERROR(N9/$N$9; 0)	100,00%
+Tablero	N9	=IFERROR(O9/$O$9; 0)	100,00%
+Tablero	O9	=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Ingreso") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	$1.992.582,67
 Tablero	R9	=IFERROR(QUERY(\n  ARRAYFORMULA({\n    AL6:AL \\ \n    IF(AK6:AK="Egreso"; -AV6:AV; AV6:AV) \\ \n    AM6:AM \\ \n    IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); "") \\\n    IFERROR(VLOOKUP(IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); ""); 'Plan de Cuentas'!P:P; 2; 0); "")\n  });\n  "SELECT Col1, SUM(Col2) \n   WHERE Col3 = 'Ingreso' \n   AND Col1 != 'Traspaso' \n   AND Col1 IS NOT NULL \n   AND Col1 != 'Inicio Mes' \n   GROUP BY Col1 \n   ORDER BY SUM(Col2) DESC \n   LABEL Col1 '', SUM(Col2) ''";\n  0\n); {"" \\ ""})	umoh
 Tablero	S9		$837.728,28
 Tablero	U9	=IFERROR(QUERY(\n  ARRAYFORMULA({\n    AL6:AL \\ \n    IF(AK6:AK="Ingreso"; -AV6:AV; AV6:AV) \\ \n    AM6:AM \\ \n    IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); "") \\\n    IFERROR(VLOOKUP(IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); ""); 'Plan de Cuentas'!P:P; 2; 0); "")\n  });\n  "SELECT Col1, SUM(Col2) \n   WHERE Col3 = 'Gasto Fijo' \n   AND Col1 != 'Traspaso' \n   AND Col1 IS NOT NULL \n   AND Col1 != 'Inicio Mes' \n   GROUP BY Col1 \n   ORDER BY SUM(Col2) DESC \n   LABEL Col1 '', SUM(Col2) ''";\n  0\n); {"" \\ ""})	Pago Tarjeta
@@ -24148,8 +24148,8 @@ Tablero	G10		6
 Tablero	H10		7
 Tablero	I10		8
 Tablero	L10		Gastos Fijos
-Tablero	N10	=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Gasto Fijo") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	$925.178,97
-Tablero	O10	=IFERROR(N10/$N$9;0)	46,43%
+Tablero	N10	=IFERROR(O10/$O$9;0)	46,43%
+Tablero	O10	=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Gasto Fijo") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	$925.178,97
 Tablero	R10		Tidetrack
 Tablero	S10		$260.000,00
 Tablero	U10		Prepaga
@@ -24180,8 +24180,8 @@ Tablero	G11		13
 Tablero	H11		14
 Tablero	I11		15
 Tablero	L11		Gastos Variables
-Tablero	N11	=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Gasto Variable") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	$1.067.388,39
-Tablero	O11	=IFERROR(N11/$N$9;0)	53,57%
+Tablero	N11	=IFERROR(O11/$O$9;0)	53,57%
+Tablero	O11	=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Gasto Variable") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	$1.067.388,39
 Tablero	R11		Ingresos Extra
 Tablero	S11		$40.069,53
 Tablero	U11		Pago Tarjeta MP
@@ -24212,8 +24212,8 @@ Tablero	G12		20
 Tablero	H12		21
 Tablero	I12		22
 Tablero	L12		Capacidad de Capitalización
-Tablero	N12	=N9-N10-N11	$15,31
-Tablero	O12	=IFERROR(N12/$N$9;0)	0,00%
+Tablero	N12	=IFERROR(O12/$O$9;0)	0,00%
+Tablero	O12	=O9-O10-O11	$15,31
 Tablero	R12		Intereses bancos
 Tablero	S12		$785,19
 Tablero	U12		Nafta
@@ -24286,7 +24286,7 @@ Tablero	AT14		$1.069,41
 Tablero	AU14		$1.746,61
 Tablero	AV14		$58.000,00
 Tablero	L15		Categoría
-Tablero	N15		Realidad
+Tablero	O15		Realidad
 Tablero	X15		Medicamentos / Accesorios
 Tablero	Y15		$19.500,00
 Tablero	AA15		Salud
@@ -24306,7 +24306,7 @@ Tablero	AU15		$1.746,61
 Tablero	AV15		$40.000,00
 Tablero	C16		Medios Bancarios.
 Tablero	L16		Ingresos
-Tablero	N16	=S7	$1.138.583,00
+Tablero	O16	=S7	$1.138.583,00
 Tablero	X16		Otros
 Tablero	Y16		$9.000,00
 Tablero	AA16		Equipamiento
@@ -24328,7 +24328,7 @@ Tablero	C17		Medio
 Tablero	F17		Moneda
 Tablero	H17		Monto
 Tablero	L17		Gastos Fijos
-Tablero	N17	=V7	$506.851,30
+Tablero	O17	=V7	$506.851,30
 Tablero	X17		Estacionamiento
 Tablero	Y17		$3.000,00
 Tablero	AA17		Conciliacion
@@ -24352,7 +24352,7 @@ Tablero	C18	=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n
 Tablero	F18	=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  saldos; MAP(lista; LAMBDA(un_medio;\n    SUM(IFERROR(FILTER(neto; vigente; col_medio=un_medio); 0))));\n  con_saldo; ARRAYFORMULA(ROUND(saldos; 2)<>0);\n  ordenada; IFERROR(SORT(FILTER(HSTACK(lista; mon_lista; saldos); con_saldo); 3; FALSE);\n    HSTACK("(sin saldos)"; ""; 0));\n  tabla; ARRAY_CONSTRAIN(ordenada; 12; 3);\n  INDEX(tabla; 0; 2)\n)	ARS
 Tablero	H18	=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  saldos; MAP(lista; LAMBDA(un_medio;\n    SUM(IFERROR(FILTER(neto; vigente; col_medio=un_medio); 0))));\n  con_saldo; ARRAYFORMULA(ROUND(saldos; 2)<>0);\n  ordenada; IFERROR(SORT(FILTER(HSTACK(lista; mon_lista; saldos); con_saldo); 3; FALSE);\n    HSTACK("(sin saldos)"; ""; 0));\n  tabla; ARRAY_CONSTRAIN(ordenada; 12; 3);\n  INDEX(tabla; 0; 3)\n)	$230.000,00
 Tablero	L18		Gastos Variables
-Tablero	N18	=Y7	$460.820,83
+Tablero	O18	=Y7	$460.820,83
 Tablero	X18		Juntadas
 Tablero	Y18		$424,33
 Tablero	AA18		Ocio y regalos
@@ -24377,7 +24377,7 @@ Tablero	C19		Frasco Transitorio NaranjaX
 Tablero	F19		ARS
 Tablero	H19		$44.141,01
 Tablero	L19		Capacidad de Capitalización
-Tablero	N19	=LET(\n  monto; Registros!B7:B;\n  tipo_mov; Registros!C7:C;\n  cuenta; Registros!D7:D;\n  medio; Registros!F7:F;\n  moneda; Registros!G7:G;\n  fecha; Registros!H7:H;\n  tipo_medio; ARRAYFORMULA(IFERROR(VLOOKUP(medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  es_riqueza; ARRAYFORMULA(((tipo_medio="Ahorros") + (tipo_medio="Inversiones")) > 0);\n  no_corte; ARRAYFORMULA(cuenta <> "Inicio Mes");\n  signo; ARRAYFORMULA(IF(tipo_mov="Egreso"; -1; 1));\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * signo * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA(es_riqueza * no_corte * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	-$59.989,12
+Tablero	O19	=LET(\n  monto; Registros!B7:B;\n  tipo_mov; Registros!C7:C;\n  cuenta; Registros!D7:D;\n  medio; Registros!F7:F;\n  moneda; Registros!G7:G;\n  fecha; Registros!H7:H;\n  tipo_medio; ARRAYFORMULA(IFERROR(VLOOKUP(medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  es_riqueza; ARRAYFORMULA(((tipo_medio="Ahorros") + (tipo_medio="Inversiones")) > 0);\n  no_corte; ARRAYFORMULA(cuenta <> "Inicio Mes");\n  signo; ARRAYFORMULA(IF(tipo_mov="Egreso"; -1; 1));\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * signo * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA(es_riqueza * no_corte * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	-$59.989,12
 Tablero	AA19		Vehiculo
 Tablero	AC19		-$107.884,35
 Tablero	AE19		USD
@@ -24460,8 +24460,8 @@ Tablero	C23		Dolar Cash
 Tablero	F23		USD
 Tablero	H23		$110,00
 Tablero	L23		Gastos Fijos
-Tablero	N23	=IFERROR(N17 / N10; 0)	55%
-Tablero	O23	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_fijos / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_fijos; liquidez * rem_fijos / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$123.223,24
+Tablero	N23	=IFERROR(O17 / O10; 0)	55%
+Tablero	O23	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $O$10 - $O$17);\n  rem_variables; MAX(0; $O$11 - $O$18);\n  rem_capitalizacion; MAX(0; $O$12 - $O$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $O$10);\n  peso_variables; MAX(0; $O$11);\n  peso_capitalizacion; MAX(0; $O$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_fijos / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_fijos; liquidez * rem_fijos / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$123.223,24
 Tablero	AJ23		$76.100,00
 Tablero	AK23		Egreso
 Tablero	AL23		Computación
@@ -24479,8 +24479,8 @@ Tablero	C24		Dolar Galicia
 Tablero	F24		USD
 Tablero	H24		$91,10
 Tablero	L24		Gastos Variables
-Tablero	N24	=IFERROR(N18 / N11; 0)	43%
-Tablero	O24	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_variables / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_variables; liquidez * rem_variables / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$178.671,47
+Tablero	N24	=IFERROR(O18 / O11; 0)	43%
+Tablero	O24	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $O$10 - $O$17);\n  rem_variables; MAX(0; $O$11 - $O$18);\n  rem_capitalizacion; MAX(0; $O$12 - $O$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $O$10);\n  peso_variables; MAX(0; $O$11);\n  peso_capitalizacion; MAX(0; $O$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_variables / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_variables; liquidez * rem_variables / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$178.671,47
 Tablero	AJ24		$8,02
 Tablero	AK24		Ingreso
 Tablero	AL24		Intereses bancos
@@ -24494,8 +24494,8 @@ Tablero	AT24		$1.071,28
 Tablero	AU24		$1.749,06
 Tablero	AV24		$8,02
 Tablero	L25		Capacidad de Capitalización
-Tablero	N25	=IFERROR(N19 / (N12); 0)	-391830%
-Tablero	O25	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_capitalizacion / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_capitalizacion; liquidez * rem_capitalizacion / suma_rem); liquidez * parte_sin_presupuesto);\n  excedente; IF(suma_rem > 0; MAX(0; liquidez - suma_rem); 0);\n  reparto + excedente\n)	$17.675,00
+Tablero	N25	=IFERROR(O19 / (O12); 0)	-391830%
+Tablero	O25	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $O$10 - $O$17);\n  rem_variables; MAX(0; $O$11 - $O$18);\n  rem_capitalizacion; MAX(0; $O$12 - $O$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $O$10);\n  peso_variables; MAX(0; $O$11);\n  peso_capitalizacion; MAX(0; $O$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_capitalizacion / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_capitalizacion; liquidez * rem_capitalizacion / suma_rem); liquidez * parte_sin_presupuesto);\n  excedente; IF(suma_rem > 0; MAX(0; liquidez - suma_rem); 0);\n  reparto + excedente\n)	$17.675,00
 Tablero	AE25		Cotizaciones Monedas.
 Tablero	AJ25		$7.000,00
 Tablero	AK25		Egreso
