@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 33,
+ minor: 34,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-21',
- releaseName: 'v0.33.0 - El semaforo no puede correr para un solo lado',
+ releaseName: 'v0.34.0 - La flecha dice la direccion, el color dice si es buena noticia',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

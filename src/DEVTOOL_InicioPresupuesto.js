@@ -150,10 +150,17 @@ const IP_BLOQUE = {
 const IP_RESUMEN = {
     saldo:        { celda: 'C8',  rotulo: { celda: 'C7',  esperado: 'Saldo Actual' } },
     capital:      { celda: 'F8',  rotulo: { celda: 'F7',  esperado: 'Capital Acumulado' } },
-    deltaCapital: { celda: 'F10', nota: 'Delta capital vs media de 6 meses' },
-    deltaIngresos: { celda: 'C15', rotulo: { celda: 'C12', esperado: 'Ingresos' }, nota: 'Delta ingresos vs media de 6 meses' },
-    deltaEgresos:  { celda: 'F15', rotulo: { celda: 'F12', esperado: 'Egresos' }, nota: 'Delta egresos vs media de 6 meses' }
+    // El `sentido` decide de que color se pinta la flecha, y es lo que estaba mal en la hoja.
+    // La flecha dice la DIRECCION (subio / bajo) y el color dice si eso es buena o mala noticia,
+    // que no es lo mismo: un egreso que sube tambien es una flecha para arriba, y es mala.
+    // decision Franco 2026-08-21.
+    deltaCapital:  { celda: 'F10', sentido: IP_MAS_ES_MEJOR, nota: 'Tendencia del capital a 6 meses' },
+    deltaIngresos: { celda: 'C15', sentido: IP_MAS_ES_MEJOR, rotulo: { celda: 'C12', esperado: 'Ingresos' }, nota: 'Tendencia de los ingresos a 6 meses' },
+    deltaEgresos:  { celda: 'F15', sentido: IP_MENOS_ES_MEJOR, rotulo: { celda: 'F12', esperado: 'Egresos' }, nota: 'Tendencia de los egresos a 6 meses' }
 };
+
+/** Las tres celdas de delta, en orden. Unica fuente: IP_RESUMEN. */
+const IP_CLAVES_DELTA = ['deltaCapital', 'deltaIngresos', 'deltaEgresos'];
 
 /**
  * El motor de la hoja: T8 derrama Registros del mes (12 columnas espejo de B:M) y AF8 es la
@@ -217,7 +224,28 @@ const IP_MESES_TENDENCIA = 6;
  * realmente se promedia.
  */
 const IP_SUFIJO_DELTA = ' de tendencia a ' + IP_MESES_TENDENCIA + ' meses';
-const IP_FORMATO_DELTA = '+0.0%"' + IP_SUFIJO_DELTA + '";-0.0%"' + IP_SUFIJO_DELTA + '"';
+/**
+ * LAS FLECHAS DE TICKER. decision Franco 2026-08-21: "seria ideal colocar flechitas de
+ * sube-baja como en los tickers financieros".
+ *
+ * Son simbolos geometricos Unicode (U+25B2 / U+25BC / U+2013), NO emojis: se dibujan con la
+ * fuente del texto, no con la de color, y son la notacion estandar de cualquier ticker. La
+ * regla 6 del contrato prohibe emojis, no tipografia.
+ *
+ * LA FLECHA REEMPLAZA AL SIGNO, no lo acompana. En la seccion negativa de un patron de numero
+ * Sheets muestra el VALOR ABSOLUTO salvo que uno escriba el "-" a mano; aca no se escribe, asi
+ * que -0,527 se lee "BAJA 52,7%". Ademas de ser como se leen los tickers, degrada bien: si
+ * algun dia el color fallara, la flecha sola sigue diciendo para donde fue.
+ */
+const IP_FLECHA_SUBE = '\u25B2';    // triangulo lleno hacia arriba
+const IP_FLECHA_BAJA = '\u25BC';    // triangulo lleno hacia abajo
+const IP_FLECHA_PLANA = '\u2013';   // raya: la tendencia no se movio
+
+/** Las tres secciones del patron: positivo ; negativo ; cero. */
+const IP_FORMATO_DELTA =
+    '"' + IP_FLECHA_SUBE + ' "0.0%"' + IP_SUFIJO_DELTA + '";' +
+    '"' + IP_FLECHA_BAJA + ' "0.0%"' + IP_SUFIJO_DELTA + '";' +
+    '"' + IP_FLECHA_PLANA + ' "0.0%"' + IP_SUFIJO_DELTA + '"';
 
 /** Tolerancia de la identidad D19=D20+D21+D22 (y E) al releer los valores. */
 const IP_UMBRAL_IDENTIDAD = 0.01;
@@ -506,6 +534,183 @@ function _formulaDeltaFlujoIp(esIngresos) {
         '  ' + _tendenciaIp('serie_flujo') + '\n)';
 }
 
+
+// ============================================
+// EL COLOR DE LOS DELTAS (reglas de formato condicional)
+// ============================================
+
+/**
+ * [CONCEPTO DE NEGOCIO]
+ * La flecha dice PARA DONDE fue la tendencia; el color dice si eso es buena o mala noticia.
+ * No son lo mismo, y confundirlos es exactamente el bug que Franco encontro el 2026-08-21: el
+ * capital acumulado mostraba "+82,0%" EN ROJO.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+ * La causa medida en la planilla ese dia: habia cuatro reglas de formato condicional del tipo
+ * "el texto contiene", y estaban bien pensadas por metrica...
+ *
+ *   C15       contiene "+" -> verde     C15       contiene "-" -> rojo
+ *   F10,F15   contiene "+" -> ROJO      F10,F15   contiene "-" -> verde
+ *
+ * ...pero F10 (capital) estaba AGRUPADO con F15 (egresos) en el mismo par. Para egresos "sube =
+ * rojo" es correcto; para el capital es exactamente al reves. Una sola regla servia a dos celdas
+ * de significado opuesto, que es la misma falla que el semaforo de las barras (ver IP_BLOQUE).
+ *
+ * POR ESO ACA CADA CELDA TIENE SU PROPIO PAR DE REGLAS, con rango de UNA sola celda. Son seis
+ * reglas donde podrian ser cuatro; el par de mas es barato y hace imposible que una celda quede
+ * arrastrada por la polaridad de otra.
+ *
+ * Y POR ESO LA CONDICION ES NUMERICA (=$F$10>0) Y NO DE TEXTO. Las reglas viejas miraban si el
+ * texto mostrado contenia "+" o "-": funcionaban de casualidad, y se rompen solas en cuanto
+ * cambia el formato de numero -- que es justo lo que pasa ahora, porque la flecha REEMPLAZA al
+ * signo. Un modulo que es dueno del formato tiene que ser dueno del color, o los dos se
+ * desincronizan sin que nada lo delate.
+ *
+ * @see docs/permanente/FORMULAS_TABLERO.md
+ */
+
+/** El par de reglas de una celda de delta: [{ formula, color }]. */
+function _reglasDeUnDeltaIp(clave) {
+    const celda = IP_RESUMEN[clave].celda;
+    const ref = _absIp(celda);
+    const subeEsBueno = IP_RESUMEN[clave].sentido === IP_MAS_ES_MEJOR;
+    return [
+        { clave: clave, celda: celda, formula: '=' + ref + '>0',
+          color: subeEsBueno ? IP_COLOR_VERDE : IP_COLOR_ROJO },
+        { clave: clave, celda: celda, formula: '=' + ref + '<0',
+          color: subeEsBueno ? IP_COLOR_ROJO : IP_COLOR_VERDE }
+    ];
+}
+
+/** Las seis reglas que este modulo escribe, en orden. */
+function _reglasDeltaIp() {
+    return IP_CLAVES_DELTA.reduce(function (acc, k) {
+        return acc.concat(_reglasDeUnDeltaIp(k));
+    }, []);
+}
+
+/** Las formulas de las seis, para reconocerlas despues. */
+function _formulasPropiasIp() {
+    return _reglasDeltaIp().map(function (r) { return r.formula; });
+}
+
+/** Los rangos A1 de una regla viva, como lista de strings. */
+function _rangosDeReglaIp(regla) {
+    return (regla.getRanges() || []).map(function (r) { return r.getA1Notation(); });
+}
+
+/**
+ * Clasifica las reglas vivas de la hoja en tres montones:
+ *   propias    - las seis de este modulo (formula numerica sobre UNA celda de delta)
+ *   superadas  - reglas "el texto contiene" cuyos rangos caen TODOS dentro de los tres deltas.
+ *                Son las de Franco: quedan sin efecto en cuanto la flecha reemplaza al signo,
+ *                asi que este modulo las levanta (y las guarda para poder reponerlas).
+ *   ajenas     - todo lo demas. Se repone INTACTO y por referencia, nunca reconstruido:
+ *                setConditionalFormatRules reemplaza TODAS las reglas de la hoja, y perder las
+ *                del calendario (J8:P14) seria un destrozo silencioso.
+ *
+ * Una regla que TOCA una celda de delta pero ademas se extiende afuera NO se toca: se reporta.
+ * Levantarla apagaria formato en celdas que no son de este modulo.
+ */
+function _clasificarReglasIp(todas) {
+    const celdas = IP_CLAVES_DELTA.map(function (k) { return IP_RESUMEN[k].celda; });
+    const propias = [], superadas = [], ajenas = [], desbordan = [];
+    const mias = _formulasPropiasIp();
+
+    (todas || []).forEach(function (regla) {
+        const cond = regla.getBooleanCondition && regla.getBooleanCondition();
+        if (!cond) { ajenas.push(regla); return; }
+        const tipo = String(cond.getCriteriaType());
+        const valores = cond.getCriteriaValues() || [];
+        const rangos = _rangosDeReglaIp(regla);
+        const dentro = rangos.filter(function (r) { return celdas.indexOf(r) !== -1; });
+
+        if (tipo === 'CUSTOM_FORMULA' && rangos.length === 1 && dentro.length === 1 &&
+            mias.indexOf(String(valores[0])) !== -1) {
+            propias.push(regla);
+            return;
+        }
+        if (!dentro.length) { ajenas.push(regla); return; }
+        // Toca deltas. Solo se levanta si NO desborda y si es del tipo que sabemos reponer.
+        if (dentro.length !== rangos.length || tipo !== 'TEXT_CONTAINS') {
+            desbordan.push({ tipo: tipo, valor: String(valores[0] || ''), rangos: rangos });
+            ajenas.push(regla);
+            return;
+        }
+        superadas.push({
+            regla: regla,
+            foto: {
+                criterio: tipo, valores: valores.map(String), rangos: rangos,
+                texto: _hexDeColorIp(cond.getFontColorObject && cond.getFontColorObject()),
+                fondo: _hexDeColorIp(cond.getBackgroundObject && cond.getBackgroundObject()),
+                negrita: !!(cond.getBold && cond.getBold()),
+                cursiva: !!(cond.getItalic && cond.getItalic()),
+                tachado: !!(cond.getStrikethrough && cond.getStrikethrough()),
+                subrayado: !!(cond.getUnderline && cond.getUnderline())
+            }
+        });
+    });
+    return { propias: propias, superadas: superadas, ajenas: ajenas, desbordan: desbordan };
+}
+
+/**
+ * El hex de un color de regla, o null. Un color de TEMA no se puede convertir a RGB (asRgbColor
+ * lanza) y adivinarle un hex seria inventar un color que Franco no eligio: se devuelve null y
+ * la reposicion lo deja sin ese atributo, que es honesto.
+ */
+function _hexDeColorIp(color) {
+    if (!color) return null;
+    try {
+        const rgb = color.asRgbColor();
+        let h = String(rgb.asHexString() || '').toLowerCase();
+        if (h.length === 9) h = '#' + h.slice(3);
+        return h || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Si las reglas ya estan como corresponden, aplicar no las toca. Se compara formula Y color:
+ * una regla propia con la formula correcta pero el color viejo tiene que reescribirse, que es
+ * justamente el caso del capital (la formula miraba bien y el color estaba invertido).
+ */
+function _reglasHacenFaltaIp(clases) {
+    if (clases.superadas.length) return true;
+    const quiero = _reglasDeltaIp().map(function (r) { return r.formula + '|' + r.color; });
+    const tengo = clases.propias.map(function (regla) {
+        const cond = regla.getBooleanCondition();
+        return String((cond.getCriteriaValues() || [])[0]) + '|' +
+               _hexDeColorIp(cond.getFontColorObject && cond.getFontColorObject());
+    });
+    if (quiero.length !== tengo.length) return true;
+    return quiero.some(function (q) { return tengo.indexOf(q) === -1; });
+}
+
+/** Construye una de las seis reglas propias. */
+function _construirReglaDeltaIp(hoja, item) {
+    return SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(item.formula)
+        .setFontColor(item.color)
+        .setBold(true)
+        .setRanges([hoja.getRange(item.celda)])
+        .build();
+}
+
+/** Reconstruye una regla "el texto contiene" desde su foto, para revertir. */
+function _reponerReglaSuperadaIp(hoja, foto) {
+    let b = SpreadsheetApp.newConditionalFormatRule()
+        .whenTextContains(foto.valores[0])
+        .setRanges(foto.rangos.map(function (r) { return hoja.getRange(r); }));
+    if (foto.texto) b = b.setFontColor(foto.texto);
+    if (foto.fondo) b = b.setBackground(foto.fondo);
+    if (foto.negrita) b = b.setBold(true);
+    if (foto.cursiva) b = b.setItalic(true);
+    if (foto.tachado) b = b.setStrikethrough(true);
+    if (foto.subrayado) b = b.setUnderline(true);
+    return b.build();
+}
+
 // ============================================
 // PREFLIGHT
 // ============================================
@@ -766,11 +971,16 @@ function _planIp(ss, pre) {
         'tendencia de los egresos en la ventana de ' + IP_MESES_TENDENCIA + ' meses que cierra en el mes del selector');
 
     // --- El formato de los tres deltas es parte del plan (se verifica y se revierte) ---
-    proponerFormato(IP_RESUMEN.deltaCapital.celda, 'Formato del delta de capital');
-    proponerFormato(IP_RESUMEN.deltaIngresos.celda, 'Formato del delta de ingresos');
-    proponerFormato(IP_RESUMEN.deltaEgresos.celda, 'Formato del delta de egresos');
+    IP_CLAVES_DELTA.forEach(function (k) {
+        proponerFormato(IP_RESUMEN[k].celda, 'Formato de la ' + IP_RESUMEN[k].nota.toLowerCase());
+    });
 
-    return { cambios: cambios };
+    // --- Y el COLOR de los tres deltas, que va junto con el formato y no aparte ---
+    // Separarlos es lo que produjo el bug: el formato decia "+82,0%" y una regla de color ajena
+    // decidia que ese "+" era rojo. Mientras el mismo modulo sea dueno de los dos, no pueden
+    // contradecirse. Ver la cabecera de la seccion "EL COLOR DE LOS DELTAS".
+    const clases = _clasificarReglasIp(pre.hoja.getConditionalFormatRules());
+    return { cambios: cambios, reglas: clases };
 }
 
 // ============================================
@@ -969,6 +1179,39 @@ function estadoInicioPresupuesto() {
             l.push('  - F10, C15 y F15 pasan a medir la TENDENCIA de la ventana de ' + IP_MESES_TENDENCIA + ' meses,');
             l.push('    con formato ' + IP_FORMATO_DELTA + '. C15/F15 reemplazan formulas rotas (0% eterno).');
         }
+
+        // EL COLOR DE LOS DELTAS. Se reporta SIEMPRE, aunque no haya celdas que escribir: el bug
+        // que Franco encontro el 2026-08-21 vivia exactamente aca, en una regla, con las formulas
+        // perfectas. Un estado que solo mira formulas no lo habria visto nunca.
+        l.push('');
+        l.push('COLOR DE LOS DELTAS (reglas de formato condicional):');
+        if (_reglasHacenFaltaIp(plan.reglas)) {
+            _reglasDeltaIp().forEach(function (r) {
+                const sube = r.formula.indexOf('>0') !== -1;
+                l.push('  ' + r.celda.padEnd(5) + (sube ? IP_FLECHA_SUBE + ' sube' : IP_FLECHA_BAJA + ' baja') +
+                       ' -> ' + r.color + (r.color === IP_COLOR_VERDE ? '  (buena noticia)' : '  (mala noticia)'));
+            });
+            if (plan.reglas.superadas.length) {
+                l.push('');
+                l.push('  Se levantan estas reglas viejas, que dejan de servir cuando la flecha');
+                l.push('  reemplaza al signo (miran el TEXTO, no el numero):');
+                plan.reglas.superadas.forEach(function (x) {
+                    l.push('    - "el texto contiene ' + x.foto.valores[0] + '" sobre ' +
+                           x.foto.rangos.join(',') + ', texto ' + (x.foto.texto || 'sin color'));
+                });
+            }
+        } else {
+            l.push('  Ya estan las seis reglas correctas. Nada que hacer.');
+        }
+        if (plan.reglas.desbordan.length) {
+            l.push('');
+            l.push('  NO SE TOCAN (tocan un delta pero se extienden fuera de el, o no son del');
+            l.push('  tipo que este modulo sabe reponer):');
+            plan.reglas.desbordan.forEach(function (d) {
+                l.push('    - ' + d.tipo + ' "' + d.valor + '" sobre ' + d.rangos.join(','));
+            });
+        }
+        l.push('  Reglas ajenas de la hoja que se reponen intactas: ' + plan.reglas.ajenas.length);
         if (pre.avisos.length) {
             l.push('');
             l.push('Avisos:');
@@ -997,14 +1240,16 @@ function aplicarInicioPresupuesto() {
         ss = SpreadsheetApp.getActiveSpreadsheet();
         const pre = _preflightIp(ss);
         const plan = _planIp(ss, pre);
-        if (!plan.cambios.length) {
-            const t = 'El bloque y los tres deltas ya estan como corresponde. No se escribio nada.';
+        const tocarReglas = _reglasHacenFaltaIp(plan.reglas);
+        if (!plan.cambios.length && !tocarReglas) {
+            const t = 'El bloque, los tres deltas y sus colores ya estan como corresponde. No se escribio nada.';
             _mostrarIp('Inicio: presupuesto', t);
             return { ok: true, detalle: t };
         }
 
         const conf = ui.alert('Inicio: presupuesto del mes y deltas',
-            'Se van a escribir ' + plan.cambios.length + ' celda(s) de "' + pre.nombre + '".\n\n' +
+            'Se van a escribir ' + plan.cambios.length + ' celda(s) de "' + pre.nombre + '"' +
+            (tocarReglas ? ', y se rehacen las reglas\nde color de los tres deltas' : '') + '.\n\n' +
             'QUE CAMBIA:\n' +
             '  - El bloque "Presupuesto del Mes." se llena: D con lo proyectado (BD de\n' +
             '    Proyeccion) y E con la realidad (motor de la hoja).\n' +
@@ -1018,8 +1263,17 @@ function aplicarInicioPresupuesto() {
             '  - F10 deja de decir "0% de Crecimiento historico": pasa a medir el capital de\n' +
             '    la tendencia de los cierres de los ultimos ' + IP_MESES_TENDENCIA + ' meses.\n' +
             '  - C15 y F15 REEMPLAZAN las formulas rotas (hoy dan 0% siempre) por el delta\n' +
-            '    la tendencia de la ventana de ' + IP_MESES_TENDENCIA + ' meses. Los tres quedan con formato ' + IP_FORMATO_DELTA + '.\n\n' +
-            'C8 y F8 NO se tocan. No se toca el ledger, la Proyeccion ni el Tablero.\n\nContinuar?',
+            '    la tendencia de la ventana de ' + IP_MESES_TENDENCIA + ' meses.\n' +
+            '  - LOS TRES DELTAS PASAN A LLEVAR FLECHA: "' + IP_FLECHA_SUBE + ' 82,0%..." si la\n' +
+            '    tendencia sube, "' + IP_FLECHA_BAJA + ' 52,7%..." si baja. La flecha reemplaza al signo.\n' +
+            '  - Y SU COLOR LO DECIDE ESTE MODULO, con una regla NUMERICA por celda: verde si\n' +
+            '    la noticia es buena, rojo si es mala. Ojo que no es lo mismo que la direccion:\n' +
+            '    en Egresos una flecha para ARRIBA se pinta ROJA.\n' +
+            (plan.reglas.superadas.length
+                ? '  - Se levantan ' + plan.reglas.superadas.length + ' regla(s) vieja(s) del tipo "el texto contiene",\n' +
+                  '    que dejan de servir en cuanto la flecha reemplaza al signo. Revertir las repone.\n'
+                : '') +
+            '\nC8 y F8 NO se tocan. No se toca el ledger, la Proyeccion ni el Tablero.\n\nContinuar?',
             ui.ButtonSet.YES_NO);
         if (conf !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se escribio nada.' };
 
@@ -1053,6 +1307,21 @@ function aplicarInicioPresupuesto() {
                 errorPrevio: errorPrevio
             });
         });
+
+        // LAS REGLAS DE COLOR. Las ajenas se reponen POR REFERENCIA y primero, intactas y en su
+        // orden: setConditionalFormatRules reemplaza TODAS las de la hoja, y perder las del
+        // calendario (J8:P14) seria un destrozo silencioso. Las superadas quedan fuera, pero se
+        // guarda su foto para poder reponerlas al revertir.
+        previos.reglas = null;
+        if (tocarReglas) {
+            const nuevasReglas = _reglasDeltaIp().map(function (item) {
+                return _construirReglaDeltaIp(pre.hoja, item);
+            });
+            pre.hoja.setConditionalFormatRules(plan.reglas.ajenas.concat(nuevasReglas));
+            previos.reglas = {
+                superadas: plan.reglas.superadas.map(function (x) { return x.foto; })
+            };
+        }
         SpreadsheetApp.flush();
 
         // Texto y estado de cada celda escrita, MAS los invariantes sobre los valores releidos.
@@ -1156,10 +1425,28 @@ function revertirInicioPresupuesto() {
             rango.clearContent();
             repuestas++;
         });
+
+        // LAS REGLAS DE COLOR: se quitan las propias y se reponen las que se habian levantado.
+        // Las ajenas nunca se reconstruyen -- se pasan por referencia --, asi que no hay forma
+        // de que revertir dane el calendario ni ninguna otra regla que este modulo no escribio.
+        let reglasQuitadas = 0, reglasRepuestas = 0;
+        if (previos.reglas) {
+            const clases = _clasificarReglasIp(hoja.getConditionalFormatRules());
+            reglasQuitadas = clases.propias.length;
+            const repuestas2 = (previos.reglas.superadas || []).map(function (foto) {
+                return _reponerReglaSuperadaIp(hoja, foto);
+            });
+            reglasRepuestas = repuestas2.length;
+            hoja.setConditionalFormatRules(clases.ajenas.concat(repuestas2));
+        }
         SpreadsheetApp.flush();
         props.deleteProperty(IP_PROP_PREVIOS);
 
         const t = 'INICIO: PRESUPUESTO REVERTIDO\n\n- Celdas repuestas: ' + repuestas + '\n' +
+            (previos.reglas
+                ? '- Reglas de color quitadas: ' + reglasQuitadas +
+                  '; reglas viejas repuestas: ' + reglasRepuestas + '\n'
+                : '') +
             (faltantes.length ? '- SIN respaldo (quedaron como estan): ' + faltantes.join(', ') + '\n' : '') +
             '- Respaldo usado: "' + previos.respaldo + '"' + (resp ? '' : ' (la hoja ya no existe)');
         logSuccess('revertirInicioPresupuesto: ' + repuestas + ' celda(s).');

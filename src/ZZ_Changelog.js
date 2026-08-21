@@ -5,6 +5,39 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-21] v0.34.0 - La flecha dice la direccion, el color dice si es buena noticia.
+ * - SINTOMA (Franco): "La tendencia del capital acumulado esta en rojo para un numero positivo..
+ *   como es? No lo entiendo". Capital Acumulado mostraba "+82,0% de tendencia a 6 meses" EN ROJO.
+ * - CAUSA, medida en la planilla. Habia cuatro reglas de formato condicional del tipo "el texto
+ *   contiene", y estaban BIEN PENSADAS por metrica:
+ *       C15      contiene "+" -> verde      C15      contiene "-" -> rojo
+ *       F10,F15  contiene "+" -> ROJO       F10,F15  contiene "-" -> verde
+ *   Para egresos (F15) "sube = rojo" es correcto. Pero F10 (capital) estaba AGRUPADO con F15 en
+ *   el mismo par, asi que heredaba la polaridad de los egresos. Una sola regla sirviendo a dos
+ *   celdas de significado opuesto: exactamente la misma falla que tenia el semaforo de las
+ *   barras en v0.33.0, en otro lado de la misma hoja.
+ * - FLECHAS DE TICKER. decision Franco 2026-08-21: "seria ideal colocar flechitas de sube-baja
+ *   como en los tickers financieros". El patron de numero pasa a tener TRES secciones y la
+ *   flecha REEMPLAZA al signo: "SUBE 82,0% de tendencia a 6 meses". Son simbolos geometricos
+ *   Unicode (U+25B2 / U+25BC / U+2013), no emojis: la regla 6 prohibe emojis, no tipografia.
+ *   Ademas degrada bien -- si el color fallara, la flecha sola sigue diciendo para donde fue.
+ * - EL MODULO PASA A SER DUENO DEL COLOR, no solo del formato. Separarlos es lo que produjo el
+ *   bug: el formato decia "+82,0%" y una regla ajena decidia que ese "+" era rojo. Seis reglas
+ *   nuevas, UN PAR POR CELDA con rango de UNA sola celda -- son dos mas de las necesarias, y ese
+ *   par de mas es lo que hace imposible que una celda quede arrastrada por la polaridad de otra.
+ * - Y LA CONDICION AHORA ES NUMERICA (=$F$10>0) EN VEZ DE DE TEXTO. Las reglas viejas miraban si
+ *   el texto mostrado contenia "+" o "-": funcionaban de casualidad y se rompen solas en cuanto
+ *   cambia el formato de numero, que es justo lo que pasa ahora que la flecha reemplaza al signo.
+ * - LAS REGLAS AJENAS NO SE TOCAN. Se reponen POR REFERENCIA (nunca reconstruidas), asi que las
+ *   del calendario J8:P14 no corren riesgo. Y una regla que toca un delta PERO se extiende fuera
+ *   de el no se levanta: se reporta. Levantarla apagaria formato en celdas ajenas.
+ * - Revertir quita las seis propias y REPONE las viejas desde una foto (rangos, colores,
+ *   negrita, cursiva, tachado, subrayado).
+ * - El banco mata siete mutaciones, entre ellas la reconstruccion exacta del bug (capital con la
+ *   polaridad de egresos) y la de agrupar celdas en un rango. Dos de esas siete SOBREVIVIAN a la
+ *   primera version del banco: no se probaba _construirReglaDeltaIp (donde se fija el rango) ni
+ *   el caso "quedan reglas viejas por levantar". Probar el plan no es probar lo que se escribe.
+ *
  * [2026-08-21] v0.33.0 - El semaforo no puede correr para un solo lado.
  * - LA BARRA DE CONSUMO SE DA VUELTA SEGUN LA FILA. decision Franco 2026-08-21: en Capacidad de
  *   Capitalizacion la barra tiene que dar VERDE del 80% de cumplimiento para arriba. No es mover

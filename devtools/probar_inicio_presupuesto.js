@@ -53,7 +53,7 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Capitalizacion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_InicioPresupuesto.js'), 'utf8') +
     '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CUENTAS_NEUTRAS,CUENTA_ARRASTRE,CAP_SELECTORES,IP_RESUMEN,IP_FORMATO_DELTA,IP_SUFIJO_DELTA,IP_MESES_TENDENCIA,' +
-    'MONEDAS_DISPONIBLES,IP_BLOQUE,IP_RESUMEN,IP_SELECTORES,IP_MOTOR,IP_FORMATO_DELTA,IP_MESES_TENDENCIA});',
+    'MONEDAS_DISPONIBLES,IP_BLOQUE,IP_RESUMEN,IP_SELECTORES,IP_MOTOR,IP_FORMATO_DELTA,IP_MESES_TENDENCIA,IP_FLECHA_SUBE,IP_FLECHA_BAJA,IP_FLECHA_PLANA,IP_CLAVES_DELTA,IP_MAS_ES_MEJOR,IP_MENOS_ES_MEJOR,IP_COLOR_VERDE,IP_COLOR_ROJO});',
     ctx);
 
 // ============================================================================
@@ -90,7 +90,9 @@ function revisar(nombre, f) {
 // El plan real del modulo, sobre una hoja falsa vacia (propone todo)
 // ============================================================================
 const hojaFalsa = {
-    getRange: () => ({ getFormula: () => '', getValue: () => '', getDisplayValue: () => '', getNumberFormat: () => '' })
+    getRange: () => ({ getFormula: () => '', getValue: () => '', getDisplayValue: () => '', getNumberFormat: () => '' }),
+    // Hoja sin ninguna regla de color: el plan tiene que proponer las seis.
+    getConditionalFormatRules: () => []
 };
 const plan = ctx._planIp(null, { hoja: hojaFalsa, nombre: 'Inicio' });
 const porCelda = {}, formatos = {};
@@ -460,8 +462,22 @@ console.log('\n=== 10. Coherencia con las constantes del modulo ===');
     // El lenguaje de patrones de setNumberFormat es INDEPENDIENTE DEL LOCALE: '.' es siempre el
     // separador decimal. Con coma, Sheets lo lee como separador de MILES y el decimal desaparece
     // ('+35%' en vez de '+34,5%'), sin ningun error. Se ve con coma porque asi lo RENDERIZA es_AR.
-    ok(/^\+0\.0%"/.test(ctx.IP_FORMATO_DELTA) && ctx.IP_FORMATO_DELTA.indexOf(';-0.0%"') !== -1,
+    ok(/0\.0%/.test(ctx.IP_FORMATO_DELTA) && !/0,0%/.test(ctx.IP_FORMATO_DELTA),
        'el patron del delta usa PUNTO decimal (se muestra con coma). Dio ' + ctx.IP_FORMATO_DELTA);
+    // LAS FLECHAS (decision Franco 2026-08-21). Tres secciones: positivo ; negativo ; cero.
+    const secciones = ctx.IP_FORMATO_DELTA.split('";"');
+    ok(ctx.IP_FORMATO_DELTA.split(';').length >= 3, 'el patron tiene las tres secciones (sube/baja/plana)');
+    ok(ctx.IP_FORMATO_DELTA.indexOf('"' + ctx.IP_FLECHA_SUBE + ' "') === 0,
+       'la seccion POSITIVA abre con la flecha para arriba');
+    ok(ctx.IP_FORMATO_DELTA.indexOf('"' + ctx.IP_FLECHA_BAJA + ' "0.0%') !== -1,
+       'la seccion NEGATIVA lleva la flecha para abajo');
+    ok(ctx.IP_FORMATO_DELTA.indexOf(ctx.IP_FLECHA_PLANA) !== -1,
+       'hay una tercera seccion para el cero: una tendencia plana no es ni subida ni bajada');
+    // LA FLECHA REEMPLAZA AL SIGNO. Si quedara un "-" literal en la seccion negativa se leeria
+    // "BAJA -52,7%", que dice dos veces lo mismo; y si quedara un "+" en la positiva, las reglas
+    // viejas de "el texto contiene" volverian a engancharse.
+    ok(ctx.IP_FORMATO_DELTA.indexOf('+') === -1 && ctx.IP_FORMATO_DELTA.indexOf('-') === -1,
+       'ni "+" ni "-" en el patron: la flecha ya dice para donde fue');
     ok(!/0,0%/.test(ctx.IP_FORMATO_DELTA),
        'ninguna coma en la parte NUMERICA: seria separador de miles y se comeria el decimal');
     // decision Franco 2026-08-21: el delta lleva texto que diga contra que se compara.
@@ -474,6 +490,154 @@ console.log('\n=== 10. Coherencia con las constantes del modulo ===');
     // Va en el FORMATO, no en un TEXT(): la celda tiene que seguir siendo un numero.
     ok(!/TEXT\(/.test(ctx._formulaDeltaIp ? ctx._formulaDeltaIp('capital') : ''),
        'el delta NO usa TEXT(): con texto la celda dejaria de ser numero y nada lo delataria');
+}
+
+console.log('\n=== 11. EL COLOR DE LOS DELTAS (el bug que encontro Franco) ===');
+{
+    const R = ctx.IP_RESUMEN;
+    const reglas = ctx._reglasDeltaIp();
+    ok(reglas.length === 6, 'seis reglas: un par por celda, ni una compartida. Dio ' + reglas.length);
+
+    // UNA CELDA POR REGLA. El bug del 2026-08-21 fue exactamente esto: F10 (capital) estaba
+    // AGRUPADO con F15 (egresos) en una sola regla, y heredo la polaridad de los egresos.
+    // Por eso el capital mostraba "+82,0%" EN ROJO.
+    reglas.forEach(r => {
+        ok(/^=\$[A-Z]+\$\d+[<>]0$/.test(r.formula),
+           r.celda + ': la condicion es NUMERICA sobre una sola celda (' + r.formula + ')');
+        ok(!/contiene|TEXT|"/.test(r.formula),
+           r.celda + ': no mira el texto mostrado -- eso se rompe solo al cambiar el formato');
+    });
+    const porCelda = {};
+    reglas.forEach(r => { porCelda[r.celda] = (porCelda[r.celda] || 0) + 1; });
+    ctx.IP_CLAVES_DELTA.forEach(k => ok(porCelda[R[k].celda] === 2,
+       R[k].celda + ' tiene exactamente su propio par de reglas'));
+
+    // LA POLARIDAD, que es el fondo del asunto.
+    const color = (celda, signo) => {
+        const r = reglas.find(x => x.celda === celda && x.formula.indexOf(signo + '0') !== -1);
+        return r && r.color;
+    };
+    ok(color(R.deltaCapital.celda, '>') === ctx.IP_COLOR_VERDE,
+       'capital que SUBE -> verde. Es el caso que Franco reporto en rojo');
+    ok(color(R.deltaCapital.celda, '<') === ctx.IP_COLOR_ROJO, 'capital que BAJA -> rojo');
+    ok(color(R.deltaIngresos.celda, '>') === ctx.IP_COLOR_VERDE, 'ingresos que SUBEN -> verde');
+    ok(color(R.deltaIngresos.celda, '<') === ctx.IP_COLOR_ROJO, 'ingresos que BAJAN -> rojo');
+    // Y la que NO es como las otras dos: en egresos la flecha para arriba es mala noticia.
+    ok(color(R.deltaEgresos.celda, '>') === ctx.IP_COLOR_ROJO,
+       'egresos que SUBEN -> ROJO, aunque la flecha apunte para el mismo lado que en capital');
+    ok(color(R.deltaEgresos.celda, '<') === ctx.IP_COLOR_VERDE, 'egresos que BAJAN -> verde');
+
+    // LA MUTACION QUE IMPORTA: si alguien vuelve a darle a los tres el mismo sentido, capital y
+    // egresos se pintan igual, que es de donde venimos.
+    ok(color(R.deltaCapital.celda, '>') !== color(R.deltaEgresos.celda, '>'),
+       'capital y egresos NO pueden compartir polaridad: agruparlos fue el bug');
+
+    ok(ctx.IP_RESUMEN.deltaEgresos.sentido === ctx.IP_MENOS_ES_MEJOR,
+       'egresos declara menos_es_mejor');
+    ok(ctx.IP_RESUMEN.deltaCapital.sentido === ctx.IP_MAS_ES_MEJOR &&
+       ctx.IP_RESUMEN.deltaIngresos.sentido === ctx.IP_MAS_ES_MEJOR,
+       'capital e ingresos declaran mas_es_mejor');
+}
+
+console.log('\n=== 11a. La regla CONSTRUIDA: el rango tiene que ser de UNA celda ===');
+{
+    // Probar el plan y NO la construccion dejaba un agujero justo donde vivia el bug: el rango
+    // se fija en _construirReglaDeltaIp, no en _reglasDeltaIp. Una mutacion que le pusiera
+    // 'F10:F15' a las seis reglas pasaba el banco entero sin que nada chistara.
+    const espia = [];
+    ctx.SpreadsheetApp.newConditionalFormatRule = () => {
+        const r = { _formula: null, _color: null, _negrita: false, _rangos: null };
+        const api = {
+            whenFormulaSatisfied: f => { r._formula = f; return api; },
+            setFontColor: c => { r._color = c; return api; },
+            setBold: b => { r._negrita = b; return api; },
+            setRanges: rr => { r._rangos = rr; return api; },
+            build: () => { espia.push(r); return r; }
+        };
+        return api;
+    };
+    const hojaEspia = { getRange: a1 => ({ _a1: a1, getA1Notation: () => a1 }) };
+    ctx._reglasDeltaIp().forEach(item => ctx._construirReglaDeltaIp(hojaEspia, item));
+
+    ok(espia.length === 6, 'se construyen las seis reglas. Dio ' + espia.length);
+    espia.forEach(r => {
+        ok(r._rangos.length === 1, 'cada regla cubre UN solo rango');
+        ok(/^[A-Z]+\d+$/.test(r._rangos[0]._a1),
+           'y ese rango es UNA celda suelta, no un bloque: dio "' + r._rangos[0]._a1 + '"');
+        ok(r._negrita === true, 'la regla mantiene la negrita que ya tenian los deltas');
+        ok(r._color === ctx.IP_COLOR_VERDE || r._color === ctx.IP_COLOR_ROJO,
+           'el color sale de la paleta del modulo, no de un hex suelto');
+    });
+    // Y la celda de cada regla es la que dice su formula: nada de reglas apuntando a otra celda.
+    espia.forEach(r => {
+        const m = r._formula.match(/^=\$([A-Z]+)\$(\d+)[<>]0$/);
+        ok(!!m, 'la formula ' + r._formula + ' tiene la forma =$COL$FILA>0');
+        const enFormula = m ? m[1] + m[2] : '';
+        ok(r._rangos[0]._a1 === enFormula,
+           'la regla ' + r._formula + ' se aplica a ' + enFormula + ', no a otra celda');
+    });
+    const celdas = espia.map(r => r._rangos[0]._a1);
+    ctx.IP_CLAVES_DELTA.forEach(k => ok(celdas.filter(c => c === ctx.IP_RESUMEN[k].celda).length === 2,
+       ctx.IP_RESUMEN[k].celda + ' recibe sus dos reglas y las de nadie mas'));
+    delete ctx.SpreadsheetApp.newConditionalFormatRule;
+}
+
+console.log('\n=== 11b. Clasificar reglas vivas: propias, superadas, ajenas ===');
+{
+    const R = ctx.IP_RESUMEN;
+    const hexA = h => ({ asRgbColor: () => ({ asHexString: () => h }) });
+    const regla = (tipo, valor, rangos, hex) => ({
+        getRanges: () => rangos.map(r => ({ getA1Notation: () => r })),
+        getBooleanCondition: () => ({
+            getCriteriaType: () => tipo,
+            getCriteriaValues: () => [valor],
+            getFontColorObject: () => (hex ? hexA(hex) : null),
+            getBackgroundObject: () => null,
+            getBold: () => true, getItalic: () => false,
+            getStrikethrough: () => false, getUnderline: () => false
+        })
+    });
+    const calendario = regla('CUSTOM_FORMULA', '=SUMAR.SI.CONJUNTO(...)>0', ['J8:P14'], '#2c4e40');
+    const textoC15 = regla('TEXT_CONTAINS', '+', [R.deltaIngresos.celda], '#356854');
+    const textoF = regla('TEXT_CONTAINS', '+', [R.deltaCapital.celda, R.deltaEgresos.celda], '#c5221f');
+    const mia = regla('CUSTOM_FORMULA', '=$' + R.deltaCapital.celda.replace(/(\d+)/, '$$$1') + '>0',
+                      [R.deltaCapital.celda], ctx.IP_COLOR_VERDE);
+
+    const c = ctx._clasificarReglasIp([calendario, textoC15, textoF, mia]);
+    ok(c.ajenas.indexOf(calendario) !== -1, 'la regla del calendario es AJENA y se repone intacta');
+    ok(c.superadas.length === 2, 'las dos reglas de "el texto contiene" sobre deltas se levantan');
+    ok(c.propias.indexOf(mia) !== -1, 'la regla propia se reconoce por formula Y rango de una celda');
+    ok(c.superadas.some(x => x.foto.rangos.length === 2 && x.foto.texto === '#c5221f'),
+       'la foto de la regla levantada guarda sus rangos y su color, para poder reponerla');
+    ok(c.superadas.every(x => x.foto.negrita === true), 'y guarda la negrita');
+
+    // LA GUARDA QUE PROTEGE LO AJENO: una regla que toca un delta PERO se extiende afuera no se
+    // levanta. Levantarla apagaria formato en celdas que no son de este modulo.
+    const desborda = regla('TEXT_CONTAINS', '-', [R.deltaCapital.celda, 'Z99'], '#c5221f');
+    const c2 = ctx._clasificarReglasIp([desborda]);
+    ok(c2.superadas.length === 0, 'una regla que desborda los deltas NO se levanta');
+    ok(c2.ajenas.indexOf(desborda) !== -1, 'y se repone intacta');
+    ok(c2.desborda ? true : c2.desbordan.length === 1, 'pero se REPORTA, no se ignora en silencio');
+
+    // Un tipo que no sabemos reponer tampoco se levanta.
+    const otroTipo = regla('NUMBER_GREATER_THAN', '5', [R.deltaCapital.celda], '#c5221f');
+    const c3 = ctx._clasificarReglasIp([otroTipo]);
+    ok(c3.superadas.length === 0 && c3.desbordan.length === 1,
+       'un tipo de regla que no sabemos reconstruir se deja quieto y se reporta');
+
+    // Idempotencia: con las seis propias puestas y nada superado, no hace falta tocar nada.
+    const seis = ctx._reglasDeltaIp().map(r => regla('CUSTOM_FORMULA', r.formula, [r.celda], r.color));
+    ok(!ctx._reglasHacenFaltaIp(ctx._clasificarReglasIp(seis.concat([calendario]))),
+       'con las seis correctas ya puestas, aplicar no toca las reglas');
+    // Pero el color invertido SI se detecta: es exactamente el estado que tenia la hoja.
+    const invertidas = ctx._reglasDeltaIp().map(r => regla('CUSTOM_FORMULA', r.formula, [r.celda],
+        r.color === ctx.IP_COLOR_VERDE ? ctx.IP_COLOR_ROJO : ctx.IP_COLOR_VERDE));
+    ok(ctx._reglasHacenFaltaIp(ctx._clasificarReglasIp(invertidas)),
+       'la formula correcta con el COLOR invertido se detecta y se reescribe');
+    // Y aunque las seis propias esten perfectas, si sobrevive una regla vieja de texto HAY que
+    // tocar: es la que le estaba ganando al color y pintaba de rojo un capital que subia.
+    ok(ctx._reglasHacenFaltaIp(ctx._clasificarReglasIp(seis.concat([textoF]))),
+       'con una regla vieja de "el texto contiene" todavia viva, aplicar SI tiene que actuar');
 }
 
 console.log('=== El verificador distingue PENDIENTE de FALLA ===');

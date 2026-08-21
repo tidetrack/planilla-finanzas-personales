@@ -9,6 +9,83 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.34.0 - La flecha dice la direccion, el color dice si es buena noticia (2026-08-21)
+
+> "La tendencia del capital acumulado esta en rojo para un numero positivo.. como es? No lo
+> entiendo. Seria ideal colocar flechitas de sube-baja como en los tickers financieros." — Franco
+
+### La causa, medida en la planilla
+
+Habia cuatro reglas de formato condicional del tipo "el texto contiene", y estaban **bien
+pensadas por metrica**:
+
+| Rango | Condicion | Color |
+|---|---|---|
+| `C15` (ingresos) | contiene "+" | verde `#356854` |
+| `C15` (ingresos) | contiene "-" | rojo `#c5221f` |
+| `F10,F15` | contiene "+" | **rojo** `#c5221f` |
+| `F10,F15` | contiene "-" | **verde** `#356854` |
+
+Para egresos (`F15`) "sube = rojo" es correcto. Pero `F10` (capital) estaba **agrupado con
+`F15`** en el mismo par, y heredaba la polaridad de los egresos. Una sola regla sirviendo a dos
+celdas de significado opuesto — exactamente la misma falla que tenia el semaforo de las barras
+en v0.33.0, en otro lado de la misma hoja.
+
+### Flechas de ticker
+
+El patron de numero pasa a tener **tres** secciones, y la flecha **reemplaza al signo**:
+
+| Valor | Antes | Ahora |
+|---|---|---|
+| `0,820` | `+82,0% de tendencia a 6 meses` | `▲ 82,0% de tendencia a 6 meses` |
+| `-0,527` | `-52,7% de tendencia a 6 meses` | `▼ 52,7% de tendencia a 6 meses` |
+| `0` | `+0,0% ...` | `– 0,0% de tendencia a 6 meses` |
+
+Son simbolos geometricos Unicode (U+25B2 / U+25BC / U+2013), no emojis: la regla 6 del contrato
+prohibe emojis, no tipografia. Y ademas degrada bien — si algun dia el color fallara, la flecha
+sola sigue diciendo para donde fue.
+
+### El modulo pasa a ser dueno del color, no solo del formato
+
+Separarlos es lo que produjo el bug: el formato decia `+82,0%` y una regla ajena decidia que ese
+`+` era rojo. Ahora son **seis reglas, un par por celda, con rango de una sola celda**. Son dos
+mas de las necesarias, y ese par de mas es justamente lo que hace imposible que una celda quede
+arrastrada por la polaridad de otra.
+
+| Celda | Sube | Baja |
+|---|---|---|
+| `F10` Capital | verde | rojo |
+| `C15` Ingresos | verde | rojo |
+| `F15` Egresos | **rojo** | **verde** |
+
+La flecha dice la **direccion**; el color dice si eso es **buena o mala noticia**. En Egresos una
+flecha para arriba se pinta roja: apunta para el mismo lado que en Capital y significa lo
+contrario.
+
+Y la condicion ahora es **numerica** (`=$F$10>0`) en vez de de texto. Las reglas viejas miraban
+si el texto mostrado contenia "+" o "-": funcionaban de casualidad y se rompen solas en cuanto
+cambia el formato de numero — que es justo lo que pasa ahora que la flecha reemplaza al signo.
+
+### Lo ajeno no se toca
+
+Las reglas ajenas se reponen **por referencia**, nunca reconstruidas, asi que las del calendario
+(`J8:P14`) no corren riesgo. Y una regla que toca un delta **pero se extiende fuera de el** no se
+levanta: se reporta. Levantarla apagaria formato en celdas que no son de este modulo. Revertir
+quita las seis propias y repone las viejas desde una foto (rangos, colores, negrita, cursiva,
+tachado, subrayado).
+
+### El banco tenia dos agujeros justo donde vivia el bug
+
+De siete mutaciones, dos **sobrevivian** a la primera version del banco:
+
+- No se probaba `_construirReglaDeltaIp`, que es donde se fija el rango. Una mutacion que le
+  pusiera `F10:F15` a las seis reglas — o sea, reconstruir el bug — pasaba en verde.
+- No se probaba el caso "quedan reglas viejas por levantar".
+
+Probar el plan no es probar lo que se escribe. Las siete mutaciones ahora mueren.
+
+---
+
 ## v0.33.0 - El semaforo no puede correr para un solo lado (2026-08-21)
 
 > "en capitalizacion, la barra debe tener color verde en 80 o mas de cumplimiento." — Franco
