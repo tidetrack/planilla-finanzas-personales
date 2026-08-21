@@ -344,19 +344,33 @@ function _formulaResiduoIp(col) {
  * sin presupuesto, cumplio el que movio plata (1) y no cumplio el que no la movio (0). Es la
  * misma trampa que Franco marco en N25 (=O19/O12 con O12 = 15,31 dando -391830%): dividir por
  * algo que tiende a cero no da un error, da un numero absurdo con cara de dato.
+ *
+ * POR QUE LA BARRA VA APILADA (consumo | 1 - consumo) Y NO SUELTA. Una barra suelta al 0% mide
+ * CERO y no se dibuja: la fila queda visualmente vacia, indistinguible de una celda sin formula.
+ * Se vio en la corrida del 2026-08-21: Capacidad de Capitalizacion, con 15,31 presupuestados y
+ * -59.989 reales, quedo sin barra ninguna -- justo el mes que mas gritaba. Apilando el resto
+ * contra un riel del color palido del nivel, la barra SIEMPRE ocupa el ancho completo y el 0%
+ * se lee como un riel vacio, que es lo que Franco pidio: "del 0% al 100%".
+ *
+ * El riel usa el tono PALIDO del mismo nivel (IP_FONDO_*), o sea la otra mitad de los pares que
+ * Franco usa en los formatos condicionales del Tablero: tinta saturada sobre fondo palido.
  */
 function _formulaConsumoIp(fila, sentido) {
     const refReal = '$' + IP_BLOQUE.colRealidad + '$' + fila;
     const refPresu = '$' + IP_BLOQUE.colPresupuesto + '$' + fila;
     // Para gastos el semaforo sube con el consumo (agotar el presupuesto es malo); para ingresos
     // y capitalizacion baja (quedarse corto del plan es lo malo). Ver IP_BLOQUE.filas.
-    const escala = (sentido === IP_MAS_ES_MEJOR)
-        ? 'IF(consumo >= 4/5; "' + IP_COLOR_VERDE + '"; IF(consumo >= 1/2; "' + IP_COLOR_NARANJA + '"; "' + IP_COLOR_ROJO + '"))'
-        : 'IF(consumo < 1/2; "' + IP_COLOR_VERDE + '"; IF(consumo <= 4/5; "' + IP_COLOR_NARANJA + '"; "' + IP_COLOR_ROJO + '"))';
+    const escala = function (verde, naranja, rojo) {
+        return (sentido === IP_MAS_ES_MEJOR)
+            ? 'IF(consumo >= 4/5; "' + verde + '"; IF(consumo >= 1/2; "' + naranja + '"; "' + rojo + '"))'
+            : 'IF(consumo < 1/2; "' + verde + '"; IF(consumo <= 4/5; "' + naranja + '"; "' + rojo + '"))';
+    };
     return '=LET(\n' +
         '  consumo; IF(' + refPresu + ' <= 0; IF(' + refReal + ' > 0; 1; 0); IFERROR(MAX(0; MIN(1; ' + refReal + ' / ' + refPresu + ')); 0));\n' +
-        '  color_nivel; ' + escala + ';\n' +
-        '  SPARKLINE(consumo; VSTACK(HSTACK("charttype"; "bar"); HSTACK("max"; 1); HSTACK("color1"; color_nivel)))\n)';
+        '  color_nivel; ' + escala(IP_COLOR_VERDE, IP_COLOR_NARANJA, IP_COLOR_ROJO) + ';\n' +
+        '  riel_nivel; ' + escala(IP_FONDO_VERDE, IP_FONDO_NARANJA, IP_FONDO_ROJO) + ';\n' +
+        '  SPARKLINE(HSTACK(consumo; 1 - consumo); VSTACK(HSTACK("charttype"; "bar"); HSTACK("max"; 1);\n' +
+        '    HSTACK("color1"; color_nivel); HSTACK("color2"; riel_nivel)))\n)';
 }
 
 /**
@@ -1062,9 +1076,12 @@ function aplicarInicioPresupuesto() {
         const filas = IP_BLOQUE.filas;
         const detalle = 'INICIO: PRESUPUESTO DEL MES Y DELTAS APLICADOS\n\n' +
             (pendientes.length
-                ? 'SIN VERIFICAR DEL TODO (' + pendientes.length + '): las cotizaciones seguian\n' +
-                  'calculando al releer. NO es un error -- las formulas quedaron escritas -- pero\n' +
-                  'estos invariantes no se pudieron comprobar:\n' +
+                // El encabezado NO puede atribuirle una causa unica a la lista: ahi caen tanto los
+                // invariantes que no se pudieron comprobar (cotizaciones todavia calculando) como
+                // los datos informativos, y el 2026-08-21 el titulo dijo "las cotizaciones seguian
+                // calculando" arriba de un aviso que no tenia nada que ver con cotizaciones.
+                ? 'PARA LEER (' + pendientes.length + '). Las formulas quedaron escritas; esto NO\n' +
+                  'es un error:\n' +
                   pendientes.map(function (a) { return '  - ' + a; }).join('\n') + '\n\n'
                 : '') +
             '- Celdas escritas y verificadas: ' + escritas.length + '\n' +

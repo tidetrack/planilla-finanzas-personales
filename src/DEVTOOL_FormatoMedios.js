@@ -367,8 +367,8 @@ function estadoFormatoMedios() {
         const sello = PropertiesService.getDocumentProperties().getProperty(FMT_PROP_APLICADO);
         if (sello) l.push('Ultima aplicacion registrada: ' + sello);
         l.push('');
-        l.push('Formula de muestra (sintaxis EN-US con comas: es la API de reglas, no setFormula;');
-        l.push('ver la nota en _formulaReglaFmt):');
+        l.push('Formula de muestra (";" como en todo el repo, y la referencia al Plan de Cuentas');
+        l.push('envuelta en INDIRECT: sin eso la regla no pinta. Ver la nota en _formulaReglaFmt):');
         l.push('  ' + plan.nuevas[0].formula);
         l.push('');
         l.push('Aplicar SIEMPRE rehace las cuatro reglas propias: es idempotente, y garantiza que');

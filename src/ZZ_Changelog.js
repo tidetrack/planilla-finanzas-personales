@@ -18,6 +18,13 @@
  *   como 0% de cumplimiento. Ahora se resuelve antes del cociente: sin presupuesto, cumplio el
  *   que movio plata. Es la misma trampa que Franco marco en N25 (=O19/O12 con O12 = 15,31 dando
  *   -391830%): dividir por algo que tiende a cero da un numero absurdo con cara de dato.
+ * - LA BARRA VA APILADA, PARA QUE EL 0% SE VEA. Una barra suelta al 0% de cumplimiento mide
+ *   CERO y no se dibuja: la fila queda visualmente vacia, indistinguible de una celda sin
+ *   formula. Se vio en la corrida del 2026-08-21 -- Capacidad de Capitalizacion, 15,31
+ *   presupuestados contra -59.989 reales, sin barra ninguna, justo el mes que mas gritaba.
+ *   Ahora se apila el resto (1 - consumo) contra un riel del tono palido del mismo nivel: la
+ *   barra ocupa siempre el ancho completo y el 0% se lee como un riel vacio, que es lo que
+ *   Franco pidio el 2026-08-20 ("un grafico de barra que represente del 0% al 100%").
  * - LA PALETA PASA A SER LA DEL TABLERO. Salen los colores heredados de la planilla anterior
  *   (#a9bca1 / #db9940 / #da8b7b) y entran los de los formatos condicionales del Tablero:
  *   #356854 verde, #ffb300 amarillo, #c93232 rojo, con sus fondos palidos #e6f4ea / #fef7e0 /

@@ -40,6 +40,17 @@ pregunta se resuelve antes del cociente — sin presupuesto, cumplio el que movi
 misma trampa que Franco marco en `N25` (`=O19/O12` con `O12 = $15,31`, dando -391830%): dividir
 por algo que tiende a cero produce un numero absurdo con cara de dato.
 
+### La barra va apilada, para que el 0% se vea
+
+Una barra suelta al 0% de cumplimiento mide **cero** y no se dibuja: la fila queda visualmente
+vacia, indistinguible de una celda sin formula. Se vio en la corrida del 2026-08-21 — Capacidad
+de Capitalizacion, $15,31 presupuestados contra -$59.989,12 reales, **sin barra ninguna**, justo
+el mes que mas gritaba.
+
+Ahora se apila el resto (`1 - consumo`) contra un riel del tono palido del mismo nivel. La barra
+ocupa siempre el ancho completo y el 0% se lee como un riel vacio — que es lo que Franco habia
+pedido el 2026-08-20: "un grafico de barra que represente del 0% al 100%".
+
 ### La paleta pasa a ser la del Tablero
 
 Salen los colores heredados de la planilla anterior y entran los de los formatos condicionales
@@ -52,8 +63,8 @@ cosas distintas.
 | Amarillo | `#ffb300` | `#fef7e0` |
 | Rojo | `#c93232` | `#fce8e6` |
 
-Las barras SPARKLINE pintan con el tono **saturado**: son tinta sobre el blanco de la hoja, y el
-tono palido existe para ir detras de un texto — sobre blanco practicamente no se ve.
+Las barras usan **los dos** tonos de cada par, igual que el Tablero: el saturado para la parte
+consumida (tinta) y el palido para el riel de atras (fondo).
 
 ### Los tres deltas miden tendencia, no un mes
 

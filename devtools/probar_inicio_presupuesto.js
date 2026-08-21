@@ -241,8 +241,17 @@ console.log('\n=== 6. Columna F: la barra de consumo ===');
     const f = porCelda[c];
     const fila = c.slice(1);
     ok(/SPARKLINE\(/.test(f), c + ' es un SPARKLINE');
-    ok(f.indexOf('VSTACK(HSTACK("charttype"; "bar"); HSTACK("max"; 1); HSTACK("color1"; color_nivel))') !== -1,
+    ok(f.indexOf('VSTACK(HSTACK("charttype"; "bar"); HSTACK("max"; 1)') !== -1 &&
+       f.indexOf('HSTACK("color1"; color_nivel); HSTACK("color2"; riel_nivel))') !== -1,
        c + ' arma las opciones con VSTACK/HSTACK, sin arrays literales');
+    // LA BARRA VA APILADA. Suelta, al 0% mide cero y no se dibuja: la fila queda visualmente
+    // vacia, igual que una celda sin formula. Paso el 2026-08-21 con la Capacidad de
+    // Capitalizacion, justo el mes que mas gritaba.
+    ok(f.indexOf('SPARKLINE(HSTACK(consumo; 1 - consumo)') !== -1,
+       c + ' apila el resto contra un riel: al 0% la barra tiene que verse igual');
+    ok(/riel_nivel; IF\(consumo/.test(f), c + ' el riel tambien sigue el semaforo de la fila');
+    ok(f.indexOf('#e6f4ea') !== -1 && f.indexOf('#fef7e0') !== -1 && f.indexOf('#fce8e6') !== -1,
+       c + ' el riel usa los tonos PALIDOS de los mismos pares del Tablero');
     ok(f.indexOf('$E$' + fila + ' / $D$' + fila) !== -1, c + ' mide E' + fila + '/D' + fila);
     ok(/MAX\(0; MIN\(1;/.test(f), c + ' acota el consumo a 0..1');
     ok(/1\/2/.test(f) && /4\/5/.test(f),
