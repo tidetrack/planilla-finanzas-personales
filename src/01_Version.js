@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 27,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.27.0 - Los traspasos a un frasco son capitalizacion, y el plan tiene piso en cero',
+ releaseName: 'v0.27.1 - Se elimina el alias SYF_ARRASTRE: un const entre archivos depende del orden de carga',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

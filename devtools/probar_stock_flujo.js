@@ -16,6 +16,7 @@ const fs=require('fs'), vm=require('vm'), path=require('path');
 const RAIZ='/Users/francodiazpizarro/Desktop/Antigravity/planilla-finanzas-personales/.claude/worktrees/gracious-kalam-00e92c';
 const ctx={console,
   MONEDAS_DISPONIBLES:['ARS','USD','AUD','EUR'], TIPOS_RIQUEZA:['Ahorros','Inversiones'],
+  CUENTA_ARRASTRE:'Inicio Mes',
   NAV_CONFIG:{SHEETS:{INICIO:'Inicio',TABLERO:'Tablero'}},
   RANGES:{REGISTROS:{sheet:'Registros',start:'B',end:'M',headerRow:6,dataRow:7,
       columns:{monto:'B',tipo:'C',cuenta:'D',tipo_cuenta:'E',medio:'F',moneda:'G',fecha:'H',nota:'I',tc_ars:'J',tc_usd:'K',tc_aud:'L',tc_eur:'M'}},
@@ -30,7 +31,7 @@ vm.runInContext(
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_FormulerioV0111.js'),'utf8')+'\n'+
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_TipoDeMedios.js'),'utf8')+'\n'+
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_StockYFlujo.js'),'utf8')+
-  '\n;Object.assign(globalThis,{FORM_CELDAS,SYF_SALDOS_TABLERO,SYF_TIPOS_TABLERO,SYF_FILA_RESIDUO,SYF_ARRASTRE,SYF_BLOQUE_MEDIOS,TDM_TIPOS});', ctx);
+  '\n;Object.assign(globalThis,{FORM_CELDAS,SYF_SALDOS_TABLERO,SYF_TIPOS_TABLERO,SYF_FILA_RESIDUO,SYF_BLOQUE_MEDIOS,TDM_TIPOS});', ctx);
 
 const tsv=fs.readFileSync(path.join(RAIZ,'docs/permanente/celdas.tsv'),'utf8').split('\n');
 const F={}; for(const l of tsv){const p=l.split('\t'); if(p.length<3||!p[2])continue;

@@ -9,6 +9,19 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.27.1 - Se elimina el alias SYF_ARRASTRE (2026-08-20)
+
+La v0.27.0 dejo `const SYF_ARRASTRE = CUENTA_ARRASTRE` por compatibilidad. Eso **solo funciona si
+Apps Script evalua `00_Config.js` antes que `DEVTOOL_StockYFlujo.js`**. Hoy lo hace — `00_` ordena
+antes que `DEVTOOL_` — pero es una bomba que estalla el dia que alguien renombra un archivo, y
+estallaria en tiempo de carga: sin menu y sin planilla operable.
+
+Los cuatro modulos usan `CUENTA_ARRASTRE` directamente. Sin alias, no hay orden que importe.
+
+Lo encontro el banco de stock y flujo, que quedo en rojo tras la v0.27.0 porque arma sus constantes
+a mano en vez de cargar Config: **la misma independencia que lo hace rapido lo convirtio en el
+unico que podia ver la dependencia oculta.**
+
 ## v0.27.0 - Los traspasos a un frasco son capitalizacion (2026-08-20)
 
 > "Los traspasos indican capitalizacion si se cruza con un medio." — Franco, 2026-08-20

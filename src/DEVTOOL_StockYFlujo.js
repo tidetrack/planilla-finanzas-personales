@@ -96,7 +96,6 @@ const SYF_PROP_APLICADO = 'stock_y_flujo_aplicado';
 const SYF_PROP_RESPALDO = 'stock_y_flujo_respaldo';
 
 /** La cuenta neutra cuyo efecto se apaga en toda la planilla. */
-const SYF_ARRASTRE = CUENTA_ARRASTRE;   // el nombre historico; la verdad esta en 00_Config
 
 /**
  * Bloque "Tipo de Medios." del Tablero (AE7:AH12) -- lo que faltaba llenar.
@@ -221,7 +220,7 @@ function estadoStockYFlujo() {
         l.push('Que cambia conceptualmente:');
         l.push('  - Los SALDOS dejan de filtrarse por mes: pasan a leer el ledger entero y a mostrar');
         l.push('    siempre el saldo actual.');
-        l.push('  - Los asientos "' + SYF_ARRASTRE + '" dejan de tener efecto en toda la planilla.');
+        l.push('  - Los asientos "' + CUENTA_ARRASTRE + '" dejan de tener efecto en toda la planilla.');
         l.push('    NO se borran: quedan como historia, pero ninguna formula los mira.');
         l.push('  - La Capacidad de Capitalizacion pasa a ser el RESIDUO: los tres buckets');
         l.push('    (fijos, variables, capitalizacion) reparten el 100% del ingreso.');
@@ -289,7 +288,7 @@ function aplicarStockYFlujo() {
             SYF_TIPOS_TABLERO.filas[SYF_TIPOS_TABLERO.filas.length - 1] + ') se llena por primera\n' +
             '    vez: cuanta plata hay en cada finalidad (' + pre.tipos.join(', ') + ').\n' +
             '  - Los saldos dejan de depender del mes seleccionado y muestran el saldo ACTUAL.\n' +
-            '  - Los asientos "' + SYF_ARRASTRE + '" dejan de contar en toda la planilla (no se borran).\n' +
+            '  - Los asientos "' + CUENTA_ARRASTRE + '" dejan de contar en toda la planilla (no se borran).\n' +
             '  - Los Ingresos del mes BAJAN: hasta hoy incluian los arrastres de las cuentas de casa.\n\n' +
             'Ninguna fila del ledger se toca. Antes de escribir se congela un respaldo de todas las ' +
             'formulas de "Inicio" y "Tablero" y se verifica releyendolo.\n\nContinuar?',
@@ -349,7 +348,7 @@ function aplicarStockYFlujo() {
             '     el monto de al lado, avisar: es el defecto que tuvo la v0.16.0.\n' +
             '  3. "Tablero"!O16 tiene que dar 100%: la capitalizacion es el residuo.\n' +
             '  4. "Tablero"!N16 (Ingresos) BAJA respecto de antes. Es correcto: ya no cuenta los\n' +
-            '     arrastres de "' + SYF_ARRASTRE + '" como si fueran ingresos del mes.\n' +
+            '     arrastres de "' + CUENTA_ARRASTRE + '" como si fueran ingresos del mes.\n' +
             'Si algo quedo peor: Tidetrack Dev > Stock y flujo > 3. Revertir.';
 
         logSuccess('aplicarStockYFlujo: ' + escritas.length + ' celda(s).');
@@ -390,7 +389,7 @@ function revertirStockYFlujo() {
 
         const conf = ui.alert('Revertir stock y flujo',
             'Se restauran ' + filas.length + ' formula(s) desde "' + nombre + '".\n\n' +
-            'Los saldos vuelven a depender del mes seleccionado y los arrastres "' + SYF_ARRASTRE +
+            'Los saldos vuelven a depender del mes seleccionado y los arrastres "' + CUENTA_ARRASTRE +
             '" vuelven a contar.\n\nOJO: la celda del indicador de movimientos sin clasificar no ' +
             'estaba en el respaldo porque antes estaba vacia; hay que borrarla a mano si se ' +
             'quiere volver del todo.\n\nContinuar?', ui.ButtonSet.YES_NO);
@@ -648,7 +647,7 @@ function _preambuloSaldoSyf() {
         '  neto; ARRAYFORMULA(IF(' + _colLedger('tipo') + '="Egreso"; -' + _colLedger('monto') + '; ' + _colLedger('monto') + '));',
         '  lista; IFERROR(FILTER(' + _colPlan(medios, 'nombre') + '; ' + _colPlan(medios, 'nombre') + '<>""); "");',
         // El ultimo "Inicio Mes" de cada medio: el punto de corte de su conciliacion.
-        '  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="' + SYF_ARRASTRE + '"); 0))));',
+        '  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="' + CUENTA_ARRASTRE + '"); 0))));',
         '  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));',
         // Vigente = el medio existe en el catalogo Y la fila es posterior a su ultima conciliacion.
         '  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));',
@@ -740,7 +739,7 @@ function _formulaDiagnosticoSyf() {
     const f = FORM_FILA_DERRAME_TABLERO;
     return '=LET(\n' +
         '  monto_neto; ARRAYFORMULA(IF(AK' + f + ':AK="Egreso"; -AJ' + f + ':AJ; AJ' + f + ':AJ));\n' +
-        '  vigente; ARRAYFORMULA(AL' + f + ':AL<>"' + SYF_ARRASTRE + '");\n' +
+        '  vigente; ARRAYFORMULA(AL' + f + ':AL<>"' + CUENTA_ARRASTRE + '");\n' +
         '  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(AN' + f + ':AN; ' + _refHoja(medios.sheet) + '!' + medios.start + ':' + medios.end + '; ' + colCatMedio + '; 0); ""));\n' +
         '  sin_clasificar; ARRAYFORMULA((AJ' + f + ':AJ<>"") * (categoria=""));\n' +
         // OJO con los nombres de variable: 'n' colisiona con la funcion N() de Sheets y hace
@@ -897,7 +896,7 @@ function _planSyf(ss, pre) {
         cambios.push({
             nombreHoja: t[0], celda: t[1], nota: t[2],
             formulaActual: actual, formulaNueva: nueva,
-            resumen: 'los "' + SYF_ARRASTRE + '" dejan de contar como ingreso del mes'
+            resumen: 'los "' + CUENTA_ARRASTRE + '" dejan de contar como ingreso del mes'
         });
     });
 

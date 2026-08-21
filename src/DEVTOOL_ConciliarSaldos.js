@@ -240,7 +240,7 @@ function _planConciliar(ss) {
 
     const cortes = Object.create(null);
     filas.forEach(function (f) {
-        if (f.cuenta !== SYF_ARRASTRE) return;
+        if (f.cuenta !== CUENTA_ARRASTRE) return;
         if (cortes[f.medio] === undefined || f.fecha > cortes[f.medio]) cortes[f.medio] = f.fecha;
     });
     const saldos = Object.create(null);

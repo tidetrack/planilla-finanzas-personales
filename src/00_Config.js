@@ -355,10 +355,15 @@ const CUENTAS_NEUTRAS = ['Traspaso', 'Inicio Mes'];
  * "Inicio Mes" no mueve nada -- declara cuanto habia. Por eso hay modulos que aceptan traspasos y
  * rechazan arrastres, y necesitan poder nombrar a este por separado.
  *
- * decision Franco 2026-08-20: entra a Config porque ya lo usan tres modulos. Antes vivia como
+ * decision Franco 2026-08-20: entra a Config porque ya lo usan cuatro modulos. Antes vivia como
  * SYF_ARRASTRE dentro de DEVTOOL_StockYFlujo y los demas lo tomaban de ahi por el scope global de
  * Apps Script -- funciona, pero es una dependencia invisible que ningun banco de pruebas puede
  * cargar sin arrastrar un modulo que no tiene nada que ver.
+ *
+ * Se elimino el alias `SYF_ARRASTRE = CUENTA_ARRASTRE` en vez de dejarlo por compatibilidad: un
+ * `const` de un archivo que referencia el `const` de otro solo funciona si Apps Script evalua los
+ * archivos en el orden correcto. Hoy lo hace -- "00_" ordena antes que "DEVTOOL_" --, pero es una
+ * bomba que estalla el dia que alguien renombra un archivo. Sin alias, no hay orden que importe.
  */
 const CUENTA_ARRASTRE = 'Inicio Mes';
 
