@@ -24287,7 +24287,6 @@ Tablero	AU14		$1.746,61
 Tablero	AV14		$58.000,00
 Tablero	L15		Categoría
 Tablero	N15		Realidad
-Tablero	O15		%
 Tablero	X15		Medicamentos / Accesorios
 Tablero	Y15		$19.500,00
 Tablero	AA15		Salud
@@ -24308,7 +24307,6 @@ Tablero	AV15		$40.000,00
 Tablero	C16		Medios Bancarios.
 Tablero	L16		Ingresos
 Tablero	N16	=S7	$1.138.583,00
-Tablero	O16	=IFERROR(N16/$N$16; 0)	100,00%
 Tablero	X16		Otros
 Tablero	Y16		$9.000,00
 Tablero	AA16		Equipamiento
@@ -24331,7 +24329,6 @@ Tablero	F17		Moneda
 Tablero	H17		Monto
 Tablero	L17		Gastos Fijos
 Tablero	N17	=V7	$506.851,30
-Tablero	O17	=IFERROR(N17/$N$16;0)	44,52%
 Tablero	X17		Estacionamiento
 Tablero	Y17		$3.000,00
 Tablero	AA17		Conciliacion
@@ -24356,7 +24353,6 @@ Tablero	F18	=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n
 Tablero	H18	=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  saldos; MAP(lista; LAMBDA(un_medio;\n    SUM(IFERROR(FILTER(neto; vigente; col_medio=un_medio); 0))));\n  con_saldo; ARRAYFORMULA(ROUND(saldos; 2)<>0);\n  ordenada; IFERROR(SORT(FILTER(HSTACK(lista; mon_lista; saldos); con_saldo); 3; FALSE);\n    HSTACK("(sin saldos)"; ""; 0));\n  tabla; ARRAY_CONSTRAIN(ordenada; 12; 3);\n  INDEX(tabla; 0; 3)\n)	$230.000,00
 Tablero	L18		Gastos Variables
 Tablero	N18	=Y7	$460.820,83
-Tablero	O18	=IFERROR(N18/$N$16;0)	40,47%
 Tablero	X18		Juntadas
 Tablero	Y18		$424,33
 Tablero	AA18		Ocio y regalos
@@ -24381,8 +24377,7 @@ Tablero	C19		Frasco Transitorio NaranjaX
 Tablero	F19		ARS
 Tablero	H19		$44.141,01
 Tablero	L19		Capacidad de Capitalización
-Tablero	N19	=N16-N17-N18	$170.910,87
-Tablero	O19	=IFERROR(N19/$N$16;0)	15,01%
+Tablero	N19	=LET(\n  monto; Registros!B7:B;\n  tipo_mov; Registros!C7:C;\n  cuenta; Registros!D7:D;\n  medio; Registros!F7:F;\n  moneda; Registros!G7:G;\n  fecha; Registros!H7:H;\n  tipo_medio; ARRAYFORMULA(IFERROR(VLOOKUP(medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  es_riqueza; ARRAYFORMULA(((tipo_medio="Ahorros") + (tipo_medio="Inversiones")) > 0);\n  no_corte; ARRAYFORMULA(cuenta <> "Inicio Mes");\n  signo; ARRAYFORMULA(IF(tipo_mov="Egreso"; -1; 1));\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * signo * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA(es_riqueza * no_corte * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	-$59.989,12
 Tablero	AA19		Vehiculo
 Tablero	AC19		-$107.884,35
 Tablero	AE19		USD
@@ -24466,7 +24461,7 @@ Tablero	F23		USD
 Tablero	H23		$110,00
 Tablero	L23		Gastos Fijos
 Tablero	N23	=IFERROR(N17 / N10; 0)	55%
-Tablero	O23	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_fijos / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_fijos; liquidez * rem_fijos / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$130.437,57
+Tablero	O23	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_fijos / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_fijos; liquidez * rem_fijos / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$123.223,24
 Tablero	AJ23		$76.100,00
 Tablero	AK23		Egreso
 Tablero	AL23		Computación
@@ -24485,7 +24480,7 @@ Tablero	F24		USD
 Tablero	H24		$91,10
 Tablero	L24		Gastos Variables
 Tablero	N24	=IFERROR(N18 / N11; 0)	43%
-Tablero	O24	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_variables / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_variables; liquidez * rem_variables / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$189.132,13
+Tablero	O24	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_variables / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_variables; liquidez * rem_variables / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$178.671,47
 Tablero	AJ24		$8,02
 Tablero	AK24		Ingreso
 Tablero	AL24		Intereses bancos
@@ -24499,8 +24494,8 @@ Tablero	AT24		$1.071,28
 Tablero	AU24		$1.749,06
 Tablero	AV24		$8,02
 Tablero	L25		Capacidad de Capitalización
-Tablero	N25	=IFERROR(N19 / (N12); 0)	1116335%
-Tablero	O25	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_capitalizacion / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_capitalizacion; liquidez * rem_capitalizacion / suma_rem); liquidez * parte_sin_presupuesto);\n  excedente; IF(suma_rem > 0; MAX(0; liquidez - suma_rem); 0);\n  reparto + excedente\n)	$0,00
+Tablero	N25	=IFERROR(N19 / (N12); 0)	-391830%
+Tablero	O25	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_capitalizacion / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_capitalizacion; liquidez * rem_capitalizacion / suma_rem); liquidez * parte_sin_presupuesto);\n  excedente; IF(suma_rem > 0; MAX(0; liquidez - suma_rem); 0);\n  reparto + excedente\n)	$17.675,00
 Tablero	AE25		Cotizaciones Monedas.
 Tablero	AJ25		$7.000,00
 Tablero	AK25		Egreso
@@ -25330,6 +25325,213 @@ Tablero	AS93		$1.515,00
 Tablero	AT93		$1.071,96
 Tablero	AU93		$1.758,15
 Tablero	AV93		$2,00
+Respaldo formulerio 2026-08-20_2328	A1		hoja
+Respaldo formulerio 2026-08-20_2328	B1		celda
+Respaldo formulerio 2026-08-20_2328	C1		formula
+Respaldo formulerio 2026-08-20_2328	A2		Inicio
+Respaldo formulerio 2026-08-20_2328	B2		AF7
+Respaldo formulerio 2026-08-20_2328	C2		="Valor en " & I4
+Respaldo formulerio 2026-08-20_2328	A3		Inicio
+Respaldo formulerio 2026-08-20_2328	B3		AT7
+Respaldo formulerio 2026-08-20_2328	C3		="Valor en " & $I$4
+Respaldo formulerio 2026-08-20_2328	A4		Inicio
+Respaldo formulerio 2026-08-20_2328	B4		C8
+Respaldo formulerio 2026-08-20_2328	C4		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA((tipo_fila<>"Ahorros") * (tipo_fila<>"Inversiones") > 0);\n  suma_ars; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="ARS"); 0));\n  suma_usd; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="USD"); 0));\n  suma_aud; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="AUD"); 0));\n  suma_eur; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="EUR"); 0));\n  total_ars; suma_ars + (suma_usd * TIDETRACK_USD()) + (suma_aud * TIDETRACK_AUD()) + (suma_eur * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($I$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  total_ars / tasa_destino\n)
+Respaldo formulerio 2026-08-20_2328	A5		Inicio
+Respaldo formulerio 2026-08-20_2328	B5		F8
+Respaldo formulerio 2026-08-20_2328	C5		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA(((tipo_fila="Ahorros") + (tipo_fila="Inversiones")) > 0);\n  suma_ars; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="ARS"); 0));\n  suma_usd; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="USD"); 0));\n  suma_aud; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="AUD"); 0));\n  suma_eur; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="EUR"); 0));\n  total_ars; suma_ars + (suma_usd * TIDETRACK_USD()) + (suma_aud * TIDETRACK_AUD()) + (suma_eur * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($I$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  total_ars / tasa_destino\n)
+Respaldo formulerio 2026-08-20_2328	A6		Inicio
+Respaldo formulerio 2026-08-20_2328	B6		T8
+Respaldo formulerio 2026-08-20_2328	C6		=LET(\n  mes_num; MATCH(I2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  fecha_inicio; TEXT(DATE(I3; mes_num; 1); "yyyy-mm-dd");\n  fecha_fin; TEXT(EOMONTH(DATE(I3; mes_num; 1); 0); "yyyy-mm-dd");\n  QUERY(\n    Registros!B6:M;\n    "SELECT * WHERE Col7 >= date '" & fecha_inicio & "' AND Col7 <= date '" & fecha_fin & "'";\n    0\n  )\n)
+Respaldo formulerio 2026-08-20_2328	A7		Inicio
+Respaldo formulerio 2026-08-20_2328	B7		AF8
+Respaldo formulerio 2026-08-20_2328	C7		=ARRAYFORMULA(\n  IF(T8:T=""; "";\n    LET(\n      tasa_origen; IF(Y8:Y="ARS"; AB8:AB; IF(Y8:Y="USD"; AC8:AC; IF(Y8:Y="AUD"; AD8:AD; IF(Y8:Y="EUR"; AE8:AE; 1))));\n      tasa_destino; IF(I4="ARS"; AB8:AB; IF(I4="USD"; AC8:AC; IF(I4="AUD"; AD8:AD; IF(I4="EUR"; AE8:AE; 1))));\n      IFERROR((T8:T * tasa_origen) / tasa_destino; 0)\n    )\n  )\n)
+Respaldo formulerio 2026-08-20_2328	A8		Inicio
+Respaldo formulerio 2026-08-20_2328	B8		AH8
+Respaldo formulerio 2026-08-20_2328	C8		=LET(\n  mes_num; MATCH(I2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  fecha_inicio; TEXT(DATE(I3; mes_num - 1; 1); "yyyy-mm-dd");\n  fecha_fin; TEXT(EOMONTH(DATE(I3; mes_num - 1; 1); 0); "yyyy-mm-dd");\n  QUERY(\n    Registros!B6:M;\n    "SELECT * WHERE Col7 >= date '" & fecha_inicio & "' AND Col7 <= date '" & fecha_fin & "'";\n    0\n  )\n)
+Respaldo formulerio 2026-08-20_2328	A9		Inicio
+Respaldo formulerio 2026-08-20_2328	B9		AT8
+Respaldo formulerio 2026-08-20_2328	C9		=ARRAYFORMULA(\n  IF(AH8:AH=""; "";\n    LET(\n      tasa_origen; IF(AM8:AM="ARS"; AP8:AP; IF(AM8:AM="USD"; AQ8:AQ; IF(AM8:AM="AUD"; AR8:AR; IF(AM8:AM="EUR"; AS8:AS; 1))));\n      tasa_destino; IF($I$4="ARS"; AP8:AP; IF($I$4="USD"; AQ8:AQ; IF($I$4="AUD"; AR8:AR; IF($I$4="EUR"; AS8:AS; 1))));\n      IFERROR((AH8:AH * tasa_origen) / tasa_destino; 0)\n    )\n  )\n)
+Respaldo formulerio 2026-08-20_2328	A10		Inicio
+Respaldo formulerio 2026-08-20_2328	B10		J9
+Respaldo formulerio 2026-08-20_2328	C10		=SEQUENCE(6; 7; DATEVALUE(I2 & " 1 " & I3) - WEEKDAY(DATEVALUE(I2 & " 1 " & I3); 1) + 1)
+Respaldo formulerio 2026-08-20_2328	A11		Inicio
+Respaldo formulerio 2026-08-20_2328	B11		C13
+Respaldo formulerio 2026-08-20_2328	C11		=IFERROR(QUERY(\n  ARRAYFORMULA({\n    V8:V \\ \n    IF(U8:U="Egreso"; -AF8:AF; AF8:AF) \\ \n    W8:W \\ \n    IFERROR(VLOOKUP(X8:X; 'Plan de Cuentas'!L:N; 3; 0); "") \\\n    IFERROR(VLOOKUP(X8:X; 'Plan de Cuentas'!L:N; 3; 0); "")\n  });\n  "SELECT SUM(Col2) \n   WHERE Col3 = 'Ingreso' \n   AND Col1 != 'Traspaso' \n   AND Col1 IS NOT NULL \n   AND Col1 != 'Inicio Mes' \n   LABEL SUM(Col2) ''";\n  0\n); 0)
+Respaldo formulerio 2026-08-20_2328	A12		Inicio
+Respaldo formulerio 2026-08-20_2328	B12		F13
+Respaldo formulerio 2026-08-20_2328	C12		=IFERROR(QUERY(\n  ARRAYFORMULA({\n    V8:V \\ \n    IF(U8:U="Ingreso"; -AF8:AF; AF8:AF) \\ \n    W8:W \\ \n    IFERROR(VLOOKUP(X8:X; 'Plan de Cuentas'!L:N; 3; 0); "") \\\n    IFERROR(VLOOKUP(X8:X; 'Plan de Cuentas'!L:N; 3; 0); "")\n  });\n  "SELECT SUM(Col2) \n   WHERE (Col3 = 'Gasto Fijo' OR Col3 = 'Gasto Variable') \n   AND Col1 != 'Traspaso' \n   AND Col1 IS NOT NULL \n   AND Col1 != 'Inicio Mes' \n   LABEL SUM(Col2) ''";\n  0\n); 0)
+Respaldo formulerio 2026-08-20_2328	A13		Inicio
+Respaldo formulerio 2026-08-20_2328	B13		C15
+Respaldo formulerio 2026-08-20_2328	C13		=LET(\n  monto_act; AF8:AF; tipo_act; U8:U; cuenta_act; V8:V; cat_act; W8:W; medio_act; X8:X;\n  monto_ant; AT8:AT; tipo_ant; AI8:AI; cuenta_ant; AJ8:AJ; cat_ant; AK8:AK; medio_ant; AL8:AL;\n  \n  monto_neto_act; ARRAYFORMULA(IF(tipo_act="Egreso"; -monto_act; monto_act));\n  monto_neto_ant; ARRAYFORMULA(IF(tipo_ant="Egreso"; -monto_ant; monto_ant));\n  \n  proy_act; ARRAYFORMULA(IFERROR(VLOOKUP(medio_act; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  tipo_proy_act; proy_act;\n  \n  proy_ant; ARRAYFORMULA(IFERROR(VLOOKUP(medio_ant; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  tipo_proy_ant; proy_ant;\n  \n  cond_ingreso_act; cat_act = "Ingreso";\n  cond_no_traspaso_act; cuenta_act <> "Traspaso";\n  cond_inicio_act; ARRAYFORMULA(cuenta_act <> "Inicio Mes");\n  \n  cond_ingreso_ant; cat_ant = "Ingreso";\n  cond_no_traspaso_ant; cuenta_ant <> "Traspaso";\n  cond_inicio_ant; ARRAYFORMULA(cuenta_ant <> "Inicio Mes");\n  \n  ingreso_act_ars; SUM(IFERROR(FILTER(monto_neto_act; cond_ingreso_act; cond_no_traspaso_act; cond_inicio_act); 0));\n  ingreso_ant_ars; SUM(IFERROR(FILTER(monto_neto_ant; cond_ingreso_ant; cond_no_traspaso_ant; cond_inicio_ant); 0));\n  \n  variacion; IF(ingreso_ant_ars = 0; IF(ingreso_act_ars > 0; 1; 0); (ingreso_act_ars - ingreso_ant_ars) / ingreso_ant_ars);\n  \n  TEXT(variacion; "+0,0%;-0,0%;0%") & " respecto del mes anterior."\n)
+Respaldo formulerio 2026-08-20_2328	A14		Inicio
+Respaldo formulerio 2026-08-20_2328	B14		F15
+Respaldo formulerio 2026-08-20_2328	C14		=LET(\n  monto_act; AF8:AF; tipo_act; U8:U; cuenta_act; V8:V; cat_act; W8:W; medio_act; X8:X;\n  monto_ant; AT8:AT; tipo_ant; AI8:AI; cuenta_ant; AJ8:AJ; cat_ant; AK8:AK; medio_ant; AL8:AL;\n  \n  monto_neto_act; ARRAYFORMULA(IF(tipo_act="Ingreso"; -monto_act; monto_act));\n  monto_neto_ant; ARRAYFORMULA(IF(tipo_ant="Ingreso"; -monto_ant; monto_ant));\n  \n  proy_act; ARRAYFORMULA(IFERROR(VLOOKUP(medio_act; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  tipo_proy_act; proy_act;\n  \n  proy_ant; ARRAYFORMULA(IFERROR(VLOOKUP(medio_ant; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  tipo_proy_ant; proy_ant;\n  \n  cond_egreso_act; ARRAYFORMULA((cat_act = "Gasto Fijo") + (cat_act = "Gasto Variable") > 0);\n  cond_no_traspaso_act; cuenta_act <> "Traspaso";\n  cond_inicio_act; ARRAYFORMULA(cuenta_act <> "Inicio Mes");\n  \n  cond_egreso_ant; ARRAYFORMULA((cat_ant = "Gasto Fijo") + (cat_ant = "Gasto Variable") > 0);\n  cond_no_traspaso_ant; cuenta_ant <> "Traspaso";\n  cond_inicio_ant; ARRAYFORMULA(cuenta_ant <> "Inicio Mes");\n  \n  egreso_act_ars; SUM(IFERROR(FILTER(monto_neto_act; cond_egreso_act; cond_no_traspaso_act; cond_inicio_act); 0));\n  egreso_ant_ars; SUM(IFERROR(FILTER(monto_neto_ant; cond_egreso_ant; cond_no_traspaso_ant; cond_inicio_ant); 0));\n  \n  variacion; IF(egreso_ant_ars = 0; IF(egreso_act_ars > 0; 1; 0); (egreso_act_ars - egreso_ant_ars) / egreso_ant_ars);\n  \n  TEXT(variacion; "+0,0%;-0,0%;0%") & " respecto del mes anterior."\n)
+Respaldo formulerio 2026-08-20_2328	A15		Tablero
+Respaldo formulerio 2026-08-20_2328	B15		AV4
+Respaldo formulerio 2026-08-20_2328	C15		="Valor en " & N4
+Respaldo formulerio 2026-08-20_2328	A16		Tablero
+Respaldo formulerio 2026-08-20_2328	B16		AJ6
+Respaldo formulerio 2026-08-20_2328	C16		=LET(\n  mes_num; MATCH(N2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  fecha_inicio; TEXT(DATE(N3; mes_num; 1); "yyyy-mm-dd");\n  fecha_fin; TEXT(EOMONTH(DATE(N3; mes_num; 1); 0); "yyyy-mm-dd");\n  QUERY(\n    Registros!B6:M;\n    "SELECT * WHERE Col7 >= date '" & fecha_inicio & "' AND Col7 <= date '" & fecha_fin & "'";\n    0\n  )\n)
+Respaldo formulerio 2026-08-20_2328	A17		Tablero
+Respaldo formulerio 2026-08-20_2328	B17		AV6
+Respaldo formulerio 2026-08-20_2328	C17		=ARRAYFORMULA(\n  IF(AJ6:AJ=""; "";\n    LET(\n      tasa_origen; IF(AO6:AO="ARS"; AR6:AR; IF(AO6:AO="USD"; AS6:AS; IF(AO6:AO="AUD"; AT6:AT; IF(AO6:AO="EUR"; AU6:AU; 1))));\n      tasa_destino; IF($N$4="ARS"; AR6:AR; IF($N$4="USD"; AS6:AS; IF($N$4="AUD"; AT6:AT; IF($N$4="EUR"; AU6:AU; 1))));\n      IFERROR((AJ6:AJ * tasa_origen) / tasa_destino; 0)\n    )\n  )\n)
+Respaldo formulerio 2026-08-20_2328	A18		Tablero
+Respaldo formulerio 2026-08-20_2328	B18		S7
+Respaldo formulerio 2026-08-20_2328	C18		=SUM(S9:S27)
+Respaldo formulerio 2026-08-20_2328	A19		Tablero
+Respaldo formulerio 2026-08-20_2328	B19		V7
+Respaldo formulerio 2026-08-20_2328	C19		=SUM(V9:V27)
+Respaldo formulerio 2026-08-20_2328	A20		Tablero
+Respaldo formulerio 2026-08-20_2328	B20		Y7
+Respaldo formulerio 2026-08-20_2328	C20		=SUM(Y9:Y27)
+Respaldo formulerio 2026-08-20_2328	A21		Tablero
+Respaldo formulerio 2026-08-20_2328	B21		C9
+Respaldo formulerio 2026-08-20_2328	C21		=SEQUENCE(6; 7; DATEVALUE(N2 & " 1 " & N3) - WEEKDAY(DATEVALUE(N2 & " 1 " & N3); 1) + 1)
+Respaldo formulerio 2026-08-20_2328	A22		Tablero
+Respaldo formulerio 2026-08-20_2328	B22		N9
+Respaldo formulerio 2026-08-20_2328	C22		=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Ingreso") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)
+Respaldo formulerio 2026-08-20_2328	A23		Tablero
+Respaldo formulerio 2026-08-20_2328	B23		O9
+Respaldo formulerio 2026-08-20_2328	C23		=IFERROR(N9/$N$9; 0)
+Respaldo formulerio 2026-08-20_2328	A24		Tablero
+Respaldo formulerio 2026-08-20_2328	B24		R9
+Respaldo formulerio 2026-08-20_2328	C24		=IFERROR(QUERY(\n  ARRAYFORMULA({\n    AL6:AL \\ \n    IF(AK6:AK="Egreso"; -AV6:AV; AV6:AV) \\ \n    AM6:AM \\ \n    IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); "") \\\n    IFERROR(VLOOKUP(IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); ""); 'Plan de Cuentas'!P:P; 2; 0); "")\n  });\n  "SELECT Col1, SUM(Col2) \n   WHERE Col3 = 'Ingreso' \n   AND Col1 != 'Traspaso' \n   AND Col1 IS NOT NULL \n   AND Col1 != 'Inicio Mes' \n   GROUP BY Col1 \n   ORDER BY SUM(Col2) DESC \n   LABEL Col1 '', SUM(Col2) ''";\n  0\n); {"" \\ ""})
+Respaldo formulerio 2026-08-20_2328	A25		Tablero
+Respaldo formulerio 2026-08-20_2328	B25		U9
+Respaldo formulerio 2026-08-20_2328	C25		=IFERROR(QUERY(\n  ARRAYFORMULA({\n    AL6:AL \\ \n    IF(AK6:AK="Ingreso"; -AV6:AV; AV6:AV) \\ \n    AM6:AM \\ \n    IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); "") \\\n    IFERROR(VLOOKUP(IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); ""); 'Plan de Cuentas'!P:P; 2; 0); "")\n  });\n  "SELECT Col1, SUM(Col2) \n   WHERE Col3 = 'Gasto Fijo' \n   AND Col1 != 'Traspaso' \n   AND Col1 IS NOT NULL \n   AND Col1 != 'Inicio Mes' \n   GROUP BY Col1 \n   ORDER BY SUM(Col2) DESC \n   LABEL Col1 '', SUM(Col2) ''";\n  0\n); {"" \\ ""})
+Respaldo formulerio 2026-08-20_2328	A26		Tablero
+Respaldo formulerio 2026-08-20_2328	B26		X9
+Respaldo formulerio 2026-08-20_2328	C26		=IFERROR(QUERY(\n  ARRAYFORMULA({\n    AL6:AL \\ \n    IF(AK6:AK="Ingreso"; -AV6:AV; AV6:AV) \\ \n    AM6:AM \\ \n    IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); "") \\\n    IFERROR(VLOOKUP(IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); ""); 'Plan de Cuentas'!P:P; 2; 0); "")\n  });\n  "SELECT Col1, SUM(Col2) \n   WHERE Col3 = 'Gasto Variable' \n   AND Col1 != 'Traspaso' \n   AND Col1 IS NOT NULL \n   AND Col1 != 'Inicio Mes' \n   GROUP BY Col1 \n   ORDER BY SUM(Col2) DESC \n   LABEL Col1 '', SUM(Col2) ''";\n  0\n); {"" \\ ""})
+Respaldo formulerio 2026-08-20_2328	A27		Tablero
+Respaldo formulerio 2026-08-20_2328	B27		AA9
+Respaldo formulerio 2026-08-20_2328	C27		=LET(\n  medio; AN6:AN;\n  moneda; AO6:AO;\n  \n  monto_neto; ARRAYFORMULA(IF(AJ6:AJ=""; 0; IF(AK6:AK="Egreso"; -AJ6:AJ; AJ6:AJ)));\n  \n  proyecto; ARRAYFORMULA(IFERROR(VLOOKUP(AL6:AL; 'Plan de Cuentas'!C:D; 2; 0); IFERROR(VLOOKUP(AL6:AL; 'Plan de Cuentas'!F:G; 2; 0); IFERROR(VLOOKUP(AL6:AL; 'Plan de Cuentas'!I:J; 2; 0); ""))));\n  tipo_proy; ARRAYFORMULA(IFERROR(VLOOKUP(proyecto; 'Plan de Cuentas'!P:P; 2; 0); ""));\n  \n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; $AF$27; IF(moneda="AUD"; $AF$28; IF(moneda="EUR"; $AF$29; 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; $AF$27; "AUD"; $AF$28; "EUR"; $AF$29); 1);\n  \n  monto_convertido; ARRAYFORMULA(IFERROR((monto_neto * tasa_origen) / tasa_destino; 0));\n  \n  condicion; ARRAYFORMULA(proyecto<>"");\n  \n  proy_filtrado; FILTER(proyecto; condicion);\n  monto_filtrado; FILTER(monto_convertido; condicion);\n  \n  resultado_query; IFERROR(QUERY(\n    {proy_filtrado \\ monto_filtrado};\n    "SELECT Col1, SUM(Col2) \n     GROUP BY Col1 \n     ORDER BY SUM(Col2) DESC \n     LABEL Col1 '', SUM(Col2) ''";\n    0\n  ); {"" \\ ""});\n  \n  columna_aj; INDEX(resultado_query; 0; 1);\n  columna_al; INDEX(resultado_query; 0; 2);\n  columna_tipo; ARRAYFORMULA(IFERROR(VLOOKUP(columna_aj; 'Plan de Cuentas'!P:P; 2; 0); ""));\n  \n  {columna_aj \\ columna_tipo \\ columna_al}\n)
+Respaldo formulerio 2026-08-20_2328	A28		Tablero
+Respaldo formulerio 2026-08-20_2328	B28		AG9
+Respaldo formulerio 2026-08-20_2328	C28		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA(tipo_fila=AE9);\n  suma_ars; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="ARS"); 0));\n  suma_usd; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="USD"); 0));\n  suma_aud; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="AUD"); 0));\n  suma_eur; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="EUR"); 0));\n  total_ars; suma_ars + (suma_usd * TIDETRACK_USD()) + (suma_aud * TIDETRACK_AUD()) + (suma_eur * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  total_ars / tasa_destino\n)
+Respaldo formulerio 2026-08-20_2328	A29		Tablero
+Respaldo formulerio 2026-08-20_2328	B29		N10
+Respaldo formulerio 2026-08-20_2328	C29		=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Gasto Fijo") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)
+Respaldo formulerio 2026-08-20_2328	A30		Tablero
+Respaldo formulerio 2026-08-20_2328	B30		O10
+Respaldo formulerio 2026-08-20_2328	C30		=IFERROR(N10/$N$9;0)
+Respaldo formulerio 2026-08-20_2328	A31		Tablero
+Respaldo formulerio 2026-08-20_2328	B31		AG10
+Respaldo formulerio 2026-08-20_2328	C31		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA(tipo_fila=AE10);\n  suma_ars; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="ARS"); 0));\n  suma_usd; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="USD"); 0));\n  suma_aud; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="AUD"); 0));\n  suma_eur; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="EUR"); 0));\n  total_ars; suma_ars + (suma_usd * TIDETRACK_USD()) + (suma_aud * TIDETRACK_AUD()) + (suma_eur * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  total_ars / tasa_destino\n)
+Respaldo formulerio 2026-08-20_2328	A32		Tablero
+Respaldo formulerio 2026-08-20_2328	B32		N11
+Respaldo formulerio 2026-08-20_2328	C32		=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Gasto Variable") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)
+Respaldo formulerio 2026-08-20_2328	A33		Tablero
+Respaldo formulerio 2026-08-20_2328	B33		O11
+Respaldo formulerio 2026-08-20_2328	C33		=IFERROR(N11/$N$9;0)
+Respaldo formulerio 2026-08-20_2328	A34		Tablero
+Respaldo formulerio 2026-08-20_2328	B34		AG11
+Respaldo formulerio 2026-08-20_2328	C34		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA(tipo_fila=AE11);\n  suma_ars; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="ARS"); 0));\n  suma_usd; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="USD"); 0));\n  suma_aud; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="AUD"); 0));\n  suma_eur; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="EUR"); 0));\n  total_ars; suma_ars + (suma_usd * TIDETRACK_USD()) + (suma_aud * TIDETRACK_AUD()) + (suma_eur * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  total_ars / tasa_destino\n)
+Respaldo formulerio 2026-08-20_2328	A35		Tablero
+Respaldo formulerio 2026-08-20_2328	B35		N12
+Respaldo formulerio 2026-08-20_2328	C35		=N9-N10-N11
+Respaldo formulerio 2026-08-20_2328	A36		Tablero
+Respaldo formulerio 2026-08-20_2328	B36		O12
+Respaldo formulerio 2026-08-20_2328	C36		=IFERROR(N12/$N$9;0)
+Respaldo formulerio 2026-08-20_2328	A37		Tablero
+Respaldo formulerio 2026-08-20_2328	B37		AG12
+Respaldo formulerio 2026-08-20_2328	C37		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA(tipo_fila=AE12);\n  suma_ars; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="ARS"); 0));\n  suma_usd; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="USD"); 0));\n  suma_aud; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="AUD"); 0));\n  suma_eur; SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda="EUR"); 0));\n  total_ars; suma_ars + (suma_usd * TIDETRACK_USD()) + (suma_aud * TIDETRACK_AUD()) + (suma_eur * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  total_ars / tasa_destino\n)
+Respaldo formulerio 2026-08-20_2328	A38		Tablero
+Respaldo formulerio 2026-08-20_2328	B38		N16
+Respaldo formulerio 2026-08-20_2328	C38		=S7
+Respaldo formulerio 2026-08-20_2328	A39		Tablero
+Respaldo formulerio 2026-08-20_2328	B39		O16
+Respaldo formulerio 2026-08-20_2328	C39		=IFERROR(N16/$N$16; 0)
+Respaldo formulerio 2026-08-20_2328	A40		Tablero
+Respaldo formulerio 2026-08-20_2328	B40		N17
+Respaldo formulerio 2026-08-20_2328	C40		=V7
+Respaldo formulerio 2026-08-20_2328	A41		Tablero
+Respaldo formulerio 2026-08-20_2328	B41		O17
+Respaldo formulerio 2026-08-20_2328	C41		=IFERROR(N17/$N$16;0)
+Respaldo formulerio 2026-08-20_2328	A42		Tablero
+Respaldo formulerio 2026-08-20_2328	B42		C18
+Respaldo formulerio 2026-08-20_2328	C42		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  saldos; MAP(lista; LAMBDA(un_medio;\n    SUM(IFERROR(FILTER(neto; vigente; col_medio=un_medio); 0))));\n  con_saldo; ARRAYFORMULA(ROUND(saldos; 2)<>0);\n  ordenada; IFERROR(SORT(FILTER(HSTACK(lista; mon_lista; saldos); con_saldo); 3; FALSE);\n    HSTACK("(sin saldos)"; ""; 0));\n  tabla; ARRAY_CONSTRAIN(ordenada; 12; 3);\n  INDEX(tabla; 0; 1)\n)
+Respaldo formulerio 2026-08-20_2328	A43		Tablero
+Respaldo formulerio 2026-08-20_2328	B43		F18
+Respaldo formulerio 2026-08-20_2328	C43		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  saldos; MAP(lista; LAMBDA(un_medio;\n    SUM(IFERROR(FILTER(neto; vigente; col_medio=un_medio); 0))));\n  con_saldo; ARRAYFORMULA(ROUND(saldos; 2)<>0);\n  ordenada; IFERROR(SORT(FILTER(HSTACK(lista; mon_lista; saldos); con_saldo); 3; FALSE);\n    HSTACK("(sin saldos)"; ""; 0));\n  tabla; ARRAY_CONSTRAIN(ordenada; 12; 3);\n  INDEX(tabla; 0; 2)\n)
+Respaldo formulerio 2026-08-20_2328	A44		Tablero
+Respaldo formulerio 2026-08-20_2328	B44		H18
+Respaldo formulerio 2026-08-20_2328	C44		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  saldos; MAP(lista; LAMBDA(un_medio;\n    SUM(IFERROR(FILTER(neto; vigente; col_medio=un_medio); 0))));\n  con_saldo; ARRAYFORMULA(ROUND(saldos; 2)<>0);\n  ordenada; IFERROR(SORT(FILTER(HSTACK(lista; mon_lista; saldos); con_saldo); 3; FALSE);\n    HSTACK("(sin saldos)"; ""; 0));\n  tabla; ARRAY_CONSTRAIN(ordenada; 12; 3);\n  INDEX(tabla; 0; 3)\n)
+Respaldo formulerio 2026-08-20_2328	A45		Tablero
+Respaldo formulerio 2026-08-20_2328	B45		N18
+Respaldo formulerio 2026-08-20_2328	C45		=Y7
+Respaldo formulerio 2026-08-20_2328	A46		Tablero
+Respaldo formulerio 2026-08-20_2328	B46		O18
+Respaldo formulerio 2026-08-20_2328	C46		=IFERROR(N18/$N$16;0)
+Respaldo formulerio 2026-08-20_2328	A47		Tablero
+Respaldo formulerio 2026-08-20_2328	B47		AF18
+Respaldo formulerio 2026-08-20_2328	C47		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA((tipo_fila<>"Ahorros") * (tipo_fila<>"Inversiones") > 0);\n  SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda=AE18); 0))\n)
+Respaldo formulerio 2026-08-20_2328	A48		Tablero
+Respaldo formulerio 2026-08-20_2328	B48		AG18
+Respaldo formulerio 2026-08-20_2328	C48		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA(((tipo_fila="Ahorros") + (tipo_fila="Inversiones")) > 0);\n  SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda=AE18); 0))\n)
+Respaldo formulerio 2026-08-20_2328	A49		Tablero
+Respaldo formulerio 2026-08-20_2328	B49		N19
+Respaldo formulerio 2026-08-20_2328	C49		=N16-N17-N18
+Respaldo formulerio 2026-08-20_2328	A50		Tablero
+Respaldo formulerio 2026-08-20_2328	B50		O19
+Respaldo formulerio 2026-08-20_2328	C50		=IFERROR(N19/$N$16;0)
+Respaldo formulerio 2026-08-20_2328	A51		Tablero
+Respaldo formulerio 2026-08-20_2328	B51		AF19
+Respaldo formulerio 2026-08-20_2328	C51		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA((tipo_fila<>"Ahorros") * (tipo_fila<>"Inversiones") > 0);\n  SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda=AE19); 0))\n)
+Respaldo formulerio 2026-08-20_2328	A52		Tablero
+Respaldo formulerio 2026-08-20_2328	B52		AG19
+Respaldo formulerio 2026-08-20_2328	C52		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA(((tipo_fila="Ahorros") + (tipo_fila="Inversiones")) > 0);\n  SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda=AE19); 0))\n)
+Respaldo formulerio 2026-08-20_2328	A53		Tablero
+Respaldo formulerio 2026-08-20_2328	B53		AF20
+Respaldo formulerio 2026-08-20_2328	C53		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA((tipo_fila<>"Ahorros") * (tipo_fila<>"Inversiones") > 0);\n  SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda=AE20); 0))\n)
+Respaldo formulerio 2026-08-20_2328	A54		Tablero
+Respaldo formulerio 2026-08-20_2328	B54		AG20
+Respaldo formulerio 2026-08-20_2328	C54		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA(((tipo_fila="Ahorros") + (tipo_fila="Inversiones")) > 0);\n  SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda=AE20); 0))\n)
+Respaldo formulerio 2026-08-20_2328	A55		Tablero
+Respaldo formulerio 2026-08-20_2328	B55		AF21
+Respaldo formulerio 2026-08-20_2328	C55		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA((tipo_fila<>"Ahorros") * (tipo_fila<>"Inversiones") > 0);\n  SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda=AE21); 0))\n)
+Respaldo formulerio 2026-08-20_2328	A56		Tablero
+Respaldo formulerio 2026-08-20_2328	B56		AG21
+Respaldo formulerio 2026-08-20_2328	C56		=LET(\n  col_medio; Registros!F7:F;\n  col_cuenta; Registros!D7:D;\n  col_fecha; Registros!H7:H;\n  col_moneda; Registros!G7:G;\n  neto; ARRAYFORMULA(IF(Registros!C7:C="Egreso"; -Registros!B7:B; Registros!B7:B));\n  lista; IFERROR(FILTER('Plan de Cuentas'!L8:L; 'Plan de Cuentas'!L8:L<>""); "");\n  cortes; MAP(lista; LAMBDA(un_medio; MAX(IFERROR(FILTER(col_fecha; col_medio=un_medio; col_cuenta="Inicio Mes"); 0))));\n  corte_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; HSTACK(lista; cortes); 2; 0); ""));\n  vigente; ARRAYFORMULA((corte_fila<>"") * (col_fecha>=corte_fila));\n  tipo_fila; ARRAYFORMULA(IFERROR(VLOOKUP(col_medio; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  mon_lista; ARRAYFORMULA(IFERROR(VLOOKUP(lista; 'Plan de Cuentas'!L:N; 2; 0); "ARS"));\n  grupo; ARRAYFORMULA(((tipo_fila="Ahorros") + (tipo_fila="Inversiones")) > 0);\n  SUM(IFERROR(FILTER(neto; vigente; grupo; col_moneda=AE21); 0))\n)
+Respaldo formulerio 2026-08-20_2328	A57		Tablero
+Respaldo formulerio 2026-08-20_2328	B57		N23
+Respaldo formulerio 2026-08-20_2328	C57		=IFERROR(N17 / N10; 0)
+Respaldo formulerio 2026-08-20_2328	A58		Tablero
+Respaldo formulerio 2026-08-20_2328	B58		O23
+Respaldo formulerio 2026-08-20_2328	C58		=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_fijos / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_fijos; liquidez * rem_fijos / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)
+Respaldo formulerio 2026-08-20_2328	A59		Tablero
+Respaldo formulerio 2026-08-20_2328	B59		N24
+Respaldo formulerio 2026-08-20_2328	C59		=IFERROR(N18 / N11; 0)
+Respaldo formulerio 2026-08-20_2328	A60		Tablero
+Respaldo formulerio 2026-08-20_2328	B60		O24
+Respaldo formulerio 2026-08-20_2328	C60		=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_variables / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_variables; liquidez * rem_variables / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)
+Respaldo formulerio 2026-08-20_2328	A61		Tablero
+Respaldo formulerio 2026-08-20_2328	B61		N25
+Respaldo formulerio 2026-08-20_2328	C61		=IFERROR(N19 / (N12); 0)
+Respaldo formulerio 2026-08-20_2328	A62		Tablero
+Respaldo formulerio 2026-08-20_2328	B62		O25
+Respaldo formulerio 2026-08-20_2328	C62		=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_capitalizacion / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_capitalizacion; liquidez * rem_capitalizacion / suma_rem); liquidez * parte_sin_presupuesto);\n  excedente; IF(suma_rem > 0; MAX(0; liquidez - suma_rem); 0);\n  reparto + excedente\n)
+Respaldo formulerio 2026-08-20_2328	A63		Tablero
+Respaldo formulerio 2026-08-20_2328	B63		AF27
+Respaldo formulerio 2026-08-20_2328	C63		=tidetrack_usd()
+Respaldo formulerio 2026-08-20_2328	A64		Tablero
+Respaldo formulerio 2026-08-20_2328	B64		L28
+Respaldo formulerio 2026-08-20_2328	C64		=LET(\n  ingresos_traspaso; SUMIFS(AV6:AV; AL6:AL; "Traspaso"; AK6:AK; "Ingreso");\n  egresos_traspaso; SUMIFS(AV6:AV; AL6:AL; "Traspaso"; AK6:AK; "Egreso");\n  diferencia; ROUND(ingresos_traspaso - egresos_traspaso; 2);\n  \n  IF(diferencia = 0;\n    "Traspasos balanceados";\n    "Descuadre en Traspasos por " & TEXT(diferencia; "$ #.##0,00")\n  )\n)
+Respaldo formulerio 2026-08-20_2328	A65		Tablero
+Respaldo formulerio 2026-08-20_2328	B65		AF28
+Respaldo formulerio 2026-08-20_2328	C65		=TIDETRACK_AUD()
+Respaldo formulerio 2026-08-20_2328	A66		Tablero
+Respaldo formulerio 2026-08-20_2328	B66		AF29
+Respaldo formulerio 2026-08-20_2328	C66		=tidetrack_EUR()
+Respaldo formulerio 2026-08-20_2328	A67		Tablero
+Respaldo formulerio 2026-08-20_2328	B67		L31
+Respaldo formulerio 2026-08-20_2328	C67		=LET(\n  monto_neto; ARRAYFORMULA(IF(AK6:AK="Egreso"; -AJ6:AJ; AJ6:AJ));\n  vigente; ARRAYFORMULA(AL6:AL<>"Inicio Mes");\n  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  sin_clasificar; ARRAYFORMULA((AJ6:AJ<>"") * (categoria=""));\n  cantidad; SUM(IFERROR(FILTER(ARRAYFORMULA(SIGN(ABS(monto_neto))); vigente; sin_clasificar); 0));\n  monto_total; SUM(IFERROR(FILTER(monto_neto; vigente; sin_clasificar); 0));\n  IF(cantidad = 0;\n    "Todos los movimientos del mes clasifican.";\n    "Sin clasificar: " & TEXT(cantidad; "0") & " movimiento(s) por " & TEXT(monto_total; "$ #.##0,00") & " (sin medio o con un medio que no esta en el Plan de Cuentas). Es lo que le falta al 100%."\n  )\n)
+Respaldo formulerio 2026-08-20_2328	A68		Tablero
+Respaldo formulerio 2026-08-20_2328	B68		L32
+Respaldo formulerio 2026-08-20_2328	C68		=LET(\n  monto_neto; ARRAYFORMULA(IF(AK6:AK="Egreso"; -AJ6:AJ; AJ6:AJ));\n  vigente; ARRAYFORMULA(AL6:AL<>"Inicio Mes");\n  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  sin_clasificar; ARRAYFORMULA((AJ6:AJ<>"") * (categoria=""));\n  cantidad; SUM(IFERROR(FILTER(ARRAYFORMULA(SIGN(ABS(monto_neto))); vigente; sin_clasificar); 0));\n  monto_total; SUM(IFERROR(FILTER(monto_neto; vigente; sin_clasificar); 0));\n  IF(cantidad = 0;\n    "Todos los movimientos del mes clasifican.";\n    "Sin clasificar: " & TEXT(cantidad; "0") & " movimiento(s) por " & TEXT(monto_total; "$ #.##0,00") & " (sin medio o con un medio que no esta en el Plan de Cuentas). Es lo que le falta al 100%."\n  )\n)
+Respaldo formulerio 2026-08-20_2328	A69		Tablero
+Respaldo formulerio 2026-08-20_2328	B69		L33
+Respaldo formulerio 2026-08-20_2328	C69		=LET(\n  monto_neto; ARRAYFORMULA(IF(AK6:AK="Egreso"; -AJ6:AJ; AJ6:AJ));\n  vigente; ARRAYFORMULA(AL6:AL<>"Inicio Mes");\n  categoria; ARRAYFORMULA(IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); ""));\n  sin_clasificar; ARRAYFORMULA((AJ6:AJ<>"") * (categoria=""));\n  cantidad; SUM(IFERROR(FILTER(ARRAYFORMULA(SIGN(ABS(monto_neto))); vigente; sin_clasificar); 0));\n  monto_total; SUM(IFERROR(FILTER(monto_neto; vigente; sin_clasificar); 0));\n  IF(cantidad = 0;\n    "Todos los movimientos del mes clasifican.";\n    "Sin clasificar: " & TEXT(cantidad; "0") & " movimiento(s) por " & TEXT(monto_total; "$ #.##0,00") & " (sin medio o con un medio que no esta en el Plan de Cuentas). Es lo que le falta al 100%."\n  )\n)
 Respaldo formulerio 2026-08-20_2231	A1		hoja
 Respaldo formulerio 2026-08-20_2231	B1		celda
 Respaldo formulerio 2026-08-20_2231	C1		formula
