@@ -9,7 +9,7 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
-## v0.38.5 - Dueno unico por celda: se retiran 9 coordenadas stale, los 8 bancos en verde (2026-08-21)
+## v0.39.1 - Dueno unico por celda: se retiran 9 coordenadas stale, los 8 bancos en verde (2026-08-21)
 
 Dos decisiones de Franco tomadas juntas: **retirar** toda coordenada que un modulo declara
 administrar y que hoy administra otro, y fijar **dueno unico** para las celdas que tres modulos se
@@ -81,6 +81,33 @@ entraron en esta decision de dueno unico.
 
 ---
 
+## v0.39.0 - El bloque de faltante proyectado sube a 30 filas y deja de abortar por falta de lugar (2026-08-21)
+
+`estadoTableroFaltanteProyectado()` corrido contra la planilla real reporto que "Gastos
+Variables" tenia 10 cuentas con movimiento real para una capacidad de 9 pares (bloque 10 a 28), y
+el preflight abortaba: "Agrandar el bloque antes de correr esto: nunca se recorta una cuenta real
+en silencio." El principio era correcto; abortar dejaba a Franco sin la funcionalidad entera por
+una sola cuenta de mas.
+
+### Que cambia
+
+- **Capacidad derivada de un solo numero**: `TFP_FILA_FIN` (30) reemplaza el `filaFin: 28`
+  repetido en los tres bloques. 21 filas -> 10 pares cuenta/faltante, y sobra exactamente una
+  fila (21 es impar) -- la que ahora ocupa el aviso de truncado.
+- **Truncar a la vista, nunca abortar**: si hay mas cuentas que lugar, la formula muestra las de
+  mayor monto (real primero, proyectado como desempate) y la ULTIMA fila del bloque avisa, en
+  cursiva, cuantas quedaron afuera y por cuanta plata. Esa fila desaparece sola cuando todo entra.
+- Los totales (`S7/S8`, etc.) y la regla gris de "falta" excluyen esa fila reservada, para que el
+  monto oculto del aviso no se sume como si fuera una cuenta real de mas.
+- **Decision confirmada**: las cuentas proyectadas sin movimiento real siguen apareciendo (es la
+  razon de ser del modulo); el orden por monto real descendente ya las manda al final.
+- `estadoTableroFaltanteProyectado()` reporta cuantas cuentas reales hay, cuantas entran y
+  cuantas quedarian afuera, por bloque.
+- `_verificarInvariantesTfp` pasa de exigir igualdad estricta entre el conteo de cuentas antes y
+  despues a exigir un piso (sin truncar) o un numero exacto (con truncado).
+
+Detalle completo, incluidas las mutaciones probadas, en `docs/permanente/HISTORIAL_DESARROLLO.md`
+y `src/ZZ_Changelog.js`.
 ## v0.38.4 - El modulo seguia leyendo R9/U9/X9 mientras su banco probaba R10/U10/X10 (2026-08-21)
 
 > **DESPLEGADO el 2026-08-21** via `sync_targets.command`, drift-check posterior: *sin drift*.

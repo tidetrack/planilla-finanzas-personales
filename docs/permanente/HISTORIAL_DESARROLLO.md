@@ -6,6 +6,116 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-21 - El bloque de faltante proyectado sube a 30 filas y deja de abortar por falta de lugar (v0.39.0)
+
+### Evento
+
+Franco corrio `estadoTableroFaltanteProyectado()` contra la planilla real y el bloque "Gastos
+Variables" del Tablero devolvio:
+
+```
+"Gastos Variables." tiene 10 cuenta(s) con movimiento real hoy, y el bloque solo entra
+9 pares cuenta/faltante en su capacidad actual (10 a 28). Agrandar el bloque antes de
+correr esto: nunca se recorta una cuenta real en silencio.
+```
+
+El preflight de `DEVTOOL_TableroFaltanteProyectado.js` (v0.36.0) abortaba por diseno ante ese
+desborde. El principio detras era correcto -- nunca recortar una cuenta real en silencio -- pero
+la conclusion (abortar) dejaba a Franco sin la funcionalidad entera por una sola cuenta de mas, y
+la proxima categoria variable que se diera de alta iba a repetir el bloqueo. Franco confirmo dos
+cambios: subir la capacidad del bloque, y reemplazar el abort por un truncado visible.
+
+### Cambio 1: la capacidad, derivada de un solo numero
+
+El bloque pasa de la fila 28 a la 30 (`TFP_FILA_FIN`, unica constante compartida por los tres
+bloques -- antes cada uno repetia `filaFin: 28` por separado, dos numeros que podian
+desincronizarse). Con `filaDatos=10`, son 21 filas -> 10 pares cuenta/faltante (antes 19 filas /
+9 pares), y sobra **exactamente una fila** (21 es impar): esa fila sobrante es la que el cambio 2
+usa para el aviso de truncado, no un desperdicio de diseno. Mismo patron que
+`SYF_BLOQUE_MEDIOS.filaFin`/`_altoBloqueMedios` en `DEVTOOL_StockYFlujo.js`.
+
+### Cambio 2: truncar a la vista, nunca abortar
+
+El preflight ya no aborta si hay mas cuentas reales que lugar. La formula ancla
+(`_formulaCuentasTfp`) sigue ordenando el universo (real union proyectadas-con-actividad) por
+monto real descendente y despues proyectado descendente -- eso ya pasaba antes -- y se queda con
+las `capacidad` cuentas de mayor monto via `ARRAY_CONSTRAIN`. Lo nuevo: si el universo completo
+(`n_total`) supera lo mostrado (`n_cuentas`), la fila sobrante que deja la capacidad impar (cambio
+1) se ocupa con un aviso: el nombre de cuenta lleva el texto `"y N cuenta(s) mas"` y el monto la
+suma de lo que quedo afuera (real + faltante de las cuentas no mostradas, calculado como el total
+completo menos el total ya mostrado -- sin refiltrar la hoja de Proyeccion de nuevo). Si nada
+quedo afuera, esa fila del derrame ni se genera: desaparece sola cuando deja de hacer falta.
+
+**El tratamiento visual es propio, no el gris ya establecido de "falta"** -- pedido explicito de
+Franco ("el gris del faltante ya es un lenguaje establecido en ese bloque; quizas ese renglon
+merece su propio tratamiento"). Se eligio la MISMA tinta (`TFP_COLOR_GRIS`, sigue siendo
+informacion secundaria) pero en **cursiva**: distinguible de una fila real (nombre + monto
+oscuro, sin cursiva) y de una fila de falta (sin nombre, gris recto), sin inventar un color nuevo
+al design system. Es una CUARTA regla de formato condicional por bloque, con formula
+`=$col$fila<>""` completamente absoluta (vive en una sola celda fija, la reservada por el cambio
+1), asi que nunca compite por lugar con la regla gris (que recorre el rango de datos, 20 filas
+relativas).
+
+**Los totales y la regla gris excluyen la fila reservada a proposito**: `_rangoColTfp` (el unico
+lugar que define el rango de datos) pasa de `filaDatos:filaFin` a `filaDatos:filaFin-1`. Si los
+totales incluyeran la fila de aviso, el monto oculto se sumaria como si fuera una cuenta real de
+mas, rompiendo el invariante de que el total real no se mueve por este refactor.
+
+### Decision: las cuentas proyectadas sin registro siguen apareciendo
+
+Franco pregunto si las cuentas proyectadas sin ningun movimiento real deberian dejar de mostrarse
+("que aparezcan a medida que existe un registro"). Se decidio **mantenerlas**: es la razon de ser
+original del modulo -- el `[CONCEPTO DE NEGOCIO]` de la cabecera dice literal que antes "una
+cuenta proyectada que TODAVIA no tuvo ningun movimiento real no aparecia en absoluto, asi que lo
+que falta cobrar o pagar de esa cuenta era invisible". Sacarlas reintroduciria exactamente ese
+problema. Lo que si se verifico (y ya era cierto en la formula existente, sin necesidad de
+cablear nada nuevo): el orden `SORT(tabla_incluida; 2; FALSE; 3; FALSE)` ordena primero por monto
+real descendente, asi que ninguna cuenta proyectada-sin-real puede desplazar a una con movimiento
+real de este mes -- siempre quedan al final, y son las primeras en truncarse si no entran todas.
+Pendiente de confirmacion explicita de Franco sobre esta lectura.
+
+### `estadoTableroFaltanteProyectado()` con numeros
+
+El reporte de solo-lectura ahora dice, por bloque, cuantas cuentas reales hay, cuantas entran y
+cuantas quedarian afuera. El numero de "afuera" es un piso garantizado (nunca sobreestima cuantas
+reales se pierden) derivado sin reimplementar en JS el filtro completo de la hoja "Proyeccion"
+(fecha/mes/tipo de cuenta/exclusion de neutras): alcanza con `cuentasVivas` (reales, ya medidas
+por el preflight) y `capacidad`, porque el orden real-primero garantiza que ninguna cuenta
+proyectada-sin-real puede ocupar un lugar que le corresponda a una real.
+
+### El invariante de conteo de cuentas: de igualdad estricta a piso/exacto
+
+`_verificarInvariantesTfp` exigia `cuentasAhora === cuentasVivas` a rajatabla. Eso ya era fragil
+antes de este cambio (el universo union con el catalogo, decision de diseno #2 del modulo, puede
+sumar cuentas proyectadas-sin-real ademas de las reales, y una igualdad estricta las contaria
+como perdida cuando en realidad es un agregado esperado) y se volvia directamente incorrecto con
+el truncado nuevo (el conteo post-escritura baja a `capacidad` cuando antes habia mas cuentas
+reales que lugar, por diseno). Pasa a exigir:
+
+- **Sin truncar** (`cuentasVivas <= capacidad`): un PISO -- todas las reales de antes tienen que
+  seguir, de mas pueden sumarse proyectadas-sin-real.
+- **Con truncado** (`cuentasVivas > capacidad`): un numero EXACTO -- el orden real-primero
+  garantiza que los `capacidad` lugares se llenan solo con cuentas reales, asi que ni una de mas
+  ni una de menos.
+
+### Bancos de pruebas
+
+`devtools/probar_tablero_faltante.js` actualizado a la geometria nueva (capacidad 10, rangos
+`filaFin-1`) y extendido con las mutaciones del truncado: mas cuentas que capacidad ya NO aborta
+(antes lanzaba), exactamente la capacidad y una cuenta menos no generan aviso, el conteo EXACTO
+(truncado) vs PISO (sin truncar) del invariante -- incluida la demostracion de que la igualdad
+estricta vieja habria marcado como falla el caso sano de "se sumo una proyectada-sin-real" -- y
+la clasificacion propia/ajena de las seis reglas de color (3 gris + 3 aviso, antes solo 3). El
+barrido anti-colision de la seccion 8 suma las dos celdas de la fila de aviso por bloque.
+
+**1 falla preexistente, sin cambios**: la colision `R10`/`U10`/`X10` entre
+`DEVTOOL_FormulerioV0111.js` y `DEVTOOL_TableroFaltanteProyectado.js`, diagnosticada como inocua
+en v0.38.0 y pendiente de decision de ownership por parte de Franco -- no se toco en esta sesion.
+
+`node devtools/probar_*.js`: todos en verde salvo los dos rojos a proposito desde v0.38.0
+(`probar_formulerio.js`, 5 fallas; `probar_riqueza.js`, 7 fallas) y la falla preexistente de
+arriba. `DEVTOOL_InicioPresupuesto.js` y su banco no se tocaron (jurisdiccion de otra sesion).
+
 ## 2026-08-21 - El guard de las auxiliares se bloqueaba a si mismo en la segunda corrida (v0.38.3)
 
 ### Evento

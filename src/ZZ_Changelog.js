@@ -1,11 +1,9 @@
 /**
- * ============================================
- * REGISTRO DE ACTUALIZACIONES (CHANGELOG)
- * ============================================
- * Historial descendente de cambios sincronizados al entorno Apps Script.
+ * ===================================== * REGISTRO DE ACTUALIZACIONES (CHANGELOG)
+ * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
- * [2026-08-21] v0.38.5 - Duenio unico por celda: se retiran 9 coordenadas stale, los 8 bancos en verde.
+ * [2026-08-21] v0.39.1 - Duenio unico por celda: se retiran 9 coordenadas stale, los 8 bancos en verde.
  * - DOS DECISIONES DE FRANCO tomadas juntas: (1) retirar toda coordenada que un modulo declara
  *   administrar y que hoy administra otro, y (2) duenio unico para las celdas que tres modulos se
  *   disputaban. Ninguna de las dos es una correccion de bug: es sacar ambiguedad del contrato.
@@ -54,6 +52,56 @@
  *   FORM_CELDAS y DEVTOOL_InicioPresupuesto.js. Las tres transformaciones son de token y hoy
  *   conviven, pero no entraron en esta decision de duenio unico.
  *
+ * [2026-08-21] v0.39.0 - El bloque de faltante proyectado sube a 30 filas y deja de abortar por falta de lugar.
+ * - EL SINTOMA, medido en la planilla real: Franco corrio estadoTableroFaltanteProyectado() y
+ *   "Gastos Variables." dio "10 cuenta(s) con movimiento real hoy, y el bloque solo entra 9
+ *   pares cuenta/faltante en su capacidad actual (10 a 28). Agrandar el bloque antes de correr
+ *   esto: nunca se recorta una cuenta real en silencio." El preflight ABORTABA por diseno: Franco
+ *   se quedaba sin la funcionalidad entera por una sola cuenta de mas, y la proxima categoria
+ *   nueva iba a repetir el bloqueo. El principio ("nunca se pierde una cuenta real en silencio")
+ *   era correcto; la conclusion (abortar) no.
+ * - CAMBIO 1, la capacidad: TFP_FILA_FIN (30) es ahora la UNICA fuente de la geometria del
+ *   bloque, compartida por los tres (Ingresos/Gastos Fijos/Gastos Variables) -- antes cada uno
+ *   repetia "filaFin: 28" por separado. 21 filas (10 a 30) dan 10 pares cuenta/faltante (antes
+ *   19 filas / 9 pares) y sobra EXACTAMENTE una fila (21 es impar): esa fila sobrante es donde
+ *   vive el aviso de truncado del cambio 2, no un desperdicio.
+ * - CAMBIO 2, el importante: el preflight YA NO ABORTA por falta de lugar. La formula
+ *   (_formulaCuentasTfp) trunca sola a las `capacidad` cuentas de MAYOR monto -- real
+ *   descendente primero, proyectado como desempate, el mismo orden de siempre -- y, si algo
+ *   quedo afuera (n_ocultas > 0), la ULTIMA fila del bloque (la reservada por el cambio 1) pasa
+ *   a decir "y N cuenta(s) mas" con el monto que representan (real + faltante de las no
+ *   mostradas, calculado como el total completo menos el ya mostrado, sin refiltrar). Esa fila
+ *   se ve en CURSIVA, misma tinta que el gris de "falta" (TFP_COLOR_GRIS) pero con su propio
+ *   tratamiento -- decision Franco: "el gris del faltante ya es un lenguaje establecido en ese
+ *   bloque; quizas ese renglon merece su propio tratamiento". Cuando todas las cuentas entran,
+ *   esa fila del derrame ni se genera: desaparece sola, no hay que "limpiarla" en otro lado.
+ * - Los totales (S7/S8, V7/V8, Y7/Y8) y la regla gris de "falta" pasan a excluir esa fila
+ *   reservada (_rangoColTfp ahora corta en filaFin-1, no en filaFin): si la incluyeran, el monto
+ *   oculto del aviso se sumaria como si fuera una cuenta real de mas, rompiendo el invariante de
+ *   que el total real no se mueve por este refactor. La regla de aviso es una CUARTA regla por
+ *   bloque, absoluta en columna Y fila (vive en una sola celda fija), asi que nunca compite por
+ *   lugar con la regla gris (que recorre el rango de datos).
+ * - decision Franco 2026-08-21 (proyectadas sin registro): SIGUEN apareciendo -- es la razon de
+ *   ser del modulo, sacarlas reintroduciria la invisibilidad que el "Faltante proyectado" vino a
+ *   resolver. El orden por monto real descendente ya las manda siempre al final (ninguna
+ *   proyectada-sin-real puede desplazar a una cuenta con movimiento real) y son las primeras en
+ *   truncarse si no entran todas: nada que cablear aparte, es una consecuencia del orden
+ *   existente, verificada por test.
+ * - estadoTableroFaltanteProyectado() reporta numeros por bloque: cuantas cuentas reales hoy,
+ *   cuantas entran, cuantas quedarian afuera (piso GARANTIZADO por el orden real-primero, sin
+ *   reimplementar en JS el filtro de "Proyeccion" -- ver decision de diseno #1 del modulo).
+ * - _verificarInvariantesTfp pasa de exigir IGUALDAD ESTRICTA (cuentasAhora === cuentasVivas) a
+ *   exigir un PISO cuando no hay truncado (el universo union con el catalogo puede sumar cuentas
+ *   proyectadas-sin-real ademas de las reales, y eso no es perder nada) y un numero EXACTO
+ *   cuando si lo hay (el orden real-primero garantiza que los `capacidad` lugares se llenan SOLO
+ *   con cuentas reales). La igualdad estricta vieja habria marcado como falla el caso sano de
+ *   "una cuenta proyectada-sin-real se sumo al derrame", revirtiendo una escritura correcta.
+ * - devtools/probar_tablero_faltante.js: capacidad y rangos actualizados a la geometria nueva, y
+ *   extendido con las mutaciones del truncado -- mas cuentas que capacidad ya NO aborta, exacto
+ *   en el limite sin aviso, una cuenta menos sin aviso, el conteo EXACTO (truncado) vs PISO (sin
+ *   truncar) del invariante, y las seis reglas de color (3 gris + 3 aviso) en la clasificacion
+ *   propia/ajena. 1 falla preexistente SIN CAMBIOS (colision R10/U10/X10 con
+ *   DEVTOOL_FormulerioV0111.js, ya diagnosticada y aceptada desde v0.38.0).
  * [2026-08-21] v0.38.4 - El modulo seguia leyendo R9/U9/X9 mientras su banco probaba R10/U10/X10.
  * - EL SINTOMA: dos bancos (probar_stock_flujo.js, probar_riqueza.js) reventaban con
  *   "Cannot read properties of undefined (reading 'replace')". Eso ya se corrigio en la v0.38.0

@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 38,
- patch: 5,
+ minor: 39,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-21',
- releaseName: 'v0.38.5 - Duenio unico por celda: se retiran 9 coordenadas stale y los 8 bancos quedan en verde',
+ releaseName: 'v0.39.1 - Duenio unico por celda: se retiran 9 coordenadas stale y los 8 bancos quedan en verde',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,7 +36,7 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
-v0.38.5 (2026-08-21) - Duenio unico por celda: se retiran 9 coordenadas stale, 8 bancos en verde
+v0.39.1 (2026-08-21) - Duenio unico por celda: se retiran 9 coordenadas stale, 8 bancos en verde
 - decision Franco 2026-08-21, dos decisiones tomadas juntas: (1) retirar las coordenadas que un
   modulo declara administrar y ya administra otro, y (2) duenio unico para las celdas que tres
   modulos se disputaban.
@@ -65,6 +65,14 @@ v0.38.5 (2026-08-21) - Duenio unico por celda: se retiran 9 coordenadas stale, 8
   FORM_CELDAS y DEVTOOL_InicioPresupuesto.js. Conviven hoy (las tres transformaciones son de token)
   pero no entraron en la decision de duenio unico.
 
+v0.39.0 (2026-08-21) - El bloque de faltante proyectado sube a 30 filas y deja de abortar por falta de lugar
+! El preflight de DEVTOOL_TableroFaltanteProyectado.js abortaba si habia mas cuentas reales que lugar ("Agrandar el bloque antes de correr esto"). Medido en la planilla: Gastos Variables tenia 10 cuentas para una capacidad de 9 -- Franco se quedaba sin la funcionalidad entera por una cuenta de mas. Ahora la formula TRUNCA sola a las cuentas de mayor monto y la ultima fila del bloque avisa (en cursiva) cuantas quedaron afuera y por cuanta plata. Esa fila desaparece sola cuando todo entra.
++ TFP_FILA_FIN (30) es la unica fuente de la geometria del bloque (antes cada uno de los tres bloques repetia "filaFin: 28" por separado): 21 filas -> 10 pares cuenta/faltante y sobra exactamente una, la que ocupa el aviso.
++ Los totales y la regla gris de "falta" excluyen esa fila reservada (si no, el monto oculto del aviso se sumaria como si fuera una cuenta real de mas). La regla de aviso es una cuarta regla por bloque, absoluta, sobre esa unica fila.
+* Las cuentas proyectadas sin movimiento real real siguen apareciendo (decision Franco: es la razon de ser del modulo) y el orden por monto real descendente ya las manda al final -- son las primeras en truncarse si no entran todas.
+* estadoTableroFaltanteProyectado() reporta numeros: cuantas cuentas reales por bloque, cuantas entran, cuantas quedarian afuera.
+- _verificarInvariantesTfp pasaba a exigir igualdad estricta entre el conteo de cuentas antes y despues; eso rompia apenas el universo union-con-catalogo sumaba una cuenta proyectada-sin-real de mas. Ahora exige un PISO sin truncar y un numero EXACTO con truncado (garantizado por el orden real-primero).
+! devtools/probar_tablero_faltante.js: capacidad y rangos actualizados, mas las mutaciones del truncado (no aborta, exacto en el limite, una cuenta menos, conteo exacto vs piso). 1 falla preexistente sin cambios (colision R10/U10/X10 con DEVTOOL_FormulerioV0111.js, aceptada desde v0.38.0).
 v0.38.4 (2026-08-21) - El modulo seguia leyendo R9/U9/X9 mientras su banco probaba R10/U10/X10
 - La v0.38.0 corrigio el corrimiento de fila del Tablero en FORM_CELDAS, RIQ_BLOQUE_CATEGORIAS y
   BCAT_CELDA, y actualizo la seccion 5 de devtools/probar_stock_flujo.js a R10/U10/X10 -- pero NO
