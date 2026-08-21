@@ -66,6 +66,24 @@ const CAP_BLOQUES = {
     }
 };
 
+/**
+ * La celda de % de la fila de INGRESOS, en cada bloque.
+ *
+ * Venia siendo `SUMA(<las otras tres>)`, que daba 100% por construccion mientras la capitalizacion
+ * era el residuo. Al dejar de serlo, esa celda pasa a mostrar un numero flotante en la fila de
+ * Ingresos -- se midio 115,99% el 2026-08-20 --, que leido literalmente dice "mis ingresos son el
+ * 116% de mis ingresos". Es una categoria equivocada, no un numero mal calculado.
+ *
+ * decision Franco 2026-08-20: los Ingresos son la BASE contra la que se mide todo lo demas, asi
+ * que su porcentaje es 100%. Los otros tres muestran su parte de los ingresos. Si esos tres suman
+ * mas de 100%, el presupuesto no cierra -- y eso se ve sumandolos, y es exactamente sobre lo que
+ * actua "Disponibilidad de fondos". Ya no se disfraza de otra cosa en la fila de arriba.
+ */
+const CAP_PORCENTAJE_BASE = {
+    presupuesto: { celda: 'O9', monto: 'N9' },
+    realidad:    { celda: 'O16', monto: 'N16' }
+};
+
 /** Las celdas de presupuesto y realidad de cada categoria, para la disponibilidad. */
 const CAP_REFS = {
     presu: { fijos: '$N$10', variables: '$N$11', capitalizacion: '$N$12' },
@@ -111,7 +129,7 @@ function _esRiquezaCap(variable) {
  * numerador y el denominador del cumplimiento usen la misma vara. El ledger es casi todo ARS, asi
  * que la diferencia practica es despreciable; la de comparar con varas distintas, no.
  */
-function _formulaHaciaRiqueza(nombreHoja, pisoCero) {
+function _formulaHaciaRiqueza(nombreHoja, soloEntradas) {
     const cfg = RANGES.REGISTROS;
     const medios = RANGES.MEDIOS_PAGO;
     const col = function (clave) {
@@ -138,17 +156,26 @@ function _formulaHaciaRiqueza(nombreHoja, pisoCero) {
         // "Inicio Mes" no: es un punto de corte de conciliacion. Si contara, el arrastre de cada
         // frasco se leeria como si uno hubiera capitalizado ese monto ese mes.
         '  no_corte; ARRAYFORMULA(cuenta <> "' + CUENTA_ARRASTRE + '");\n' +
-        '  signo; ARRAYFORMULA(IF(tipo_mov="Egreso"; -1; 1));\n' +
+        // El PLAN cuenta solo lo que ENTRA; la REALIDAD netea con signo.
+        //
+        // decision Franco 2026-08-20: no es una inconsistencia, es la diferencia entre una
+        // intencion y un hecho. Un plan de capitalizar es cuanto pensas apartar -- nadie planifica
+        // sacar plata del frasco --, asi que en el presupuesto los retiros no restan. En la
+        // realidad si: si ese mes sacaste mas de lo que pusiste, el neto es negativo y eso hay que
+        // poder verlo. El cumplimiento entonces se lee "de lo que pensaba apartar, cuanto aparte
+        // de verdad", y puede dar negativo, que quiere decir que en vez de apartar, saque.
+        //
+        // Esto REEMPLAZA al piso en cero de la v0.27.0, que era un parche: aplastar un neto
+        // negativo a cero no arregla el numero, lo esconde. Contando solo las entradas, el plan
+        // es positivo porque mide algo positivo, no porque se le puso un piso.
+        (soloEntradas
+            ? '  signo; ARRAYFORMULA(IF(tipo_mov="Egreso"; 0; 1));\n'
+            : '  signo; ARRAYFORMULA(IF(tipo_mov="Egreso"; -1; 1));\n') +
         _rangoMesCap() +
         _conversionCap('moneda') +
         '  convertido; ARRAYFORMULA(monto * signo * tasa_origen / tasa_destino);\n' +
         '  del_mes; ARRAYFORMULA(es_riqueza * no_corte * (fecha>=desde) * (fecha<=hasta));\n' +
-        '  neto; SUM(IFERROR(FILTER(convertido; del_mes); 0));\n' +
-        // decision Franco 2026-08-20: en la PROYECCION la capitalizacion no puede dar negativo.
-        // Un plan de capitalizar es cuanto pensas apartar; planear apartar menos que cero no
-        // significa nada. En la REALIDAD si puede: negativo ahi quiere decir que ese mes sacaste
-        // plata de los frascos, y eso es un hecho que hay que poder ver.
-        (pisoCero ? '  MAX(0; neto)\n)' : '  neto\n)');
+        '  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)';
 }
 
 /** La liquidez disponible: el bucket cotidiano de "Saldos Actuales", convertido al selector. */
@@ -278,6 +305,13 @@ function _planCap(ss, pre) {
         _formulaHaciaRiqueza(RANGES.REGISTROS.sheet, false),
         'lo que realmente fue a medios de tipo ' + TIPOS_RIQUEZA.join(' e ') +
         '; puede dar negativo, y eso significa que ese mes sacaste plata de los frascos');
+
+    ['presupuesto', 'realidad'].forEach(function (bloque) {
+        const b = CAP_PORCENTAJE_BASE[bloque];
+        proponer(b.celda, 'Porcentaje de la fila de Ingresos (' + bloque + ')',
+            '=IFERROR(' + b.monto + '/$' + b.monto[0] + '$' + b.monto.slice(1) + '; 0)',
+            'los Ingresos son la base: 100%, no la suma de los otros tres');
+    });
 
     const d = CAP_BLOQUES.disponibilidad;
     ['fijos', 'variables', 'capitalizacion'].forEach(function (k) {

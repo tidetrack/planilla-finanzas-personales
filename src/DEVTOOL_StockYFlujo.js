@@ -869,9 +869,13 @@ function _planSyf(ss, pre) {
     // resto es la unica forma de que sumen 100%. Pero eso no mide capitalizacion, mide lo que
     // quedo sin explicar -- y cuando los gastos superan a los ingresos da NEGATIVO. Se prefirio
     // perder el 100% y ganar un numero que significa algo.
-    proponer(pre.nombreTablero, 'O16', 'Total del bloque',
-        '=SUM(O17:O' + SYF_FILA_RESIDUO + ')',
-        'suma las tres filas de abajo del bloque');
+    // O16 tampoco se escribe aca. Era `SUM(O17:O19)` -- el total del bloque -- y tenia sentido
+    // mientras la capitalizacion era el residuo y los tres sumaban 100%. Hoy la escribe
+    // DEVTOOL_Capitalizacion, que la pone en 100% porque los Ingresos son la base.
+    //
+    // Es la segunda celda que se saca de este modulo por la misma razon que N19: dos modulos
+    // proponiendo formulas distintas para la misma celda hacen que el numero del Tablero dependa
+    // del orden en que se aprietan los botones del menu.
 
     if (!pre.diagLibre) {
         avisos.push('NO se escribe el indicador de movimientos sin clasificar: ninguna de las ' +

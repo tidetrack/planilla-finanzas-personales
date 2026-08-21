@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 27,
- patch: 1,
+ minor: 28,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.27.1 - Se elimina el alias SYF_ARRASTRE: un const entre archivos depende del orden de carga',
+ releaseName: 'v0.28.0 - Los Ingresos son la base del porcentaje, y el plan cuenta lo que entra en vez de tener piso',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

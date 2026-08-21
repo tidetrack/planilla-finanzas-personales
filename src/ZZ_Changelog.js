@@ -5,6 +5,34 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.28.0 - El porcentaje de la fila de Ingresos, y el fin del piso en cero.
+ *
+ * Franco: "el % me da mas de 100%, simplemente tapaste un error con otro error". Tenia razon en
+ * las dos mitades.
+ *
+ * 1. EL SEGUNDO ERROR ERA O9. Venia siendo `SUMA(O10:O12)` -- la suma de los otros tres, puesta en
+ *    la fila de INGRESOS. Daba 100% por construccion mientras la capitalizacion era el residuo. Al
+ *    dejar de serlo, esa celda pasa a mostrar un numero flotante que, leido literalmente, dice
+ *    "mis ingresos son el 116% de mis ingresos". Es una categoria equivocada, no un numero mal
+ *    calculado, y por eso ningun arreglo del calculo lo iba a resolver.
+ *    Ahora los Ingresos son la BASE: su porcentaje es 100%, y los otros tres muestran su parte.
+ *    Si esos tres suman mas de 100%, el presupuesto no cierra -- se ve sumandolos, y es
+ *    exactamente sobre lo que actua "Disponibilidad de fondos". Ya no se disfraza en la fila de
+ *    arriba. Lo mismo en O16, el bloque de la realidad.
+ *
+ * 2. EL PRIMER ERROR ERA EL PISO EN CERO. Aplastar un neto negativo a cero no arregla el numero:
+ *    lo esconde, y encima deja el bloque mostrando $0,00 sin decir por que. Se reemplaza por el
+ *    modelo correcto: el PLAN cuenta solo lo que ENTRA a los medios de riqueza; la REALIDAD netea
+ *    con signo. No es una inconsistencia -- es la diferencia entre una intencion y un hecho. Nadie
+ *    planifica sacar plata del frasco, asi que en el presupuesto los retiros no restan; en la
+ *    realidad si, y si ese mes sacaste mas de lo que pusiste el neto da negativo y hay que poder
+ *    verlo. El cumplimiento se lee "de lo que pensaba apartar, cuanto aparte de verdad".
+ *    El plan es positivo porque mide algo positivo, no porque se le puso un piso.
+ *
+ * 3. O16 SALE DE StockYFlujo. Era la segunda celda que dos modulos se disputaban, despues de N19.
+ *    Se agrego al banco un chequeo que recorre todos los DEVTOOL_ y falla si dos proponen la misma
+ *    celda: el numero del Tablero no puede depender del orden en que se aprietan los botones.
+ *
  * [2026-08-20] v0.27.1 - Se elimina el alias SYF_ARRASTRE.
  * - La v0.27.0 dejo `const SYF_ARRASTRE = CUENTA_ARRASTRE` por compatibilidad. Eso solo funciona
  *   si Apps Script evalua 00_Config.js ANTES que DEVTOOL_StockYFlujo.js. Hoy lo hace -- "00_"

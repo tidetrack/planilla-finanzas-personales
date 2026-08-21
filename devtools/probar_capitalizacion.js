@@ -51,7 +51,7 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_StockYFlujo.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Proyeccion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Capitalizacion.js'), 'utf8') +
-    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CAP_BLOQUES,CAP_REFS,SYF_SALDOS_TABLERO});',
+    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CAP_BLOQUES,CAP_REFS,CAP_PORCENTAJE_BASE,SYF_SALDOS_TABLERO});',
     ctx);
 
 function revisar(nombre, f) {
@@ -73,8 +73,8 @@ function revisar(nombre, f) {
 
 console.log('=== 1. La suma hacia los medios de riqueza ===');
 [['Proyeccion (presupuesto)', ctx.SHEETS.PROYECCION, true], ['Registros (realidad)', ctx.RANGES.REGISTROS.sheet, false]]
-    .forEach(([etiqueta, hoja, piso]) => {
-        const f = ctx._formulaHaciaRiqueza(hoja, piso);
+    .forEach(([etiqueta, hoja, soloEntradas]) => {
+        const f = ctx._formulaHaciaRiqueza(hoja, soloEntradas);
         if (revisar(etiqueta, f)) console.log('  OK  ' + etiqueta);
         ok(!/\$AF\$\d+/.test(f), etiqueta + ': ninguna coordenada de cotizacion (esas se pudren)');
         ok(/TIDETRACK_USD\(\)/.test(f), etiqueta + ': convierte con las custom functions');
@@ -86,17 +86,19 @@ console.log('=== 1. La suma hacia los medios de riqueza ===');
         ok(!/Traspaso/.test(f), etiqueta + ': NO excluye los traspasos (capitalizar es traspasar a un frasco)');
         ok(/signo; ARRAYFORMULA\(IF\(tipo_mov="Egreso"/.test(f),
            etiqueta + ': aplica signo por Ingreso/Egreso, que es como se registra un traspaso (dos filas)');
-        ok(piso === /MAX\(0; neto\)/.test(f),
-           etiqueta + (piso ? ': tiene piso en cero (es un plan)' : ': SIN piso, puede dar negativo (es un hecho)'));
+        ok(!/MAX\(0; neto\)/.test(f), etiqueta + ': SIN piso en cero -- aplastar un neto negativo lo esconde');
+        ok(soloEntradas === /IF\(tipo_mov="Egreso"; 0; 1\)/.test(f),
+           etiqueta + (soloEntradas ? ': el PLAN cuenta solo lo que entra (nadie planifica retirar)'
+                                    : ': la REALIDAD netea con signo (retirar resta)'));
     });
 
 // Las dos columnas tienen que medir IGUAL, o el porcentaje de cumplimiento compara varas distintas.
 const fProy = ctx._formulaHaciaRiqueza(ctx.SHEETS.PROYECCION, true);
 const fReg = ctx._formulaHaciaRiqueza(ctx.RANGES.REGISTROS.sheet, false);
-// Miden lo mismo: la unica diferencia permitida es la hoja y el piso en cero del plan.
-ok(fProy.replace(new RegExp(ctx.SHEETS.PROYECCION, 'g'), 'X').replace('MAX(0; neto)', 'neto') ===
-   fReg.replace(new RegExp(ctx.RANGES.REGISTROS.sheet, 'g'), 'X'),
-   'presupuesto y realidad miden IGUAL: solo cambian la hoja y el piso en cero');
+// La UNICA diferencia permitida entre las dos es la hoja y el tratamiento de los egresos.
+ok(fProy.replace(new RegExp(ctx.SHEETS.PROYECCION, 'g'), 'X').replace('"Egreso"; 0; 1', 'SIGNO') ===
+   fReg.replace(new RegExp(ctx.RANGES.REGISTROS.sheet, 'g'), 'X').replace('"Egreso"; -1; 1', 'SIGNO'),
+   'presupuesto y realidad son la misma formula salvo la hoja y el signo de los egresos');
 
 console.log('\n=== 2. Las tres filas de la disponibilidad ===');
 const claves = ['fijos', 'variables', 'capitalizacion'];
@@ -197,19 +199,60 @@ console.log('\n=== 3b. El CABLEADO: que formula va a cada celda ===');
     const porCelda = {};
     plan.cambios.forEach(c => { porCelda[c.celda] = c.formulaNueva; });
 
-    ok(Object.keys(porCelda).length === 5, 'el plan propone las 5 celdas. Propuso ' + Object.keys(porCelda).length);
+    ok(Object.keys(porCelda).length === 7, 'el plan propone las 7 celdas. Propuso ' + Object.keys(porCelda).length);
     const presu = porCelda[ctx.CAP_BLOQUES.presupuesto.celda] || '';
     const real = porCelda[ctx.CAP_BLOQUES.realidad.celda] || '';
-    ok(/MAX\(0; neto\)/.test(presu),
-       ctx.CAP_BLOQUES.presupuesto.celda + ' (presupuesto) SI lleva piso en cero: es un plan');
-    ok(!/MAX\(0; neto\)/.test(real),
-       ctx.CAP_BLOQUES.realidad.celda + ' (realidad) NO lleva piso: negativo significa que sacaste plata');
+    ok(/IF\(tipo_mov="Egreso"; 0; 1\)/.test(presu),
+       ctx.CAP_BLOQUES.presupuesto.celda + ' (presupuesto) cuenta SOLO lo que entra al frasco');
+    ok(/IF\(tipo_mov="Egreso"; -1; 1\)/.test(real),
+       ctx.CAP_BLOQUES.realidad.celda + ' (realidad) netea: si sacaste mas de lo que pusiste, da negativo');
+    ok(!/MAX\(0;/.test(presu) && !/MAX\(0;/.test(real),
+       'ninguna de las dos lleva piso en cero: el parche se fue');
     ok(presu.indexOf(ctx.SHEETS.PROYECCION + '!') !== -1,
        ctx.CAP_BLOQUES.presupuesto.celda + ' lee la hoja de proyeccion');
     ok(real.indexOf(ctx.RANGES.REGISTROS.sheet + '!') !== -1,
        ctx.CAP_BLOQUES.realidad.celda + ' lee el ledger');
     ok(presu.indexOf(ctx.RANGES.REGISTROS.sheet + '!B') === -1,
        'el presupuesto NO lee el ledger por accidente');
+}
+
+console.log('\n=== 3c. El porcentaje de la fila de Ingresos ===');
+{
+    const hojaFalsa = { getRange: () => ({ getFormula: () => '', getValue: () => '', getDisplayValue: () => '' }) };
+    const plan = ctx._planCap({ getSheetByName: () => hojaFalsa }, { hoja: hojaFalsa, nombre: 'Tablero' });
+    const porCelda = {}; plan.cambios.forEach(c => { porCelda[c.celda] = c.formulaNueva; });
+    ['presupuesto', 'realidad'].forEach(b => {
+        const cfg = ctx.CAP_PORCENTAJE_BASE[b];
+        const f = porCelda[cfg.celda] || '';
+        ok(!!f, cfg.celda + ' (' + b + ') entra al plan');
+        // Es la fila de INGRESOS: su porcentaje es el monto sobre si mismo, o sea 100%.
+        ok(f.indexOf(cfg.monto + '/$' + cfg.monto[0] + '$' + cfg.monto.slice(1)) !== -1,
+           cfg.celda + ' divide los Ingresos por si mismos: da 100%, la base contra la que se mide el resto');
+        ok(!/SUM\(|SUMA\(/.test(f),
+           cfg.celda + ' NO es la suma de los otros tres: eso daba 115,99% en la fila de Ingresos');
+    });
+    ok(Object.keys(porCelda).length === 7, 'el plan propone 7 celdas. Propuso ' + Object.keys(porCelda).length);
+}
+
+console.log('\n=== 3d. Ningun modulo se pisa con otro ===');
+// Ya paso dos veces: N19 (StockYFlujo vs Capitalizacion) y O16. Cuando dos modulos proponen
+// formulas distintas para la misma celda, el numero del Tablero pasa a depender del orden en que
+// se aprietan los botones del menu, y no hay forma de notarlo mirando la planilla.
+{
+    const dir = path.join(RAIZ, 'src');
+    const prop = {};
+    fs.readdirSync(dir).filter(f => f.indexOf('DEVTOOL_') === 0).forEach(f => {
+        const src = fs.readFileSync(path.join(dir, f), 'utf8');
+        const re = /proponer\(\s*(?:[A-Za-z_.]+\s*,\s*)?'([A-Z]{1,2}\d{1,3})'/g;
+        let m;
+        while ((m = re.exec(src)) !== null) {
+            (prop[m[1]] = prop[m[1]] || new Set()).add(f);
+        }
+    });
+    const choques = Object.keys(prop).filter(c => prop[c].size > 1)
+        .map(c => c + ' <- ' + [...prop[c]].join(' y '));
+    ok(choques.length === 0, choques.length ? 'DOS MODULOS EN LA MISMA CELDA: ' + choques.join('; ')
+                                            : 'ninguna celda la proponen dos modulos distintos');
 }
 
 console.log('\n=== 4. Coherencia con el resto de la planilla ===');
