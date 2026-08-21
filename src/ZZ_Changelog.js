@@ -55,6 +55,58 @@
  *   truncar) del invariante, y las seis reglas de color (3 gris + 3 aviso) en la clasificacion
  *   propia/ajena. 1 falla preexistente SIN CAMBIOS (colision R10/U10/X10 con
  *   DEVTOOL_FormulerioV0111.js, ya diagnosticada y aceptada desde v0.38.0).
+ * [2026-08-21] v0.38.4 - El modulo seguia leyendo R9/U9/X9 mientras su banco probaba R10/U10/X10.
+ * - EL SINTOMA: dos bancos (probar_stock_flujo.js, probar_riqueza.js) reventaban con
+ *   "Cannot read properties of undefined (reading 'replace')". Eso ya se corrigio en la v0.38.0
+ *   (guard de _repararFormula) y las referencias R9/U9/X9 de FORM_CELDAS pasaron a R10/U10/X10.
+ *   Lo que quedo sin corregir es lo que ese crash tapaba del otro lado: DEVTOOL_StockYFlujo.js.
+ * - LA CAUSA: el reacomodo del Tablero del 2026-08-21 (Franco abrio la fila 8 para "Faltante
+ *   proyectado") corrio el header "Cuenta" de la fila 8 a la 9 y el derrame de datos de la 9 a la
+ *   10. Verificado contra el gemelo: Tablero!R8/U8/X8 = "Faltante proyectado", R9/U9/X9 =
+ *   "Cuenta" (sin formula), R10/U10/X10 = la QUERY real. La v0.38.0 corrigio FORM_CELDAS
+ *   (DEVTOOL_FormulerioV0111.js), RIQ_BLOQUE_CATEGORIAS y BCAT_CELDA, y actualizo la seccion 5 de
+ *   devtools/probar_stock_flujo.js a R10/U10/X10 -- pero no toco el modulo que esa seccion prueba.
+ *   DEVTOOL_StockYFlujo.js siguio nombrando R9/U9/X9 en su lista de "apagar el arrastre", no
+ *   encontraba formula en el header, y salia por `avisos.push(... 'no tiene formula: se saltea')`.
+ * - POR QUE NADIE LO VIO: el banco tenia su PROPIA COPIA de las coordenadas. Actualizar la copia
+ *   del banco lo puso en verde probando R10 contra el gemelo, mientras el modulo -- contra la
+ *   planilla -- no aplicaba la transformacion a NINGUNA de las tres columnas del Tablero. Un banco
+ *   verde sobre codigo que no se ejecuta es peor que un banco en rojo. Es la misma leccion que la
+ *   v0.38.0 ya habia escrito para probar_riqueza.js ("la celda se lee de RIQ_BLOQUE_CATEGORIAS.celda
+ *   en vez de hardcodearse"), aplicada aca tarde.
+ * - EL ARREGLO: SYF_ARRASTRE (nueva, DEVTOOL_StockYFlujo.js) declara las 5 celdas con su ROTULO al
+ *   lado -- R10/"Cuenta"@R9, U10, X10, Inicio!C13/"Ingresos."@C12, F13/"Egresos."@F12 --, y
+ *   _preflightSyf las verifica por rotulo con _normalizarRotulo y ABORTA si alguno no coincide,
+ *   igual que ya hacia con SYF_TIPOS_TABLERO, SYF_SALDOS_TABLERO y SYF_BLOQUE_MEDIOS. Una posicion
+ *   se pudre en silencio; un rotulo, no.
+ * - devtools/probar_stock_flujo.js deriva su seccion 5 de SYF_ARRASTRE en vez de repetir la lista:
+ *   modulo y banco no pueden volver a divergir. C15/F15 se siguen probando aparte, a proposito (ya
+ *   no las escribe este modulo -- las reescribe DEVTOOL_InicioPresupuesto -- pero la transformacion
+ *   tiene que seguir siendo correcta contra ellas).
+ * - "Sin formula" con el rotulo YA verificado deja de ser un aviso mudo: nombra la celda, su nota y
+ *   dice que la transformacion no se aplico ahi.
+ * - devtools: seis bancos (probar_stock_flujo, probar_riqueza, probar_formulerio, probar_capitalizacion,
+ *   probar_formato_medios, probar_presupuesto_base) hardcodeaban RAIZ a la ruta absoluta de un
+ *   worktree concreto. Corridos desde cualquier otro worktree leian el src de AQUEL y validaban
+ *   codigo que no era el que se estaba editando -- otra forma del mismo verde enganoso. Ahora
+ *   derivan RAIZ de __dirname, la convencion que probar_tablero_faltante.js y
+ *   probar_inicio_presupuesto.js ya usaban.
+ * - VERIFICADO POR MUTACION: con SYF_ARRASTRE devuelta a R9/U9/X9, probar_stock_flujo.js pasa de
+ *   SIN FALLAS a 3 FALLA(S) nombrando celda y contenido real ("Tablero!R9: hoy tiene 'Cuenta'").
+ *   Restaurado, vuelve a SIN FALLAS. Los 8 bancos corren desde este worktree con los mismos
+ *   resultados que el baseline: probar_riqueza 7 FALLA(S) y probar_formulerio 5 FALLA(S) (ambas
+ *   documentadas como deliberadas en la v0.38.0), probar_tablero_faltante 1 FALLA, el resto limpio.
+ * - HALLAZGO REPORTADO, NO RESUELTO: al declarar R10/U10/X10 en SYF_ARRASTRE, la barrida
+ *   anti-colision de probar_tablero_faltante.js (seccion 8) ahora acusa TRES modulos sobre esas
+ *   celdas -- DEVTOOL_FormulerioV0111.js (ya reportado en v0.38.0), DEVTOOL_TableroFaltanteProyectado.js
+ *   y ahora, explicitamente, DEVTOOL_StockYFlujo.js. No es una colision nueva: es la que existia
+ *   sin declararse, porque el modulo apuntaba a la celda equivocada. Es menos riesgosa que la de
+ *   Formulerio: _apagarArrastreSyf hace CIRUGIA DE TOKEN sobre la formula viva (reemplaza un
+ *   patron y deja el resto intacto), asi que respeta el envoltorio que TFP le pone alrededor a la
+ *   QUERY de Franco, corra en el orden que corra. Hoy ademas es un no-op: la formula viva ya
+ *   excluye el arrastre. Que los tres modulos se declaren duenios de la misma celda sigue siendo
+ *   una decision de Franco, no una correccion de coordenada.
+ * - NO SE DESPLEGO. Cambios solo en el repo.
  *
  * [2026-08-21] v0.38.3 - El guard de las auxiliares se bloqueaba a si mismo en la segunda corrida.
  * - EL SINTOMA, reportado por Franco: con DEVTOOL_InicioPresupuesto.js ya aplicado, correr

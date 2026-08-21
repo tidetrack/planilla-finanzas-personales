@@ -174,7 +174,24 @@ for i in "${!TARGET_NAMES[@]}"; do
     printf '{"scriptId":"%s","rootDir":"src"}\n' "$script_id" > "$tmp_dir/.clasp.json"
 
     if clasp_pull_en "$tmp_dir" > "$tmp_dir/pull.log" 2>&1; then
-        diff -rq "$tmp_dir/src" "$SRC_DIR" > "$tmp_dir/diff.log" 2>&1
+        # DONDE QUEDAN LOS ARCHIVOS PULLEADOS NO SE ASUME, SE BUSCA.
+        # decision Franco 2026-08-21: clasp 3.x anida rootDir y deja el pull en
+        # "$tmp_dir/src/src"; clasp 2.x lo dejaba en "$tmp_dir/src". Con la ruta fija, el diff
+        # comparaba src/ local contra un directorio que solo contenia un subdirectorio "src", y
+        # reportaba LOS 38 ARCHIVOS como drift en cada corrida -- un drift-check que grita
+        # siempre no informa nada y entrena a tipear "pisar" sin mirar, que es justo lo que este
+        # guard existe para impedir. Se resuelve por donde quedo appsscript.json (viene en todo
+        # pull, en cualquier version) en vez de por una ruta supuesta.
+        pulled_manifest="$(find "$tmp_dir" -name appsscript.json -print -quit 2>/dev/null)"
+        if [ -z "$pulled_manifest" ]; then
+            echo "  ERROR: el pull no dejo ningun appsscript.json bajo $tmp_dir; no se puede"
+            echo "         ubicar lo descargado, asi que NO se declara 'sin drift'."
+            DRIFT_STATUS+=("error")
+            echo "----------------------------------------------"
+            continue
+        fi
+        pulled_dir="$(dirname "$pulled_manifest")"
+        diff -rq "$pulled_dir" "$SRC_DIR" > "$tmp_dir/diff.log" 2>&1
         diff_rc=$?
         if [ "$diff_rc" -eq 0 ]; then
             echo "  sin drift: el remoto coincide con src/ local."

@@ -44,6 +44,23 @@ v0.39.0 (2026-08-21) - El bloque de faltante proyectado sube a 30 filas y deja d
 * estadoTableroFaltanteProyectado() reporta numeros: cuantas cuentas reales por bloque, cuantas entran, cuantas quedarian afuera.
 - _verificarInvariantesTfp pasaba a exigir igualdad estricta entre el conteo de cuentas antes y despues; eso rompia apenas el universo union-con-catalogo sumaba una cuenta proyectada-sin-real de mas. Ahora exige un PISO sin truncar y un numero EXACTO con truncado (garantizado por el orden real-primero).
 ! devtools/probar_tablero_faltante.js: capacidad y rangos actualizados, mas las mutaciones del truncado (no aborta, exacto en el limite, una cuenta menos, conteo exacto vs piso). 1 falla preexistente sin cambios (colision R10/U10/X10 con DEVTOOL_FormulerioV0111.js, aceptada desde v0.38.0).
+v0.38.4 (2026-08-21) - El modulo seguia leyendo R9/U9/X9 mientras su banco probaba R10/U10/X10
+- La v0.38.0 corrigio el corrimiento de fila del Tablero en FORM_CELDAS, RIQ_BLOQUE_CATEGORIAS y
+  BCAT_CELDA, y actualizo la seccion 5 de devtools/probar_stock_flujo.js a R10/U10/X10 -- pero NO
+  toco DEVTOOL_StockYFlujo.js, que es el modulo que esa seccion prueba. El modulo siguio leyendo
+  R9/U9/X9 (el header "Cuenta", sin formula) y saliendo por un aviso mudo, "no tiene formula: se
+  saltea". La transformacion del arrastre dejo de aplicarse a las tres columnas del Tablero con el
+  banco en verde: el banco tenia su propia copia de las coordenadas y solo se actualizo esa.
+- SYF_ARRASTRE (nueva): la lista sale del modulo, con el rotulo de cada celda al lado, y
+  _preflightSyf la verifica por rotulo y aborta si no coincide. El banco deriva su seccion 5 de
+  esta constante en vez de repetirla, asi que modulo y banco no pueden volver a divergir.
+- "Sin formula" con el rotulo correcto deja de ser un aviso mudo: nombra la celda y dice que la
+  transformacion no se aplico.
+- devtools: los 6 bancos que hardcodeaban la ruta absoluta de un worktree ahora derivan RAIZ de
+  __dirname (la convencion que probar_tablero_faltante.js ya usaba). Corridos desde otro worktree
+  validaban el src de gracious-kalam, no el que se estaba editando.
+- Verificado por mutacion: con SYF_ARRASTRE de vuelta en R9/U9/X9 el banco acusa 3 FALLA(S)
+  nombrando la celda y su contenido real ("hoy tiene 'Cuenta'"). NO SE DESPLEGO.
 
 v0.38.3 (2026-08-21) - El guard de las auxiliares se bloqueaba a si mismo en la segunda corrida
 ! Con el modulo ya aplicado, correr "2. Aplicar" de nuevo abortaba en el preflight con "las celdas auxiliares (AW8, AW9, AW10) no estan vacias". Medido contra el gemelo: esa zona no tenia ningun intruso -- tenia el PROMEDIO que la propia corrida anterior habia calculado (el derrame del HSTACK de _tendenciaYPromedioIp). El guard pedia la zona VACIA sin excepcion y se mordia la cola contra su propio resultado.

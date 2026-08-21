@@ -209,6 +209,40 @@ const SYF_BLOQUE_MEDIOS = {
  */
 const SYF_CANDIDATAS_DIAGNOSTICO = ['L31', 'L32', 'L33', 'C34', 'C35'];
 
+/**
+ * Las celdas cuya formula viva hay que RETOCAR para apagar la clausula especial del arrastre
+ * (los "Inicio Mes" dejan de contar como ingreso del mes). Este modulo no las escribe de cero:
+ * lee la formula que hay, le pasa `_apagarArrastreSyf` y devuelve el cambio.
+ *
+ * VAN CON SU ROTULO AL LADO, Y ESO ES EL PUNTO. Hasta el 2026-08-21 las tres del Tablero se
+ * nombraban sueltas y a mano ('R9', 'U9', 'X9') dentro del plan. Ese dia Franco corrio los tres
+ * bloques de agregacion una fila hacia abajo para hacerle lugar a "Faltante proyectado" (fila 8):
+ * el header "Cuenta" paso de la 8 a la 9 y el derrame de datos de la 9 a la 10. Las tres
+ * direcciones de aca quedaron apuntando al HEADER -- una celda sin formula --, y el codigo hacia
+ * `avisos.push(... 'no tiene formula: se saltea')` y seguia de largo. Es decir: la transformacion
+ * dejo de aplicarse a las tres columnas del Tablero SIN QUE NADA FALLARA.
+ *
+ * La v0.38.0 corrigio FORM_CELDAS (DEVTOOL_FormulerioV0111.js) y actualizo la seccion 5 de
+ * devtools/probar_stock_flujo.js a R10/U10/X10, pero ESTE modulo -- el que de verdad escribe --
+ * quedo en R9/U9/X9. El banco pasaba a verde porque prueba `_apagarArrastreSyf` contra la formula
+ * que el gemelo tiene en R10; el modulo, contra la planilla, no encontraba nada en R9. Un banco
+ * verde sobre codigo que no se ejecuta es la peor version del problema.
+ *
+ * decision Franco 2026-08-21: la coordenada nunca mas viaja sola. Cada entrada declara el rotulo
+ * que tiene que haber JUSTO ARRIBA, y `_preflightSyf` lo verifica antes de tocar nada. Si la hoja
+ * se vuelve a mover, el modulo aborta diciendo que encontro en su lugar -- no silba en falso.
+ */
+const SYF_ARRASTRE = [
+    { hoja: 'TABLERO', celda: 'R10', rotuloCelda: 'R9', rotuloEsperado: 'Cuenta', nota: 'Ingresos por cuenta' },
+    { hoja: 'TABLERO', celda: 'U10', rotuloCelda: 'U9', rotuloEsperado: 'Cuenta', nota: 'Gastos fijos por cuenta' },
+    { hoja: 'TABLERO', celda: 'X10', rotuloCelda: 'X9', rotuloEsperado: 'Cuenta', nota: 'Gastos variables por cuenta' },
+    { hoja: 'INICIO', celda: 'C13', rotuloCelda: 'C12', rotuloEsperado: 'Ingresos.', nota: 'Ingresos del mes' },
+    { hoja: 'INICIO', celda: 'F13', rotuloCelda: 'F12', rotuloEsperado: 'Egresos.', nota: 'Egresos del mes' }
+    // Inicio!C15 y F15 salieron de aca el 2026-08-21: las reescribe DEVTOOL_InicioPresupuesto,
+    // que las reemplaza enteras (venian dando 0% eterno). Dos modulos sobre la misma celda hacen
+    // que el numero dependa del orden del menu -- ya paso con N19 y con O16.
+];
+
 // ============================================
 // PUBLICAS
 // ============================================
@@ -535,6 +569,28 @@ function _preflightSyf(ss) {
     // El bloque de medios se verifica POR SUS ROTULOS antes de escribir. Es el guard que faltaba
     // en la v0.16.0: se escribio una formula de tres columnas sobre celdas combinadas y solo
     // entro la primera, dejando Moneda y Monto con datos viejos.
+    // Las celdas del arrastre (SYF_ARRASTRE) se verifican POR SU ROTULO, igual que todo lo demas
+    // de este preflight. Es el guard que faltaba el 2026-08-21: R9/U9/X9 pasaron a ser el header
+    // "Cuenta" y el modulo, en vez de gritar, anotaba "no tiene formula: se saltea" y seguia. Un
+    // rotulo que no coincide significa que la hoja se movio otra vez, y entonces NINGUNA de las
+    // coordenadas que este modulo conoce es confiable: se aborta antes de escribir nada.
+    const arrastreMal = [];
+    SYF_ARRASTRE.forEach(function (spec) {
+        const hoja = spec.hoja === 'INICIO' ? hojaInicio : hojaTablero;
+        const nombre = spec.hoja === 'INICIO' ? nombreInicio : nombreTablero;
+        if (!hoja) return;
+        const vivo = String(hoja.getRange(spec.rotuloCelda).getValue() || '').trim();
+        if (_normalizarRotulo(vivo) !== _normalizarRotulo(spec.rotuloEsperado)) {
+            arrastreMal.push(nombre + '!' + spec.rotuloCelda + ' dice "' + vivo + '" y se esperaba "' +
+                spec.rotuloEsperado + '" (rotulo de ' + spec.celda + ', ' + spec.nota + ')');
+        }
+    });
+    if (arrastreMal.length) {
+        throw new Error('Los rotulos de las celdas del arrastre no son los esperados: ' +
+            arrastreMal.join('; ') + '. La geometria se movio de nuevo: hay que remedir antes de ' +
+            'tocar nada. No se toco nada.');
+    }
+
     const rotulosMal = [];
     SYF_BLOQUE_MEDIOS.columnas.forEach(function (c) {
         const vivo = String(hojaTablero.getRange(c.col + SYF_BLOQUE_MEDIOS.filaHeader).getValue() || '').trim();
@@ -892,21 +948,25 @@ function _planSyf(ss, pre) {
     }
 
     // --- FLUJOS: apagar la clausula especial del arrastre ---
-    [[pre.nombreTablero, 'R9', 'Ingresos por cuenta'],
-     [pre.nombreTablero, 'U9', 'Gastos fijos por cuenta'],
-     [pre.nombreTablero, 'X9', 'Gastos variables por cuenta'],
-     [pre.nombreInicio, 'C13', 'Ingresos del mes'],
-     [pre.nombreInicio, 'F13', 'Egresos del mes'],
-     // Inicio!C15 y F15 salieron de aca el 2026-08-21: las reescribe DEVTOOL_InicioPresupuesto,
-     // que las reemplaza enteras (venian dando 0% eterno). Dos modulos sobre la misma celda hacen
-     // que el numero dependa del orden del menu -- ya paso con N19 y con O16.
-     ].forEach(function (t) {
-        const actual = ss.getSheetByName(t[0]).getRange(t[1]).getFormula();
-        if (!actual) { avisos.push(t[0] + '!' + t[1] + ' no tiene formula: se saltea.'); return; }
+    // Los rotulos de estas celdas ya se verificaron en _preflightSyf: si alguno no coincidia, el
+    // modulo aborto y no llegamos hasta aca. Ver SYF_ARRASTRE.
+    SYF_ARRASTRE.forEach(function (spec) {
+        const nombreHoja = spec.hoja === 'INICIO' ? pre.nombreInicio : pre.nombreTablero;
+        const actual = ss.getSheetByName(nombreHoja).getRange(spec.celda).getFormula();
+        if (!actual) {
+            // "Se saltea" en silencio es como esta transformacion dejo de aplicarse a las tres
+            // columnas del Tablero durante todo el 2026-08-21 sin que nada fallara. Con el rotulo
+            // ya verificado, una celda vacia aca no es un estado esperable: es un dato que falta.
+            avisos.push('ATENCION -- ' + nombreHoja + '!' + spec.celda + ' (' + spec.nota + ') no tiene ' +
+                'formula, y su rotulo ' + spec.rotuloCelda + ' SI dice "' + spec.rotuloEsperado + '". ' +
+                'La transformacion del arrastre NO se aplico ahi: hay que mirar esa celda antes de ' +
+                'dar la corrida por buena.');
+            return;
+        }
         const nueva = _apagarArrastreSyf(actual);
         if (nueva === actual) return;
         cambios.push({
-            nombreHoja: t[0], celda: t[1], nota: t[2],
+            nombreHoja: nombreHoja, celda: spec.celda, nota: spec.nota,
             formulaActual: actual, formulaNueva: nueva,
             resumen: 'los "' + CUENTA_ARRASTRE + '" dejan de contar como ingreso del mes'
         });

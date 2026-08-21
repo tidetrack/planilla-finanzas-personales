@@ -40,7 +40,11 @@
  * @see docs/permanente/celdas.tsv (las formulas contra las que se prueba)
  */
 const fs = require('fs'), vm = require('vm'), path = require('path');
-const RAIZ = '/Users/francodiazpizarro/Desktop/Antigravity/planilla-finanzas-personales/.claude/worktrees/gracious-kalam-00e92c';
+// La raiz se deriva de la ubicacion de ESTE archivo (misma convencion que
+// probar_tablero_faltante.js y probar_inicio_presupuesto.js). Hasta el 2026-08-21 era la ruta
+// absoluta de un worktree concreto: correr el banco desde cualquier otro leia el src de ese
+// worktree y validaba codigo que no era el que se estaba editando.
+const RAIZ = path.resolve(__dirname, '..');
 
 // --- Stubs de los globales de Apps Script que el modulo usa en sus funciones puras ---
 const ctx = {
