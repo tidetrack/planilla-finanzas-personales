@@ -820,19 +820,45 @@ function _reglasDeltaIp() {
     }, []);
 }
 
-/** Las formulas de las seis, para reconocerlas despues. */
-function _formulasPropiasIp() {
-    return _reglasDeltaIp().map(function (r) { return r.formula; });
-}
-
 /** Los rangos A1 de una regla viva, como lista de strings. */
 function _rangosDeReglaIp(regla) {
     return (regla.getRanges() || []).map(function (r) { return r.getA1Notation(); });
 }
 
 /**
- * Clasifica las reglas vivas de la hoja en tres montones:
- *   propias    - las seis de este modulo (formula numerica sobre UNA celda de delta)
+ * Reconoce la FORMA de una regla propia sin exigir la referencia exacta de HOY: una comparacion
+ * contra cero de UNA sola referencia de celda absoluta (=$COL$FILA>0 o =$COL$FILA<0). Es lo que
+ * NO cambia entre generaciones de este modulo -- la referencia si cambio, dos veces:
+ *   v0.34.0  =$C$15>0 / =$C$15<0   (evalua la celda visible del delta, que entonces era numero)
+ *   v0.37.0+ =$AV$9>0 / =$AV$9<0   (evalua la auxiliar de IP_AUX, la celda visible paso a texto)
+ * Identificar por la LISTA EXACTA de las seis formulas de hoy (como hacia esta funcion antes)
+ * deja huerfana a cualquier generacion anterior: no matchea, cae en "ajenas", y un modulo que
+ * solo repone lo ajeno por referencia la reproduce intacta en cada corrida para siempre. Es
+ * exactamente el bug de v0.38.1: la regla vieja de v0.34.0 (=$C$15>0) sobre una celda que ahora
+ * es TEXTO da VERDADERO siempre (en Sheets un texto compara mayor que cualquier numero), y como
+ * iba primera en el orden le ganaba a la regla nueva y correcta -- Ingresos y Egresos quedaban
+ * con el color invertido con las dos formulas perfectas al lado. Misma leccion, mismo dia, en
+ * DEVTOOL_FormatoMedios.js (ver el comentario de _esReglaPropiaFmt): identificar una regla propia
+ * por lo que NO cambia, no por la forma exacta de la referencia -- para que el dia que la
+ * auxiliar se mude de columna de nuevo, esta funcion la siga reconociendo sola.
+ */
+const IP_RE_FORMULA_DELTA = /^=\$?[A-Z]+\$?[0-9]+[<>]0$/;
+function _esFormulaDeDeltaIp(formula) {
+    return IP_RE_FORMULA_DELTA.test(String(formula || ''));
+}
+
+/**
+ * Clasifica las reglas vivas de la hoja en tres montones (mas "desbordan", que no es una
+ * particion sino un reporte aparte de reglas que ya cayeron en "ajenas" por tocar un delta y
+ * extenderse afuera -- ver el parrafo final):
+ *   propias    - CUALQUIER generacion de este modulo: CUSTOM_FORMULA con UN solo rango que es
+ *                exactamente una celda de delta, y formula "referencia unica comparada contra
+ *                cero" (_esFormulaDeDeltaIp), sin importar A QUE celda apunte esa referencia.
+ *                Cubre tanto la generacion de hoy (evalua la auxiliar de IP_AUX) como la de
+ *                v0.34.0 (evaluaba la propia celda visible). Se BARREN al aplicar y no se
+ *                reponen -- ver el porque en revertirInicioPresupuesto, donde tampoco se
+ *                reponen: no son una preferencia de Franco que preservar, son una referencia
+ *                stale que hoy da un falso positivo permanente contra una celda de texto.
  *   superadas  - reglas "el texto contiene" cuyos rangos caen TODOS dentro de los tres deltas.
  *                Son las de Franco: quedan sin efecto en cuanto la flecha reemplaza al signo,
  *                asi que este modulo las levanta (y las guarda para poder reponerlas).
@@ -846,7 +872,6 @@ function _rangosDeReglaIp(regla) {
 function _clasificarReglasIp(todas) {
     const celdas = IP_CLAVES_DELTA.map(function (k) { return IP_RESUMEN[k].celda; });
     const propias = [], superadas = [], ajenas = [], desbordan = [];
-    const mias = _formulasPropiasIp();
 
     (todas || []).forEach(function (regla) {
         const cond = regla.getBooleanCondition && regla.getBooleanCondition();
@@ -857,7 +882,7 @@ function _clasificarReglasIp(todas) {
         const dentro = rangos.filter(function (r) { return celdas.indexOf(r) !== -1; });
 
         if (tipo === 'CUSTOM_FORMULA' && rangos.length === 1 && dentro.length === 1 &&
-            mias.indexOf(String(valores[0])) !== -1) {
+            _esFormulaDeDeltaIp(valores[0])) {
             propias.push(regla);
             return;
         }
@@ -1750,6 +1775,18 @@ function revertirInicioPresupuesto() {
         // LAS REGLAS DE COLOR: se quitan las propias y se reponen las que se habian levantado.
         // Las ajenas nunca se reconstruyen -- se pasan por referencia --, asi que no hay forma
         // de que revertir dane el calendario ni ninguna otra regla que este modulo no escribio.
+        //
+        // OJO: "propias" desde v0.38.2 incluye tambien la generacion anterior (v0.34.0, formula
+        // sobre la propia celda visible en vez de la auxiliar -- ver _esFormulaDeDeltaIp). Esas
+        // NO se fotografian ni se reponen aca, a proposito, y a diferencia de "superadas": una
+        // regla superada es una preferencia de estilo de Franco que perdio efecto por una razon
+        // ajena a ella (la flecha reemplazo al signo en el texto) y vale la pena preservarla. Una
+        // regla de la generacion anterior de ESTE mecanismo es al reves: HOY evalua contra cero
+        // una celda que es texto, lo que en Sheets da VERDADERO siempre -- es un falso positivo
+        // permanente, no una preferencia. Reponerla en un revert reintroduciria exactamente el
+        // bug que esta version corrige (el color de Ingresos/Egresos invertido). Si algun dia
+        // hace falta el estado anterior a v0.38.2 tal cual estaba, la via es el respaldo de la
+        // planilla, no este boton.
         let reglasQuitadas = 0, reglasRepuestas = 0;
         if (previos.reglas) {
             const clases = _clasificarReglasIp(hoja.getConditionalFormatRules());

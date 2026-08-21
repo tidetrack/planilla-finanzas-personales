@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 38,
- patch: 1,
+ patch: 2,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-21',
- releaseName: 'v0.38.1 - El patron con coma decimal era al reves; las auxiliares se veian',
+ releaseName: 'v0.38.2 - Dos deltas quedaban con el color invertido: reglas de v0.34.0 sobrevivian mudas',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.38.2 (2026-08-21) - Dos deltas quedaban con el color invertido: reglas de v0.34.0 sobrevivian mudas
+! Ingresos cayo 52,7% y se pintaba VERDE; Egresos cayo 50,5% y se pintaba ROJO -- las dos al reves (Capital bien). Causa: sobre C15/F15 convivian CUATRO reglas de color en vez de dos, dos de v0.34.0 (=$C$15>0/<0, evaluaban la celda visible) mas las dos correctas de hoy (=$AV$9>0/<0, evaluan la auxiliar). En Sheets un texto compara SIEMPRE mayor que cualquier numero: desde que C15/F15 son texto (v0.37.0), "=$C$15>0" da VERDADERO sin condicion y, por ir primera en el orden, le gana a la regla correcta.
+- _clasificarReglasIp solo reconocia como "propia" la lista EXACTA de las seis formulas de la generacion vigente; las de v0.34.0 no matcheaban, caian en "ajenas" y aplicarIp las reponia intactas en cada corrida -- huerfanas para siempre. Mismo bug de identificacion que _esReglaPropiaFmt ya documenta en DEVTOOL_FormatoMedios.js, mismo dia, otro modulo.
+* _esFormulaDeDeltaIp (nuevo) reconoce por PATRON: comparacion contra cero de UNA sola referencia de celda (=$COL$FILA>0 o <0), sin importar a que celda apunte. Cubre la generacion de hoy y la de v0.34.0 por igual, y a cualquier generacion futura si la auxiliar vuelve a mudarse de columna.
+! Las reglas de generacion anterior se barren al aplicar y NO se reponen al revertir -- a diferencia de las "superadas" (texto contiene, preferencia de estilo de Franco que se fotografia y se repone), una regla de generacion anterior de este mismo mecanismo evalua HOY una celda de texto y da un falso positivo permanente: reponerla en un revert reintroduciria el bug. Documentado inline en ambos puntos.
+! probar_inicio_presupuesto.js (11b) nunca junto dos generaciones de reglas sobre la MISMA celda de delta -- por eso el bug no lo agarro. Se agrega la reconstruccion exacta (2 reglas de v0.34.0 + 2 de hoy sobre C15) verificada por mutacion: las cuatro clasifican como propias y _reglasHacenFaltaIp da true; mas una asercion sobre el hecho de Sheets que hace esto peligroso (>0/<0 contra texto no falla, da verdadero/falso sin avisar) confirmada contra las seis formulas reales que el modulo escribe.
+
 v0.38.1 (2026-08-21) - El patron con coma decimal era al reves; las auxiliares se veian
 ! La corrida de v0.37.0 salio mal en la planilla real: "82,0%" se vio "133%", "$211.073,04" se vio "$211.073,04333", "$16.725,60 inyectados" se vio "$16.725,6000". Revertida con revertirInicioPresupuesto(); esta version arregla los dos defectos.
 - El comentario que justificaba el patron con coma decimal ("TEXT() SI es sensible al locale") era FALSO -- tercera vez en el dia que una afirmacion sobre locale sin medir cuesta un bug (v0.32.2, v0.33.0). Medido en vivo por setFormula: TEXT() se comporta EXACTAMENTE como setNumberFormat, patron SIEMPRE canonico (punto decimal, coma de miles), sin excepcion. IP_PATRON_PORCENTAJE '0,0%'->'0.0%'; IP_PATRON_MONEDA '$#.##0,00'->'$ #,##0.00'.

@@ -772,6 +772,48 @@ console.log('\n=== 11b. Clasificar reglas vivas: propias, superadas, ajenas ==='
     // tocar.
     ok(ctx._reglasHacenFaltaIp(ctx._clasificarReglasIp(seis.concat([textoF]))),
        'con una regla vieja de "el texto contiene" todavia viva, aplicar SI tiene que actuar');
+
+    // EL BUG REAL, reconstruido tal cual lo encontro Franco en produccion: CUATRO reglas sobre
+    // C15 donde debia haber dos -- dos de v0.34.0 que evaluan la celda visible directamente
+    // (=$C$15>0 / =$C$15<0, correctas cuando C15 era numero, mudas desde que C15 es texto) mas
+    // las dos de hoy que evaluan la auxiliar (=$AV$9>0 / =$AV$9<0). Antes de este fix las viejas
+    // caian en "ajenas" y aplicarIp las reponia intactas para siempre -- la version anterior de
+    // esta prueba nunca junto a las dos generaciones en la misma celda y por eso no lo agarro.
+    const viejaMas = regla('CUSTOM_FORMULA', '=' + ctx._absIp(R.deltaIngresos.celda) + '>0',
+                           [R.deltaIngresos.celda], ctx.IP_COLOR_VERDE);
+    const viejaMenos = regla('CUSTOM_FORMULA', '=' + ctx._absIp(R.deltaIngresos.celda) + '<0',
+                             [R.deltaIngresos.celda], ctx.IP_COLOR_ROJO);
+    const nuevaMas = regla('CUSTOM_FORMULA', '=' + ctx._absIp(A.deltaIngresos.tendencia) + '>0',
+                           [R.deltaIngresos.celda], ctx.IP_COLOR_VERDE);
+    const nuevaMenos = regla('CUSTOM_FORMULA', '=' + ctx._absIp(A.deltaIngresos.tendencia) + '<0',
+                             [R.deltaIngresos.celda], ctx.IP_COLOR_ROJO);
+    const cCuatro = ctx._clasificarReglasIp([viejaMas, viejaMenos, nuevaMas, nuevaMenos]);
+    ok(cCuatro.propias.length === 4,
+       'las cuatro reglas sobre C15 (dos de v0.34.0 + dos de hoy) se reconocen TODAS como propias. Dio ' +
+       cCuatro.propias.length);
+    ok(cCuatro.ajenas.length === 0 && cCuatro.superadas.length === 0 && cCuatro.desbordan.length === 0,
+       'ninguna de las cuatro queda huerfana en otro monton (ni ajena, ni superada, ni reportada como desborde)');
+    ok(ctx._reglasHacenFaltaIp(cCuatro),
+       'con dos generaciones conviviendo en la misma celda, aplicar SI tiene que actuar: barre las cuatro y escribe las dos correctas');
+
+    // EL HECHO DE SHEETS QUE HACE ESTO PELIGROSO, y por el que el bug nunca disparo un error: en
+    // Sheets un texto compara SIEMPRE mayor que cualquier numero, asi que ">0" contra una celda
+    // de TEXTO no falla -- da VERDADERO sin condicion -- y "<0" da FALSO sin condicion. Ninguna
+    // excepcion, ningun log: el unico sintoma es el color pintado. Por eso la garantia real no es
+    // "el codigo no explota", es "las reglas que este modulo ESCRIBE jamas evaluan la celda de
+    // texto que pintan". Se verifica sobre las seis reglas reales (_reglasDeUnDeltaIp), no sobre
+    // datos de prueba armados a mano.
+    ctx.IP_CLAVES_DELTA.forEach(function (k) {
+        ctx._reglasDeUnDeltaIp(k).forEach(function (r) {
+            const m = r.formula.match(/^=\$([A-Z]+)\$([0-9]+)[<>]0$/);
+            const evaluada = m ? m[1] + m[2] : '';
+            ok(!!m, k + ': la formula ' + r.formula + ' tiene la forma =$COL$FILA>0/<0');
+            ok(evaluada !== r.celda,
+               k + ': la regla que este modulo escribe evalua ' + evaluada + ', NUNCA ' + r.celda +
+               ' (la celda de texto que pinta) -- si coincidieran, un ">0" contra texto daria' +
+               ' VERDADERO siempre y el bug de v0.34.0 volveria a pasar sin avisar');
+        });
+    });
 }
 
 console.log('\n=== 12. El verificador distingue PENDIENTE de FALLA (auxiliares numericas + visibles de texto) ===');

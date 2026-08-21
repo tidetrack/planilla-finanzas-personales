@@ -9,6 +9,63 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.38.2 - Dos deltas quedaban con el color invertido: reglas de v0.34.0 sobrevivian mudas (2026-08-21)
+
+Ingresos cayo 52,7% y se pintaba **VERDE**; Egresos cayo 50,5% y se pintaba **ROJO** — las dos al
+reves (Capital estaba bien). Leyendo el panel de formato condicional sobre `C15` habia **cuatro**
+reglas donde debia haber dos:
+
+| Formula | Color | Generacion |
+|---|---|---|
+| `=$C$15>0` | verde | v0.34.0, sobrevivio |
+| `=$C$15<0` | rojo | v0.34.0, sobrevivio |
+| `=$AV$9>0` | verde | v0.38.1, correcta |
+| `=$AV$9<0` | rojo | v0.38.1, correcta |
+
+### El mecanismo
+
+`C15`/`F15` son texto desde v0.37.0, y en Google Sheets **un texto compara siempre mayor que
+cualquier numero**. `"=$C$15>0"` contra una celda de texto no lanza error — da **verdadero** sin
+condicion — y por ir primera en el orden de evaluacion le gana a la regla correcta que esta al
+lado con la formula perfecta. En Ingresos eso pinta verde (su regla de "sube" es verde); en
+Egresos pinta rojo (la de "sube" en egresos es roja). Sin ninguna excepcion ni log de por medio:
+el unico sintoma es el color pintado.
+
+### Por que sobrevivieron
+
+`_clasificarReglasIp` (`DEVTOOL_InicioPresupuesto.js`) reconocia como "propia" solo la lista
+**exacta** de las seis formulas de la generacion vigente (comparacion string contra la auxiliar
+`AV8`/`AV9`/`AV10`). Las reglas de v0.34.0 evaluaban la propia celda del delta — correcto cuando
+esa celda todavia era numero — no matcheaban esa lista, caian en el monton "ajenas" y el modulo
+las reponia **intactas** en cada corrida: huerfanas para siempre. Es el mismo bug de
+identificacion que el comentario de `_esReglaPropiaFmt` ya documenta en `DEVTOOL_FormatoMedios.js`,
+escrito el mismo dia, en otro modulo.
+
+### El arreglo
+
+Generalizado, no un parche puntual: `_esFormulaDeDeltaIp` reconoce una regla propia por lo que
+**no cambia** entre generaciones — el rango es exactamente una celda de delta, y la formula es una
+comparacion contra cero de una sola referencia de celda absoluta (`=$COL$FILA>0` o `<0`) — sin
+exigir que esa referencia sea la auxiliar de hoy. Cubre por igual la generacion actual y la de
+v0.34.0, y a cualquier generacion futura si la auxiliar vuelve a mudarse de columna.
+
+Las reglas de generacion anterior se **barren** al aplicar y **no se reponen** al revertir, a
+diferencia de las reglas "superadas" (texto contiene, que si se fotografian y se restauran): una
+regla superada es una preferencia de estilo de Franco que perdio efecto por una razon ajena a
+ella; una regla de generacion anterior de este mismo mecanismo hoy evalua contra cero una celda
+de texto, un falso positivo permanente — reponerla en un revert reintroduciria el bug.
+
+### Agujero de banco tapado
+
+`probar_inicio_presupuesto.js` (seccion 11b) nunca juntaba dos generaciones de `CUSTOM_FORMULA`
+sobre la misma celda de delta. Se agrego la reconstruccion exacta del caso real (cuatro reglas
+sobre `C15`, dos de v0.34.0 + dos de hoy), verificado por mutacion que las cuatro clasifican como
+propias y que `_reglasHacenFaltaIp` da `true`, mas una asercion sobre el hecho de Sheets que hace
+esto peligroso: ninguna de las seis reglas que el modulo realmente escribe evalua la celda de
+texto visible que pinta.
+
+---
+
 ## v0.38.1 - El patron con coma decimal era al reves; las auxiliares se veian (2026-08-21)
 
 La v0.37.0 (deltas de Inicio con promedio concatenado) se desplego y se corrio en la planilla

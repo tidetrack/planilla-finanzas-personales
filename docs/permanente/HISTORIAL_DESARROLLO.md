@@ -6,6 +6,114 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-21 - Dos deltas quedaban con el color invertido: reglas de v0.34.0 sobrevivian mudas (v0.38.2)
+
+### Evento
+
+La v0.38.1 arreglo los decimales del texto de los tres deltas y las columnas auxiliares (ambos
+verificados en la planilla), pero dejo un tercer defecto sin diagnosticar: los **colores** de dos
+de los tres deltas quedaban invertidos. En la corrida real, `Ingresos` cayo 52,7% y se mostraba
+**en VERDE**; `Egresos` cayo 50,5% y se mostraba **en ROJO** — las dos al reves. `Capital` estaba
+bien.
+
+### Diagnostico
+
+Leyendo el panel de formato condicional de Google Sheets sobre `C15` (el delta de Ingresos)
+aparecian **cuatro** reglas donde debia haber dos:
+
+```
+=$C$15>0  -> #356854 verde   <- generacion v0.34.0, sobrevivio
+=$C$15<0  -> #c93232 rojo    <- generacion v0.34.0, sobrevivio
+=$AV$9>0  -> #356854 verde   <- generacion v0.38.1, correcta
+=$AV$9<0  -> #c93232 rojo    <- generacion v0.38.1, correcta
+```
+
+El mecanismo: `C15` (y `F15`, el delta de Egresos) contienen **texto** desde v0.37.0 (flecha +
+tendencia + promedio concatenados en un solo string). En Google Sheets **un texto compara SIEMPRE
+mayor que cualquier numero**. La condicion `=$C$15>0` contra una celda de texto no lanza ningun
+error — evalua **VERDADERO** sin condicion, siempre — y como esa regla va **primera** en el orden
+de evaluacion de la lista de formato condicional, le gana a la regla correcta que esta al lado con
+la formula perfecta. En Ingresos eso pinta verde (ahi la regla de "sube" es verde); en Egresos
+pinta rojo (ahi la regla de "sube" es roja). Las dos invertidas, de forma perfectamente
+consistente con la explicacion, y sin ningun sintoma mas alla del color: ninguna excepcion,
+ningun log, nada que hubiera avisado antes de mirar la planilla.
+
+### Por que sobrevivieron
+
+`_clasificarReglasIp` (`DEVTOOL_InicioPresupuesto.js`) reconocia como "propias" **solo** las
+reglas de la generacion vigente: comparaba la formula viva contra la lista exacta de las seis
+formulas que `_reglasDeltaIp()` genera hoy (comparacion string contra la auxiliar numerica
+`AV8`/`AV9`/`AV10`, ver `IP_AUX`). Las reglas de v0.34.0 evaluaban la **propia celda visible** del
+delta (`=$C$15>0`) — correcto en su momento, cuando esa celda todavia era un numero — y por lo
+tanto no coincidian textualmente con ninguna de las seis formulas de hoy. `_clasificarReglasIp`
+las mandaba al monton `ajenas`, y ese monton se repone **intacto y por referencia** en cada
+corrida (es el mecanismo que protege reglas de verdad ajenas, como el calendario en `J8:P14`).
+Resultado: las reglas rotas de v0.34.0 quedaban huerfanas para siempre — ni se reemplazaban al
+aplicar, ni se quitaban al revertir, porque el modulo nunca las reconocia como suyas.
+
+Es **exactamente el mismo bug de identificacion** que el comentario de `_esReglaPropiaFmt` ya
+documenta en `DEVTOOL_FormatoMedios.js` (escrito el mismo dia, otro modulo): identificar una
+regla propia por la forma exacta de la generacion de HOY deja huerfana a cualquier generacion
+anterior en cuanto una referencia se muda de lugar.
+
+### El arreglo
+
+Generalizado a proposito, no un parche puntual para esta generacion: se agrega
+`_esFormulaDeDeltaIp`, que reconoce una regla propia por lo que **no cambia** entre generaciones
+del mismo mecanismo — el rango de la regla es exactamente **una** celda de delta, y la formula es
+una comparacion contra cero de **una sola referencia** de celda absoluta (`=$COL$FILA>0` o
+`=$COL$FILA<0`) — sin exigir que esa referencia apunte a la auxiliar de hoy. La funcion cubre por
+igual:
+
+- la generacion actual (`=$AV$9>0`, evalua la auxiliar de `IP_AUX`), y
+- la de v0.34.0 (`=$C$15>0`, evaluaba directamente la celda visible),
+
+y a cualquier generacion futura, si la auxiliar vuelve a mudarse de columna, sin que haga falta
+tocar este codigo de nuevo. `_clasificarReglasIp` usa esta funcion en el punto donde antes
+comparaba contra la lista exacta; el resto de la clasificacion (`superadas`, `ajenas`,
+`desbordan`, y la guarda contra reglas que tocan un delta pero se extienden fuera de el) queda
+intacto.
+
+### Que pasa al aplicar y al revertir
+
+Con el cambio, las reglas de generacion anterior caen en `propias` y se **barren** al aplicar:
+`aplicarInicioPresupuesto()` sigue escribiendo exactamente `ajenas + las seis reglas correctas`,
+nunca reproduce lo que habia en `propias`. La pregunta simetrica es que hace `revertirInicioPresupuesto()`
+— y la respuesta, deliberada, es: **no las repone**, a diferencia de las reglas `superadas` (el
+tipo "el texto contiene", que si se fotografian con su foto de color/negrita/rango y se restauran
+al revertir). La diferencia es de fondo: una regla superada es una preferencia de **estilo** de
+Franco que perdio efecto por una razon ajena a ella (la flecha reemplazo al signo en el texto). Una
+regla de generacion anterior de este mismo mecanismo de color, en cambio, hoy evalua contra cero
+una celda que es texto — eso es un **falso positivo permanente**, no una preferencia. Reponerla en
+un revert reintroduciria exactamente el bug que esta version corrige. Documentado inline en
+`revertirInicioPresupuesto()`, junto al bloque que quita las reglas propias.
+
+### Agujero de banco tapado (verificado por mutacion)
+
+La seccion 11b de `probar_inicio_presupuesto.js` ya probaba `_clasificarReglasIp` con reglas
+propias de la generacion actual y con reglas de texto viejas (`superadas`), pero **nunca** las
+combinaba: nunca puso dos generaciones de `CUSTOM_FORMULA` sobre la **misma** celda de delta, que
+es exactamente la forma del bug real. Se agrego la reconstruccion literal del caso que Franco
+encontro en produccion — cuatro reglas sobre `C15` (dos formulas de v0.34.0 + las dos de hoy) — y
+se verifico por mutacion que las **cuatro** clasifican como `propias` (ninguna cae en `ajenas`,
+`superadas` ni `desbordan`) y que `_reglasHacenFaltaIp` da `true` sobre esa clasificacion.
+
+Se sumo ademas una asercion sobre el hecho de Sheets que hace este bug peligroso en primer lugar:
+que **ninguna** de las seis reglas que el modulo efectivamente escribe (`_reglasDeUnDeltaIp`,
+sobre las tres claves de `IP_CLAVES_DELTA`) evalua la celda de texto visible que pinta. La
+justificacion queda inline en el propio test: una comparacion `>0`/`<0` contra una celda de texto
+no falla nunca — da verdadero o falso sin condicion — y por eso este bug no disparo ninguna
+excepcion ni quedo logueado en ningun lado.
+
+### Verificacion
+
+`node devtools/probar_inicio_presupuesto.js` da `SIN FALLAS` con las nuevas aserciones. El resto
+de los bancos del repo se corrio completo: todos verdes salvo los tres ya diagnosticados y dejados
+en rojo a proposito (`probar_formulerio.js`, 5; `probar_riqueza.js`, 7;
+`probar_tablero_faltante.js`, 1) — sin cambios respecto del estado previo a esta sesion.
+
+---
+
 ## 2026-08-21 - El patron con coma decimal estaba al reves; las auxiliares quedaban visibles (v0.38.1)
 
 ### Evento
