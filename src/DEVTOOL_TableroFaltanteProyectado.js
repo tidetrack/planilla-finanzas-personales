@@ -1,7 +1,8 @@
 /**
  * DEVTOOL_TableroFaltanteProyectado.js
  * Agrega el "Faltante proyectado" a los tres bloques de cuentas del Tablero (Ingresos, Gastos
- * Fijos, Gastos Variables): cada cuenta pasa a ocupar DOS FILAS.
+ * Fijos, Gastos Variables): dos SECCIONES dentro del mismo bloque, no una fila intercalada por
+ * cuenta.
  *
  * [CONCEPTO DE NEGOCIO]
  * Los tres bloques de cuentas del Tablero (Ingresos, Gastos Fijos, Gastos Variables) mostraban
@@ -11,16 +12,28 @@
  * TODAVIA no tuvo ningun movimiento real no aparecia en absoluto, asi que lo que falta cobrar o
  * pagar de esa cuenta era invisible.
  *
- * decision Franco 2026-08-21: cada cuenta pasa a ocupar DOS FILAS en vez de una. Arriba, el
- * nombre de la cuenta y lo REALMENTE registrado (oscuro, sin cambios de fondo). Abajo, SIN
- * nombre, el FALTANTE proyectado para esa cuenta este mes (gris). Franco eligio esta opcion
- * explicitamente sobre las alternativas de agregar una columna nueva o de mostrar solo un total:
+ * decision Franco 2026-08-21 (layout definitivo, segunda vuelta de diseno): NO es una fila real
+ * seguida de una fila faltante por cuenta. Son DOS SECCIONES separadas dentro del mismo bloque:
+ * arriba, TODO lo real (una fila por cuenta con movimiento, oscuro); abajo, TODO lo faltante
+ * (una fila por cuenta con faltante > 0, gris, REPITIENDO el nombre de la cuenta -- no lo deja
+ * vacio). Franco, textual: "en el orden. Todo lo faltante y proyectado, va al final de todo lo
+ * real. No una cuenta con dos sumas arriba y abajo (...) abajo de intereses bancos, aparecen los
+ * faltantes pero como una duplicacion de cuenta. Por ejemplo, vuelve a aparecer umoh y sale la
+ * diferencia entre el monto cobrado y proyectado".
  *
  *     Cuenta              Monto
- *     umoh              $837.728,28   <- oscuro (real)
- *                       $162.271,72   <- gris (falta)
+ *     umoh              $837.728,28   <- SECCION 1 (real): oscuro
  *     Tidetrack         $260.000,00
- *                        $40.000,00
+ *     Ingresos Extra     $40.069,53
+ *     Intereses banc        $785,19
+ *     umoh              $162.271,72   <- SECCION 2 (faltante): gris, MISMO nombre repetido
+ *     Tidetrack          $40.000,00
+ *
+ * Una primera vuelta de diseno (v0.39.0/intento fallido, ver mas abajo "EL BUG QUE ESTO
+ * REEMPLAZA") intercalaba las dos filas por cuenta con la de faltante SIN nombre. Franco la
+ * corrigio ANTES de que llegara a la planilla: el layout real que el necesita es el de dos
+ * secciones de arriba. El intento intercalado queda documentado como diagnostico (la causa raiz
+ * que atrapo la verificacion sigue siendo valida y esta seccion la hereda), no como diseno vivo.
  *
  * El total de faltantes de cada bloque va debajo del titulo (R8/U8/X8, rotulo ya escrito por
  * Franco; S8/V8/Y8 son las celdas de valor que este modulo cablea).
@@ -30,123 +43,134 @@
  * respaldo congelado y verificado antes de mutar, verificacion del VALOR resultante, reversion
  * completa. Contrato de las tres publicas: { ok, detalle?, error? }.
  *
- * decision Franco 2026-08-21 (segunda ronda, capacidad y truncado): el bloque sube de 19 a 21
- * filas visibles (10 a 30, no 10 a 28) -- 10 pares cuenta/faltante en vez de 9, con UNA fila
- * sobrante que el diseno usa a proposito (ver decision #5). Y el comportamiento ante desborde
- * cambia de raiz: la version anterior ABORTABA si habia mas cuentas reales que lugar ("Agrandar
- * el bloque antes de correr esto"). Corrida contra la planilla real, esa version aborto con
- * Gastos Variables (10 cuentas reales, capacidad 9): Franco se quedo SIN la funcionalidad
- * entera por una sola cuenta de mas, y la proxima categoria nueva iba a repetir el problema. El
- * principio "nunca se recorta una cuenta real en silencio" seguia siendo correcto -- la
- * conclusion (abortar) no. La nueva regla es TRUNCAR A LA VISTA: se muestran las cuentas de
- * mayor monto que entran, y la ULTIMA FILA del bloque (la que la capacidad en pares siempre deja
- * libre, ver decision #5) pasa a decir cuantas quedaron afuera y por cuanta plata, en vez de
- * desaparecer sin que nadie se entere. Ver decision #5b (el aviso) y #7 (estado() con numeros).
+ * EL BUG QUE ESTO REEMPLAZA (diagnostico de la corrida real del 2026-08-21, v0.39.0): con el
+ * layout intercalado, los totales se armaron como SUMIF(rango; "<>"; monto) para "real" y el
+ * espejo SUMIF(rango; "="; monto) para "faltante", separando por si la celda de Cuenta estaba
+ * vacia. La corrida real lo delato: el total real paso de $1.138.583,00 a $3.218.368,47 en
+ * Ingresos (exactamente real + faltante), y el mismo patron en Gastos Fijos y Variables. La
+ * causa: en Sheets, SUMIF/COUNTIF con el criterio "<>"/"=" A SECAS (sin operando) NO comparan el
+ * VALOR de la celda contra "" -- preguntan si la celda "tiene contenido" (formula o dato), y una
+ * celda que pertenece a un DERRAME de array y muestra "" (el resultado de una formula, no un
+ * vacio real) CUENTA COMO "CON CONTENIDO". Con eso, TODAS las filas del derrame (las que tenian
+ * nombre Y las que mostraban "") caian del lado "<>" (no vacio): el total real sumaba real +
+ * faltante, y el total faltante quedaba en $0 sistematicamente (ningun SUMIF conseguia una fila
+ * que calificara como "vacia" para el criterio "="). El banco de pruebas de esa version daba
+ * VERDE con esto roto porque su mock en JS solo puede representar "" como string, sin la
+ * distincion Sheets-especifica entre "celda vacia real" y "celda con formula que devolvio '  '":
+ * un agujero de cobertura documentado y corregido en la seccion 3 de este banco.
  *
- * decision Franco 2026-08-21 (cuentas proyectadas sin movimiento real): SIGUEN apareciendo. Es
- * la razon de ser de este modulo entero -- el [CONCEPTO DE NEGOCIO] de arriba dice literal que
- * antes "una cuenta proyectada que TODAVIA no tuvo ningun movimiento real no aparecia en
- * absoluto, asi que lo que falta cobrar o pagar de esa cuenta era invisible". Sacarlas
- * reintroduciria exactamente ese problema. Lo que SI se garantiza (por construccion, no por un
- * chequeo aparte): el orden `SORT(tabla_incluida; 2; FALSE; 3; FALSE)` ordena PRIMERO por monto
- * real descendente, asi que NINGUNA cuenta proyectada-sin-real (real = 0) puede desplazar a una
- * con movimiento real de este mes, sin importar cuan grande sea lo proyectado -- las
- * proyectadas-sin-real siempre quedan despues de las que si tienen movimiento, y son las
- * primeras en truncarse si no entran todas. Ver el test "5c" (mutacion) del banco.
+ * Con el layout de DOS SECCIONES ese mecanismo de deteccion (vacio vs no vacio en Cuenta) ya NO
+ * EXISTE -- ninguna fila de Cuenta esta vacia nunca. Eso mata la ambiguedad de raiz, pero
+ * tambien mata el unico dato que los totales viejos usaban para separarse: ver decision de
+ * diseno #1 (totales por construccion) y #7 (el gris) mas abajo, las dos consecuencias directas.
  *
  * DECISIONES DE DISENO
  *
- * 1. LA FORMULA "REAL" DE FRANCO SE REUSA VERBATIM, NUNCA SE REESCRIBE. R10 (y U10, X10) ya
- *    tienen una QUERY que agrupa el derrame del motor del Tablero (AJ:AV) por cuenta y suma con
- *    el signo correcto -- es la formula que hoy da $1.138.583,00 en Ingresos, $506.851,30 en
- *    Fijos y $460.820,83 en Variables (Agosto 2026 / ARS). Reconstruir esa logica en JS arriesga
- *    un desvio sutil (una cuenta que aparece en el ledger pero no en el catalogo, por ejemplo, y
- *    que la QUERY de Franco SI captura por ser data-driven). En cambio, el preflight LEE la
- *    formula viva de la celda ancla, verifica que tenga la forma esperada (QUERY, SUM(Col2),
- *    GROUP BY Col1, la categoria correcta) y la EMPOTRA tal cual dentro de un LET nuevo como
- *    variable `tabla_real`. El total de la columna Monto no se mueve ni un centavo por este
- *    cambio: se verifica al releer contra el valor que tenia ANTES de tocar nada.
+ * 1. LOS TOTALES SE CALCULAN POR CONSTRUCCION, NUNCA RELEYENDO EL DERRAME. Con el layout viejo
+ *    (intercalado) esto ya era la opcion preferida por menos fragil; con el layout de dos
+ *    secciones es la UNICA que funciona, porque el nombre de cuenta se repite en las dos
+ *    secciones y ya no hay ninguna senal de "vacio" que un SUMIF pueda usar para separarlas.
+ *    S7 (total real) es `=SUM(INDEX(<QUERY real de Franco, verbatim>; 0; 2))`: suma DIRECTO la
+ *    columna 2 de la QUERY de Franco, sin pasar por el derrame ni por ningun filtro nuevo -- es
+ *    matematicamente la MISMA cifra que Franco ya tenia antes de que este modulo tocara nada,
+ *    por eso el invariante "el total real no se mueve" se cumple por construccion, no por
+ *    coincidencia. S8 (total faltante) reusa el MISMO bloque de calculo LET que arma el derrame
+ *    (`_bloqueComunTfp`, generado por UNA sola funcion JS para evitar que las dos formulas de
+ *    Sheets diverjan con el tiempo) y suma `faltante_por_cuenta` sobre el UNIVERSO COMPLETO, no
+ *    solo lo que entra en pantalla: si algun dia hay truncado, S8 sigue mostrando el faltante
+ *    real total, no el recortado a la vista (mas util para Franco que un total que depende de
+ *    cuantas filas entraron).
  *
- * 2. LO PROYECTADO SE CALCULA FRESCO, cuenta por cuenta, desde la hoja "Proyeccion" (espejo de
- *    Registros), con el mismo criterio que DEVTOOL_Proyeccion usa para N9:N11 (mes/anio/moneda
- *    de $N$2/$N$3/$N$4, exclusion de cuentas neutras, conversion con TIDETRACK_*() en vivo
- *    porque un movimiento previsto no tiene TC congelado) pero agrupado POR CUENTA en vez de
- *    sumado en un solo total. El universo de cuentas a mirar es la UNION de la lista del
- *    catalogo del bloque (Plan de Cuentas, la misma que alimenta el desplegable de Cargas) y las
- *    cuentas que ya aparecen en `tabla_real` -- asi una cuenta proyectada sin catalogar no se
- *    pierde, y una cuenta con datos reales pero fuera del catalogo (si la hubiera) tampoco.
+ * 2. LA FORMULA "REAL" DE FRANCO SE REUSA VERBATIM, NUNCA SE REESCRIBE (sin cambios respecto de
+ *    la version anterior). El preflight LEE la formula viva de la celda ancla, verifica su forma
+ *    esperada y la EMPOTRA tal cual dentro de un LET nuevo como variable `tabla_real`.
  *
- * 3. FALTANTE = MAX(0; proyectado - real). Nunca negativo: una cuenta que ya supero lo
- *    proyectado no "debe" nada, y unificar eso a 0 es lo que Franco pidio explicitamente. Una
- *    cuenta proyectada sin ningun movimiento real aparece igual, con su faltante completo.
+ * 3. LO PROYECTADO SE CALCULA FRESCO, cuenta por cuenta, desde la hoja "Proyeccion" (sin cambios
+ *    respecto de la version anterior: mismo criterio que DEVTOOL_Proyeccion usa para N9:N11,
+ *    agrupado POR CUENTA). El universo de cuentas es la UNION del catalogo del bloque y las
+ *    cuentas que ya aparecen en `tabla_real`.
  *
- * 4. LAS DOS FILAS SE ARMAN INTERCALANDO EN LA MISMA FORMULA (SEQUENCE + MOD para decidir fila
- *    par/impar, INDEX para leer la tabla ordenada). Sigue siendo UNA sola formula anclada en
- *    R10/U10/X10 que derrama R10:S30 (etc., la fila 30 solo si hace falta el aviso de truncado):
- *    no hay una segunda formula "faltante" (ni una tercera "aviso") aparte que pudiera
- *    desalinearse de la primera en un recalculo.
+ * 4. FALTANTE = MAX(0; proyectado - real). Nunca negativo (sin cambios).
  *
- * 5. LA CAPACIDAD SE DERIVA DE UN SOLO NUMERO: TFP_FILA_FIN (30), compartido por los tres
- *    bloques. `_capacidadCuentasTfp` la convierte en pares (21 filas, 10 a 30 -> 10 pares
- *    cuenta/faltante, ARRAY_CONSTRAIN a esa MISMA capacidad) -- nunca dos numeros que puedan
- *    desincronizarse, mismo criterio que SYF_BLOQUE_MEDIOS.filaFin/_altoBloqueMedios
- *    (DEVTOOL_StockYFlujo). 21 es IMPAR: 10 pares ocupan 20 filas y sobra EXACTAMENTE una (la
- *    30, la ultima del bloque) -- ver decision #5b, esa fila sobrante no es un desperdicio, es
- *    donde vive el aviso de truncado.
+ * 5. SECCION 1 (real) ES `tabla_real` VERBATIM, EN SU PROPIO ORDEN (el de la QUERY de Franco,
+ *    "ORDER BY SUM(Col2) DESC"): no se reordena, no se filtra por valor -- es la misma tabla que
+ *    Franco ya tenia, mostrada tal cual. La UNICA depuracion que este modulo le aplica es
+ *    descartar el caso extremo en que la QUERY entera fallo y el `IFERROR` externo de Franco
+ *    devolvio su placeholder de una fila en blanco (`{"" \ ""}`, ver el fixture del banco): eso
+ *    se detecta (una sola fila con nombre "") y se trata como "cero cuentas reales", no como una
+ *    fila real con nombre vacio.
  *
- * 5b. EL BLOQUE NO CRECE, PERO NUNCA ABORTA: TRUNCA A LA VISTA. Si el universo de cuentas (real
- *    union proyectadas-con-actividad este mes) supera la capacidad, la formula ordena por monto
- *    real descendente y despues por proyectado descendente (decision de arriba) y se queda con
- *    las `capacidad` mas importantes via ARRAY_CONSTRAIN -- eso ya pasaba antes. LO NUEVO: si
- *    `n_total > n_cuentas` (algo quedo afuera), la fila sobrante que deja la capacidad impar
- *    (decision #5) se ocupa con UNA fila de aviso: el nombre de cuenta lleva el texto
- *    "y N cuenta(s) mas" y el monto lleva la suma de lo que quedo afuera (real + faltante de las
- *    cuentas no mostradas, calculado como el total de `tabla_ordenada` menos el total de
- *    `tabla_topada` -- no hace falta re-sumar por separado, es la resta de las dos tablas que la
- *    formula ya tiene). Si nada quedo afuera, esa fila del derrame ni se genera: la fila 30
- *    queda vacia sola, sin que nadie tenga que "borrar el aviso a mano" -- desaparece cuando
- *    deja de hacer falta, que es la condicion que pidio Franco.
+ * 6. SECCION 2 (faltante) ES `FILTER` + `SORT` DESCENDENTE sobre TODO el universo con
+ *    faltante_por_cuenta > 0 -- incluye cuentas que TAMBIEN estan en la seccion 1 (repiten
+ *    nombre, decision de Franco) y cuentas SIN ningun movimiento real (aparecen SOLO en la
+ *    seccion 2, con el faltante completo: es la razon de ser del modulo, ver decision #9). El
+ *    orden (mayor faltante primero) es el mismo criterio de prioridad que ya usaba la seccion 1:
+ *    si hay que truncar, se pierde lo mas chico primero.
  *
- * 6. LOS TOTALES SE REESCRIBEN, Y EXCLUYEN LA FILA DE AVISO. S7 pasa de SUM(S10:S28) (que ahora
- *    sumaria real+faltante mezclados) a SUMIF(R10:R29;"<>";S10:S29) -- solo las filas CON nombre
- *    de cuenta EN EL RANGO DE DATOS (10 a 29, sin la fila 30 reservada al aviso: si la incluyera,
- *    el monto oculto del aviso se sumaria como si fuera "real" y el total dejaria de coincidir
- *    con el que tenia antes del cambio, rompiendo el invariante que este modulo verifica al
- *    releer). El nuevo S8 es el espejo exacto: SUMIF(R10:R29;"=";S10:S29), las filas SIN nombre
- *    del rango de datos, que son las de faltante. `_rangoColTfp` es el UNICO lugar que define
- *    ese rango (10 a filaFin-1): totales, la regla gris y el invariante de conteo de cuentas lo
- *    heredan todos de ahi, nunca se repite el numero 29 a mano en otro lado.
+ * 7. EL GRIS DE LA SECCION 2 NO PUEDE COLGAR DE "EL NOMBRE ESTA VACIO" (esa senal desaparecio
+ *    con el layout viejo) NI DE "ES LA SEGUNDA VEZ QUE APARECE ESTE NOMBRE" (evaluado y
+ *    descartado: una cuenta proyectada SIN ningun movimiento real aparece UNA SOLA VEZ, siempre
+ *    en la seccion 2 -- un COUNTIF de "aparece 2+ veces" nunca la marca, asi que esa cuenta
+ *    quedaria con el tratamiento visual de "real" a pesar de ser 100% faltante. La senal elegida
+ *    es el TIPO DE DATO de la celda de Monto: la seccion 1 escribe un NUMERO; la seccion 2
+ *    escribe el mismo importe pasado por TEXT() (mismo patron de formato que la celda ya tenia
+ *    en vivo, leido una sola vez en el preflight y embebido como literal -- no se inventa un
+ *    formato nuevo). La regla de formato condicional pasa a ser `=ISTEXT($S10)`: no depende de
+ *    ninguna otra columna, no tiene la ambiguedad vacio/cadena-vacia del SUMIF (ISTEXT pregunta
+ *    el TIPO del valor ya calculado, no si la celda "tiene contenido" como hacia el criterio de
+ *    SUMIF/COUNTIF), y separa las DOS secciones sin excepcion, incluidas las cuentas que solo
+ *    viven en la seccion 2. Limitacion CONOCIDA y aceptada (no resuelta en este modulo): un
+ *    numero convertido a texto se alinea a la izquierda por defecto en Sheets, mientras que un
+ *    numero real se alinea a la derecha -- las filas de faltante pueden verse desalineadas
+ *    contra las de real hasta que alguien fuerce la alineacion de la columna a la derecha a mano
+ *    (Formato > Alinear > Derecha sobre S10:S29 o el rango del bloque que corresponda). Se
+ *    decidio NO automatizar esa alineacion: hacerlo bien exige leer, mutar y poder revertir una
+ *    propiedad de formato mas (con su propio respaldo), y el modulo ya tiene bastante superficie
+ *    nueva con los totales por construccion y el TEXT() del gris. Es un ajuste cosmetico de
+ *    treinta segundos para Franco versus una pieza mas de maquinaria para mantener.
  *
- * 7. EL GRIS ES FORMATO CONDICIONAL, no pintura. El bloque es un derrame que se reordena en
- *    cada recalculo: una pintura estatica quedaria pegada a la FILA, no a si esa fila es "de
- *    cuenta" o "de faltante". La regla ("la celda de Cuenta de esta fila esta vacia mientras la
- *    de Monto no") usa ';' como separador (NUNCA coma: con coma Sheets acepta la regla y no
- *    pinta nada, sin avisar -- medido en DEVTOOL_FormatoMedios v0.33.0) y no necesita INDIRECT
- *    porque las dos columnas que compara estan en la MISMA hoja. El rango de esta regla es el
- *    rango DE DATOS (10 a 29): la fila de aviso (30) queda fuera a proposito, tiene su propia
- *    regla (decision #8) porque Franco pidio explicitamente que no se confunda con el gris ya
- *    establecido de "falta". Las reglas ajenas de la hoja se reponen intactas y por referencia
- *    (setConditionalFormatRules reemplaza TODAS las reglas).
+ * 8. NO HAY FILA SEPARADORA entre las dos secciones (ni una fila en blanco, ni un rotulo
+ *    repetido tipo "Faltante proyectado" en medio de los datos). Dos razones: (a) el color YA es
+ *    el separador -- oscuro vs. gris marca el corte con la misma claridad que una fila en blanco,
+ *    sin gastar una fila de las veintiuna disponibles; (b) el limite entre secciones es
+ *    DINAMICO (depende de cuantas cuentas reales hay hoy), asi que una fila separadora tendria
+ *    que insertarse en una posicion que cambia con los datos -- el derrame de una sola formula no
+ *    puede "saltear" una fila fija en un punto variable sin gastar logica extra solo para eso.
+ *    Franco ya tiene el rotulo "Faltante proyectado" en R8/U8/X8, arriba de la tabla: cumple el
+ *    rol de avisar que el bloque incluye faltante sin necesidad de repetirlo adentro.
  *
- * 8. EL AVISO DE TRUNCADO TIENE SU PROPIO TRATAMIENTO VISUAL, NO EL GRIS DE "FALTA". Franco lo
- *    pidio explicito: "el gris del faltante ya es un lenguaje establecido en ese bloque; quizas
- *    ese renglon merece su propio tratamiento". Se eligio la MISMA tinta (TFP_COLOR_GRIS: sigue
- *    siendo informacion secundaria, no un dato de cuenta) pero EN CURSIVA -- suficiente para no
- *    confundirse con una fila real (nombre + monto oscuro, sin cursiva) ni con una fila de falta
- *    (sin nombre, gris recto), sin inventar un color nuevo al design system. La regla es una
- *    CUARTA por bloque, con formula COMPLETAMENTE ABSOLUTA ($col$fila, sin relativas) porque
- *    esta fija a UNA sola fila conocida de antemano (filaFin, la reservada por la decision #5):
- *    no necesita evaluar "esta fila" como la regla gris (que recorre 20 filas), solo pregunta si
- *    ESA fila especifica tiene contenido en Monto. Como la fila de aviso siempre tiene el
- *    NOMBRE lleno (a diferencia de una fila de falta, que lo tiene vacio), las dos reglas nunca
- *    compiten por la misma celda.
+ * 9. UNA CUENTA PROYECTADA SIN NINGUN MOVIMIENTO REAL SIGUE APARECIENDO (sin cambios respecto de
+ *    la version anterior, confirmado explicitamente para este layout): no tiene fila en la
+ *    seccion 1 (no esta en `tabla_real`, porque no hay ningun registro real que agrupar), y
+ *    aparece en la seccion 2 con el faltante completo (= todo lo proyectado, porque real = 0).
+ *    Es la razon de ser del modulo -- sacarla reintroduciria la invisibilidad original que el
+ *    "Faltante proyectado" vino a resolver.
+ *
+ * 10. LA CAPACIDAD SE RELAJA SOLA: ya no son "10 pares cuenta/faltante" fijos. Las 21 filas del
+ *    bloque (10 a 30) siguen siendo UN SOLO NUMERO (TFP_FILA_FIN), pero ahora se reparten como
+ *    veinte filas de DATOS (10 a 29, `_capacidadFilasTfp`) mas la fila 30 reservada al aviso de
+ *    truncado -- y esas veinte filas ya NO se gastan de a pares fijos: una cuenta que ya cubrio
+ *    lo proyectado (faltante = 0) ocupa UNA sola fila (solo en la seccion 1), no dos. El PEOR
+ *    CASO (el numero que hay que poder garantizar sin truncar) sigue siendo el de antes -- diez
+ *    cuentas, cada una con faltante pendiente, ocupando sus dos filas -- por eso
+ *    `_capacidadPeorCasoTfp` sigue dando 10 y es el numero que estado() reporta como piso
+ *    garantizado. En la practica entran mas: cualquier cuenta ya cubierta libera una fila para
+ *    otra.
+ *
+ * 11. TRUNCADO A LA VISTA, NUNCA SE ABORTA (sin cambios de principio respecto de la version
+ *    anterior, adaptado al nuevo conteo por filas en vez de por pares): si el total de filas que
+ *    hacen falta (cuentas reales + cuentas con faltante > 0) supera las veinte disponibles, se
+ *    muestran las `capacidadFilas` mas importantes (seccion 1 completa primero, siempre que
+ *    quepa; el resto para la seccion 2, ordenada de mayor a menor faltante) y la fila 30 avisa
+ *    "y N cuenta(s) mas" con la plata que representan, calculada como el total completo menos lo
+ *    ya mostrado -- igual que en la version anterior, sin refiltrar.
  *
  * QUE NO HACE
  * 1. NO cambia el titulo de los bloques (R7/U7/X7) ni la geometria del Plan de Cuentas.
  * 2. NO toca "Categorias" ni ningun otro bloque del Tablero.
  * 3. NO agranda el bloque mas alla de R10:S30 / U10:V30 / X10:Y30: si no entra todo, TRUNCA a
- *    las cuentas de mayor monto y lo dice en la ultima fila del bloque (nunca invade lo que hay
- *    debajo, y nunca aborta dejando a Franco sin el tablero).
+ *    las cuentas de mayor monto y lo dice en la ultima fila del bloque.
+ * 4. NO fuerza la alineacion de la columna Monto (decision #7): queda como ajuste manual.
  *
  * Contrato de las tres publicas: { ok: boolean, detalle?: string, error?: string }.
  *   estadoTableroFaltanteProyectado()    -> solo lectura. Se corre PRIMERO.
@@ -159,7 +183,7 @@
  * (DEVTOOL_Proyeccion).
  *
  * @see docs/permanente/FORMULAS_TABLERO.md
- * @version 0.39.0
+ * @version 0.40.0
  * @since 2026-08-21
  * @lastModified 2026-08-21
  */
@@ -170,15 +194,9 @@
 
 /**
  * Ultima fila del bloque de cuentas del Tablero: UNICO punto de verdad, compartido por los tres
- * bloques (Ingresos, Gastos Fijos, Gastos Variables).
- *
- * decision Franco 2026-08-21: sube de 28 a 30 ("visible hasta la fila 30. Si hay mas cuentas,
- * que aparezcan a medida que existe un registro"). Con filaDatos=10 son 21 filas -> 10 pares
- * cuenta/faltante (`_capacidadCuentasTfp`) y sobra UNA fila (21 es impar): esa fila sobrante es
- * la que ocupa el aviso de truncado cuando hace falta (ver decision #5b en la cabecera). Cambiar
- * este numero alcanza para mover la capacidad, el ARRAY_CONSTRAIN de `_formulaCuentasTfp` y el
- * rango de los totales/la regla gris (todos derivados, ninguno hardcodea filaFin de nuevo) --
- * mismo patron que SYF_BLOQUE_MEDIOS.filaFin en DEVTOOL_StockYFlujo.
+ * bloques (Ingresos, Gastos Fijos, Gastos Variables). Sin cambios respecto de la version
+ * anterior: sigue siendo 30 ("visible hasta la fila 30"), con la fila 30 reservada al aviso de
+ * truncado. Lo que cambia es COMO se reparten las 20 filas de datos (10 a 29): ver decision #10.
  */
 const TFP_FILA_FIN = 30;
 
@@ -224,13 +242,26 @@ const TFP_PROP_PREVIOS = 'tablero_faltante_previos';
 /** Tinta gris de las filas de faltante. Un solo tono: es texto, no una barra con riel. */
 const TFP_COLOR_GRIS = '#757575';
 
+/** Patron de respaldo si la celda de Monto todavia no tiene ningun formato de numero propio. */
+const TFP_PATRON_MONTO_DEFECTO = '#,##0.00';
+
 // ============================================
 // GEOMETRIA DERIVADA
 // ============================================
 
-/** Cuantos pares cuenta/faltante entran en el bloque, dado su alto en filas. */
-function _capacidadCuentasTfp(b) {
-    return Math.floor((b.filaFin - b.filaDatos + 1) / 2);
+/** Cuantas filas de DATOS (real + faltante combinados) entran en el bloque, sin la fila de aviso. */
+function _capacidadFilasTfp(b) {
+    return b.filaFin - b.filaDatos;
+}
+
+/**
+ * El PEOR CASO garantizado sin truncar: si TODAS las cuentas necesitaran sus dos filas (real Y
+ * faltante pendiente), este es el numero de cuentas que entran completas. En la practica suele
+ * entrar mas, porque una cuenta ya cubierta (faltante = 0) libera una fila para otra (decision
+ * #10 de la cabecera). Informativo: estado() lo reporta, no es un limite duro del preflight.
+ */
+function _capacidadPeorCasoTfp(b) {
+    return Math.floor(_capacidadFilasTfp(b) / 2);
 }
 
 /** La celda ancla del derrame: donde vive HOY la QUERY de Franco y donde va la formula nueva. */
@@ -239,11 +270,9 @@ function _celdaAnclaTfp(b) {
 }
 
 /**
- * La ULTIMA fila del bloque de datos propiamente dicho (pares cuenta/faltante), es decir
- * `b.filaFin` MENOS la fila que la capacidad impar deja sobrante (ver TFP_FILA_FIN y decision
- * #5b): esa fila sobrante (`b.filaFin`) esta reservada al aviso de truncado, nunca a un par de
- * datos, asi que ni los totales ni la regla gris ni el conteo de cuentas del invariante deben
- * incluirla como si fuera una cuenta mas.
+ * La ULTIMA fila del bloque de datos propiamente dicho, es decir `b.filaFin` MENOS la fila
+ * reservada al aviso de truncado (ver TFP_FILA_FIN y decision #11): ni los totales ni la regla
+ * gris ni el conteo de cuentas del invariante deben incluirla como si fuera un dato mas.
  */
 function _filaFinDatosTfp(b) {
     return b.filaFin - 1;
@@ -271,21 +300,50 @@ function _formulaSinIgualTfp(hoja, celda) {
     return f.charAt(0) === '=' ? f.substring(1) : f;
 }
 
+/**
+ * Extrae el texto embebido de la variable `tabla_real` de una formula ancla YA APLICADA por este
+ * modulo (ver _anclaYaEsNuestraTfp): escanea desde 'tabla_real; ' hasta el primer ';' de NIVEL 0
+ * (fuera de parentesis y de comillas), el mismo delimitador que _bloqueComunTfp usa para cerrar
+ * esa variable del LET. Hace falta porque, en una segunda corrida (bloque ya aplicado), la celda
+ * ancla ya NO contiene la QUERY cruda de Franco -- la contiene ENVUELTA dentro de este LET -- y
+ * los totales (S7/S8) necesitan ese mismo texto para poder recalcular su formula esperada y
+ * comparar idempotencia, sin volver a pedirle a Franco su formula original.
+ *
+ * El toggle de comillas es deliberadamente ingenuo (cuenta comillas, no distingue apertura de
+ * cierre): una comilla ESCAPADA en Sheets se escribe doblada (""), asi que dos toggles seguidos
+ * se cancelan solos y el estado neto queda correcto sin necesidad de un caso especial.
+ */
+function _extraerTablaRealTfp(formulaAncla) {
+    const marca = 'tabla_real; ';
+    const inicio = formulaAncla.indexOf(marca);
+    if (inicio === -1) throw new Error('no se encontro "tabla_real;" en la formula ancla ya aplicada');
+    let i = inicio + marca.length;
+    let profundidad = 0, dentroComillas = false;
+    for (; i < formulaAncla.length; i++) {
+        const ch = formulaAncla.charAt(i);
+        if (ch === '"') { dentroComillas = !dentroComillas; continue; }
+        if (dentroComillas) continue;
+        if (ch === '(') profundidad++;
+        else if (ch === ')') profundidad--;
+        else if (ch === ';' && profundidad === 0) break;
+    }
+    if (i >= formulaAncla.length) {
+        throw new Error('"tabla_real;" no cierra con un ";" de nivel 0: la formula ancla no tiene la forma esperada');
+    }
+    return formulaAncla.substring(inicio + marca.length, i);
+}
+
 // ============================================
 // LA FORMULA NUEVA DE CADA BLOQUE
 // ============================================
 
 /**
- * La celda ancla (R10, U10, X10): reusa la QUERY real de Franco como caja negra, calcula lo
- * proyectado por cuenta desde "Proyeccion", arma el faltante (MAX(0; proy - real)) y devuelve
- * las dos filas por cuenta intercaladas, acotadas a la capacidad del bloque -- y si el universo
- * de cuentas no entra entero, agrega una fila final de aviso (decision #5b de la cabecera).
- *
- * `formulaRealVerbatim` es el texto de la formula viva en la celda ancla, YA LEIDO por el
- * preflight: no se vuelve a leer aca para que el plan sea una funcion pura de sus argumentos
- * (facil de probar sin una hoja falsa que sepa devolver formulas).
+ * El bloque de variables LET compartido por la celda ancla (seccion 1 + seccion 2) y por el
+ * total de faltantes (S8/V8/Y8): UNA sola funcion JS que genera este texto para evitar que las
+ * dos formulas de Sheets diverjan con el tiempo (decision #1 de la cabecera). Es exactamente el
+ * calculo de "cuanto es real" y "cuanto falta" por cuenta, sin decidir todavia como se muestra.
  */
-function _formulaCuentasTfp(b, formulaRealVerbatim) {
+function _bloqueComunTfp(b, formulaRealVerbatim) {
     const cfgCat = _catalogoTfp(b.clave);
     const catCol = _colPlan(cfgCat, 'nombre');
     const cfgReg = RANGES.REGISTROS;
@@ -295,10 +353,8 @@ function _formulaCuentasTfp(b, formulaRealVerbatim) {
     };
     const neutras = CUENTAS_NEUTRAS.map(function (c) { return '(cuenta_proy<>"' + c + '")'; }).join(' * ');
     const sel = CAP_SELECTORES.tablero;
-    const capacidad = _capacidadCuentasTfp(b);
 
-    return '=LET(\n' +
-        '  tabla_real; ' + formulaRealVerbatim + ';\n' +
+    return '  tabla_real; ' + formulaRealVerbatim + ';\n' +
         '  nombres_real; INDEX(tabla_real; 0; 1);\n' +
         '  montos_real; ARRAYFORMULA(N(INDEX(tabla_real; 0; 2)));\n' +
         '  monto_proy; ' + colProy('monto') + ';\n' +
@@ -319,59 +375,80 @@ function _formulaCuentasTfp(b, formulaRealVerbatim) {
         '  universo; IFERROR(UNIQUE(FILTER(universo_bruto; universo_bruto<>"")); "");\n' +
         '  real_por_cuenta; MAP(universo; LAMBDA(nombre; IFERROR(INDEX(montos_real; MATCH(nombre; nombres_real; 0)); 0)));\n' +
         '  proy_por_cuenta; MAP(universo; LAMBDA(nombre; SUM(IFERROR(FILTER(convertido_proy; del_mes_proy; cuenta_proy=nombre); 0))));\n' +
-        '  faltante_por_cuenta; MAP(real_por_cuenta; proy_por_cuenta; LAMBDA(val_real; val_proy; MAX(0; val_proy - val_real)));\n' +
-        '  incluir; ARRAYFORMULA((real_por_cuenta<>0) + (proy_por_cuenta<>0) > 0);\n' +
-        '  tabla_incluida; IFERROR(FILTER(HSTACK(universo; real_por_cuenta; proy_por_cuenta; faltante_por_cuenta); incluir);\n' +
-        '    HSTACK("Sin movimientos ni proyeccion"; 0; 0; 0));\n' +
-        // ORDEN: real descendente primero. Ninguna cuenta proyectada-sin-movimiento-real (real=0)
-        // puede desplazar a una con movimiento real de este mes, sin importar cuan grande sea lo
-        // proyectado -- asi las "proyectadas sin registro" siempre quedan despues de las que ya
-        // tienen actividad, y son las primeras en truncarse si no entran todas (decision Franco
-        // 2026-08-21, cabecera del archivo).
-        '  tabla_ordenada; SORT(tabla_incluida; 2; FALSE; 3; FALSE);\n' +
-        '  n_total; ROWS(tabla_ordenada);\n' +
-        '  tabla_topada; ARRAY_CONSTRAIN(tabla_ordenada; ' + capacidad + '; 4);\n' +
-        '  n_cuentas; ROWS(tabla_topada);\n' +
-        // TRUNCADO A LA VISTA (decision Franco 2026-08-21): nunca se aborta por falta de lugar.
-        // Si `n_total` supera la capacidad, `n_ocultas` cuenta cuantas quedaron afuera y
-        // `monto_oculto` es lo que representan (real + faltante de las NO mostradas), calculado
-        // como el total completo menos el total ya topado -- no hace falta filtrar de nuevo.
-        '  n_ocultas; n_total - n_cuentas;\n' +
-        '  hay_ocultas; n_ocultas > 0;\n' +
-        '  monto_oculto; (SUM(INDEX(tabla_ordenada; 0; 2)) - SUM(INDEX(tabla_topada; 0; 2))) +\n' +
-        '    (SUM(INDEX(tabla_ordenada; 0; 4)) - SUM(INDEX(tabla_topada; 0; 4)));\n' +
-        '  aviso_texto; "y " & n_ocultas & " cuenta" & IF(n_ocultas = 1; ""; "s") & " mas";\n' +
-        // La fila de aviso ocupa la UNICA fila que la capacidad (impar) deja sobrante (ver
-        // TFP_FILA_FIN): nunca compite por lugar con un par de datos, y si `hay_ocultas` es
-        // FALSO ese renglon del derrame ni se genera -- la celda queda vacia sola, sin que haga
-        // falta "limpiarla" en ningun otro lado.
-        '  filas_datos; n_cuentas * 2;\n' +
-        '  filas_total; filas_datos + IF(hay_ocultas; 1; 0);\n' +
+        '  faltante_por_cuenta; MAP(real_por_cuenta; proy_por_cuenta; LAMBDA(val_real; val_proy; MAX(0; val_proy - val_real)));\n';
+}
+
+/**
+ * La celda ancla (R10, U10, X10): reusa la QUERY real de Franco como caja negra (seccion 1,
+ * verbatim y en su propio orden), calcula lo proyectado por cuenta desde "Proyeccion" (bloque
+ * comun), arma la seccion 2 (faltante > 0, ordenada de mayor a menor) y las apila UNA DEBAJO DE
+ * LA OTRA -- nunca intercaladas, decision Franco 2026-08-21. `patronMonto` es el formato de
+ * numero que la celda de Monto ya tenia en vivo (leido por el preflight): la seccion 2 lo usa
+ * para convertir su importe a TEXT() con el MISMO aspecto que un numero real, la senal que
+ * separa las dos secciones para el gris (decision #7).
+ */
+function _formulaCuentasTfp(b, formulaRealVerbatim, patronMonto) {
+    const capacidad = _capacidadFilasTfp(b);
+    const patronEscapado = String(patronMonto || TFP_PATRON_MONTO_DEFECTO).replace(/"/g, '""');
+
+    return '=LET(\n' + _bloqueComunTfp(b, formulaRealVerbatim) +
+        '  cant_real_bruto; ROWS(tabla_real);\n' +
+        '  cant_real; IF(AND(cant_real_bruto = 1; INDEX(tabla_real; 1; 1) = ""); 0; cant_real_bruto);\n' +
+        '  tabla_faltante; IFERROR(SORT(FILTER(HSTACK(universo; faltante_por_cuenta); faltante_por_cuenta > 0); 2; FALSE); HSTACK(""; 0));\n' +
+        '  cant_faltante; SUMPRODUCT(N(faltante_por_cuenta > 0));\n' +
+        '  cant_total_bruto; cant_real + cant_faltante;\n' +
+        '  cant_total; IF(cant_total_bruto = 0; 1; cant_total_bruto);\n' +
+        '  combinado; IF(cant_total_bruto = 0; HSTACK("Sin movimientos ni proyeccion"; 0);\n' +
+        '    IF(cant_real = 0; tabla_faltante; VSTACK(tabla_real; tabla_faltante)));\n' +
+        '  cant_mostradas; MIN(cant_total; ' + capacidad + ');\n' +
+        '  cant_ocultas; cant_total - cant_mostradas;\n' +
+        '  hay_ocultas; cant_ocultas > 0;\n' +
+        '  tabla_topada; ARRAY_CONSTRAIN(combinado; cant_mostradas; 2);\n' +
+        '  monto_oculto; SUM(INDEX(combinado; 0; 2)) - SUM(INDEX(tabla_topada; 0; 2));\n' +
+        '  aviso_texto; "y " & cant_ocultas & " cuenta" & IF(cant_ocultas = 1; ""; "s") & " mas";\n' +
+        '  filas_total; cant_mostradas + IF(hay_ocultas; 1; 0);\n' +
         '  idx_fila; SEQUENCE(filas_total);\n' +
-        '  nombre_out; MAP(idx_fila; LAMBDA(pos; IF(pos > filas_datos; aviso_texto;\n' +
-        '    IF(MOD(pos; 2) = 0; ""; INDEX(tabla_topada; ROUNDUP(pos / 2; 0); 1)))));\n' +
-        '  monto_out; MAP(idx_fila; LAMBDA(pos; IF(pos > filas_datos; monto_oculto;\n' +
-        '    IF(MOD(pos; 2) = 0; INDEX(tabla_topada; ROUNDUP(pos / 2; 0); 4); INDEX(tabla_topada; ROUNDUP(pos / 2; 0); 2)))));\n' +
+        '  cant_real_mostradas; MIN(cant_real; cant_mostradas);\n' +
+        '  patron_monto; "' + patronEscapado + '";\n' +
+        '  nombre_out; MAP(idx_fila; LAMBDA(pos; IF(pos > cant_mostradas; aviso_texto; INDEX(tabla_topada; pos; 1))));\n' +
+        '  monto_out; MAP(idx_fila; LAMBDA(pos; IF(pos > cant_mostradas; monto_oculto;\n' +
+        '    IF(pos > cant_real_mostradas; TEXT(INDEX(tabla_topada; pos; 2); patron_monto); INDEX(tabla_topada; pos; 2)))));\n' +
         '  HSTACK(nombre_out; monto_out)\n)';
 }
 
-/** Total REAL (S7/V7/Y7): solo las filas con nombre de cuenta. */
-function _formulaTotalRealTfp(b) {
-    return '=SUMIF(' + _rangoColTfp(b, b.colCuenta) + '; "<>"; ' + _rangoColTfp(b, b.colMonto) + ')';
+/**
+ * Total FALTANTE (S8/V8/Y8): reusa el MISMO bloque comun que la ancla (via _bloqueComunTfp,
+ * nunca copiado a mano) y suma `faltante_por_cuenta` sobre el UNIVERSO COMPLETO -- no el
+ * truncado a la vista: si algun dia hay truncado, este total sigue reflejando el faltante real
+ * total (mas util para Franco que un numero que depende de cuantas filas entraron en pantalla).
+ */
+function _formulaTotalFaltanteTfp(b, formulaRealVerbatim) {
+    return '=LET(\n' + _bloqueComunTfp(b, formulaRealVerbatim) +
+        '  SUM(faltante_por_cuenta)\n)';
 }
 
-/** Total FALTANTE (S8/V8/Y8): el espejo exacto, las filas SIN nombre de cuenta. */
-function _formulaTotalFaltanteTfp(b) {
-    return '=SUMIF(' + _rangoColTfp(b, b.colCuenta) + '; "="; ' + _rangoColTfp(b, b.colMonto) + ')';
+/**
+ * Total REAL (S7/V7/Y7): suma DIRECTO la columna 2 de la QUERY real de Franco, sin pasar por el
+ * derrame. Es matematicamente la MISMA cifra que Franco ya tenia (decision #1 de la cabecera):
+ * el invariante "el total real no se mueve" se cumple por construccion, no por verificacion.
+ */
+function _formulaTotalRealTfp(formulaRealVerbatim) {
+    return '=SUM(INDEX(' + formulaRealVerbatim + '; 0; 2))';
 }
 
 // ============================================
-// EL GRIS DE LAS FILAS DE FALTANTE (formato condicional)
+// EL GRIS DE LA SECCION DE FALTANTE (formato condicional)
 // ============================================
 
-/** La formula de la regla propia de un bloque: "esta fila no tiene cuenta pero si tiene monto". */
+/**
+ * La formula de la regla propia de un bloque: "el Monto de esta fila es TEXTO" (decision #7 de
+ * la cabecera). La seccion 1 escribe un NUMERO; la seccion 2 escribe el mismo importe pasado por
+ * TEXT(), asi que ISTEXT() las separa sin ambiguedad, incluidas las cuentas que solo viven en la
+ * seccion 2 (sin ningun movimiento real) -- algo que un COUNTIF de "aparece 2+ veces" no puede
+ * hacer (evaluado y descartado, ver decision #7).
+ */
 function _formulaReglaGrisTfp(b) {
-    return '=AND($' + b.colCuenta + b.filaDatos + '=""; ' + b.colMonto + b.filaDatos + '<>"")';
+    return '=ISTEXT($' + b.colMonto + b.filaDatos + ')';
 }
 
 /** Las tres reglas "de falta" que este modulo escribe, en el orden de TFP_ORDEN. */
@@ -386,13 +463,14 @@ function _reglasGrisTfp() {
  * La formula de la regla de aviso: totalmente ABSOLUTA ($col$fila en las dos coordenadas) a
  * proposito -- esta regla vive en UN SOLO rango de una sola fila (la que reserva TFP_FILA_FIN),
  * asi que no necesita evaluar "esta fila" como la regla gris (que recorre 20 filas relativas):
- * solo pregunta si ESA celda fija de Monto tiene contenido. Ver decision #8 de la cabecera.
+ * solo pregunta si ESA celda fija de Monto tiene contenido. Sin cambios respecto de la version
+ * anterior.
  */
 function _formulaReglaAvisoTfp(b) {
     return '=$' + b.colMonto + '$' + b.filaFin + '<>""';
 }
 
-/** Las tres reglas "de aviso" (cursiva, decision #8): una por bloque, sobre su fila reservada. */
+/** Las tres reglas "de aviso" (cursiva): una por bloque, sobre su fila reservada. */
 function _reglasAvisoTfp() {
     return TFP_ORDEN.map(function (k) {
         const b = TFP_BLOQUES[k];
@@ -443,8 +521,7 @@ function _construirReglaGrisTfp(hoja, item) {
         .build();
 }
 
-/** La regla "de aviso": MISMA tinta que la de falta, pero en cursiva (decision #8: su propio
- * tratamiento, sin inventar un color nuevo al design system). */
+/** La regla "de aviso": MISMA tinta que la de falta, pero en cursiva (su propio tratamiento). */
 function _construirReglaAvisoTfp(hoja, item) {
     return SpreadsheetApp.newConditionalFormatRule()
         .whenFormulaSatisfied(item.formula)
@@ -471,25 +548,23 @@ function _formaAnclaValidaTfp(formula, categoria) {
  *
  * IMPORTA DISTINGUIRLO: la formula que este modulo escribe EMPOTRA la QUERY original de Franco
  * como variable `tabla_real`, asi que sigue conteniendo 'QUERY(', 'SUM(Col2)' y 'GROUP BY Col1'
- * -- pasaria el chequeo de "_formaAnclaValidaTfp" igual que la original. Sin esta deteccion, un
- * segundo "Aplicar" tomaria la formula YA transformada (cuyo Col1 real ahora incluye filas de
- * faltante sin nombre) como si fuera la original de Franco y la volveria a envolver: un
- * anidamiento que crece en cada corrida y ademas corrompe `nombres_real`/`montos_real` (dejarian
- * de ser el agrupado limpio por cuenta). Se identifica por tres nombres de variable propios de
- * esta formula que no tienen motivo para aparecer en ninguna otra.
+ * -- pasaria el chequeo de "_formaAnclaValidaTfp" igual que la original. Se identifica por tres
+ * nombres de variable propios de esta formula (del layout de dos secciones) que no tienen motivo
+ * para aparecer en ninguna otra: si no se detectara, un segundo "Aplicar" envolveria la formula
+ * ya aplicada dentro de si misma, un anidamiento creciente que ademas corrompe
+ * nombres_real/montos_real.
  */
 function _anclaYaEsNuestraTfp(formula) {
     return formula.indexOf('tabla_topada') !== -1 &&
         formula.indexOf('faltante_por_cuenta') !== -1 &&
-        formula.indexOf('n_cuentas') !== -1;
+        formula.indexOf('cant_real_mostradas') !== -1;
 }
 
 /**
  * Verifica los tres bloques por ROTULO antes de que nadie escriba, cuenta las cuentas reales
  * vivas de cada uno (informativo: estado() lo reporta, _verificarInvariantesTfp lo usa despues
- * de escribir -- YA NO frena el preflight, ver decision Franco 2026-08-21) y captura su total
- * real ANTES del cambio (para el invariante: el total real no se puede mover ni un centavo por
- * este refactor).
+ * de escribir -- nunca frena el preflight) y captura su total real ANTES del cambio (para el
+ * invariante: el total real no se puede mover ni un centavo por este refactor).
  */
 function _preflightTfp(ss) {
     const nombre = NAV_CONFIG.SHEETS.TABLERO;
@@ -524,8 +599,6 @@ function _preflightTfp(ss) {
                 'nada "real" que reusar. No se toco nada.');
             return;
         }
-        // Si ya es la formula de este modulo (corrida anterior), NO se vuelve a validar contra
-        // la forma de Franco ni se reusa como `tabla_real`: ver _anclaYaEsNuestraTfp.
         const anclaYaAplicada = _anclaYaEsNuestraTfp(formulaAnclaVivaTexto);
         if (!anclaYaAplicada && !_formaAnclaValidaTfp(formulaAnclaVivaTexto, b.categoria)) {
             desvios.push(celdaAncla + ' no tiene la forma esperada (QUERY agrupando por cuenta, ' +
@@ -533,18 +606,38 @@ function _preflightTfp(ss) {
             return;
         }
 
+        // La QUERY real de Franco, lista para reusar como `tabla_real`: si el bloque ya esta
+        // aplicado, hay que EXTRAERLA de dentro del LET vivo (ya no esta cruda en la celda);
+        // ver _extraerTablaRealTfp.
+        let formulaRealParaTotales;
+        try {
+            formulaRealParaTotales = anclaYaAplicada
+                ? _extraerTablaRealTfp(formulaAnclaVivaTexto)
+                : formulaAnclaVivaTexto;
+        } catch (e) {
+            desvios.push(celdaAncla + ' (bloque "' + tituloVivo + '") ya esta aplicada pero no se pudo leer ' +
+                'su QUERY real embebida: ' + e.message + '. No se toco nada.');
+            return;
+        }
+
+        // El formato de numero que la celda de Monto ya tenia en vivo: la seccion de faltante lo
+        // reusa via TEXT() para verse igual que un numero real (decision #7 de la cabecera).
+        const patronMonto = hoja.getRange(b.colMonto + b.filaDatos).getNumberFormat() || TFP_PATRON_MONTO_DEFECTO;
+
         const totalRealVivo = hoja.getRange(b.totalReal).getFormula();
-        const yaEsSumif = _canonizarFormula(totalRealVivo) === _canonizarFormula(_formulaTotalRealTfp(b));
         if (!totalRealVivo) {
             desvios.push(b.totalReal + ' no tiene formula.');
             return;
         }
-        const totalRealValorPrevio = totalRealVivo ? hoja.getRange(b.totalReal).getValue() : null;
+        const formulaTotalRealEsperada = _formulaTotalRealTfp(formulaRealParaTotales);
+        const totalRealYaEsNueva = _canonizarFormula(totalRealVivo) === _canonizarFormula(formulaTotalRealEsperada);
+        const totalRealValorPrevio = hoja.getRange(b.totalReal).getValue();
 
         const totalFaltanteVivo = hoja.getRange(b.totalFaltante);
         const faltanteFormula = totalFaltanteVivo.getFormula();
         const faltanteValor = totalFaltanteVivo.getValue();
-        const faltanteEsNuestra = _canonizarFormula(faltanteFormula) === _canonizarFormula(_formulaTotalFaltanteTfp(b));
+        const formulaTotalFaltanteEsperada = _formulaTotalFaltanteTfp(b, formulaRealParaTotales);
+        const faltanteEsNuestra = _canonizarFormula(faltanteFormula) === _canonizarFormula(formulaTotalFaltanteEsperada);
         if (!faltanteEsNuestra && (faltanteFormula || String(faltanteValor) !== '')) {
             desvios.push(b.totalFaltante + ' no esta vacia (formula="' + faltanteFormula + '", valor="' +
                 faltanteValor + '"): podria ser un dato de Franco. No se toco nada.');
@@ -556,23 +649,23 @@ function _preflightTfp(ss) {
 
         const valoresCuenta = hoja.getRange(_rangoColTfp(b, b.colCuenta)).getValues();
         const cuentasVivas = valoresCuenta.filter(function (f) { return String(f[0] || '').trim() !== ''; }).length;
-        const capacidad = _capacidadCuentasTfp(b);
-        // decision Franco 2026-08-21: YA NO ABORTA si cuentasVivas > capacidad. cuentasVivas y
-        // capacidad se siguen midiendo igual (estado() los reporta, y _verificarInvariantesTfp
-        // los usa para saber cuanto exigir despues de escribir) pero nunca frenan el preflight:
-        // la formula nueva trunca sola a las cuentas de mayor monto y avisa en la propia hoja
-        // cuantas quedaron afuera (ver _formulaCuentasTfp). Abortar dejaba a Franco sin la
-        // funcionalidad entera por una sola cuenta de mas; truncar avisando cumple el mismo
-        // principio ("nunca se pierde una cuenta real en silencio") sin ese costo.
+        const capacidadFilas = _capacidadFilasTfp(b);
+        const capacidadPeorCaso = _capacidadPeorCasoTfp(b);
+        // decision Franco 2026-08-21: nunca aborta si cuentasVivas > capacidad. La formula nueva
+        // trunca sola a las cuentas mas importantes y avisa en la propia hoja cuantas quedaron
+        // afuera (ver _formulaCuentasTfp).
 
         bloques[clave] = {
             b: b, anclaYaAplicada: anclaYaAplicada,
             formulaReal: anclaYaAplicada ? null : formulaAnclaVivaTexto,
+            formulaRealParaTotales: formulaRealParaTotales, patronMonto: patronMonto,
             totalRealFormulaVieja: totalRealVivo,
-            totalRealYaEsSumif: yaEsSumif, totalRealValorPrevio: totalRealValorPrevio,
+            totalRealYaEsNueva: totalRealYaEsNueva, totalRealValorPrevio: totalRealValorPrevio,
+            formulaTotalRealEsperada: formulaTotalRealEsperada,
+            formulaTotalFaltanteEsperada: formulaTotalFaltanteEsperada,
             faltanteEsNuestra: faltanteEsNuestra, faltanteFormulaVieja: faltanteFormula,
             faltanteValorVieja: faltanteValor, rotuloYaEsta: rotuloYaEsta, cuentasVivas: cuentasVivas,
-            capacidad: capacidad
+            capacidadFilas: capacidadFilas, capacidadPeorCaso: capacidadPeorCaso
         };
     });
 
@@ -615,27 +708,28 @@ function _planTfp(pre) {
         if (!info.anclaYaAplicada) {
             cambios.push({
                 bloque: clave, celda: _celdaAnclaTfp(b), tipo: 'ancla',
-                formulaNueva: _formulaCuentasTfp(b, info.formulaReal),
+                formulaNueva: _formulaCuentasTfp(b, info.formulaReal, info.patronMonto),
                 nota: 'Cuentas + faltante: ' + b.titulo.esperado,
-                resumen: 'dos filas por cuenta (real oscura, faltante gris), reusando la QUERY real existente'
+                resumen: 'dos secciones (real arriba oscuro, faltante abajo gris repitiendo el nombre), ' +
+                    'reusando la QUERY real existente'
             });
         }
 
-        if (!info.totalRealYaEsSumif) {
+        if (!info.totalRealYaEsNueva) {
             cambios.push({
                 bloque: clave, celda: b.totalReal, tipo: 'total_real',
-                formulaVieja: info.totalRealFormulaVieja, formulaNueva: _formulaTotalRealTfp(b),
+                formulaVieja: info.totalRealFormulaVieja, formulaNueva: info.formulaTotalRealEsperada,
                 nota: 'Total real: ' + b.titulo.esperado,
-                resumen: 'SUMIF de las filas CON nombre de cuenta (antes sumaba real+faltante mezclados)'
+                resumen: 'suma directa de la columna 2 de la QUERY real (por construccion, no relee el derrame)'
             });
         }
         if (!info.faltanteEsNuestra) {
             cambios.push({
                 bloque: clave, celda: b.totalFaltante, tipo: 'total_faltante',
                 formulaVieja: info.faltanteFormulaVieja, valorVieja: info.faltanteValorVieja,
-                formulaNueva: _formulaTotalFaltanteTfp(b),
+                formulaNueva: info.formulaTotalFaltanteEsperada,
                 nota: 'Total faltante: ' + b.titulo.esperado,
-                resumen: 'SUMIF de las filas SIN nombre de cuenta: el espejo del total real'
+                resumen: 'suma del faltante por cuenta sobre el universo completo (por construccion)'
             });
         }
         if (!info.rotuloYaEsta) {
@@ -676,10 +770,11 @@ function _leerYaCalculadoTfp(hoja, celda) {
 }
 
 /**
- * Cuenta las filas con nombre de cuenta no vacio en el rango vivo, con los mismos reintentos:
+ * Cuenta los nombres DISTINTOS no vacios en el rango vivo de Cuenta, con los mismos reintentos:
  * mientras la formula ancla no termino de calcular, la columna entera puede mostrar "Cargando...".
+ * Distintos, no filas: con el layout de dos secciones un nombre puede repetirse (real + faltante).
  */
-function _contarCuentasYaCalculadoTfp(hoja, rangoA1) {
+function _contarNombresDistintosYaCalculadoTfp(hoja, rangoA1) {
     const esperas = [0, 600, 1500, 3000];
     for (let i = 0; i < esperas.length; i++) {
         if (esperas[i]) { SpreadsheetApp.flush(); Utilities.sleep(esperas[i]); }
@@ -689,25 +784,24 @@ function _contarCuentasYaCalculadoTfp(hoja, rangoA1) {
             return typeof v === 'string' && v !== '' && v.indexOf('#') !== 0 &&
                 _normalizarRotulo(v).indexOf('cargando') !== -1;
         });
-        if (!pendiente) return valores.filter(function (f) { return String(f[0] || '').trim() !== ''; }).length;
+        if (!pendiente) {
+            const nombres = valores.map(function (f) { return String(f[0] || '').trim(); }).filter(function (v) { return v !== ''; });
+            const distintos = nombres.filter(function (v, i) { return nombres.indexOf(v) === i; });
+            return distintos.length;
+        }
     }
     return TFP_PENDIENTE;
 }
 
 /**
  * Invariantes por bloque, sobre los VALORES releidos:
- *   1. El total real NO SE MOVIO respecto del valor previo a este refactor.
+ *   1. El total real NO SE MOVIO respecto del valor previo a este refactor -- garantizado por
+ *      construccion (S7 suma directo la QUERY de Franco), pero se releen igual: la construccion
+ *      correcta en la formula generadora no reemplaza la verificacion contra la planilla viva.
  *   2. El total faltante es un numero finito y no negativo.
- *   3. Cuantas cuentas con nombre quedaron en el rango de datos (excluida la fila de aviso, ver
- *      _rangoColTfp) depende de si hubo truncado o no:
- *        - SIN truncar (cuentasVivas <= capacidad): TODAS las reales de antes tienen que seguir
- *          -- es un PISO, no una igualdad exacta, porque el universo union con el catalogo
- *          (decision de diseno #2) puede sumar cuentas proyectadas-sin-real ademas de las
- *          reales; eso no es perder nada, es el comportamiento buscado.
- *        - CON truncado (cuentasVivas > capacidad): el orden por monto real descendente
- *          garantiza que los `capacidad` lugares se llenan SOLO con cuentas reales (ninguna
- *          proyectada-sin-real puede desplazar a una real, ver decision de diseno de la
- *          cabecera) -- asi que el numero es EXACTO: ni una real de mas, ni una de menos.
+ *   3. Cuantos NOMBRES DISTINTOS con contenido quedaron en el rango de datos (excluida la fila de
+ *      aviso): un piso, no una igualdad exacta, salvo en el caso de truncado real (mismo espiritu
+ *      que la version anterior, adaptado a que ahora un nombre puede repetirse en dos filas).
  */
 function _verificarInvariantesTfp(pre) {
     const fallas = [], avisos = [];
@@ -737,23 +831,24 @@ function _verificarInvariantesTfp(pre) {
                 '): el MAX(0; proyectado - real) de la formula no esta funcionando.');
         }
 
-        const cuentasAhora = _contarCuentasYaCalculadoTfp(pre.hoja, _rangoColTfp(b, b.colCuenta));
-        if (cuentasAhora === TFP_PENDIENTE) {
+        const distintosAhora = _contarNombresDistintosYaCalculadoTfp(pre.hoja, _rangoColTfp(b, b.colCuenta));
+        if (distintosAhora === TFP_PENDIENTE) {
             avisos.push('"' + nombreBloque + '": la columna Cuenta todavia estaba calculando al releerla.');
-        } else if (info.cuentasVivas > info.capacidad) {
-            // TRUNCADO ESPERADO: exactamente `capacidad` cuentas reales (las de mayor monto),
-            // ni una mas ni una menos -- ver el comentario del invariante 3 mas arriba.
-            if (cuentasAhora !== info.capacidad) {
+        } else if (info.cuentasVivas > info.capacidadFilas) {
+            // TRUNCADO ESPERADO (caso extremo: mas cuentas reales que filas de datos disponibles
+            // incluso usando una sola fila cada una): el piso pasa a ser la capacidad completa.
+            if (distintosAhora < info.capacidadFilas) {
                 fallas.push('"' + nombreBloque + '": con truncado esperado (' + info.cuentasVivas +
-                    ' cuenta(s) real(es) para ' + info.capacidad + ' lugar(es)) quedaron ' + cuentasAhora +
-                    ' cuenta(s) con nombre en el rango de datos y se esperaban exactamente ' + info.capacidad +
-                    '. Una cuenta real no puede perderse ni duplicarse.');
+                    ' cuenta(s) real(es) para ' + info.capacidadFilas + ' fila(s) de datos) quedaron ' +
+                    distintosAhora + ' nombre(s) distinto(s) y se esperaban al menos ' + info.capacidadFilas +
+                    '. Una cuenta real no puede perderse.');
             }
-        } else if (cuentasAhora < info.cuentasVivas) {
-            // SIN truncar: todas las reales de antes tienen que seguir (piso, no igualdad: el
-            // universo union con el catalogo puede sumar proyectadas-sin-real ademas).
-            fallas.push('"' + nombreBloque + '": quedaron ' + cuentasAhora + ' cuenta(s) con nombre y ' +
-                'antes habia ' + info.cuentasVivas + ' con movimiento real. Una cuenta real no puede perderse.');
+        } else if (distintosAhora < info.cuentasVivas) {
+            // SIN truncado esperado: todos los nombres reales de antes tienen que seguir
+            // apareciendo (piso, no igualdad: el universo union con el catalogo puede sumar
+            // proyectadas-sin-real ademas, y esas SUMAN nombres distintos, no los reemplazan).
+            fallas.push('"' + nombreBloque + '": quedaron ' + distintosAhora + ' nombre(s) distinto(s) y ' +
+                'antes habia ' + info.cuentasVivas + ' cuenta(s) con movimiento real. Una cuenta real no puede perderse.');
         }
     });
     return { fallas: fallas, avisos: avisos };
@@ -807,23 +902,14 @@ function estadoTableroFaltanteProyectado() {
         TFP_ORDEN.forEach(function (clave) {
             const info = pre.bloques[clave];
             const b = info.b;
-            // "Entran"/"quedan afuera" son sobre CUENTAS REALES unicamente (lo unico que se
-            // puede afirmar sin reimplementar en JS el filtro de "Proyeccion" -- ver decision
-            // de diseno #1 de la cabecera). El total real puede sumar ademas cuentas
-            // proyectadas-sin-movimiento-real (catalogo union real): esas nunca desplazan a una
-            // real (orden por real descendente), asi que este piso es exacto para lo que
-            // importa: ninguna cuenta real se recorta sin que Franco lo sepa.
-            const entran = Math.min(info.cuentasVivas, info.capacidad);
-            const afuera = Math.max(0, info.cuentasVivas - info.capacidad);
             l.push('"' + b.titulo.esperado + '": ' + info.cuentasVivas + ' cuenta(s) con movimiento real ' +
-                'hoy (capacidad del bloque: ' + info.capacidad + ' pares cuenta/faltante). Entran: ' + entran +
-                (afuera > 0
-                    ? '. Quedan afuera (garantizado; se truncan primero las de menor monto real, y la ' +
-                      'hoja lo va a avisar en su ultima fila): ' + afuera + '.'
-                    : '. Ninguna cuenta real queda afuera' +
-                      (info.capacidad > info.cuentasVivas
-                          ? ' (y todavia entran cuentas proyectadas sin movimiento real, si las hay).'
-                          : '.')));
+                'hoy. Peor caso garantizado sin truncar (si TODAS tuvieran faltante pendiente): ' +
+                info.capacidadPeorCaso + ' cuentas. En la practica suele entrar mas: una cuenta ya cubierta ' +
+                '(faltante = 0) ocupa una sola fila de las ' + info.capacidadFilas + ' disponibles.' +
+                (info.cuentasVivas > info.capacidadFilas
+                    ? ' ATENCION: ya hoy hay mas cuentas reales (' + info.cuentasVivas + ') que filas de ' +
+                      'datos (' + info.capacidadFilas + '), incluso a una fila cada una: va a truncar y avisar.'
+                    : ''));
         });
         l.push('');
         if (!plan.cambios.length && !_reglasHacenFaltaTfp(plan.reglas)) {
@@ -839,6 +925,10 @@ function estadoTableroFaltanteProyectado() {
                 (_reglasHacenFaltaTfp(plan.reglas) ? 'se escriben/rehacen las 6 propias (3 + 3)' : 'ya estan correctas'));
         }
         l.push('Reglas ajenas de la hoja que se reponen intactas: ' + plan.reglas.ajenas.length);
+        l.push('');
+        l.push('NOTA: la columna Monto de la seccion de faltante puede verse alineada a la izquierda ' +
+            '(es texto, no numero -- decision #7 del modulo). Si molesta: Formato > Alinear > Derecha ' +
+            'sobre la columna Monto de cada bloque.');
         const t = l.join('\n');
         _mostrarTfp('Tablero: faltante proyectado - estado', t);
         logInfo('estadoTableroFaltanteProyectado: ' + plan.cambios.length + ' celda(s) pendientes.');
@@ -874,18 +964,18 @@ function aplicarTableroFaltanteProyectado() {
             'Se van a escribir ' + plan.cambios.length + ' celda(s) en "' + pre.nombre + '"' +
             (tocarReglas ? ', y se rehacen las 6 reglas de color (3 gris de faltante + 3 cursiva de aviso)' : '') + '.\n\n' +
             'QUE CAMBIA en Ingresos, Gastos Fijos y Gastos Variables:\n' +
-            '  - Cada cuenta pasa a ocupar DOS FILAS: arriba el nombre y lo REAL (sin cambios de\n' +
-            '    fondo), abajo sin nombre el FALTANTE proyectado del mes (gris).\n' +
-            '  - Los totales de la fila 7 (S7/V7/Y7) pasan de sumar TODO a sumar solo las filas\n' +
-            '    CON nombre de cuenta: el total real NO se mueve, se verifica al releerlo.\n' +
-            '  - Los totales nuevos (S8/V8/Y8) suman las filas SIN nombre: el total de faltantes.\n' +
-            '  - El bloque va hasta la fila 30 (10 pares cuenta/faltante) y NUNCA aborta por\n' +
-            '    falta de lugar: si algun dia hay mas cuentas con actividad que lugar, se\n' +
-            '    muestran las mas importantes (por monto real y despues por proyectado) y la\n' +
-            '    ULTIMA fila del bloque avisa, en cursiva, cuantas quedaron afuera y por cuanta\n' +
-            '    plata -- nunca desaparecen en silencio.\n\n' +
-            'Ninguna cuenta con movimiento real puede perderse (ni siquiera cuando trunca: se ' +
-            'verifica que la cantidad exacta de cuentas reales mostradas coincida con lo esperado).' +
+            '  - El bloque pasa a tener DOS SECCIONES: arriba TODO lo real (una fila por cuenta con\n' +
+            '    movimiento, sin cambios de fondo), abajo TODO lo faltante (una fila por cuenta con\n' +
+            '    faltante > 0 este mes, gris, REPITIENDO el nombre de la cuenta).\n' +
+            '  - Los totales de la fila 7 (S7/V7/Y7) se recalculan por construccion desde la QUERY\n' +
+            '    real de siempre: el total real NO se mueve, se verifica al releerlo.\n' +
+            '  - Los totales nuevos (S8/V8/Y8) suman el faltante de TODAS las cuentas (aunque no\n' +
+            '    entren todas en pantalla).\n' +
+            '  - El bloque sigue yendo hasta la fila 30 y NUNCA aborta por falta de lugar: si un dia\n' +
+            '    hay mas filas que hacen falta que lugar, se muestran las cuentas mas importantes y\n' +
+            '    la ULTIMA fila avisa, en cursiva, cuantas quedaron afuera y por cuanta plata.\n\n' +
+            'Ninguna cuenta con movimiento real puede perderse (se verifica que la cantidad de nombres ' +
+            'distintos mostrados coincida con lo esperado).' +
             '\n\nContinuar?',
             ui.ButtonSet.YES_NO);
         if (conf !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se escribio nada.' };
@@ -947,13 +1037,16 @@ function aplicarTableroFaltanteProyectado() {
             (tocarReglas ? 'rehechas (6 propias: 3 + 3)' : 'ya estaban correctas') + '\n' +
             '- Respaldo en la hoja oculta "' + respaldo.nombre + '"\n\n' +
             'QUE MIRAR:\n' +
-            '  1. Cada cuenta con nombre y monto oscuro es lo REAL; la fila de abajo sin nombre,\n' +
-            '     en gris, es el FALTANTE proyectado.\n' +
+            '  1. Arriba de cada bloque, una fila por cuenta con movimiento real (oscuro). Abajo,\n' +
+            '     una fila por cuenta con faltante > 0 (gris), repitiendo el nombre de la cuenta.\n' +
             '  2. Los totales de la fila 7 no se movieron (se verifico); el total de faltantes de\n' +
-            '     la fila 8 es nuevo.\n' +
-            '  3. Una cuenta proyectada sin movimiento real todavia aparece con su faltante completo.\n' +
-            '  4. Si algun bloque no tenia lugar para todas las cuentas, su ULTIMA fila (30) dice\n' +
-            '     en cursiva "y N cuentas mas" y cuanta plata representan.\n\n' +
+            '     la fila 8 es nuevo y suma TODAS las cuentas con faltante, entren o no en pantalla.\n' +
+            '  3. Una cuenta proyectada sin movimiento real todavia aparece, solo en la seccion de\n' +
+            '     faltante, con el faltante completo.\n' +
+            '  4. Si algun bloque no tenia lugar para todas las filas, su ULTIMA fila (30) dice\n' +
+            '     en cursiva "y N cuentas mas" y cuanta plata representan.\n' +
+            '  5. La columna Monto de la seccion de faltante puede verse alineada a la izquierda\n' +
+            '     (es texto, no numero): Formato > Alinear > Derecha si molesta.\n\n' +
             'Si algo quedo peor: revertirTableroFaltanteProyectado (menu Tidetrack Dev).';
 
         logSuccess('aplicarTableroFaltanteProyectado: ' + escritas.length + ' celda(s).');

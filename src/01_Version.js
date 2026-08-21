@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 39,
+ minor: 40,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-21',
- releaseName: 'v0.39.0 - El bloque de faltante proyectado sube a 30 filas y deja de abortar por falta de lugar',
+ releaseName: 'v0.40.0 - Faltante proyectado: dos secciones, no una fila intercalada; totales por construccion',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,15 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.40.0 (2026-08-21) - Faltante proyectado: dos secciones, no una fila intercalada; totales por construccion
+! aplicarTableroFaltanteProyectado() se corrio en la planilla real (v0.39.0, layout intercalado) y la propia verificacion lo atrapo y revirtio solo: "el total real paso de 1.138.583 a 3.218.368,47" en Ingresos (exactamente real + faltante), mismo patron en Gastos Fijos y Variables. Causa medida: los totales usaban SUMIF(rango;"<>"/"=";monto) para separar filas con/sin nombre de cuenta, y en Sheets ese criterio a secas NO compara el VALOR contra "" -- pregunta si la celda "tiene contenido" (formula o dato). Una celda de DERRAME que muestra "" (el resultado de una formula, no un vacio real) cuenta como "con contenido": TODAS las filas caian del lado "<>", el total real sumaba las dos columnas y el de faltantes daba cero siempre. El banco daba VERDE con esto roto: su mock en JS solo puede representar "" como string, sin la distincion Sheets-especifica entre celda vacia de verdad y celda con formula que devolvio ''.
+! ADEMAS, Franco cambio el diseno de destino a mitad de la correccion: NO es una fila real y una fila de faltante intercaladas por cuenta. Son DOS SECCIONES dentro del bloque -- arriba TODO lo real, abajo TODO lo faltante, REPITIENDO el nombre de la cuenta (no lo deja vacio). Eso mata la ambiguedad vacio/cadena-vacia de raiz (ninguna fila de Cuenta esta vacia nunca), pero tambien mata el unico dato que los totales viejos usaban para separarse.
++ LOS TOTALES SE CALCULAN POR CONSTRUCCION, nunca releyendo el derrame. S7 (total real) es SUM(INDEX(<QUERY real de Franco, verbatim>;0;2)): suma directo la columna 2 de la QUERY de Franco, la MISMA cifra de siempre -- el invariante "el total real no se mueve" se cumple por construccion, no por coincidencia. S8 (total faltante) reusa el MISMO bloque LET que arma el derrame (_bloqueComunTfp, UNA sola funcion JS: las dos formulas de Sheets no pueden desincronizarse) y suma el faltante sobre el UNIVERSO COMPLETO, no solo lo que entra en pantalla.
++ EL GRIS DE LA SECCION DE FALTANTE ya no puede colgar de "el nombre esta vacio" (esa senal desaparecio) ni de "es la 2da+ vez que aparece este nombre" (COUNTIF de duplicados, evaluado y descartado: una cuenta proyectada SIN ningun movimiento real aparece UNA SOLA VEZ, siempre en la seccion de faltante -- un COUNTIF de duplicados nunca la marca). La senal elegida es el TIPO DE DATO de la celda de Monto: la seccion real escribe un NUMERO, la de faltante el mismo importe pasado por TEXT() (mismo patron que la celda ya tenia en vivo, leido en el preflight). La regla pasa a ser =ISTEXT($S10): no depende de otra columna, no tiene la ambiguedad del SUMIF, y separa las dos secciones sin excepcion. Limitacion aceptada y documentada: un numero-como-texto se alinea a la izquierda por defecto; ajuste manual de alineacion si molesta (Formato > Alinear > Derecha), no automatizado a proposito (evita mutar/respaldar una propiedad de formato mas).
++ LA CAPACIDAD SE RELAJA SOLA: ya no son "10 pares cuenta/faltante" fijos. Las 20 filas de datos (10 a 29, _capacidadFilasTfp) se reparten dinamico -- una cuenta ya cubierta (faltante = 0) ocupa UNA sola fila, no dos. El peor caso garantizado sigue siendo 10 cuentas (si TODAS tuvieran faltante pendiente); en la practica entra mas.
+* Sin cambios de principio: la QUERY real de Franco se reusa verbatim, lo proyectado se calcula fresco desde "Proyeccion" agrupado por cuenta, faltante = MAX(0; proyectado - real), una cuenta proyectada sin movimiento real sigue apareciendo (razon de ser del modulo, confirmado explicitamente para el layout nuevo), nunca se aborta por falta de lugar (trunca a la vista y avisa en la fila 30, en cursiva).
+! devtools/probar_tablero_faltante.js: reescrito para las dos secciones. Incluye el diagnostico permanente del bug real (evaluador SUMIF-like que reproduce el sintoma exacto medido en la planilla), la prueba de reuso byte-a-byte del bloque comun entre la ancla y el total de faltantes, la extraccion de la QUERY embebida para una segunda corrida (_extraerTablaRealTfp), y el simulador del algoritmo (simularSeccionesTfp) que prueba por mutacion la senal del gris: confirma que ISTEXT marca correctamente a una cuenta sin movimiento real y que la alternativa descartada (COUNTIF de duplicados) NO la habria marcado. 1 falla preexistente sin cambios (colision R10/U10/X10 con DEVTOOL_FormulerioV0111.js y DEVTOOL_StockYFlujo.js, aceptada desde v0.38.0).
+NOTA: sesion en paralelo detectada en el mismo worktree (src/DEVTOOL_DIAG_Desplegables.js, entrada de menu temporal en 00_Config.js, celdas.tsv refrescado) -- no tocada por este cambio, reportada a Franco sin intentar reconciliarla.
 v0.39.0 (2026-08-21) - El bloque de faltante proyectado sube a 30 filas y deja de abortar por falta de lugar
 ! El preflight de DEVTOOL_TableroFaltanteProyectado.js abortaba si habia mas cuentas reales que lugar ("Agrandar el bloque antes de correr esto"). Medido en la planilla: Gastos Variables tenia 10 cuentas para una capacidad de 9 -- Franco se quedaba sin la funcionalidad entera por una cuenta de mas. Ahora la formula TRUNCA sola a las cuentas de mayor monto y la ultima fila del bloque avisa (en cursiva) cuantas quedaron afuera y por cuanta plata. Esa fila desaparece sola cuando todo entra.
 + TFP_FILA_FIN (30) es la unica fuente de la geometria del bloque (antes cada uno de los tres bloques repetia "filaFin: 28" por separado): 21 filas -> 10 pares cuenta/faltante y sobra exactamente una, la que ocupa el aviso.

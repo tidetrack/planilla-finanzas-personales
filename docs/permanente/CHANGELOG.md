@@ -9,6 +9,36 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.40.0 - Faltante proyectado: dos secciones, no fila intercalada; totales por construccion (2026-08-21)
+
+`aplicarTableroFaltanteProyectado()` (v0.39.0) se corrio contra la planilla real y **la propia
+verificacion lo atrapo y revirtio solo**: el total real de cada bloque paso a ser real + faltante
+sumados. La causa: los totales usaban `SUMIF(rango;"<>"/"=";monto)` para separar filas con/sin
+nombre de cuenta, y en Sheets ese criterio a secas no distingue una celda vacia de verdad de una
+celda de DERRAME que muestra `""` -- las trata igual, "con contenido". Mientras se investigaba,
+Franco redefinio ademas el layout: no es una fila real + una de faltante intercaladas por cuenta,
+son DOS SECCIONES (todo lo real arriba, todo lo faltante abajo repitiendo el nombre).
+
+### Que cambia
+
+- **Totales por construccion**: `S7` suma directo la columna de la QUERY real de Franco
+  (`SUM(INDEX(...;0;2))`), nunca relee el derrame -- el invariante "el total real no se mueve" se
+  cumple por construccion. `S8` reusa el mismo bloque de calculo LET que arma el derrame (una
+  sola funcion JS genera las dos formulas de Sheets, no pueden desincronizarse) y suma sobre el
+  universo completo, no solo lo visible.
+- **El gris ya no depende de una celda vacia**: se evaluo un COUNTIF de duplicados (la primera
+  propuesta) y se descarto -- una cuenta sin ningun movimiento real aparece una sola vez y ese
+  COUNTIF nunca la marca. La senal elegida es el tipo de dato: real es NUMERO, faltante es el
+  mismo importe pasado por `TEXT()`. La regla pasa a ser `=ISTEXT($S10)`.
+- **La capacidad se relaja sola**: ya no son 10 pares fijos. Una cuenta ya cubierta (faltante = 0)
+  ocupa una sola fila de las 20 disponibles. Peor caso garantizado sin truncar: 10 cuentas.
+- Sigue sin abortar nunca por falta de lugar (trunca a la vista y avisa en la fila 30).
+- Limitacion aceptada: las filas de faltante (texto, no numero) pueden verse alineadas a la
+  izquierda; ajuste manual si molesta, no automatizado a proposito.
+
+Detalle completo, incluido el diagnostico del bug y las mutaciones probadas, en
+`docs/permanente/HISTORIAL_DESARROLLO.md` y `src/ZZ_Changelog.js`.
+
 ## v0.39.0 - El bloque de faltante proyectado sube a 30 filas y deja de abortar por falta de lugar (2026-08-21)
 
 `estadoTableroFaltanteProyectado()` corrido contra la planilla real reporto que "Gastos
