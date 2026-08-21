@@ -9,6 +9,131 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.36.0 - Cada cuenta dice tambien cuanto le falta (2026-08-21)
+
+Los bloques de cuentas del Tablero (Ingresos, Gastos Fijos, Gastos Variables) mostraban solo lo
+REALMENTE registrado en el mes. Ahora cada cuenta ocupa dos filas: arriba el nombre y lo real
+(oscuro), abajo sin nombre el faltante proyectado del mes (gris). Franco eligio esta opcion sobre
+agregar una columna nueva o mostrar solo un total.
+
+### Como se hizo, sin tocar lo que ya funcionaba
+
+- **La formula "real" de Franco se reusa VERBATIM.** El preflight lee la QUERY que ya agrupaba
+  cada bloque por cuenta (R10/U10/X10), verifica su forma y la empotra tal cual dentro de una
+  formula nueva. Reconstruirla en JS arriesgaba perder una cuenta que el ledger tiene y el
+  catalogo del Plan de Cuentas no -- la QUERY de Franco es data-driven y la captura igual.
+- **Lo proyectado se calcula fresco**, cuenta por cuenta, desde la hoja "Proyeccion" (mismo
+  criterio que el bloque "Presupuesto Asignado": selectores del Tablero, exclusion de cuentas
+  neutras, conversion en vivo porque un previsto no tiene tipo de cambio congelado). Faltante =
+  `MAX(0; proyectado - real)`: nunca negativo, y una cuenta proyectada sin ningun movimiento real
+  aparece igual, con su faltante completo.
+- **El bloque no crece.** La capacidad viva (19 filas, 9 pares cuenta/faltante) se deriva de la
+  misma geometria que ya definia el total; si algun dia hay mas cuentas con actividad que lugar,
+  se muestran las mas importantes en vez de invadir lo que hay debajo. El preflight aborta si las
+  cuentas con movimiento real de HOY ya superan la capacidad: una cuenta real nunca se recorta en
+  silencio.
+- **Los totales de la fila 7 se reescriben** de `SUM` (que ahora sumaria real y faltante
+  mezclados) a `SUMIF` sobre las filas con nombre; el nuevo total de faltantes de la fila 8 es el
+  espejo exacto sobre las filas sin nombre. Se verifica al releer que el total real no se movio
+  ni un centavo.
+- **El gris es formato condicional**, no pintura: el bloque es un derrame que se reordena en cada
+  recalculo. Separador `;` siempre -- con coma la regla no parsea en es_AR y no pinta nada, sin
+  avisar (la misma trampa medida en v0.33.0 sobre el color de los medios).
+- **Idempotencia real:** una formula ya aplicada se reconoce y no se vuelve a envolver. El banco
+  demuestra que sin esa deteccion, aplicar dos veces anidaria la formula dentro de si misma.
+
+`DEVTOOL_TableroFaltanteProyectado.js` (trio estado/aplicar/revertir, en el menu Tidetrack Dev
+como "Faltante proyectado (Tablero)"). Banco `probar_tablero_faltante.js` con mutaciones
+dirigidas: total real convertido en SUM ciego, separador coma en la regla gris, formula gris en
+el rango de otro bloque, faltante negativo, cuenta real perdida.
+
+**De paso:** `SYF_BLOQUE_MEDIOS.filaFin` pasa de 29 a 30 (Franco abrio una fila mas en "Medios
+Bancarios" para poder sumar un medio 13). Es el unico punto de verdad del borde: el alto y el
+`ARRAY_CONSTRAIN` de la formula de saldos por medio se derivan de esta constante.
+
+---
+
+## v0.35.0 - Los deltas dicen cuanto, no solo cuanto por ciento (2026-08-21)
+
+> "Podes ponerme ingresos / egresos y capitalizacion promedio? Como para entender valores y por
+> que estamos para arriba o para abajo en el mes." — Franco, aclarando despues: "va concatenado
+> en los deltas de capital, ingresos y egresos", no en una tarjeta nueva. Y despues: "cuanto
+> capital se inyecto o retiro en el periodo de analisis, esto podrias agregarlo en los delta?"
+
+### De numero con formato a texto con formula
+
+Un formato de numero puede llevar texto **fijo** (las flechas de v0.34.0), pero no puede embeber
+un **valor calculado** como el promedio. Para concatenarlo, `F10`/`C15`/`F15` tienen que dejar de
+ser numeros.
+
+Eso rompe dos cosas a la vez, y las dos se reparan juntas:
+
+1. El formato con flechas de v0.34.0 deja de aplicar sobre texto: la flecha se concatena a mano
+   en la formula, con la misma logica de signo (reemplaza al signo, no lo acompana).
+2. Las seis reglas de color de v0.34.0 miraban `=$F$10>0`. Sobre un **texto** esa condicion no se
+   cumple nunca, y las reglas mueren en silencio — la misma superficie del bug que Franco reporto
+   esta manana (una regla mirando el numero equivocado). No se repite: las reglas pasan a apuntar
+   a una celda **auxiliar numerica**, nunca al texto visible.
+
+### Celdas auxiliares, en la trastienda de la hoja
+
+Medido contra el gemelo digital antes de escribir: el motor de la hoja Inicio ya usa las columnas
+`T:AF` (mes en curso) y `AH:AT` (mes anterior), con `AG` como columna en blanco entre los dos —
+angosta y encajada entre dos motores que derraman, no es lugar para escribir a mano. De `AU` en
+adelante no hay ninguna celda con contenido en toda la hoja: ahi van las tres auxiliares
+(`AV8`/`AV9`/`AV10`), con `AU` de separador, la misma convencion que el propio `AG`.
+
+Cada delta arma su serie de 6 meses con un `MAP`+`FILTER` (en Capital, ademas, un `FILTER` por
+cada medio dentro de cada mes) — calcularla dos veces, una para la tendencia y otra para el
+promedio, duplicaria ese costo. Una sola formula por delta devuelve `HSTACK(tendencia; promedio)`:
+la tendencia queda en la celda ancla y el promedio **derrama** una columna a la derecha, por
+construccion. Las celdas visibles solo leen esos dos numeros.
+
+### F10 suma un tercer dato: cuanto capital se movio
+
+Franco pidio "cuanto capital se inyecto o retiro en el periodo de analisis". Ese numero **ya
+existe**: es `Inicio!E22`, la misma `_formulaHaciaRiqueza` que alimenta `Tablero!O19`. Se
+**referencia** esa celda — no se llama de nuevo a la formula ni se reescribe su logica — para que
+sea imposible que Inicio muestre dos numeros distintos para la misma cosa en la misma pantalla.
+
+`"inyectados"` si `E22 > 0`, `"retirados"` si `E22 < 0` (en valor absoluto: la palabra ya dice el
+signo, repetirlo con un `"-"` diria lo mismo dos veces), y una frase aparte si da cero.
+
+```
+▲ 82,0% de tendencia a 6 meses · promedio $1.610.284,12 · $59.989,00 retirados en Agosto
+```
+
+### La inconsistencia que destapa el pedido
+
+`F10` anclaba su ventana de 6 meses a `TODAY()` ("el capital es un stock, no se filtra por
+periodo"), mientras `C15`/`F15` anclaban al **selector** de mes/año. Invisible mientras nadie
+miraba el numero — pero con el promedio y el flujo del periodo al lado, medio renglon iba a
+reaccionar al filtro de mes y el otro medio no. `F10` pasa a anclar tambien al selector: coincide
+con hoy en el mes en curso (esta corrida no cambia nada visible) y solo cambia de verdad al mirar
+un mes pasado.
+
+**Lo que queda pendiente, reportado y no resuelto:** `F8` (Capital Acumulado, de
+`DEVTOOL_StockYFlujo`, fuera de jurisdiccion de este modulo) sigue anclado a HOY. Si el selector
+se mueve a un mes pasado, `F8` y `F10` van a hablar de momentos distintos en la misma pantalla.
+
+### El guardian ISNUMBER
+
+`F10` depende de su propia auxiliar y de `E22`, las dos con `TIDETRACK_*()` adentro — las dos
+pueden mostrar `"Loading..."` mientras la cotizacion resuelve (la misma cicatriz que ya obligo a
+un lector especial para `E22` en v0.31.0). `F10` revisa `ISNUMBER()` de las tres entradas *antes*
+de armar la frase: si alguna todavia no es numero, devuelve esa misma celda pendiente tal cual en
+vez de arriesgar un texto con forma de dato pero sin serlo.
+
+### El banco, por mutacion dirigida
+
+Ademas de las mutaciones heredadas de v0.33.0/v0.34.0, este banco mata: la regla de color
+apuntando al texto en vez de a la auxiliar (el bug de esta manana, reconstruido a proposito), la
+serie pesada calculada dos veces, `F10` anclado a `TODAY()` en vez del selector, el flujo del
+periodo reimplementado en vez de leer `E22`, el monto del flujo con signo *y* con la palabra a la
+vez, y la palabra invertida (positivo mostrando "retirados").
+
+---
+
 ## v0.34.0 - La flecha dice la direccion, el color dice si es buena noticia (2026-08-21)
 
 > "La tendencia del capital acumulado esta en rojo para un numero positivo.. como es? No lo

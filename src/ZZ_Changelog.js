@@ -5,6 +5,104 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-21] v0.36.0 - Cada cuenta dice tambien cuanto le falta.
+ * - PEDIDO (Franco): en los bloques de cuentas de Ingresos, Gastos Fijos y Gastos Variables del
+ *   Tablero, cada cuenta pasa a ocupar DOS FILAS: arriba el nombre y lo REALMENTE registrado en
+ *   el mes (oscuro, como ya estaba); abajo, sin nombre, el FALTANTE proyectado para esa cuenta
+ *   este mes (gris). Franco eligio esta opcion sobre agregar una columna nueva o mostrar solo un
+ *   total. Categorias y el resto del Tablero quedan sin tocar.
+ * - LA FORMULA "REAL" DE FRANCO (R10/U10/X10: una QUERY que agrupa el motor del Tablero por
+ *   cuenta) SE REUSA VERBATIM, nunca se reescribe. El preflight la lee de la celda ancla,
+ *   verifica su forma (QUERY, SUM(Col2), GROUP BY Col1, la categoria correcta) y la empotra tal
+ *   cual dentro de un LET nuevo. Reconstruirla en JS arriesgaba un desvio sutil -- una cuenta que
+ *   el ledger tiene y el catalogo no, que la QUERY data-driven de Franco SI captura.
+ * - LO PROYECTADO se calcula fresco, cuenta por cuenta, desde "Proyeccion" (mismo criterio que
+ *   Tablero!N9:N11: selectores $N$2/$N$3/$N$4, exclusion de cuentas neutras, conversion con
+ *   TIDETRACK_*() en vivo porque un previsto no tiene TC congelado), sobre el universo de
+ *   cuentas = catalogo del bloque UNION las que ya aparecen en lo real. FALTANTE = MAX(0;
+ *   proyectado - real): nunca negativo, y una cuenta proyectada sin ningun movimiento real
+ *   aparece igual, con su faltante completo -- si no, quedaba invisible.
+ * - LAS DOS FILAS SE INTERCALAN EN LA MISMA FORMULA (SEQUENCE + MOD deciden fila par/impar), asi
+ *   que siguen siendo UNA sola formula anclada en R10/U10/X10: no hay una segunda formula
+ *   "faltante" aparte que se pudiera desalinear de la primera en un recalculo.
+ * - EL BLOQUE NO CRECE. S7=SUM(S10:S28) ya definia la capacidad viva: 19 filas, 9 pares
+ *   cuenta/faltante como mucho (ARRAY_CONSTRAIN a la capacidad, ordenado por real y despues por
+ *   proyectado). El preflight cuenta las cuentas reales de HOY y aborta si esa cantidad sola ya
+ *   supera la capacidad: una cuenta real nunca se recorta en silencio, primero hay que agrandar
+ *   el bloque.
+ * - LOS TOTALES SE REESCRIBEN: S7 pasa de SUM (que ahora sumaria real+faltante mezclados) a
+ *   SUMIF(R10:R28;"<>";S10:S28) -- solo las filas CON nombre. El nuevo S8 es el espejo exacto:
+ *   SUMIF(R10:R28;"=";S10:S28), las filas SIN nombre. Se verifica al releer que el total real NO
+ *   se movio ni un centavo por este refactor.
+ * - EL GRIS ES FORMATO CONDICIONAL (AND(cuenta vacia; monto no vacio) sobre la columna Monto),
+ *   nunca pintura: el bloque es un derrame que se reordena en cada recalculo. Separador ';'
+ *   siempre (con coma la regla no parsea en es_AR y no pinta, sin avisar -- la misma trampa
+ *   medida en v0.33.0); las reglas ajenas de la hoja se reponen intactas y por referencia.
+ * - IDEMPOTENCIA: una formula ya aplicada por este modulo se reconoce (_anclaYaEsNuestraTfp) y
+ *   NO se vuelve a envolver. Sin esa deteccion, un segundo "Aplicar" habria anidado la formula
+ *   dentro de si misma -- el banco demuestra el crecimiento concreto (de 3 a 6 referencias a
+ *   "tabla_real" al envolver dos veces) que esa deteccion evita.
+ * - DEVTOOL_TableroFaltanteProyectado.js: trio estado/aplicar/revertir, cableado en el menu
+ *   Tidetrack Dev como "Faltante proyectado (Tablero)". El banco (probar_tablero_faltante.js)
+ *   prueba, con mutaciones dirigidas: el total real convertido en SUM ciego, el separador coma
+ *   en la regla gris, la formula gris en el rango de otro bloque, el faltante dando negativo, y
+ *   una cuenta real perdida en el derrame.
+ * - DE PASO (pedido aparte de Franco, mismo dia): SYF_BLOQUE_MEDIOS.filaFin pasa de 29 a 30 --
+ *   Franco abrio una fila mas en "Medios Bancarios" (C16:I29 -> C16:I30) para poder sumar un
+ *   medio 13. Es el UNICO punto de verdad del borde (decision de la v0.17.1): el alto y el
+ *   ARRAY_CONSTRAIN de la formula de saldos por medio se derivan de esta constante, asi que el
+ *   12 que mostraba la formula viva pasa a 13 solo con este cambio. probar_formato_medios.js
+ *   actualiza su asercion de 'C18:E29' a 'C18:E30' -- si hubiera quedado en 29 habria dado VERDE
+ *   sobre la geometria vieja mientras el codigo ya miraba la nueva.
+ *
+ * [2026-08-21] v0.35.0 - Los deltas dicen cuanto, no solo cuanto por ciento.
+ * - PEDIDO (Franco): "Podes ponerme ingresos / egresos y capitalizacion promedio? Como para
+ *   entender valores y por que estamos para arriba o para abajo en el mes". Aclaracion: va
+ *   concatenado en los mismos tres deltas del resumen (F10 capital, C15 ingresos, F15 egresos),
+ *   no en una tarjeta nueva. Y despues: "cuanto capital se inyecto o retiro en el periodo de
+ *   analisis", solo para F10.
+ * - F10/C15/F15 PASAN DE NUMERO A TEXTO. Un formato de numero puede llevar texto FIJO (las
+ *   flechas de v0.34.0) pero no puede embeber un VALOR CALCULADO como el promedio. Eso rompe dos
+ *   cosas a la vez: el formato con flechas deja de aplicar sobre texto (se concatena a mano), y
+ *   las seis reglas de color de v0.34.0 -- que miraban "=$F$10>0" -- mueren en silencio sobre un
+ *   texto, la MISMA superficie del bug de esta manana. No se repite: las reglas pasan a apuntar
+ *   a una celda AUXILIAR NUMERICA nueva (IP_AUX), nunca al texto visible.
+ * - CELDAS AUXILIARES DE TRASTIENDA (AV8/AV9/AV10 + su promedio derramado en AW). Medido contra
+ *   el gemelo (celdas.tsv, refrescado antes de medir): el motor de la hoja usa T:AF y AH:AT con
+ *   AG en blanco entre los dos, angosto y encajado entre dos motores que spillean -- no es lugar
+ *   para escribir a mano. De AU en adelante no hay NINGUNA celda con contenido en toda la hoja
+ *   Inicio: ahi van las auxiliares, con AU de separador (misma convencion que el propio AG).
+ * - LA SERIE PESADA SE CALCULA UNA SOLA VEZ. Cada delta arma su serie de 6 meses con un MAP+FILTER
+ *   (en Capital, ademas, un FILTER por cada medio dentro de cada mes): calcularla dos veces --
+ *   tendencia por un lado, promedio por otro -- duplicaria ese costo. Una sola formula por delta
+ *   devuelve HSTACK(tendencia; promedio): la tendencia queda en la celda ancla y el promedio
+ *   DERRAMA una columna a la derecha, por construccion.
+ * - F10 SUMA UN TERCER DATO: cuanto capital se inyecto o retiro en el mes elegido. Ese numero YA
+ *   EXISTE (Inicio!E22, la misma _formulaHaciaRiqueza que alimenta Tablero!O19): se REFERENCIA la
+ *   celda, no se llama de nuevo a la formula ni se reescribe su logica -- es LA MISMA celda leida
+ *   dos veces, no dos formulas iguales que podrian divergir. "inyectados" si es positivo,
+ *   "retirados" si es negativo (en valor absoluto: la palabra ya dice el signo), y una frase
+ *   aparte si da cero.
+ * - LA INCONSISTENCIA QUE DESTAPA EL CAMBIO, resuelta: F10 anclaba su ventana de 6 meses a
+ *   TODAY() ("el capital es un stock, no se filtra por periodo") mientras C15/F15 anclaban al
+ *   SELECTOR de mes/anio. Invisible mientras nadie miraba el numero; con el promedio y el flujo
+ *   al lado, media linea reaccionaria al filtro de mes y la otra mitad no. F10 pasa a anclar
+ *   tambien al selector. Coincide con HOY en el mes en curso (por eso esta corrida no cambia
+ *   nada visible) y solo cambia de verdad al mirar un mes pasado. OJO: F8 (Capital Acumulado, de
+ *   DEVTOOL_StockYFlujo, fuera de jurisdiccion de este modulo) sigue anclado a HOY -- si el
+ *   selector se mueve a un mes pasado, F8 y F10 van a hablar de momentos distintos en la misma
+ *   pantalla. Reportado a Franco, no resuelto aca.
+ * - EL GUARDIAN ISNUMBER en F10: depende de su auxiliar y de E22, las dos con TIDETRACK_* adentro
+ *   y por lo tanto capaces de mostrar "Loading..." mientras la cotizacion resuelve (la cicatriz
+ *   de E22 en v0.31.0). F10 revisa ISNUMBER() de las tres entradas ANTES de armar la frase: si
+ *   alguna todavia no es numero, devuelve esa misma celda pendiente tal cual en vez de arriesgar
+ *   un texto con forma de dato pero sin serlo.
+ * - El banco prueba, con mutaciones dirigidas: la regla de color apuntando a la celda de texto en
+ *   vez de a la auxiliar (el bug de esta manana, reconstruido a proposito), la serie pesada
+ *   calculada dos veces, F10 anclado a TODAY() en vez del selector, el flujo reimplementado en
+ *   vez de leer E22, el monto del flujo con signo Y con la palabra a la vez, y la palabra
+ *   invertida (positivo mostrando "retirados").
+ *
  * [2026-08-21] v0.34.0 - La flecha dice la direccion, el color dice si es buena noticia.
  * - SINTOMA (Franco): "La tendencia del capital acumulado esta en rojo para un numero positivo..
  *   como es? No lo entiendo". Capital Acumulado mostraba "+82,0% de tendencia a 6 meses" EN ROJO.

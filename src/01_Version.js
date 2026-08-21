@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 34,
+ minor: 36,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-21',
- releaseName: 'v0.34.0 - La flecha dice la direccion, el color dice si es buena noticia',
+ releaseName: 'v0.36.0 - Cada cuenta dice tambien cuanto le falta',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

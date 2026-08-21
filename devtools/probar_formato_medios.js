@@ -179,8 +179,12 @@ console.log('=== 1. La formula de cada regla (locale es_AR: aca el ";" es OBLIGA
     const rangoEsperado = b.columnas[0].col + b.filaDatos + ':' + colFinEsperada + b.filaFin;
     ok(ctx._rangoMediosFmt() === rangoEsperado,
        'el rango se deriva de SYF_BLOQUE_MEDIOS: ' + ctx._rangoMediosFmt());
-    ok(ctx._rangoMediosFmt() === 'C18:E29',
-       'y con la geometria medida hoy da C18:E29 (la columna Medio con sus combinadas C:E)');
+    // decision Franco 2026-08-21: se abrio una fila mas en la hoja (C16:I29 -> C16:I30, para
+    // poder sumar un medio 13o). SYF_BLOQUE_MEDIOS.filaFin paso de 29 a 30 y este rango tiene
+    // que seguirlo SOLO: si el test siguiera exigiendo 'C18:E29' daria VERDE sobre la geometria
+    // vieja mientras el codigo ya mira la nueva -- exactamente el agujero que Franco pidio cerrar.
+    ok(ctx._rangoMediosFmt() === 'C18:E30',
+       'y con la geometria de hoy (filaFin=30) da C18:E30 (la columna Medio con sus combinadas C:E)');
 
     TIPOS.forEach(tipo => {
         const f = ctx._formulaReglaFmt(tipo);

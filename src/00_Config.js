@@ -595,6 +595,17 @@ const MENU_CONFIG = {
             ]
         },
         {
+            // decision Franco 2026-08-21: cada cuenta de Ingresos/Gastos Fijos/Gastos Variables
+            // pasa a ocupar dos filas (real oscura + faltante proyectado gris) en vez de una.
+            // @see DEVTOOL_TableroFaltanteProyectado.js
+            submenu: 'Faltante proyectado (Tablero)', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoTableroFaltanteProyectado' },
+                { name: '2. Aplicar', function: 'aplicarTableroFaltanteProyectado' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirTableroFaltanteProyectado' }
+            ]
+        },
+        {
             submenu: 'Categorizar cuentas', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoCategorizar' },
                 { name: '2. Aplicar', function: 'aplicarCategorizar' }

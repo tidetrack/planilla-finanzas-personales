@@ -184,9 +184,15 @@ const SYF_BLOQUE_MEDIOS = {
     //     algo, y ese fue el #REF! de F18/H18). Limpiar de mas pisaria lo que haya debajo del
     //     bloque, que no es nuestro.
     //   - cuantas filas puede ocupar el resultado. El derrame se acota con ARRAY_CONSTRAIN a
-    //     filaFin - filaDatos + 1 = 12 medios. Si algun dia hubiera mas medios con saldo que
-    //     filas, se muestran los 12 mayores en vez de romper el diseno de la hoja.
-    filaFin: 29,
+    //     filaFin - filaDatos + 1 medios. Si algun dia hubiera mas medios con saldo que
+    //     filas, se muestran los mayores en vez de romper el diseno de la hoja.
+    //
+    // decision Franco 2026-08-21: abrio una fila mas en la hoja (C16:I29 -> C16:I30) para poder
+    // sumar un medio 13. filaFin pasa de 29 a 30 -- UNICO punto de verdad del borde: el alto
+    // (_altoBloqueMedios) y el ARRAY_CONSTRAIN de _formulaSaldoPorMedio se derivan de esta
+    // constante, asi que el 12 que mostraba la formula viva pasa a 13 solo con este cambio, sin
+    // tocar la formula a mano en un segundo lugar.
+    filaFin: 30,
     colIni: 'C',
     colFin: 'I',
     columnas: [
