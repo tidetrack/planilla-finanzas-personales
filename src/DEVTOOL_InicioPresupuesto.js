@@ -22,14 +22,23 @@
  * independiente. Por eso D22 y E22 son restas de tres celdas y nada mas: no hay forma de que
  * no cierren. La verificacion post-escritura relee los VALORES y exige la identidad al centavo.
  *
- * Ademas, los tres deltas del resumen:
- *   F10  DELTA CAPITAL   crecimiento del capital actual contra la MEDIA de los cierres de los
- *                        6 meses previos completos. Reemplaza el texto estatico "0% de
- *                        Crecimiento historico".
- *   C15  DELTA INGRESOS  ingresos del mes contra la media mensual de los 6 meses previos.
- *   F15  DELTA EGRESOS   idem egresos. C15 y F15 REEMPLAZAN formulas rotas: las vivas muestran
- *                        "0%" siempre porque sus condiciones de FILTER caen en interseccion
- *                        implicita (diagnostico en DEVTOOL_FormulerioV0111, defecto quinto).
+ * Ademas, los tres deltas del resumen -- y desde v0.37.0, tambien CUANTO:
+ *   F10  DELTA CAPITAL   tendencia de los cierres de capital en la ventana de 6 meses que
+ *                        CIERRA en el mes del selector, MAS el promedio de esa ventana Y cuanto
+ *                        capital se inyecto o retiro en el mes elegido (referencia a E22: ver
+ *                        "EL TEXTO DE LOS TRES DELTAS" mas abajo).
+ *   C15  DELTA INGRESOS  tendencia de los ingresos en la ventana de 6 meses que cierra en el mes
+ *                        del selector, mas el ingreso promedio de esa ventana.
+ *   F15  DELTA EGRESOS   idem egresos.
+ * (C15 y F15 ya REEMPLAZARON en v0.32.2/v0.33.0 unas formulas rotas que mostraban "0%" siempre
+ * por interseccion implicita; ver DEVTOOL_FormulerioV0111, defecto quinto.)
+ *
+ * decision Franco 2026-08-21: "podes ponerme ingresos/egresos y capitalizacion promedio, para
+ * entender valores y por que estamos para arriba o para abajo en el mes... concatenado en los
+ * deltas". Y sobre F10 en particular: "cuanto capital se inyecto o retiro en el periodo de
+ * analisis". "Capitalizacion" en el pedido es el STOCK (capital acumulado, F8/F10), no el flujo
+ * mensual hacia Ahorros/Inversiones (E22): no hay tarjeta nueva, los tres deltas siguen siendo
+ * F10/C15/F15.
  *
  * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
  * Arnes Tidetrack seccion 6: preflight por ROTULO que aborta ante la minima discrepancia,
@@ -55,12 +64,21 @@
  * - decision Franco 2026-08-20: los umbrales del semaforo se escriben 1/2 y 4/5 en vez de
  *   0,5 y 0,8. Un literal decimal con coma es ambiguo dentro de una formula con separador ";"
  *   y uno con punto depende del locale; una fraccion no depende de nada.
- * - decision Franco 2026-08-20: F10 es un STOCK (capital), asi que ancla a TODAY() y no al
- *   selector de mes -- los stocks no se filtran por periodo (regla de DEVTOOL_StockYFlujo).
- *   El capital al cierre de cada mes previo aplica la MISMA regla del ultimo "Inicio Mes" por
- *   medio, con el corte acotado a la fecha de cierre. Los tres deltas son COCIENTES: se
- *   calculan en ARS (F10 con TIDETRACK en vivo, C15/F15 con los TC congelados de cada fila,
- *   patron de Inicio!AF8) y el resultado no depende del selector de moneda.
+ * - decision Franco 2026-08-21 (SUPERA la de 2026-08-20): la ventana de F10 ANCLA AL SELECTOR de
+ *   Inicio ($I$2/$I$3), igual que C15/F15 -- no a TODAY(). La razon original ("el capital es un
+ *   stock, no se filtra por periodo") seguia siendo cierta pero dejaba los tres deltas
+ *   DESINCRONIZADOS: con el selector en un mes pasado, F10 mostraba la tendencia de HOY mientras
+ *   C15/F15 mostraban la de ese mes -- medio renglon reaccionando al filtro y el otro medio no,
+ *   sin que el numero lo dijera. El capital al cierre de cada mes de la ventana aplica la MISMA
+ *   regla del ultimo "Inicio Mes" por medio, con el corte acotado a la fecha de cierre. Los tres
+ *   deltas son COCIENTES: se calculan en ARS (F10 con TIDETRACK en vivo, C15/F15 con los TC
+ *   congelados de cada fila, patron de Inicio!AF8) y el resultado no depende del selector de
+ *   moneda. Coincide con TODAY() en cualquier corrida sobre el mes en curso (es lo que pasa hoy,
+ *   2026-08-21, selector en Agosto) y solo cambia de verdad al mirar un mes pasado.
+ * - OJO, esto NO se corrige: F8 (Capital Acumulado, DEVTOOL_StockYFlujo, fuera de jurisdiccion de
+ *   este modulo) sigue anclado a HOY. Si el selector se mueve a un mes pasado, F8 sigue hablando
+ *   de HOY mientras F10 pasa a hablar del mes elegido -- dos relojes distintos en la misma
+ *   pantalla. Reportado a Franco, no resuelto aca.
  * - C8:E9 y F8:H9 NO se tocan: Franco pidio revisarlas, no reescribirlas. El preflight verifica
  *   que tengan formula y el dialogo reporta su estado. Sus formulas son de DEVTOOL_StockYFlujo.
  *
@@ -77,12 +95,13 @@
  * Reusa helpers probados: _respaldarFormulerio, _leerRespaldoFormulerio, _errorDeCelda,
  * _normalizarRotulo, _rotulosCompatibles, _leerHeaderLedger (DEVTOOL_FormulerioV0111);
  * _refHoja, _colLedger, _colPlan, _condTipoSyf, _canonizarFormula, _verificarEscrituraSyf
- * (DEVTOOL_StockYFlujo).
+ * (DEVTOOL_StockYFlujo); _formulaHaciaRiqueza, CAP_SELECTORES (DEVTOOL_Capitalizacion) -- para
+ * F10 no se llama de nuevo: se REFERENCIA la celda E22 que ya la usa (ver mas abajo).
  *
  * @see docs/permanente/FUNCIONALIDADES.md
- * @version 0.31.0
+ * @version 0.37.0
  * @since 2026-08-20
- * @lastModified 2026-08-20
+ * @lastModified 2026-08-21
  */
 
 // ============================================
@@ -163,6 +182,47 @@ const IP_RESUMEN = {
 const IP_CLAVES_DELTA = ['deltaCapital', 'deltaIngresos', 'deltaEgresos'];
 
 /**
+ * LAS CELDAS AUXILIARES DE LOS TRES DELTAS -- numeros de verdad, en la trastienda de la hoja.
+ *
+ * Desde v0.37.0 las celdas visibles (F10/C15/F15) son TEXTO (ver "EL TEXTO DE LOS TRES DELTAS"
+ * mas abajo), y las reglas de color TIENEN que seguir siendo numericas. La serie de 6 meses que
+ * arma cada delta ademas es CARA (un MAP con un FILTER por mes, y en Capital ademas un FILTER
+ * por cada medio DENTRO de cada mes): calcularla dos veces -- una para la tendencia y otra para
+ * el promedio -- duplicaria ese costo. Por eso cada delta escribe UNA sola formula pesada, en la
+ * celda de aca abajo, y esa formula devuelve DOS numeros con HSTACK(tendencia; promedio): la
+ * tendencia queda en la celda ancla y el promedio DERRAMA una columna a la derecha, por
+ * construccion -- no hay forma de duplicar el calculo sin reescribir el HSTACK entero. La celda
+ * visible y la regla de color solo LEEN esos dos numeros, nunca recalculan la serie.
+ *
+ * DONDE: medido contra el gemelo el 2026-08-21 (docs/permanente/celdas.tsv, refrescado antes de
+ * medir con el webhook de sync). El motor de la hoja ya usa T:AF (mes en curso, filas 8 en
+ * adelante) y AH:AT (mes anterior, filas 8 en adelante), con AG como columna en blanco entre los
+ * dos -- ese blanco es angosto (UNA sola columna) y esta encajado entre dos motores que
+ * spillean: no es lugar para escribir a mano, una fila con mas transacciones de las de hoy lo
+ * invadiria. Un barrido columna por columna del gemelo confirma que AU en adelante no tiene
+ * NINGUNA celda con contenido en toda la hoja Inicio, asi que las auxiliares van ahi: AU queda
+ * en blanco como separador del ultimo motor (misma convencion que el propio AG) y AV/AW alojan
+ * las tres auxiliares, una por fila (8=capital, 9=ingresos, 10=egresos, calcando las filas del
+ * resumen visible).
+ */
+const IP_AUX = {
+    deltaCapital:  { tendencia: 'AV8' },
+    deltaIngresos: { tendencia: 'AV9' },
+    deltaEgresos:  { tendencia: 'AV10' }
+};
+
+/**
+ * La celda de promedio de un delta: una columna a la derecha de su tendencia, que es DONDE
+ * DERRAMA el HSTACK de _tendenciaYPromedioIp. Se DERIVA en vez de declararse aparte a proposito:
+ * declarar las dos por separado permitiria que quedaran desalineadas (un typo en IP_AUX) sin que
+ * nada lo note hasta que alguien leyera un promedio que en realidad es la tendencia de otra fila.
+ */
+function _celdaPromedioIp(celdaTendencia) {
+    const m = String(celdaTendencia).match(/^([A-Z]+)([0-9]+)$/);
+    return columnIndexToLetter(columnLetterToIndex(m[1]) + 1) + m[2];
+}
+
+/**
  * El motor de la hoja: T8 derrama Registros del mes (12 columnas espejo de B:M) y AF8 es la
  * conversion con TC congelados. Las letras de las columnas consumidas NO se hardcodean: se
  * derivan de RANGES.REGISTROS por offset, y el preflight las verifica contra los rotulos vivos.
@@ -203,24 +263,10 @@ const IP_FONDO_ROJO = '#fce8e6';
 const IP_MESES_TENDENCIA = 6;
 
 /**
- * Formato de los tres deltas: porcentaje con signo, un decimal, y el texto que lo explica.
+ * El sufijo de los tres deltas: dice contra que ventana se compara la tendencia.
  *
- * decision Franco 2026-08-21: "-10,4%" solo no se entiende -- no dice contra que se compara. El
- * texto va PEGADO AL FORMATO DE NUMERO, no concatenado con TEXT(): asi la celda sigue siendo un
- * NUMERO de verdad. Con TEXT() pasaria a ser una cadena y cualquier formula que despues la sume,
- * la compare o le aplique un formato condicional dejaria de funcionar -- y lo haria en silencio,
- * porque un texto que dice "-10,4%" se ve identico a un numero que vale -0,104.
- *
- * OJO CON EL PUNTO. El lenguaje de patrones de setNumberFormat es INDEPENDIENTE DEL LOCALE: '.' es
- * siempre el separador decimal y ',' el de miles, sin importar que la planilla este en es_AR. El
- * patron se escribe con punto y Sheets lo MUESTRA con coma. Con '+0,0%' -- que es como se ve el
- * resultado y por eso engana -- el ',' se lee como separador de miles y los deltas saldrian
- * '+35%' en vez de '+34,5%': el decimal desaparece sin ningun error.
- *
- * Distinto de TEXT(), que SI es locale-aware. La constante venia de la C15 vieja, donde el patron
- * vivia adentro de un TEXT(); al moverlo a setNumberFormat cambio el idioma en el que se lee.
- *
- * El texto se deriva de IP_MESES_TENDENCIA para que la etiqueta no pueda desfasarse de la ventana que
+ * decision Franco 2026-08-21: "-10,4%" solo no se entiende -- no dice contra que se compara.
+ * Se deriva de IP_MESES_TENDENCIA para que la etiqueta no pueda desfasarse de la ventana que
  * realmente se promedia.
  */
 const IP_SUFIJO_DELTA = ' de tendencia a ' + IP_MESES_TENDENCIA + ' meses';
@@ -241,11 +287,38 @@ const IP_FLECHA_SUBE = '\u25B2';    // triangulo lleno hacia arriba
 const IP_FLECHA_BAJA = '\u25BC';    // triangulo lleno hacia abajo
 const IP_FLECHA_PLANA = '\u2013';   // raya: la tendencia no se movio
 
-/** Las tres secciones del patron: positivo ; negativo ; cero. */
-const IP_FORMATO_DELTA =
-    '"' + IP_FLECHA_SUBE + ' "0.0%"' + IP_SUFIJO_DELTA + '";' +
-    '"' + IP_FLECHA_BAJA + ' "0.0%"' + IP_SUFIJO_DELTA + '";' +
-    '"' + IP_FLECHA_PLANA + ' "0.0%"' + IP_SUFIJO_DELTA + '"';
+/**
+ * EL TEXTO DE LOS TRES DELTAS -- desde v0.37.0 ya NO es un NUMERO con formato: es TEXTO armado
+ * por formula.
+ *
+ * decision Franco 2026-08-21: "podes ponerme ingresos/egresos y capitalizacion promedio... para
+ * entender valores", concatenado en los mismos deltas. Un formato de numero puede llevar texto
+ * FIJO (la v0.34.0: '"' + IP_FLECHA_SUBE + ' "0.0%"' + IP_SUFIJO_DELTA + '"') pero no puede
+ * embeber un VALOR CALCULADO -- el promedio no es un literal, sale de la misma serie que la
+ * tendencia. Para concatenarlo la celda tiene que dejar de ser un numero.
+ *
+ * ESO ROMPE DOS COSAS A LA VEZ, y las dos se reparan en el mismo movimiento:
+ *   1. El formato con flechas de v0.34.0 deja de aplicar sobre texto: la flecha se concatena a
+ *      mano en la formula (ver _formulaVisibleFlujoIp / _formulaVisibleCapitalIp), con la MISMA
+ *      logica de signo -- la flecha REEMPLAZA al signo, nunca lo acompana.
+ *   2. Las seis reglas de color de v0.34.0 miraban '=$F$10>0': sobre un TEXTO esa condicion no
+ *      se cumple NUNCA, y las reglas mueren en silencio -- exactamente la superficie del bug que
+ *      Franco reporto ese mismo dia (una regla mirando el numero equivocado). No se repite: las
+ *      reglas pasan a apuntar a la celda AUXILIAR numerica de IP_AUX, nunca al texto visible
+ *      (ver "EL COLOR DE LOS DELTAS" mas abajo).
+ *
+ * POR QUE TEXT() Y NO setNumberFormat: sin numero no hay patron de numero que aplicar. Y OJO,
+ * porque es la trampa de locale al REVES de la de v0.34.0: TEXT() SI es sensible al locale (la
+ * planilla es es_AR, decimal ","), mientras que setNumberFormat NO lo es (decimal "." siempre en
+ * el patron, aunque se VEA con coma). Los patrones de aca abajo van dentro de un TEXT() de una
+ * formula (setFormula, no setNumberFormat), asi que se escriben en es_AR -- coma decimal, punto
+ * de miles -- que es como Sheets los interpreta cuando se los escribe por codigo, igual que
+ * cualquier otro string de formula (separador ";").
+ */
+const IP_PATRON_PORCENTAJE = '0,0%';
+const IP_PATRON_MONEDA = '$#.##0,00';
+/** El separador visual entre pedazos del texto: tendencia, promedio y (solo capital) flujo. */
+const IP_SEPARADOR = ' \u00B7 ';    // espacio, punto medio (U+00B7), espacio -- tipografia, no emoji
 
 /** Tolerancia de la identidad D19=D20+D21+D22 (y E) al releer los valores. */
 const IP_UMBRAL_IDENTIDAD = 0.01;
@@ -439,45 +512,59 @@ function _formulaDistribucionIp(cual) {
 }
 
 /**
- * EL CALCULO DE LA TENDENCIA, unico para los tres deltas.
+ * EL CALCULO DE LA TENDENCIA *Y* EL PROMEDIO, unico para los tres deltas -- UNA sola formula
+ * pesada por delta (ver la cabecera de IP_AUX: calcularla dos veces duplicaria el costo).
  *
  * Recibe el nombre LET de una serie de IP_MESES_TENDENCIA valores mensuales (el mas viejo
- * primero) y devuelve el crecimiento de su tendencia como fraccion.
+ * primero) y devuelve HSTACK(tendencia; promedio):
  *
- * COMO: se ajusta la recta de minimos cuadrados sobre los seis puntos (SLOPE) y se mide cuanto
- * SUBIO ESA RECTA de punta a punta -- pendiente * (n-1) --, expresado como fraccion del nivel
- * medio de la ventana. En criollo: "la tendencia subio un 12% del nivel tipico de estos seis
- * meses". Se usa la recta y no los extremos crudos (ultimo/primero - 1) justamente para no
- * volver al problema que Franco marco: dos puntos sueltos vuelven a ser un dato de un mes.
+ *   - tendencia: el crecimiento de la tendencia como fraccion. Se ajusta la recta de minimos
+ *     cuadrados sobre los seis puntos (SLOPE) y se mide cuanto SUBIO ESA RECTA de punta a punta
+ *     -- pendiente * (n-1) --, expresado como fraccion del nivel medio de la ventana. En
+ *     criollo: "la tendencia subio un 12% del nivel tipico de estos seis meses". Se usa la
+ *     recta y no los extremos crudos (ultimo/primero - 1) justamente para no volver al problema
+ *     que Franco marco: dos puntos sueltos vuelven a ser un dato de un mes.
+ *   - promedio: el NIVEL MEDIO de la ventana (AVERAGE). No es una cuenta nueva: es el mismo
+ *     numero que esta formula YA hacia de denominador de la tendencia y se descartaba -- ahora
+ *     se expone en vez de tirarse.
  *
- * POR QUE EL PROMEDIO EN EL DENOMINADOR y no el primer valor: el primer mes de la ventana puede
- * ser cero o casi cero (un mes sin egresos de una categoria, una cuenta recien abierta) y ahi
- * un cociente contra el arranque explota a miles por ciento. El promedio de la ventana es el
- * nivel tipico de la serie y no se anula salvo que la serie entera sea cero, caso que se
- * responde con 0 y no con una division. ABS() porque una serie negativa (un capital en rojo)
- * tiene que conservar el SIGNO de la pendiente: si la deuda se achica, eso es crecimiento.
+ * POR QUE EL PROMEDIO EN EL DENOMINADOR (de la tendencia) y no el primer valor: el primer mes de
+ * la ventana puede ser cero o casi cero (un mes sin egresos de una categoria, una cuenta recien
+ * abierta) y ahi un cociente contra el arranque explota a miles por ciento. El promedio de la
+ * ventana es el nivel tipico de la serie y no se anula salvo que la serie entera sea cero, caso
+ * que se responde con 0 y no con una division. ABS() porque una serie negativa (un capital en
+ * rojo) tiene que conservar el SIGNO de la pendiente: si la deuda se achica, eso es crecimiento.
  */
-function _tendenciaIp(nombreSerie) {
+function _tendenciaYPromedioIp(nombreSerie) {
     return 'LET(\n' +
         '    nivel_tend; AVERAGE(' + nombreSerie + ');\n' +
         '    pend_tend; IFERROR(SLOPE(' + nombreSerie + '; SEQUENCE(' + IP_MESES_TENDENCIA + ')); 0);\n' +
-        '    IF(nivel_tend=0; 0; pend_tend * ' + (IP_MESES_TENDENCIA - 1) + ' / ABS(nivel_tend))\n' +
+        '    tend_frac; IF(nivel_tend=0; 0; pend_tend * ' + (IP_MESES_TENDENCIA - 1) + ' / ABS(nivel_tend));\n' +
+        '    HSTACK(tend_frac; nivel_tend)\n' +
         '  )';
 }
 
 /**
- * DELTA CAPITAL (F10): capital actual contra la media de los cierres de los 6 meses previos
- * completos. El capital de una fecha aplica la MISMA regla de saldo del sistema (el ultimo
- * "Inicio Mes" de cada medio + lo posterior, validada al centavo en DEVTOOL_StockYFlujo) con
- * el corte y los movimientos acotados a esa fecha, sobre los medios de la lista blanca
+ * LA FORMULA PESADA DE CAPITAL -- va en la celda auxiliar IP_AUX.deltaCapital.tendencia (F10 la
+ * LEE, no la recalcula: ver _formulaVisibleCapitalIp). La serie de los cierres de capital de los
+ * 6 meses que TERMINAN en el mes del selector, y de ahi tendencia y promedio via
+ * _tendenciaYPromedioIp. El capital de una fecha aplica la MISMA regla de saldo del sistema (el
+ * ultimo "Inicio Mes" de cada medio + lo posterior, validada al centavo en DEVTOOL_StockYFlujo)
+ * con el corte y los movimientos acotados a esa fecha, sobre los medios de la lista blanca
  * TIPOS_RIQUEZA. Se calcula en ARS: el delta es un cociente y la conversion se cancela.
- * MAP/LAMBDA sobre SEQUENCE(6), sin arrays literales. Ancla a TODAY(), no al selector: es un
- * stock (ver cabecera).
+ * MAP/LAMBDA sobre SEQUENCE(6), sin arrays literales.
+ *
+ * decision Franco 2026-08-21 (reemplaza la de 2026-08-20, ver cabecera del archivo): la ventana
+ * ANCLA AL SELECTOR de Inicio ($I$2/$I$3) -- no a TODAY(). Coincide con TODAY() en el mes en
+ * curso (hoy, 2026-08-21, selector en Agosto) y solo cambia de verdad al mirar un mes pasado,
+ * que es justo donde antes desincronizaba a F10 de C15/F15.
  */
-function _formulaDeltaCapitalIp() {
+function _formulaAuxCapitalIp() {
     const medios = RANGES.MEDIOS_PAGO;
     const colTipoMedio = columnLetterToIndex(medios.columns.proyecto) - columnLetterToIndex(medios.start) + 1;
     const rangoMedios = _refHoja(medios.sheet) + '!' + medios.start + ':' + medios.end;
+    const selMes = _absIp(IP_SELECTORES.mes);
+    const selAnio = _absIp(IP_SELECTORES.anio);
     return '=LET(\n' +
         '  col_medio; ' + _colLedger('medio') + ';\n' +
         '  col_cuenta; ' + _colLedger('cuenta') + ';\n' +
@@ -497,19 +584,23 @@ function _formulaDeltaCapitalIp() {
         '    suma_eur; SUM(IFERROR(FILTER(neto_mov; vigente_fila; grupo_fila; col_moneda="EUR"); 0));\n' +
         '    suma_ars + (suma_usd * TIDETRACK_USD()) + (suma_aud * TIDETRACK_AUD()) + (suma_eur * TIDETRACK_EUR())\n' +
         '  ));\n' +
-        '  serie_cap; MAP(SEQUENCE(' + IP_MESES_TENDENCIA + '); LAMBDA(k_mes; capital_al(EOMONTH(TODAY(); k_mes - ' + IP_MESES_TENDENCIA + '))));\n' +
-        '  ' + _tendenciaIp('serie_cap') + '\n)';
+        '  mes_num; MATCH(' + selMes + '; SPLIT("' + IP_MESES + '"; ","); 0);\n' +
+        '  ancla_mes; DATE(' + selAnio + '; mes_num; 1);\n' +
+        '  serie_cap; MAP(SEQUENCE(' + IP_MESES_TENDENCIA + '); LAMBDA(k_mes; capital_al(EOMONTH(ancla_mes; k_mes - ' + IP_MESES_TENDENCIA + '))));\n' +
+        '  ' + _tendenciaYPromedioIp('serie_cap') + '\n)';
 }
 
 /**
- * DELTA DE FLUJO (C15 ingresos / F15 egresos): el mes del selector contra la media mensual de
- * los 6 meses previos completos, directo desde Registros. Cada fila se lleva a ARS con SU TC
- * congelado (patron de Inicio!AF8: las columnas J:M congelan la cotizacion del dia del
- * registro). Excluye cuentas neutras y filas sin cuenta, como los bloques del mes.
- * REEMPLAZA la formula rota actual (interseccion implicita, siempre "0%"): aca toda condicion
- * ligada a LET va en ARRAYFORMULA y las de FILTER van inline, que es lo que ya funciona en C8.
+ * LA FORMULA PESADA DE FLUJO (ingresos/egresos) -- va en la celda auxiliar
+ * IP_AUX.deltaIngresos/deltaEgresos.tendencia (C15/F15 la LEEN, no la recalculan: ver
+ * _formulaVisibleFlujoIp). El mes del selector y los 5 previos, directo desde Registros. Cada
+ * fila se lleva a ARS con SU TC congelado (patron de Inicio!AF8: las columnas J:M congelan la
+ * cotizacion del dia del registro). Excluye cuentas neutras y filas sin cuenta, como los bloques
+ * del mes. Toda condicion ligada a LET va en ARRAYFORMULA y las de FILTER van inline, que es lo
+ * que ya funciona en C8 (la interseccion implicita fue lo que rompio la formula original de
+ * C15/F15, ver DEVTOOL_FormulerioV0111, defecto quinto).
  */
-function _formulaDeltaFlujoIp(esIngresos) {
+function _formulaAuxFlujoIp(esIngresos) {
     const cond = esIngresos
         ? '(col_cat="Ingreso")'
         : '(((col_cat="Gasto Fijo") + (col_cat="Gasto Variable")) > 0)';
@@ -531,7 +622,67 @@ function _formulaDeltaFlujoIp(esIngresos) {
         '    fin_k; EOMONTH(ini_k; 0);\n' +
         '    SUM(IFERROR(FILTER(neto_valor; base_mov; col_fecha>=ini_k; col_fecha<=fin_k); 0))\n' +
         '  )));\n' +
-        '  ' + _tendenciaIp('serie_flujo') + '\n)';
+        '  ' + _tendenciaYPromedioIp('serie_flujo') + '\n)';
+}
+
+/**
+ * EL TEXTO VISIBLE de un delta de flujo (C15 ingresos / F15 egresos): formula LIVIANA que solo
+ * LEE las dos celdas auxiliares (tendencia, promedio) y arma el string. La serie pesada NO se
+ * vuelve a calcular aca -- vive unicamente en la celda auxiliar de _formulaAuxFlujoIp.
+ */
+function _formulaVisibleFlujoIp(clave) {
+    const refTend = _absIp(IP_AUX[clave].tendencia);
+    const refProm = _absIp(_celdaPromedioIp(IP_AUX[clave].tendencia));
+    return '=LET(\n' +
+        '  tendencia; ' + refTend + ';\n' +
+        '  promedio; ' + refProm + ';\n' +
+        '  flecha; IF(tendencia>0; "' + IP_FLECHA_SUBE + '"; IF(tendencia<0; "' + IP_FLECHA_BAJA + '"; "' + IP_FLECHA_PLANA + '"));\n' +
+        '  flecha & " " & TEXT(ABS(tendencia); "' + IP_PATRON_PORCENTAJE + '") & "' + IP_SUFIJO_DELTA + '" & "' + IP_SEPARADOR + '" & "promedio " & TEXT(promedio; "' + IP_PATRON_MONEDA + '")\n' +
+        ')';
+}
+
+/**
+ * EL TEXTO VISIBLE de F10 (capital): igual estructura que el de flujo, mas un tercer dato que
+ * Franco pidio el 2026-08-21: "cuanto capital se inyecto o retiro en el periodo de analisis".
+ * Ese numero YA EXISTE: es Inicio!E22, la capitalizacion EFECTIVA del mes elegido
+ * (_formulaHaciaRiqueza con los selectores de Inicio -- la MISMA formula que alimenta
+ * Tablero!O19, ver DEVTOOL_Capitalizacion). Se REFERENCIA esa celda -- no se llama de nuevo a
+ * _formulaHaciaRiqueza ni se reescribe su logica -- para que sea IMPOSIBLE que Inicio muestre
+ * dos numeros distintos para la misma cosa en la misma pantalla: no son dos formulas iguales,
+ * es LA MISMA celda leida dos veces.
+ *
+ * "inyectados" si E22 > 0, "retirados" si E22 < 0 -- en valor absoluto, porque la palabra ya
+ * dice el signo: repetirlo con un "-" adelante ("-$59.989 retirados") diria lo mismo dos veces.
+ * Si da 0, una frase aparte ("sin movimientos de capital en <mes>"): ni "inyectados" ni
+ * "retirados" describen a cero.
+ *
+ * EL GUARDIAN ISNUMBER. F10 depende de su propia auxiliar (que llama a TIDETRACK_* adentro de
+ * capital_al) Y de E22 (que tambien llama a TIDETRACK_* para convertir). Las dos pueden mostrar
+ * "Loading..." mientras la cotizacion resuelve -- la misma cicatriz que ya obligo a
+ * _leerYaCalculadoIp en la verificacion de E22 (v0.31.0). Concatenar TEXT()/IF() directo sobre
+ * ese string pendiente arriesgaba un resultado con forma de dato pero sin serlo, en vez de un
+ * error visible. Por eso ISNUMBER() se fija ANTES de armar la frase: si alguna de las tres
+ * entradas todavia no es numero, F10 devuelve ESA MISMA celda pendiente tal cual (se ve
+ * "Loading...", no se disimula), y recien arma el texto cuando las tres estan listas.
+ */
+function _formulaVisibleCapitalIp() {
+    const refTend = _absIp(IP_AUX.deltaCapital.tendencia);
+    const refProm = _absIp(_celdaPromedioIp(IP_AUX.deltaCapital.tendencia));
+    const refFlujo = _absIp(IP_BLOQUE.colRealidad + IP_BLOQUE.filas.capitalizacion.fila);
+    const refMes = _absIp(IP_SELECTORES.mes);
+    return '=LET(\n' +
+        '  tendencia; ' + refTend + ';\n' +
+        '  promedio; ' + refProm + ';\n' +
+        '  flujo; ' + refFlujo + ';\n' +
+        '  pendiente; IF(NOT(ISNUMBER(tendencia)); tendencia; IF(NOT(ISNUMBER(promedio)); promedio; IF(NOT(ISNUMBER(flujo)); flujo; "")));\n' +
+        '  IF(pendiente<>""; pendiente; LET(\n' +
+        '    flecha; IF(tendencia>0; "' + IP_FLECHA_SUBE + '"; IF(tendencia<0; "' + IP_FLECHA_BAJA + '"; "' + IP_FLECHA_PLANA + '"));\n' +
+        '    texto_flujo; IF(flujo>0; TEXT(flujo; "' + IP_PATRON_MONEDA + '") & " inyectados en " & ' + refMes + ';\n' +
+        '      IF(flujo<0; TEXT(ABS(flujo); "' + IP_PATRON_MONEDA + '") & " retirados en " & ' + refMes + ';\n' +
+        '      "sin movimientos de capital en " & ' + refMes + '));\n' +
+        '    flecha & " " & TEXT(ABS(tendencia); "' + IP_PATRON_PORCENTAJE + '") & "' + IP_SUFIJO_DELTA + '" & "' + IP_SEPARADOR + '" & "promedio " & TEXT(promedio; "' + IP_PATRON_MONEDA + '") & "' + IP_SEPARADOR + '" & texto_flujo\n' +
+        '  ))\n' +
+        ')';
 }
 
 
@@ -566,18 +717,29 @@ function _formulaDeltaFlujoIp(esIngresos) {
  * signo. Un modulo que es dueno del formato tiene que ser dueno del color, o los dos se
  * desincronizan sin que nada lo delate.
  *
+ * ACTUALIZACION v0.37.0: F10/C15/F15 pasan a ser TEXTO (ver "EL TEXTO DE LOS TRES DELTAS"). Una
+ * condicion "=$F$10>0" sobre un texto NO SE CUMPLE NUNCA -- exactamente la misma clase de bug
+ * que el parrafo de arriba, en otro punto del mismo modulo. La condicion pasa a apuntar a la
+ * celda AUXILIAR NUMERICA de IP_AUX (=$AV$8>0, nunca =$F$10>0), mientras que el RANGO que se
+ * pinta sigue siendo la celda visible (F10/C15/F15): una regla de formato condicional puede
+ * evaluar una celda y pintar otra, y es justo lo que hace falta aca.
+ *
  * @see docs/permanente/FORMULAS_TABLERO.md
  */
 
-/** El par de reglas de una celda de delta: [{ formula, color }]. */
+/**
+ * El par de reglas de una celda de delta: [{ formula, color }]. `celda` es la que se PINTA (el
+ * texto visible, F10/C15/F15); la formula EVALUA la auxiliar numerica de IP_AUX -- nunca la
+ * celda que se pinta, que desde v0.37.0 es texto y no cumpliria la condicion jamas.
+ */
 function _reglasDeUnDeltaIp(clave) {
     const celda = IP_RESUMEN[clave].celda;
-    const ref = _absIp(celda);
+    const refNumerica = _absIp(IP_AUX[clave].tendencia);
     const subeEsBueno = IP_RESUMEN[clave].sentido === IP_MAS_ES_MEJOR;
     return [
-        { clave: clave, celda: celda, formula: '=' + ref + '>0',
+        { clave: clave, celda: celda, formula: '=' + refNumerica + '>0',
           color: subeEsBueno ? IP_COLOR_VERDE : IP_COLOR_ROJO },
-        { clave: clave, celda: celda, formula: '=' + ref + '<0',
+        { clave: clave, celda: celda, formula: '=' + refNumerica + '<0',
           color: subeEsBueno ? IP_COLOR_ROJO : IP_COLOR_VERDE }
     ];
 }
@@ -878,6 +1040,26 @@ function _preflightIp(ss) {
             'formula) antes de correr. No se toco nada.');
     }
 
+    // --- 8. Las celdas AUXILIARES (trastienda AV/AW) tienen que estar libres. Cada delta ---
+    // --- escribe en su celda de tendencia (IP_AUX) y el HSTACK derrama el promedio una ---
+    // --- columna a la derecha (_celdaPromedioIp): las dos tienen que estar vacias, o el ---
+    // --- derrame fallaria con "el resultado de la formula se superpone con datos". ---
+    const conValorAux = [];
+    IP_CLAVES_DELTA.forEach(function (k) {
+        const cTend = IP_AUX[k].tendencia;
+        const cProm = _celdaPromedioIp(cTend);
+        [cTend, cProm].forEach(function (celda) {
+            const r = hoja.getRange(celda);
+            if (!r.getFormula() && String(r.getValue()) !== '') conValorAux.push(celda);
+        });
+    });
+    if (conValorAux.length) {
+        throw new Error('Las celdas auxiliares de los deltas (' + conValorAux.join(', ') + ') no ' +
+            'estan vacias. Medido contra el gemelo el 2026-08-21: esa zona (columnas AV/AW, a la ' +
+            'derecha del motor de la hoja) no tenia ninguna celda con contenido. Si algo la ocupo ' +
+            'desde entonces, hay que volver a medir antes de escribir. No se toco nada.');
+    }
+
     return { hoja: hoja, nombre: nombre, estadoResumen: estadoResumen, avisos: avisos };
 }
 
@@ -902,17 +1084,6 @@ function _planIp(ss, pre) {
             valorActual: actual ? '' : rango.getValue(), resumen: resumen
         });
     };
-    const proponerFormato = function (celda, nota) {
-        const vivo = pre.hoja.getRange(celda).getNumberFormat();
-        if (vivo === IP_FORMATO_DELTA) return;
-        cambios.push({
-            celda: celda, nota: nota, esFormato: true,
-            formatoActual: vivo, formatoNuevo: IP_FORMATO_DELTA,
-            formulaActual: '', formulaNueva: '',
-            resumen: 'el delta se muestra como porcentaje con signo'
-        });
-    };
-
     // --- Columna D: presupuesto proyectado + residuo ---
     ['ingresos', 'fijos', 'variables'].forEach(function (k) {
         proponer(IP_BLOQUE.colPresupuesto + filas[k].fila, 'Presupuesto: ' + filas[k].rotulo,
@@ -959,26 +1130,36 @@ function _planIp(ss, pre) {
             'reparte la liquidez de C8 por remanente, y por peso cuando no queda remanente');
     });
 
-    // --- Los tres deltas del resumen ---
+    // --- Las celdas AUXILIARES de los tres deltas: la formula pesada, UNA vez por delta ---
+    // --- (ver cabecera de IP_AUX). Trastienda -- Franco no las lee directo. ---
+    proponer(IP_AUX.deltaCapital.tendencia, 'Auxiliar: ' + IP_RESUMEN.deltaCapital.nota,
+        _formulaAuxCapitalIp(),
+        'tendencia y promedio de los cierres de capital en la ventana de ' + IP_MESES_TENDENCIA +
+        ' meses que cierra en el mes del selector (celda de trastienda, F10 la lee)');
+    proponer(IP_AUX.deltaIngresos.tendencia, 'Auxiliar: ' + IP_RESUMEN.deltaIngresos.nota,
+        _formulaAuxFlujoIp(true),
+        'tendencia y promedio de los ingresos en la ventana de ' + IP_MESES_TENDENCIA +
+        ' meses que cierra en el mes del selector (celda de trastienda, C15 la lee)');
+    proponer(IP_AUX.deltaEgresos.tendencia, 'Auxiliar: ' + IP_RESUMEN.deltaEgresos.nota,
+        _formulaAuxFlujoIp(false),
+        'tendencia y promedio de los egresos en la ventana de ' + IP_MESES_TENDENCIA +
+        ' meses que cierra en el mes del selector (celda de trastienda, F15 la lee)');
+
+    // --- Las celdas VISIBLES: formula liviana, solo LEE las auxiliares y arma el texto ---
     proponer(IP_RESUMEN.deltaCapital.celda, IP_RESUMEN.deltaCapital.nota,
-        _formulaDeltaCapitalIp(),
-        'tendencia de los cierres de capital de los ultimos ' + IP_MESES_TENDENCIA + ' meses');
+        _formulaVisibleCapitalIp(),
+        'texto con flecha + tendencia + promedio + cuanto capital se inyecto/retiro en el mes elegido (lee E22, no lo recalcula)');
     proponer(IP_RESUMEN.deltaIngresos.celda, IP_RESUMEN.deltaIngresos.nota,
-        _formulaDeltaFlujoIp(true),
-        'tendencia de los ingresos en la ventana de ' + IP_MESES_TENDENCIA + ' meses que cierra en el mes del selector');
+        _formulaVisibleFlujoIp('deltaIngresos'),
+        'texto con flecha + tendencia + el ingreso promedio de la ventana');
     proponer(IP_RESUMEN.deltaEgresos.celda, IP_RESUMEN.deltaEgresos.nota,
-        _formulaDeltaFlujoIp(false),
-        'tendencia de los egresos en la ventana de ' + IP_MESES_TENDENCIA + ' meses que cierra en el mes del selector');
+        _formulaVisibleFlujoIp('deltaEgresos'),
+        'texto con flecha + tendencia + el egreso promedio de la ventana');
 
-    // --- El formato de los tres deltas es parte del plan (se verifica y se revierte) ---
-    IP_CLAVES_DELTA.forEach(function (k) {
-        proponerFormato(IP_RESUMEN[k].celda, 'Formato de la ' + IP_RESUMEN[k].nota.toLowerCase());
-    });
-
-    // --- Y el COLOR de los tres deltas, que va junto con el formato y no aparte ---
-    // Separarlos es lo que produjo el bug: el formato decia "+82,0%" y una regla de color ajena
-    // decidia que ese "+" era rojo. Mientras el mismo modulo sea dueno de los dos, no pueden
-    // contradecirse. Ver la cabecera de la seccion "EL COLOR DE LOS DELTAS".
+    // --- Y el COLOR de los tres deltas, que va junto con el texto y no aparte ---
+    // Separarlos es lo que produjo el bug de v0.34.0: el formato decia "+82,0%" y una regla de
+    // color ajena decidia que ese "+" era rojo. Mientras el mismo modulo sea dueno de los dos, no
+    // pueden contradecirse. Ver la cabecera de la seccion "EL COLOR DE LOS DELTAS".
     const clases = _clasificarReglasIp(pre.hoja.getConditionalFormatRules());
     return { cambios: cambios, reglas: clases };
 }
@@ -988,11 +1169,15 @@ function _planIp(ss, pre) {
 // ============================================
 
 /**
- * Los invariantes del bloque, sobre los VALORES releidos (no sobre el texto):
+ * Los invariantes del bloque, sobre los VALORES releidos (no sobre el texto de setFormula):
  *   1. IDENTIDAD: |D19-D20-D21-D22| < 0.01, y lo mismo en E. Es la definicion del bloque.
  *   2. G19 queda vacia (los ingresos no reciben distribucion).
  *   3. G20+G21+G22 = C8 (el reparto ni pierde ni inventa plata), si C8 es numerico.
- *   4. Los tres deltas son numeros finitos.
+ *   4. Las seis celdas AUXILIARES (IP_AUX: tendencia + su promedio derramado) son numeros
+ *      finitos -- son la unica fuente numerica de la que dependen el color y el texto.
+ *   5. Las tres celdas VISIBLES (F10/C15/F15) son TEXTO no vacio y sin error -- desde v0.37.0 YA
+ *      NO son numeros (ver "EL TEXTO DE LOS TRES DELTAS"), asi que "correcto" aca es cualquier
+ *      string que no sea un error de celda ni el marcador de "todavia calculando".
  */
 /**
  * Lee una celda ESPERANDO a que las custom functions terminen de calcular.
@@ -1025,6 +1210,26 @@ function _leerYaCalculadoIp(hoja, celda) {
     }
     const ult = hoja.getRange(celda).getValue();
     return typeof ult === 'number' ? ult : IP_PENDIENTE;
+}
+
+/**
+ * Como _leerYaCalculadoIp, pero para las celdas VISIBLES (F10/C15/F15), que desde v0.37.0 son
+ * TEXTO a proposito -- un NUMERO ahi seria el error de diseno, no un exito. "Correcto" es
+ * cualquier string no vacio que no sea un error de celda (#...) ni el marcador de "todavia
+ * calculando" (el mismo "Loading.../Cargando..." de _leerYaCalculadoIp: F10 depende de su
+ * auxiliar y de E22, las dos con TIDETRACK_* adentro, asi que hereda la misma cicatriz).
+ */
+function _leerTextoYaCalculadoIp(hoja, celda) {
+    const esperas = [0, 600, 1500, 3000];
+    const esPendiente = function (v) { return v === 'Loading...' || v === 'Cargando...'; };
+    for (let i = 0; i < esperas.length; i++) {
+        if (esperas[i]) { SpreadsheetApp.flush(); Utilities.sleep(esperas[i]); }
+        const v = hoja.getRange(celda).getValue();
+        if (typeof v === 'string' && v && v.indexOf('#') === 0) return v;   // error real: no se espera
+        if (typeof v === 'string' && v && !esPendiente(v)) return v;
+    }
+    const ult = hoja.getRange(celda).getValue();
+    return (typeof ult === 'string' && ult && !esPendiente(ult)) ? ult : IP_PENDIENTE;
 }
 
 function _verificarInvariantesIp(hoja) {
@@ -1107,12 +1312,34 @@ function _verificarInvariantesIp(hoja) {
         }
     }
 
+    // Las celdas AUXILIARES (trastienda): tienen que releer NUMEROS, tanto la tendencia como el
+    // promedio derramado a su derecha. Son la unica fuente numerica del color y del texto.
+    IP_CLAVES_DELTA.forEach(function (k) {
+        const cTend = IP_AUX[k].tendencia;
+        const cProm = _celdaPromedioIp(cTend);
+        [[cTend, 'tendencia'], [cProm, 'promedio']].forEach(function (par) {
+            const celda = par[0], v = leer(celda);
+            if (v === IP_PENDIENTE) {
+                avisos.push(celda + ' (' + par[1] + ' auxiliar de ' + IP_RESUMEN[k].nota.toLowerCase() +
+                    ') todavia estaba calculando al releerla.');
+            } else if (typeof v !== 'number' || !isFinite(v)) {
+                fallas.push(celda + ' (' + par[1] + ' auxiliar de ' + IP_RESUMEN[k].nota.toLowerCase() + ') no releyo un numero');
+            }
+        });
+    });
+
+    // Las celdas VISIBLES (F10/C15/F15): desde v0.37.0 ya NO son numeros -- son TEXTO con la
+    // flecha, la tendencia, el promedio y (solo capital) el flujo del periodo. "Correcto" aca es
+    // cualquier string no vacio que no sea un error de celda ni el marcador de "todavia calculando".
+    const leerTexto = function (celda) { return _leerTextoYaCalculadoIp(hoja, celda); };
     [IP_RESUMEN.deltaCapital, IP_RESUMEN.deltaIngresos, IP_RESUMEN.deltaEgresos].forEach(function (d) {
-        const v = leer(d.celda);
+        const v = leerTexto(d.celda);
         if (v === IP_PENDIENTE) {
             avisos.push(d.celda + ' (' + d.nota + ') todavia estaba calculando al releerla.');
-        } else if (typeof v !== 'number' || !isFinite(v)) {
-            fallas.push(d.celda + ' (' + d.nota + ') no releyo un numero');
+        } else if (typeof v === 'string' && v.indexOf('#') === 0) {
+            fallas.push(d.celda + ' (' + d.nota + ') quedo en ' + v);
+        } else if (typeof v !== 'string' || !v) {
+            fallas.push(d.celda + ' (' + d.nota + ') no releyo un texto');
         }
     });
 
@@ -1176,8 +1403,11 @@ function estadoInicioPresupuesto() {
             l.push('  - F19:F22 con la barra de cumplimiento; verde a partir del 80% en Ingresos y');
             l.push('    Capitalizacion, verde por debajo del 50% en los dos bloques de gastos.');
             l.push('  - G20:G22 reparten la liquidez de C8 como Tablero!O23:O25; G19 queda vacia.');
-            l.push('  - F10, C15 y F15 pasan a medir la TENDENCIA de la ventana de ' + IP_MESES_TENDENCIA + ' meses,');
-            l.push('    con formato ' + IP_FORMATO_DELTA + '. C15/F15 reemplazan formulas rotas (0% eterno).');
+            l.push('  - F10, C15 y F15 pasan a ser TEXTO: flecha + tendencia de la ventana de ' +
+                IP_MESES_TENDENCIA + ' meses + el promedio de esa ventana. F10 suma ademas cuanto');
+            l.push('    capital se inyecto o retiro en el mes elegido (lee E22, no lo recalcula).');
+            l.push('    La serie pesada de cada delta se calcula UNA vez, en una celda auxiliar de');
+            l.push('    trastienda (AV8/AV9/AV10); las visibles solo la leen.');
         }
 
         // EL COLOR DE LOS DELTAS. Se reporta SIEMPRE, aunque no haya celdas que escribir: el bug
@@ -1260,15 +1490,22 @@ function aplicarInicioPresupuesto() {
             '  - F19:F22 muestran la barra de cumplimiento con el semaforo de cada fila.\n' +
             '  - G20:G22 reparten la liquidez de C8 igual que Tablero!O23:O25; G19 queda\n' +
             '    vacia porque los ingresos no reciben distribucion.\n' +
-            '  - F10 deja de decir "0% de Crecimiento historico": pasa a medir el capital de\n' +
-            '    la tendencia de los cierres de los ultimos ' + IP_MESES_TENDENCIA + ' meses.\n' +
-            '  - C15 y F15 REEMPLAZAN las formulas rotas (hoy dan 0% siempre) por el delta\n' +
-            '    la tendencia de la ventana de ' + IP_MESES_TENDENCIA + ' meses.\n' +
-            '  - LOS TRES DELTAS PASAN A LLEVAR FLECHA: "' + IP_FLECHA_SUBE + ' 82,0%..." si la\n' +
-            '    tendencia sube, "' + IP_FLECHA_BAJA + ' 52,7%..." si baja. La flecha reemplaza al signo.\n' +
-            '  - Y SU COLOR LO DECIDE ESTE MODULO, con una regla NUMERICA por celda: verde si\n' +
-            '    la noticia es buena, rojo si es mala. Ojo que no es lo mismo que la direccion:\n' +
-            '    en Egresos una flecha para ARRIBA se pinta ROJA.\n' +
+            '  - F10, C15 y F15 PASAN A SER TEXTO (antes eran numero con formato): flecha +\n' +
+            '    tendencia de la ventana de ' + IP_MESES_TENDENCIA + ' meses + el PROMEDIO de esa ventana.\n' +
+            '    "' + IP_FLECHA_SUBE + ' 82,0% de tendencia a 6 meses · promedio $1.610.284,12".\n' +
+            '  - F10 SUMA UN TERCER DATO: cuanto capital se inyecto o retiro en el mes elegido\n' +
+            '    ("$59.989 retirados en Agosto" / "inyectados" / "sin movimientos de capital"),\n' +
+            '    leyendo E22 -- no se recalcula, para que no puedan divergir.\n' +
+            '  - LA VENTANA DE F10 PASA A ANCLAR AL SELECTOR de mes/anio, igual que C15/F15 (antes\n' +
+            '    ataba a HOY). Coincide con hoy en el mes en curso y solo cambia al mirar un mes\n' +
+            '    pasado. OJO: F8 (Capital Acumulado) sigue anclado a HOY -- no es de este modulo.\n' +
+            '  - La serie pesada de cada delta se calcula UNA sola vez, en una celda auxiliar de\n' +
+            '    trastienda (AV8/AV9/AV10, a la derecha del motor de la hoja); las celdas visibles\n' +
+            '    solo la leen.\n' +
+            '  - Y EL COLOR LO DECIDE ESTE MODULO, con una regla NUMERICA por celda que apunta a\n' +
+            '    la auxiliar (nunca al texto visible): verde si la noticia es buena, rojo si es\n' +
+            '    mala. Ojo que no es lo mismo que la direccion: en Egresos una flecha para ARRIBA\n' +
+            '    se pinta ROJA.\n' +
             (plan.reglas.superadas.length
                 ? '  - Se levantan ' + plan.reglas.superadas.length + ' regla(s) vieja(s) del tipo "el texto contiene",\n' +
                   '    que dejan de servir en cuanto la flecha reemplaza al signo. Revertir las repone.\n'
@@ -1368,7 +1605,10 @@ function aplicarInicioPresupuesto() {
             '     rojo arriba. En Ingresos y Capitalizacion la escala se da vuelta: verde del 80% de\n' +
             '     cumplimiento para arriba.\n' +
             '  3. G20+G21+G22 tiene que dar exactamente el Saldo Actual de C8, siempre.\n' +
-            '  4. F10, C15 y F15 muestran +x,x% o -x,x% de tendencia a ' + IP_MESES_TENDENCIA + ' meses.\n\n' +
+            '  4. F10, C15 y F15 muestran flecha + x,x% de tendencia a ' + IP_MESES_TENDENCIA + ' meses + el\n' +
+            '     promedio de la ventana. F10 suma cuanto capital se inyecto/retiro en el mes\n' +
+            '     elegido. Si alguna muestra "Loading..." es la cotizacion todavia resolviendo,\n' +
+            '     no un error -- se corrige sola al reabrir o recalcular la hoja.\n\n' +
             'Si algo quedo peor: revertirInicioPresupuesto (menu Tidetrack Dev).';
 
         logSuccess('aplicarInicioPresupuesto: ' + escritas.length + ' celda(s).');

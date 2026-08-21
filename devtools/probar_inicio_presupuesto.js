@@ -2,7 +2,7 @@
  * devtools/probar_inicio_presupuesto.js
  * Banco de pruebas de DEVTOOL_InicioPresupuesto.js.
  *
- * Tres mitades:
+ * Cuatro mitades:
  *
  * 1. ESTRUCTURA DE LAS FORMULAS que el modulo emite: cero arrays literales {} (setFormula no
  *    los traduce en es_AR), cero comas fuera de strings (el separador es ;, y un decimal 0,5
@@ -16,11 +16,21 @@
  *    barrido desde el plan real).
  *
  * 3. LA MATEMATICA, espejada en JS: la identidad D19=D20+D21+D22, los tres regimenes del
- *    reparto (mismo diseno que DEVTOOL_Capitalizacion) y el delta contra la media. No prueban
- *    la formula: prueban el DISENO, y la mitad 1 ata el espejo a la forma de la formula.
+ *    reparto (mismo diseno que DEVTOOL_Capitalizacion), el delta contra la tendencia, y desde
+ *    v0.37.0 el PROMEDIO de esa misma ventana. No prueban la formula: prueban el DISENO, y la
+ *    mitad 1 ata el espejo a la forma de la formula.
+ *
+ * 4. DESDE v0.37.0: que las celdas AUXILIARES (trastienda AV/AW) carguen la formula pesada UNA
+ *    sola vez, que las celdas VISIBLES (F10/C15/F15) sean texto liviano que solo LEE esas
+ *    auxiliares, que el color siga siendo numerico apuntando a la auxiliar (nunca al texto), y
+ *    que F10 sume el flujo del periodo REFERENCIANDO E22 en vez de recalcularlo. Cubre, por
+ *    mutacion dirigida: la regla de color mirando el texto en vez de la auxiliar (el bug de
+ *    v0.34.0, reconstruido a proposito), la serie pesada calculada dos veces, F10 anclado a
+ *    TODAY() en vez del selector, el flujo reimplementado en vez de leer E22, el monto del
+ *    flujo con signo Y con la palabra a la vez, y la palabra invertida (positivo="retirados").
  *
  * USO:  node devtools/probar_inicio_presupuesto.js
- * @version 0.31.0
+ * @version 0.37.0
  * @since 2026-08-20
  */
 const fs = require('fs'), vm = require('vm'), path = require('path');
@@ -52,8 +62,8 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Proyeccion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Capitalizacion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_InicioPresupuesto.js'), 'utf8') +
-    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CUENTAS_NEUTRAS,CUENTA_ARRASTRE,CAP_SELECTORES,IP_RESUMEN,IP_FORMATO_DELTA,IP_SUFIJO_DELTA,IP_MESES_TENDENCIA,' +
-    'MONEDAS_DISPONIBLES,IP_BLOQUE,IP_RESUMEN,IP_SELECTORES,IP_MOTOR,IP_FORMATO_DELTA,IP_MESES_TENDENCIA,IP_FLECHA_SUBE,IP_FLECHA_BAJA,IP_FLECHA_PLANA,IP_CLAVES_DELTA,IP_MAS_ES_MEJOR,IP_MENOS_ES_MEJOR,IP_COLOR_VERDE,IP_COLOR_ROJO});',
+    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CUENTAS_NEUTRAS,CUENTA_ARRASTRE,CAP_SELECTORES,IP_RESUMEN,IP_AUX,IP_SUFIJO_DELTA,IP_MESES_TENDENCIA,' +
+    'MONEDAS_DISPONIBLES,IP_BLOQUE,IP_RESUMEN,IP_SELECTORES,IP_MOTOR,IP_MESES_TENDENCIA,IP_FLECHA_SUBE,IP_FLECHA_BAJA,IP_FLECHA_PLANA,IP_CLAVES_DELTA,IP_MAS_ES_MEJOR,IP_MENOS_ES_MEJOR,IP_COLOR_VERDE,IP_COLOR_ROJO,IP_PATRON_PORCENTAJE,IP_PATRON_MONEDA,IP_SEPARADOR});',
     ctx);
 
 // ============================================================================
@@ -95,10 +105,9 @@ const hojaFalsa = {
     getConditionalFormatRules: () => []
 };
 const plan = ctx._planIp(null, { hoja: hojaFalsa, nombre: 'Inicio' });
-const porCelda = {}, formatos = {};
+const porCelda = {};
 plan.cambios.forEach(c => {
-    if (c.esFormato) formatos[c.celda] = c.formatoNuevo;
-    else porCelda[c.celda] = c.formulaNueva;
+    if (!c.esFormato) porCelda[c.celda] = c.formulaNueva;
 });
 
 console.log('=== 0. Las tres publicas existen ===');
@@ -109,17 +118,16 @@ console.log('\n=== 1. EL CABLEADO: que celda recibe que ===');
 {
     const esperadasFormula = ['D19', 'D20', 'D21', 'D22', 'E19', 'E20', 'E21', 'E22',
                               'F19', 'F20', 'F21', 'F22', 'G19', 'G20', 'G21', 'G22',
-                              'F10', 'C15', 'F15'];
-    const esperadasFormato = ['F10', 'C15', 'F15'];
+                              'AV8', 'AV9', 'AV10', 'F10', 'C15', 'F15'];
     ok(Object.keys(porCelda).length === esperadasFormula.length,
        'el plan propone ' + esperadasFormula.length + ' formulas. Propuso ' + Object.keys(porCelda).length);
     esperadasFormula.forEach(c => ok(!!porCelda[c], c + ' recibe formula'));
     Object.keys(porCelda).forEach(c => ok(esperadasFormula.indexOf(c) !== -1,
        c + ' esta en la lista esperada (no hay celdas de mas)'));
-    ok(Object.keys(formatos).length === esperadasFormato.length,
-       'el plan propone ' + esperadasFormato.length + ' formatos. Propuso ' + Object.keys(formatos).length);
-    esperadasFormato.forEach(c => ok(formatos[c] === ctx.IP_FORMATO_DELTA,
-       c + ' recibe el formato ' + ctx.IP_FORMATO_DELTA + '. Recibio "' + formatos[c] + '"'));
+    // DESDE v0.37.0: los deltas son TEXTO por formula, no numero con formato. Ningun cambio
+    // propuesto puede ser de formato -- si alguno lo fuera, seria un resabio del diseno v0.34.0.
+    ok(plan.cambios.every(c => !c.esFormato),
+       'ningun cambio propuesto es de formato: los tres deltas dejaron de ser numero con formato');
 }
 
 console.log('\n=== 1b. Ningun modulo se pisa con otro (barrido anti-colision) ===');
@@ -156,7 +164,7 @@ console.log('\n=== 1b. Ningun modulo se pisa con otro (barrido anti-colision) ==
         : 'el plan no toca ninguna celda que ya escriba otro modulo');
 }
 
-console.log('\n=== 2. Estructura de las 19 formulas ===');
+console.log('\n=== 2. Estructura de las 22 formulas ===');
 Object.keys(porCelda).forEach(c => { if (revisar(c, porCelda[c])) console.log('  OK  ' + c); });
 
 console.log('\n=== 3. LA IDENTIDAD: la Capacidad es el residuo, en las dos columnas ===');
@@ -350,17 +358,21 @@ console.log('\n=== 7b. La regla de reparto (espejo en JS del diseno, como en pro
     ok(peor < 0.000001, '3000 casos al azar: las tres siempre suman la liquidez (peor desvio ' + peor.toExponential(1) + ')');
 }
 
-console.log('\n=== 8. F10: el delta de capital ===');
+console.log('\n=== 8. AV8 (auxiliar de capital): la formula pesada, ANCLADA AL SELECTOR ===');
 {
-    const f = porCelda.F10;
+    const f = porCelda.AV8;
     ok(f.indexOf('MAP(SEQUENCE(' + ctx.IP_MESES_TENDENCIA + ')') !== -1,
-       'F10 recorre los ' + ctx.IP_MESES_TENDENCIA + ' meses previos con MAP/SEQUENCE, sin arrays literales');
-    ok(/EOMONTH\(TODAY\(\); k_mes - 6\)/.test(f), 'cada punto de la serie es el EOMONTH de TODAY() corrido k-6 meses');
-    // k va 1..6, asi que los corrimientos son -5..0: la ventana CIERRA en el mes en curso. Una
-    // ventana que terminara el mes pasado no veria el movimiento que Franco acaba de cargar.
-    ok(!/EOMONTH\(TODAY\(\); -k_mes\)/.test(f), 'la ventana termina en el mes en curso, no el mes pasado');
-    ok(!/\$I\$2|\$I\$3/.test(f), 'F10 NO depende del selector de mes: el capital es un stock');
-    ok(!/\$I\$4/.test(f), 'F10 NO depende del selector de moneda: el delta es un cociente en ARS');
+       'AV8 recorre los ' + ctx.IP_MESES_TENDENCIA + ' meses previos con MAP/SEQUENCE, sin arrays literales');
+    // decision Franco 2026-08-21: la ventana ahora ANCLA AL SELECTOR, no a TODAY(). Es la
+    // mutacion que Franco pidio cubrir explicitamente: "la tendencia del capital anclada a
+    // TODAY() en vez de al selector" tiene que morir aca.
+    ok(/EOMONTH\(ancla_mes; k_mes - 6\)/.test(f),
+       'AV8 ancla cada punto de la serie al selector (ancla_mes), no a TODAY()');
+    ok(!/TODAY\(\)/.test(f), 'AV8 YA NO usa TODAY() en ningun lado');
+    ok(/mes_num; MATCH\(\$I\$2; SPLIT\("Enero,/.test(f) && /ancla_mes; DATE\(\$I\$3; mes_num; 1\)/.test(f),
+       'AV8 resuelve el mes con el MISMO patron que los auxiliares de flujo (selector de Inicio)');
+    ok(/\$I\$2/.test(f) && /\$I\$3/.test(f), 'AV8 SI depende del selector de mes/anio (dejo de ser un stock puro)');
+    ok(!/\$I\$4/.test(f), 'AV8 NO depende del selector de moneda: el delta es un cociente en ARS');
     ok(f.indexOf('col_cuenta="' + ctx.CUENTA_ARRASTRE + '"') !== -1 && f.indexOf('col_fecha<=tope') !== -1,
        'el corte es el ultimo "' + ctx.CUENTA_ARRASTRE + '" de cada medio ACOTADO a la fecha de cierre');
     ctx.TIPOS_RIQUEZA.forEach(t => ok(f.indexOf('(tipo_fila="' + t + '")') !== -1,
@@ -368,13 +380,59 @@ console.log('\n=== 8. F10: el delta de capital ===');
     ok(f.indexOf("'Plan de Cuentas'!") !== -1, 'el tipo del medio sale del Plan de Cuentas vivo (no del mapa TDM)');
     ok(/TIDETRACK_USD\(\)/.test(f) && /TIDETRACK_AUD\(\)/.test(f) && /TIDETRACK_EUR\(\)/.test(f),
        'convierte las monedas por funcion, no por coordenada');
-    ok(/SLOPE\(serie_cap; SEQUENCE\(6\)\)/.test(f), 'F10 mide la TENDENCIA de la serie (SLOPE), no un mes contra una media');
-    ok(!/capital_hoy/.test(f), 'F10 ya no compara el capital de hoy contra nada: un punto solo no es una tendencia');
-    ok(!/AVERAGE\(cierres_previos\)/.test(f), 'F10 ya no promedia cierres previos');
+    ok(/SLOPE\(serie_cap; SEQUENCE\(6\)\)/.test(f), 'AV8 mide la TENDENCIA de la serie (SLOPE)');
+    ok(f.indexOf('HSTACK(tend_frac; nivel_tend)') !== -1,
+       'AV8 termina en HSTACK(tendencia; promedio): las dos salen de la MISMA serie, calculada una sola vez');
+    ok(!/capital_hoy/.test(f), 'AV8 no compara el capital de hoy contra nada: un punto solo no es una tendencia');
+    ok(!/AVERAGE\(cierres_previos\)/.test(f), 'AV8 no promedia cierres previos por fuera de _tendenciaYPromedioIp');
 }
 
-console.log('\n=== 9. C15 y F15: los deltas de flujo (reemplazan las formulas rotas) ===');
-[['C15', true], ['F15', false]].forEach(par => {
+console.log('\n=== 8b. F10 (visible): LEE la auxiliar, no la recalcula, y agrega el flujo del periodo ===');
+{
+    const f = porCelda.F10;
+    // LA SERIE PESADA NO SE DUPLICA: si F10 volviera a traer alguno de estos tokens, la estaria
+    // recalculando por su cuenta -- exactamente la mutacion que Franco pidio cubrir.
+    ['MAP(SEQUENCE', 'SLOPE(', 'capital_al', 'FILTER(', 'TIDETRACK_USD()', 'TIDETRACK_AUD()', 'TIDETRACK_EUR()']
+        .forEach(tok => ok(f.indexOf(tok) === -1, 'F10 NO contiene "' + tok + '": la serie pesada vive SOLO en la auxiliar AV8'));
+
+    const refTend = ctx._absIp(ctx.IP_AUX.deltaCapital.tendencia);
+    const refProm = ctx._absIp(ctx._celdaPromedioIp(ctx.IP_AUX.deltaCapital.tendencia));
+    ok(refTend === '$AV$8', 'la auxiliar de capital es AV8. Dio ' + refTend);
+    ok(refProm === '$AW$8', 'el promedio de capital derrama en AW8, una columna a la derecha de AV8. Dio ' + refProm);
+    ok(f.indexOf(refTend) !== -1, 'F10 lee la tendencia de la auxiliar (' + refTend + ')');
+    ok(f.indexOf(refProm) !== -1, 'F10 lee el promedio derramado de la auxiliar (' + refProm + ')');
+
+    // EL FLUJO DEL PERIODO: se REFERENCIA E22, no se recalcula. Mutacion pedida por Franco: "el
+    // flujo del periodo calculado con una formula propia en vez de reusar _formulaHaciaRiqueza".
+    const refE22 = ctx._absIp(ctx.IP_BLOQUE.colRealidad + ctx.IP_BLOQUE.filas.capitalizacion.fila);
+    ok(refE22 === '$E$22', 'la celda de capitalizacion real es E22. Dio ' + refE22);
+    ok(f.indexOf(refE22) !== -1, 'F10 lee ' + refE22 + ' (la MISMA capitalizacion medida que ya usan E22 y Tablero!O19)');
+    ok(f.indexOf(ctx.RANGES.REGISTROS.sheet + '!') === -1,
+       'F10 NO lee Registros directo: el flujo del periodo sale de referenciar E22, no de recalcularlo');
+    ['es_riqueza', 'no_corte', 'tipo_medio', 'signo;'].forEach(tok =>
+        ok(f.indexOf(tok) === -1, 'F10 no reimplementa _formulaHaciaRiqueza (sin "' + tok + '"): la reusa por referencia'));
+
+    // "inyectados" si es positivo, "retirados" si es negativo, EN ESE ORDEN -- la palabra
+    // invertida es una de las mutaciones que Franco pidio cubrir explicitamente.
+    ok(/flujo>0; TEXT\(flujo; "\$#\.##0,00"\) & " inyectados en " & \$I\$2/.test(f),
+       'F10: flujo POSITIVO dice "inyectados", SIN ABS() -- ahi el signo ya es positivo');
+    ok(/flujo<0; TEXT\(ABS\(flujo\); "\$#\.##0,00"\) & " retirados en " & \$I\$2/.test(f),
+       'F10: flujo NEGATIVO dice "retirados" y usa ABS() -- la palabra ya dice el signo, no se repite con un "-"');
+    ok(f.indexOf('"sin movimientos de capital en " & $I$2') !== -1,
+       'F10: flujo en CERO tiene su propia frase (ni "inyectados" ni "retirados" describen a cero)');
+    ok(f.indexOf('$I$2') !== -1, 'F10 nombra el MES elegido (selector), no un mes fijo');
+
+    // EL GUARDIAN ISNUMBER: sin el, un "Loading..." de la auxiliar o de E22 se concatenaria como
+    // si fuera un dato, en vez de mostrarse tal cual.
+    ['ISNUMBER(tendencia)', 'ISNUMBER(promedio)', 'ISNUMBER(flujo)'].forEach(tok =>
+        ok(f.indexOf(tok) !== -1, 'F10 revisa ' + tok + ' antes de armar el texto'));
+    ok(/pendiente; IF\(NOT\(ISNUMBER\(tendencia\)\); tendencia;/.test(f),
+       'si la tendencia no es numero, F10 propaga ESA celda pendiente tal cual (no arma texto encima)');
+    ok(/IF\(pendiente<>""; pendiente; LET\(/.test(f), 'F10 corta ANTES de concatenar si algo esta pendiente');
+}
+
+console.log('\n=== 9. AV9 y AV10 (auxiliares de flujo): la formula pesada de ingresos/egresos ===');
+[['AV9', true], ['AV10', false]].forEach(par => {
     const c = par[0], esIngresos = par[1];
     const f = porCelda[c];
     ok(f.indexOf('Registros!') !== -1, c + ' lee directo de Registros');
@@ -387,6 +445,8 @@ console.log('\n=== 9. C15 y F15: los deltas de flujo (reemplazan las formulas ro
     ok(/EOMONTH\(ini_k; 0\)/.test(f) && /col_fecha>=ini_k/.test(f) && /col_fecha<=fin_k/.test(f),
        c + ' cada punto es un mes calendario cerrado');
     ok(/SLOPE\(serie_flujo; SEQUENCE\(6\)\)/.test(f), c + ' mide la TENDENCIA de la serie, no el mes contra una media');
+    ok(f.indexOf('HSTACK(tend_frac; nivel_tend)') !== -1,
+       c + ' termina en HSTACK(tendencia; promedio): una sola serie, dos numeros');
     ok(!/monto_previos|media_prev|monto_actual/.test(f), c + ' ya no separa "el mes" de "los previos"');
     ctx.CUENTAS_NEUTRAS.forEach(cta => ok(f.indexOf('<>"' + cta + '"') !== -1,
        c + ' excluye la cuenta neutra "' + cta + '"'));
@@ -403,15 +463,29 @@ console.log('\n=== 9. C15 y F15: los deltas de flujo (reemplazan las formulas ro
     }
 });
 
-console.log('\n=== 9b. La tendencia (espejo en JS del diseno) ===');
+console.log('\n=== 9b. C15 y F15 (visibles): LEEN su auxiliar, no la recalculan ===');
+[['C15', 'deltaIngresos'], ['F15', 'deltaEgresos']].forEach(par => {
+    const celda = par[0], clave = par[1];
+    const f = porCelda[celda];
+    ['MAP(SEQUENCE', 'SLOPE(', 'FILTER(', 'Registros!'].forEach(tok =>
+        ok(f.indexOf(tok) === -1, celda + ' NO contiene "' + tok + '": la serie pesada vive SOLO en la auxiliar'));
+    const refTend = ctx._absIp(ctx.IP_AUX[clave].tendencia);
+    const refProm = ctx._absIp(ctx._celdaPromedioIp(ctx.IP_AUX[clave].tendencia));
+    ok(f.indexOf(refTend) !== -1, celda + ' lee la tendencia de su auxiliar (' + refTend + ')');
+    ok(f.indexOf(refProm) !== -1, celda + ' lee el promedio derramado (' + refProm + ')');
+});
+
+console.log('\n=== 9c. La tendencia Y el promedio (espejo en JS del diseno) ===');
 {
-    // Espejo exacto de _tendenciaIp: pendiente de minimos cuadrados sobre los 6 puntos,
-    // multiplicada por el largo de la ventana, sobre el nivel medio.
+    // Espejo exacto de _tendenciaYPromedioIp: pendiente de minimos cuadrados sobre los 6 puntos,
+    // multiplicada por el largo de la ventana, sobre el nivel medio (tendencia); y el nivel
+    // medio crudo (promedio) -- el mismo AVERAGE que ya se calculaba y se descartaba.
+    const promedio = serie => serie.reduce((a, b) => a + b, 0) / serie.length;
     const tendencia = serie => {
         const n = serie.length;
         const xs = serie.map((_, i) => i + 1);
         const mx = xs.reduce((a, b) => a + b, 0) / n;
-        const my = serie.reduce((a, b) => a + b, 0) / n;
+        const my = promedio(serie);
         const num = serie.reduce((a, y, i) => a + (xs[i] - mx) * (y - my), 0);
         const den = xs.reduce((a, x) => a + (x - mx) * (x - mx), 0);
         const pend = den === 0 ? 0 : num / den;
@@ -440,11 +514,15 @@ console.log('\n=== 9b. La tendencia (espejo en JS del diseno) ===');
     ok(viejoDelta === 1, 'el diseno viejo leia ese pico como +100%');
     ok(tendencia(conPico) < viejoDelta, 'la tendencia no se deja arrastrar por un mes suelto: dio ' +
        (tendencia(conPico) * 100).toFixed(1) + '%, contra el ' + (viejoDelta * 100).toFixed(0) + '% de antes');
-    // Y el contraste que cierra el argumento: el mismo salto REPARTIDO en los seis meses -- una
-    // tendencia de verdad -- pesa MAS que el pico suelto, que es exactamente al reves de como lo
-    // leia el diseno viejo (ahi los dos daban +100%).
     ok(tendencia([100, 120, 140, 160, 180, 200]) > tendencia(conPico),
        'un crecimiento sostenido pesa mas que un mes aislado; el diseno viejo no los distinguia');
+
+    // EL PROMEDIO -- desde v0.37.0 se EXPONE en vez de descartarse. Es el nivel medio crudo, sin
+    // ABS(): un capital promedio negativo (una deuda promedio) tiene que seguir viendose negativo.
+    ok(cerca(promedio([100, 110, 120, 130, 140, 150]), 125), 'el promedio de la ventana es su AVERAGE simple');
+    ok(cerca(promedio([-500, -400, -300, -200, -100, -50]), -1550 / 6),
+       'el promedio conserva el signo: una deuda promedio sigue siendo negativa');
+    ok(cerca(promedio([0, 0, 0, 0, 0, 0]), 0), 'una ventana entera en cero promedia cero, sin division por nada');
 }
 
 console.log('\n=== 10. Coherencia con las constantes del modulo ===');
@@ -459,91 +537,110 @@ console.log('\n=== 10. Coherencia con las constantes del modulo ===');
        'C8/F8 estan declaradas SOLO para revisarlas: el plan no las propone (verificado en 1b)');
     ok(ctx.IP_SELECTORES.mes === 'I2' && ctx.IP_SELECTORES.anio === 'I3' && ctx.IP_SELECTORES.moneda === 'I4',
        'los selectores son I2/I3/I4: la moneda vive en I4, G4 es solo el rotulo');
-    // El lenguaje de patrones de setNumberFormat es INDEPENDIENTE DEL LOCALE: '.' es siempre el
-    // separador decimal. Con coma, Sheets lo lee como separador de MILES y el decimal desaparece
-    // ('+35%' en vez de '+34,5%'), sin ningun error. Se ve con coma porque asi lo RENDERIZA es_AR.
-    ok(/0\.0%/.test(ctx.IP_FORMATO_DELTA) && !/0,0%/.test(ctx.IP_FORMATO_DELTA),
-       'el patron del delta usa PUNTO decimal (se muestra con coma). Dio ' + ctx.IP_FORMATO_DELTA);
-    // LAS FLECHAS (decision Franco 2026-08-21). Tres secciones: positivo ; negativo ; cero.
-    const secciones = ctx.IP_FORMATO_DELTA.split('";"');
-    ok(ctx.IP_FORMATO_DELTA.split(';').length >= 3, 'el patron tiene las tres secciones (sube/baja/plana)');
-    ok(ctx.IP_FORMATO_DELTA.indexOf('"' + ctx.IP_FLECHA_SUBE + ' "') === 0,
-       'la seccion POSITIVA abre con la flecha para arriba');
-    ok(ctx.IP_FORMATO_DELTA.indexOf('"' + ctx.IP_FLECHA_BAJA + ' "0.0%') !== -1,
-       'la seccion NEGATIVA lleva la flecha para abajo');
-    ok(ctx.IP_FORMATO_DELTA.indexOf(ctx.IP_FLECHA_PLANA) !== -1,
-       'hay una tercera seccion para el cero: una tendencia plana no es ni subida ni bajada');
-    // LA FLECHA REEMPLAZA AL SIGNO. Si quedara un "-" literal en la seccion negativa se leeria
-    // "BAJA -52,7%", que dice dos veces lo mismo; y si quedara un "+" en la positiva, las reglas
-    // viejas de "el texto contiene" volverian a engancharse.
-    ok(ctx.IP_FORMATO_DELTA.indexOf('+') === -1 && ctx.IP_FORMATO_DELTA.indexOf('-') === -1,
-       'ni "+" ni "-" en el patron: la flecha ya dice para donde fue');
-    ok(!/0,0%/.test(ctx.IP_FORMATO_DELTA),
-       'ninguna coma en la parte NUMERICA: seria separador de miles y se comeria el decimal');
-    // decision Franco 2026-08-21: el delta lleva texto que diga contra que se compara.
-    ok(ctx.IP_FORMATO_DELTA.indexOf(ctx.IP_SUFIJO_DELTA) !== -1,
-       'el patron concatena el texto explicativo: "' + ctx.IP_SUFIJO_DELTA + '"');
-    ok((ctx.IP_FORMATO_DELTA.match(/"/g) || []).length % 2 === 0,
-       'las comillas del texto literal estan balanceadas');
+
+    // LA GEOMETRIA DE LAS AUXILIARES, medida contra el gemelo el 2026-08-21 (celdas.tsv).
+    ok(ctx.IP_AUX.deltaCapital.tendencia === 'AV8' && ctx.IP_AUX.deltaIngresos.tendencia === 'AV9' &&
+       ctx.IP_AUX.deltaEgresos.tendencia === 'AV10',
+       'las tres auxiliares son AV8/AV9/AV10: una fila por delta, calcando las filas del resumen visible');
+    ok(ctx._celdaPromedioIp('AV8') === 'AW8' && ctx._celdaPromedioIp('AV9') === 'AW9' &&
+       ctx._celdaPromedioIp('AV10') === 'AW10',
+       'el promedio de cada delta cae una columna a la derecha de su tendencia -- ahi derrama el HSTACK');
+    ok(ctx._celdaPromedioIp('Z99') === 'AA99',
+       '_celdaPromedioIp generaliza mas alla de la columna AV: no hardcodea la letra');
+
+    // LOS PATRONES DE TEXT(): van adentro de una FORMULA (setFormula), asi que se escriben en
+    // es_AR -- coma decimal, punto de miles -- al REVES de setNumberFormat (que es independiente
+    // del locale). Ver la cabecera "EL TEXTO DE LOS TRES DELTAS".
+    ok(ctx.IP_PATRON_PORCENTAJE === '0,0%', 'el patron de porcentaje usa coma decimal. Dio ' + ctx.IP_PATRON_PORCENTAJE);
+    ok(ctx.IP_PATRON_MONEDA === '$#.##0,00', 'el patron de moneda usa punto de miles y coma decimal. Dio ' + ctx.IP_PATRON_MONEDA);
+    ok(ctx.IP_SEPARADOR.indexOf('·') !== -1, 'el separador visual es un punto medio (U+00B7), tipografia y no emoji');
+
+    // LAS FLECHAS siguen vivas: se concatenan a mano ahora (ya no van en un formato de numero).
+    ok(ctx.IP_FLECHA_SUBE === '▲' && ctx.IP_FLECHA_BAJA === '▼' && ctx.IP_FLECHA_PLANA === '–',
+       'las flechas son simbolos geometricos Unicode, no emojis');
+
+    // El sufijo se sigue derivando de IP_MESES_TENDENCIA: no puede desfasarse de la ventana real.
     ok(ctx.IP_SUFIJO_DELTA.indexOf(String(ctx.IP_MESES_TENDENCIA)) !== -1,
-       'el texto nombra los ' + ctx.IP_MESES_TENDENCIA + ' meses que realmente se promedian: no puede desfasarse');
-    // Va en el FORMATO, no en un TEXT(): la celda tiene que seguir siendo un numero.
-    ok(!/TEXT\(/.test(ctx._formulaDeltaIp ? ctx._formulaDeltaIp('capital') : ''),
-       'el delta NO usa TEXT(): con texto la celda dejaria de ser numero y nada lo delataria');
+       'el sufijo nombra los ' + ctx.IP_MESES_TENDENCIA + ' meses que realmente se promedian');
+
+    // Y LAS TRES VISIBLES USAN ESTAS PIEZAS DE VERDAD, no solo la constante existe suelta.
+    [['F10', 'deltaCapital'], ['C15', 'deltaIngresos'], ['F15', 'deltaEgresos']].forEach(par => {
+        const celda = par[0], clave = par[1], f = porCelda[celda];
+        ok(f.indexOf(ctx.IP_SUFIJO_DELTA) !== -1, celda + ' concatena el sufijo de tendencia');
+        ok(f.indexOf(ctx.IP_SEPARADOR) !== -1, celda + ' concatena el separador visual');
+        ok(f.indexOf('promedio ') !== -1, celda + ' rotula el promedio con la palabra "promedio"');
+        ok(f.indexOf(ctx.IP_PATRON_MONEDA) !== -1, celda + ' formatea el promedio en pesos con el patron de moneda');
+        // LA FLECHA REEMPLAZA AL SIGNO: se arma con IF(tendencia>0/<0/else), y el porcentaje va
+        // en ABS() -- si no, "-52,7%" repetiria el signo que la flecha ya dijo.
+        ok(new RegExp('flecha; IF\\(tendencia>0; "' + ctx.IP_FLECHA_SUBE + '"; IF\\(tendencia<0; "' +
+            ctx.IP_FLECHA_BAJA + '"; "' + ctx.IP_FLECHA_PLANA + '"\\)\\)').test(f),
+           celda + ' arma la flecha por el SIGNO de la tendencia, en el orden sube/baja/plana');
+        ok(f.indexOf('TEXT(ABS(tendencia); "' + ctx.IP_PATRON_PORCENTAJE + '")') !== -1,
+           celda + ' formatea el porcentaje en ABS(tendencia): la flecha ya dice el signo, no se repite');
+        ok(!/TEXT\(tendencia;/.test(f),
+           celda + ' nunca formatea la tendencia CON signo (seria "+52,7%" y flecha diciendo lo mismo dos veces)');
+        void clave;
+    });
 }
 
-console.log('\n=== 11. EL COLOR DE LOS DELTAS (el bug que encontro Franco) ===');
+console.log('\n=== 11. EL COLOR DE LOS DELTAS: apunta a la AUXILIAR, nunca al texto visible ===');
 {
-    const R = ctx.IP_RESUMEN;
+    const R = ctx.IP_RESUMEN, A = ctx.IP_AUX;
     const reglas = ctx._reglasDeltaIp();
     ok(reglas.length === 6, 'seis reglas: un par por celda, ni una compartida. Dio ' + reglas.length);
 
-    // UNA CELDA POR REGLA. El bug del 2026-08-21 fue exactamente esto: F10 (capital) estaba
-    // AGRUPADO con F15 (egresos) en una sola regla, y heredo la polaridad de los egresos.
-    // Por eso el capital mostraba "+82,0%" EN ROJO.
     reglas.forEach(r => {
         ok(/^=\$[A-Z]+\$\d+[<>]0$/.test(r.formula),
            r.celda + ': la condicion es NUMERICA sobre una sola celda (' + r.formula + ')');
         ok(!/contiene|TEXT|"/.test(r.formula),
            r.celda + ': no mira el texto mostrado -- eso se rompe solo al cambiar el formato');
+
+        // LA MUTACION CENTRAL que Franco pidio cubrir: la regla de color apuntando a la celda de
+        // TEXTO (F10/C15/F15) en vez de a la auxiliar numerica. Sobre un texto la condicion NO
+        // SE CUMPLE NUNCA -- exactamente la superficie del bug de v0.34.0, en otro punto del
+        // mismo modulo.
+        const refAux = ctx._absIp(A[r.clave].tendencia);
+        const refVisible = ctx._absIp(R[r.clave].celda);
+        ok(r.formula === '=' + refAux + '>0' || r.formula === '=' + refAux + '<0',
+           r.celda + ': la formula evalua la auxiliar ' + refAux + '. Dio ' + r.formula);
+        ok(r.formula.indexOf(refVisible) === -1,
+           r.celda + ': la formula NO menciona la celda visible ' + refVisible +
+           ' -- sobre un texto la condicion no se cumpliria nunca');
+        ok(r.celda === R[r.clave].celda, 'el RANGO que se pinta sigue siendo la celda visible ' + R[r.clave].celda);
     });
-    const porCelda = {};
-    reglas.forEach(r => { porCelda[r.celda] = (porCelda[r.celda] || 0) + 1; });
-    ctx.IP_CLAVES_DELTA.forEach(k => ok(porCelda[R[k].celda] === 2,
+
+    const porCeldaReglas = {};
+    reglas.forEach(r => { porCeldaReglas[r.celda] = (porCeldaReglas[r.celda] || 0) + 1; });
+    ctx.IP_CLAVES_DELTA.forEach(k => ok(porCeldaReglas[R[k].celda] === 2,
        R[k].celda + ' tiene exactamente su propio par de reglas'));
 
-    // LA POLARIDAD, que es el fondo del asunto.
-    const color = (celda, signo) => {
-        const r = reglas.find(x => x.celda === celda && x.formula.indexOf(signo + '0') !== -1);
+    // LA POLARIDAD, que es el fondo del asunto (heredado de v0.34.0, sigue vigente).
+    const color = (clave, signo) => {
+        const refAux = ctx._absIp(A[clave].tendencia);
+        const r = reglas.find(x => x.clave === clave && x.formula === '=' + refAux + signo + '0');
         return r && r.color;
     };
-    ok(color(R.deltaCapital.celda, '>') === ctx.IP_COLOR_VERDE,
+    ok(color('deltaCapital', '>') === ctx.IP_COLOR_VERDE,
        'capital que SUBE -> verde. Es el caso que Franco reporto en rojo');
-    ok(color(R.deltaCapital.celda, '<') === ctx.IP_COLOR_ROJO, 'capital que BAJA -> rojo');
-    ok(color(R.deltaIngresos.celda, '>') === ctx.IP_COLOR_VERDE, 'ingresos que SUBEN -> verde');
-    ok(color(R.deltaIngresos.celda, '<') === ctx.IP_COLOR_ROJO, 'ingresos que BAJAN -> rojo');
-    // Y la que NO es como las otras dos: en egresos la flecha para arriba es mala noticia.
-    ok(color(R.deltaEgresos.celda, '>') === ctx.IP_COLOR_ROJO,
+    ok(color('deltaCapital', '<') === ctx.IP_COLOR_ROJO, 'capital que BAJA -> rojo');
+    ok(color('deltaIngresos', '>') === ctx.IP_COLOR_VERDE, 'ingresos que SUBEN -> verde');
+    ok(color('deltaIngresos', '<') === ctx.IP_COLOR_ROJO, 'ingresos que BAJAN -> rojo');
+    ok(color('deltaEgresos', '>') === ctx.IP_COLOR_ROJO,
        'egresos que SUBEN -> ROJO, aunque la flecha apunte para el mismo lado que en capital');
-    ok(color(R.deltaEgresos.celda, '<') === ctx.IP_COLOR_VERDE, 'egresos que BAJAN -> verde');
+    ok(color('deltaEgresos', '<') === ctx.IP_COLOR_VERDE, 'egresos que BAJAN -> verde');
+    ok(color('deltaCapital', '>') !== color('deltaEgresos', '>'),
+       'capital y egresos NO pueden compartir polaridad: agruparlos fue el bug de v0.34.0');
 
-    // LA MUTACION QUE IMPORTA: si alguien vuelve a darle a los tres el mismo sentido, capital y
-    // egresos se pintan igual, que es de donde venimos.
-    ok(color(R.deltaCapital.celda, '>') !== color(R.deltaEgresos.celda, '>'),
-       'capital y egresos NO pueden compartir polaridad: agruparlos fue el bug');
-
-    ok(ctx.IP_RESUMEN.deltaEgresos.sentido === ctx.IP_MENOS_ES_MEJOR,
-       'egresos declara menos_es_mejor');
+    ok(ctx.IP_RESUMEN.deltaEgresos.sentido === ctx.IP_MENOS_ES_MEJOR, 'egresos declara menos_es_mejor');
     ok(ctx.IP_RESUMEN.deltaCapital.sentido === ctx.IP_MAS_ES_MEJOR &&
        ctx.IP_RESUMEN.deltaIngresos.sentido === ctx.IP_MAS_ES_MEJOR,
        'capital e ingresos declaran mas_es_mejor');
 }
 
-console.log('\n=== 11a. La regla CONSTRUIDA: el rango tiene que ser de UNA celda ===');
+console.log('\n=== 11a. La regla CONSTRUIDA: rango = celda visible, formula = auxiliar (DISTINTAS) ===');
 {
-    // Probar el plan y NO la construccion dejaba un agujero justo donde vivia el bug: el rango
-    // se fija en _construirReglaDeltaIp, no en _reglasDeltaIp. Una mutacion que le pusiera
-    // 'F10:F15' a las seis reglas pasaba el banco entero sin que nada chistara.
+    // Probar el plan y NO la construccion dejaba un agujero justo donde vivia el bug de v0.34.0:
+    // el rango se fija en _construirReglaDeltaIp, no en _reglasDeltaIp.
     const espia = [];
     ctx.SpreadsheetApp.newConditionalFormatRule = () => {
         const r = { _formula: null, _color: null, _negrita: false, _rangos: null };
@@ -557,34 +654,39 @@ console.log('\n=== 11a. La regla CONSTRUIDA: el rango tiene que ser de UNA celda
         return api;
     };
     const hojaEspia = { getRange: a1 => ({ _a1: a1, getA1Notation: () => a1 }) };
-    ctx._reglasDeltaIp().forEach(item => ctx._construirReglaDeltaIp(hojaEspia, item));
+    const items = ctx._reglasDeltaIp();
+    items.forEach(item => ctx._construirReglaDeltaIp(hojaEspia, item));
 
     ok(espia.length === 6, 'se construyen las seis reglas. Dio ' + espia.length);
-    espia.forEach(r => {
+    espia.forEach((r, i) => {
+        const item = items[i];
         ok(r._rangos.length === 1, 'cada regla cubre UN solo rango');
-        ok(/^[A-Z]+\d+$/.test(r._rangos[0]._a1),
-           'y ese rango es UNA celda suelta, no un bloque: dio "' + r._rangos[0]._a1 + '"');
+        ok(r._rangos[0]._a1 === item.celda, 'el rango que se PINTA es la celda visible ' + item.celda);
         ok(r._negrita === true, 'la regla mantiene la negrita que ya tenian los deltas');
         ok(r._color === ctx.IP_COLOR_VERDE || r._color === ctx.IP_COLOR_ROJO,
            'el color sale de la paleta del modulo, no de un hex suelto');
-    });
-    // Y la celda de cada regla es la que dice su formula: nada de reglas apuntando a otra celda.
-    espia.forEach(r => {
+
         const m = r._formula.match(/^=\$([A-Z]+)\$(\d+)[<>]0$/);
         ok(!!m, 'la formula ' + r._formula + ' tiene la forma =$COL$FILA>0');
         const enFormula = m ? m[1] + m[2] : '';
-        ok(r._rangos[0]._a1 === enFormula,
-           'la regla ' + r._formula + ' se aplica a ' + enFormula + ', no a otra celda');
+        const refAux = ctx.IP_AUX[item.clave].tendencia;
+        ok(enFormula === refAux, 'la formula EVALUA la auxiliar ' + refAux + '. Dio ' + enFormula);
+
+        // LA MUTACION CENTRAL, reconstruida a proposito: si la regla volviera a apuntar a la
+        // celda que se pinta (el bug de v0.34.0, mirando el texto), esto tiene que fallar.
+        ok(enFormula !== item.celda,
+           'la celda que se EVALUA (' + enFormula + ') y la celda que se PINTA (' + item.celda +
+           ') son DISTINTAS -- si coincidieran, la formula estaria mirando el texto en vez de la auxiliar');
     });
-    const celdas = espia.map(r => r._rangos[0]._a1);
-    ctx.IP_CLAVES_DELTA.forEach(k => ok(celdas.filter(c => c === ctx.IP_RESUMEN[k].celda).length === 2,
+    const celdasPintadas = espia.map(r => r._rangos[0]._a1);
+    ctx.IP_CLAVES_DELTA.forEach(k => ok(celdasPintadas.filter(c => c === ctx.IP_RESUMEN[k].celda).length === 2,
        ctx.IP_RESUMEN[k].celda + ' recibe sus dos reglas y las de nadie mas'));
     delete ctx.SpreadsheetApp.newConditionalFormatRule;
 }
 
 console.log('\n=== 11b. Clasificar reglas vivas: propias, superadas, ajenas ===');
 {
-    const R = ctx.IP_RESUMEN;
+    const R = ctx.IP_RESUMEN, A = ctx.IP_AUX;
     const hexA = h => ({ asRgbColor: () => ({ asHexString: () => h }) });
     const regla = (tipo, valor, rangos, hex) => ({
         getRanges: () => rangos.map(r => ({ getA1Notation: () => r })),
@@ -600,16 +702,27 @@ console.log('\n=== 11b. Clasificar reglas vivas: propias, superadas, ajenas ==='
     const calendario = regla('CUSTOM_FORMULA', '=SUMAR.SI.CONJUNTO(...)>0', ['J8:P14'], '#2c4e40');
     const textoC15 = regla('TEXT_CONTAINS', '+', [R.deltaIngresos.celda], '#356854');
     const textoF = regla('TEXT_CONTAINS', '+', [R.deltaCapital.celda, R.deltaEgresos.celda], '#c5221f');
-    const mia = regla('CUSTOM_FORMULA', '=$' + R.deltaCapital.celda.replace(/(\d+)/, '$$$1') + '>0',
+    // La regla PROPIA reconocida: RANGO en la celda visible, FORMULA sobre la auxiliar -- el
+    // diseno real desde v0.37.0 (antes las dos coincidian en F10).
+    const mia = regla('CUSTOM_FORMULA', '=' + ctx._absIp(A.deltaCapital.tendencia) + '>0',
                       [R.deltaCapital.celda], ctx.IP_COLOR_VERDE);
 
     const c = ctx._clasificarReglasIp([calendario, textoC15, textoF, mia]);
     ok(c.ajenas.indexOf(calendario) !== -1, 'la regla del calendario es AJENA y se repone intacta');
     ok(c.superadas.length === 2, 'las dos reglas de "el texto contiene" sobre deltas se levantan');
-    ok(c.propias.indexOf(mia) !== -1, 'la regla propia se reconoce por formula Y rango de una celda');
+    ok(c.propias.indexOf(mia) !== -1, 'la regla propia se reconoce por formula (sobre la auxiliar) Y rango de una celda visible');
     ok(c.superadas.some(x => x.foto.rangos.length === 2 && x.foto.texto === '#c5221f'),
        'la foto de la regla levantada guarda sus rangos y su color, para poder reponerla');
     ok(c.superadas.every(x => x.foto.negrita === true), 'y guarda la negrita');
+
+    // LA MUTACION: una regla con la formula CORRECTA (apunta a la auxiliar) pero el RANGO puesto
+    // en la auxiliar en vez de en la celda visible -- no se reconoce como propia, porque el
+    // rango no esta entre las tres celdas visibles que _clasificarReglasIp sabe pintar.
+    const rangoEquivocado = regla('CUSTOM_FORMULA', '=' + ctx._absIp(A.deltaCapital.tendencia) + '>0',
+                                  [A.deltaCapital.tendencia], ctx.IP_COLOR_VERDE);
+    const c4 = ctx._clasificarReglasIp([rangoEquivocado]);
+    ok(c4.propias.length === 0,
+       'una regla con la formula correcta pero pintando la AUXILIAR (no la celda visible) no se reconoce como propia');
 
     // LA GUARDA QUE PROTEGE LO AJENO: una regla que toca un delta PERO se extiende afuera no se
     // levanta. Levantarla apagaria formato en celdas que no son de este modulo.
@@ -617,7 +730,7 @@ console.log('\n=== 11b. Clasificar reglas vivas: propias, superadas, ajenas ==='
     const c2 = ctx._clasificarReglasIp([desborda]);
     ok(c2.superadas.length === 0, 'una regla que desborda los deltas NO se levanta');
     ok(c2.ajenas.indexOf(desborda) !== -1, 'y se repone intacta');
-    ok(c2.desborda ? true : c2.desbordan.length === 1, 'pero se REPORTA, no se ignora en silencio');
+    ok(c2.desbordan.length === 1, 'pero se REPORTA, no se ignora en silencio');
 
     // Un tipo que no sabemos reponer tampoco se levanta.
     const otroTipo = regla('NUMBER_GREATER_THAN', '5', [R.deltaCapital.celda], '#c5221f');
@@ -629,61 +742,102 @@ console.log('\n=== 11b. Clasificar reglas vivas: propias, superadas, ajenas ==='
     const seis = ctx._reglasDeltaIp().map(r => regla('CUSTOM_FORMULA', r.formula, [r.celda], r.color));
     ok(!ctx._reglasHacenFaltaIp(ctx._clasificarReglasIp(seis.concat([calendario]))),
        'con las seis correctas ya puestas, aplicar no toca las reglas');
-    // Pero el color invertido SI se detecta: es exactamente el estado que tenia la hoja.
+    // Pero el color invertido SI se detecta.
     const invertidas = ctx._reglasDeltaIp().map(r => regla('CUSTOM_FORMULA', r.formula, [r.celda],
         r.color === ctx.IP_COLOR_VERDE ? ctx.IP_COLOR_ROJO : ctx.IP_COLOR_VERDE));
     ok(ctx._reglasHacenFaltaIp(ctx._clasificarReglasIp(invertidas)),
        'la formula correcta con el COLOR invertido se detecta y se reescribe');
     // Y aunque las seis propias esten perfectas, si sobrevive una regla vieja de texto HAY que
-    // tocar: es la que le estaba ganando al color y pintaba de rojo un capital que subia.
+    // tocar.
     ok(ctx._reglasHacenFaltaIp(ctx._clasificarReglasIp(seis.concat([textoF]))),
        'con una regla vieja de "el texto contiene" todavia viva, aplicar SI tiene que actuar');
 }
 
-console.log('=== El verificador distingue PENDIENTE de FALLA ===');
-// Las custom functions (TIDETRACK_*) devuelven "Loading..." en su primer calculo. Un verificador
-// que relee enseguida ve un string y revierte formulas correctas: paso el 2026-08-21 con E22.
+console.log('\n=== 12. El verificador distingue PENDIENTE de FALLA (auxiliares numericas + visibles de texto) ===');
 {
     const hojaDe = (valores) => ({
         getRange: (celda) => ({
             getValue: () => (celda in valores ? valores[celda] : ''),
-            getFormula: () => '', getNumberFormat: () => ctx.IP_FORMATO_DELTA
+            getFormula: () => ''
         })
     });
-    const F = ctx.IP_BLOQUE.filas, B = ctx.IP_BLOQUE;
+    const F = ctx.IP_BLOQUE.filas, B = ctx.IP_BLOQUE, A = ctx.IP_AUX;
     const base = {};
     [['colPresupuesto', [100, 40, 30, 30]], ['colRealidad', [90, 30, 30, 30]]].forEach(([c, v]) => {
-        ['ingresos','fijos','variables','capitalizacion'].forEach((k, j) => { base[B[c] + F[k].fila] = v[j]; });
+        ['ingresos', 'fijos', 'variables', 'capitalizacion'].forEach((k, j) => { base[B[c] + F[k].fila] = v[j]; });
     });
     base[B.colDistribucion + F.ingresos.fila] = '';
     [['fijos', 10], ['variables', 20], ['capitalizacion', 70]].forEach(([k, v]) => { base[B.colDistribucion + F[k].fila] = v; });
     base[ctx.IP_RESUMEN.saldo.celda] = 100;
-    [ctx.IP_RESUMEN.deltaCapital, ctx.IP_RESUMEN.deltaIngresos, ctx.IP_RESUMEN.deltaEgresos]
-        .forEach(d => { base[d.celda] = 0.1; });
+    // Las seis auxiliares: numeros de verdad (tendencia + su promedio derramado).
+    ctx.IP_CLAVES_DELTA.forEach(k => {
+        base[A[k].tendencia] = 0.1;
+        base[ctx._celdaPromedioIp(A[k].tendencia)] = 123456.78;
+    });
+    // Las tres visibles: TEXTO, como las arma de verdad la formula.
+    base[ctx.IP_RESUMEN.deltaCapital.celda] = '▲ 10,0% de tendencia a 6 meses · promedio $123.456,78 · $50.000,00 inyectados en Agosto';
+    base[ctx.IP_RESUMEN.deltaIngresos.celda] = '▲ 10,0% de tendencia a 6 meses · promedio $123.456,78';
+    base[ctx.IP_RESUMEN.deltaEgresos.celda] = '▲ 10,0% de tendencia a 6 meses · promedio $123.456,78';
 
     let r = ctx._verificarInvariantesIp(hojaDe(base));
-    ok(r.fallas.length === 0 && r.avisos.length === 0, 'todo numerico y coherente: sin fallas ni avisos');
+    ok(r.fallas.length === 0 && r.avisos.length === 0,
+       'todo numerico/textual y coherente: sin fallas ni avisos. Fallas: ' + JSON.stringify(r.fallas) +
+       ' Avisos: ' + JSON.stringify(r.avisos));
 
-    // Una celda "cargando": aviso, NUNCA falla.
-    const cargando = Object.assign({}, base);
-    cargando[B.colRealidad + F.capitalizacion.fila] = 'Loading...';
-    r = ctx._verificarInvariantesIp(hojaDe(cargando));
-    ok(r.fallas.length === 0, 'una custom function cargando NO es falla: revertir destruiria formulas buenas');
-    ok(r.avisos.length > 0, 'pero si deja aviso: el invariante quedo sin comprobar');
+    // Una AUXILIAR "cargando": aviso, nunca falla -- revertir destruiria una formula buena.
+    const cargandoAux = Object.assign({}, base);
+    cargandoAux[A.deltaCapital.tendencia] = 'Loading...';
+    r = ctx._verificarInvariantesIp(hojaDe(cargandoAux));
+    ok(r.fallas.length === 0, 'una auxiliar cargando NO es falla');
+    ok(r.avisos.some(a => a.indexOf(A.deltaCapital.tendencia) !== -1), 'y queda un aviso nombrando la celda auxiliar pendiente');
 
-    // Idem en castellano, que es como lo muestra esta planilla.
-    const cargando2 = Object.assign({}, base);
-    cargando2[B.colRealidad + F.capitalizacion.fila] = 'Cargando...';
-    r = ctx._verificarInvariantesIp(hojaDe(cargando2));
-    ok(r.fallas.length === 0 && r.avisos.length > 0, '"Cargando..." recibe el mismo trato que "Loading..."');
+    // Un PROMEDIO derramado "cargando" -- mismo trato, en castellano.
+    const cargandoProm = Object.assign({}, base);
+    cargandoProm[ctx._celdaPromedioIp(A.deltaIngresos.tendencia)] = 'Cargando...';
+    r = ctx._verificarInvariantesIp(hojaDe(cargandoProm));
+    ok(r.fallas.length === 0 && r.avisos.length > 0, 'el promedio "Cargando..." tambien es aviso, no falla');
 
-    // Un ERROR de celda SI es falla, y no se espera.
-    const conError = Object.assign({}, base);
-    conError[B.colRealidad + F.fijos.fila] = '#REF!';
-    r = ctx._verificarInvariantesIp(hojaDe(conError));
-    ok(r.fallas.length > 0 && /#REF!/.test(r.fallas.join(' ')), 'un #REF! SI es falla y se nombra');
+    // Una AUXILIAR en error real: SI es falla.
+    const errorAux = Object.assign({}, base);
+    errorAux[A.deltaEgresos.tendencia] = '#REF!';
+    r = ctx._verificarInvariantesIp(hojaDe(errorAux));
+    ok(r.fallas.length > 0 && r.fallas.some(f => f.indexOf(A.deltaEgresos.tendencia) !== -1),
+       'una auxiliar en #REF! SI es falla y se nombra');
 
-    // La identidad del PLAN rota sigue siendo falla.
+    // Un string cualquiera en una auxiliar (ni "Loading..." ni error "#..."): el lector de
+    // numeros lo trata igual que "todavia calculando" (comportamiento heredado de
+    // _leerYaCalculadoIp, sin cambios en v0.37.0) -- termina en aviso, no en falla.
+    const auxTextoRaro = Object.assign({}, base);
+    auxTextoRaro[A.deltaIngresos.tendencia] = 'no soy un numero';
+    r = ctx._verificarInvariantesIp(hojaDe(auxTextoRaro));
+    ok(r.fallas.length === 0, 'un string que no es numero ni error de celda se trata como pendiente, no como falla');
+    ok(r.avisos.some(a => a.indexOf(A.deltaIngresos.tendencia) !== -1), 'y queda un aviso nombrando la auxiliar');
+
+    // Una celda VISIBLE (F10/C15/F15) "cargando": aviso, no falla. F10 depende de su auxiliar Y
+    // de E22 (las dos con TIDETRACK_* adentro), asi que hereda la misma cicatriz que ya obligo a
+    // _leerYaCalculadoIp en v0.31.0.
+    const cargandoVisible = Object.assign({}, base);
+    cargandoVisible[ctx.IP_RESUMEN.deltaCapital.celda] = 'Loading...';
+    r = ctx._verificarInvariantesIp(hojaDe(cargandoVisible));
+    ok(r.fallas.length === 0, 'F10 "cargando" NO es falla');
+    ok(r.avisos.some(a => a.indexOf(ctx.IP_RESUMEN.deltaCapital.celda) !== -1), 'y queda un aviso nombrando F10');
+
+    // Una celda VISIBLE en error real: SI es falla, con el error nombrado.
+    const errorVisible = Object.assign({}, base);
+    errorVisible[ctx.IP_RESUMEN.deltaIngresos.celda] = '#VALUE!';
+    r = ctx._verificarInvariantesIp(hojaDe(errorVisible));
+    ok(r.fallas.length > 0 && r.fallas.some(f => f.indexOf('#VALUE!') !== -1),
+       'C15 en #VALUE! SI es falla y se nombra el error');
+
+    // Una celda VISIBLE vacia: se trata como pendiente (no se puede distinguir de "todavia
+    // calculando" sin una senal explicita) -- documentado, no un olvido.
+    const vacia = Object.assign({}, base);
+    vacia[ctx.IP_RESUMEN.deltaEgresos.celda] = '';
+    r = ctx._verificarInvariantesIp(hojaDe(vacia));
+    ok(r.fallas.length === 0 && r.avisos.some(a => a.indexOf(ctx.IP_RESUMEN.deltaEgresos.celda) !== -1),
+       'F15 vacia se trata como pendiente, no como falla (no hay forma de distinguirla de "todavia calculando")');
+
+    // La identidad del PLAN rota sigue siendo falla (sin cambios respecto de v0.34.0).
     const roto = Object.assign({}, base);
     roto[B.colPresupuesto + F.capitalizacion.fila] = 999;
     r = ctx._verificarInvariantesIp(hojaDe(roto));
