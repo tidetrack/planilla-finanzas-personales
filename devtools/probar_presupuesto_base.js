@@ -142,6 +142,23 @@ console.log('=== 0. Integridad de los fuentes (sin bytes de control) ===');
     }));
     ok(sospechosos.length === 0, sospechosos.length ? 'bytes de control: ' + sospechosos.join('; ')
                                                     : 'ningun byte de control en src/ ni devtools/');
+
+    // Y NINGUNA funcion definida dos veces. En Apps Script la ultima definicion pisa a las
+    // anteriores EN SILENCIO: node --check no protesta, la planilla tampoco, y uno edita la copia
+    // muerta creyendo que edita la viva. Paso el 2026-08-20: _planCap quedo definida CUATRO veces
+    // tras una serie de cirugias de texto, y las tres primeras eran cadaveres.
+    const defs = {};
+    dirs.filter(d => d === 'src').forEach(d => fs.readdirSync(path.join(RAIZ, d)).forEach(f => {
+        if (!/\.js$/.test(f)) return;
+        const lineas = fs.readFileSync(path.join(RAIZ, d, f), 'utf8').split('\n');
+        lineas.forEach((l, i) => {
+            const m = l.match(/^\s*function\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/);
+            if (m) (defs[m[1]] = defs[m[1]] || []).push(f + ':' + (i + 1));
+        });
+    }));
+    const dup = Object.keys(defs).filter(k => defs[k].length > 1);
+    ok(dup.length === 0, dup.length ? 'FUNCIONES DUPLICADAS (la ultima pisa en silencio): ' +
+       dup.map(k => k + ' [' + defs[k].join(', ') + ']').join('; ') : 'ninguna funcion definida dos veces en src/');
 }
 
 const cfg = ctx.RANGES.REGISTROS;

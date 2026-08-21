@@ -9,6 +9,31 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.31.1 - Reanclaje al rediseno manual: los montos viven en O (2026-08-20)
+
+Franco rediseno a mano `L7:O19`: movio los **montos** de la columna N a la O, dejo los % del plan en
+N como formulas suyas, y **elimino** el % del bloque de la realidad — *"nunca me iba a dar 100% y
+era irrelevante"*, que es exactamente correcto desde la v0.31.0.
+
+### Lo que estaba roto en la hoja, sin un solo error visible
+
+La Disponibilidad de fondos leia `$N$10`/`$N$17` para sus remanentes. Con la mudanza, eso es
+`MAX(0; 0,4643 - "")` en vez de `MAX(0; 925.178 - 506.851)`: numeros sin sentido, cero errores. La
+clase de falla mas silenciosa que tiene esta planilla, y la tercera vez que aparece en el dia.
+
+`DEVTOOL_Proyeccion` escribe `O9:O11`; `DEVTOOL_Capitalizacion` escribe `O12` y `O19`. **El modulo
+ya no escribe ningun porcentaje** — esa columna es de Franco, y un modulo que la escribiera pisaria
+su trabajo en la proxima corrida.
+
+### Un bug grave encontrado al pasar
+
+`_planCap` habia quedado definida **cuatro veces** en el mismo archivo, resultado de cirugias de
+texto acumuladas. En Apps Script la ultima definicion pisa a las anteriores **en silencio** —
+`node --check` no protesta, la planilla tampoco — asi que se podia estar editando un cadaver
+creyendo editar el codigo vivo.
+
+Quedo una sola, y el banco ahora barre todo `src/` y falla si una funcion esta definida dos veces.
+
 ## v0.31.0 - El plan asigna, la realidad se mide (2026-08-20)
 
 > "N19 no debe ser una resta de descarte. Aca si va el valor registrado del mes: lo que se haya

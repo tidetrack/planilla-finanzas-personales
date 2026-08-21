@@ -67,8 +67,12 @@
  * un desplazamiento se detecta comparando el rotulo, no la posicion.
  */
 const CAP_BLOQUES = {
-    presupuesto: { titulo: 'L7', rotulo: 'L12', celda: 'N12', esperado: 'Capacidad de Capitalizacion' },
-    realidad:    { titulo: 'L14', rotulo: 'L19', celda: 'N19', esperado: 'Capacidad de Capitalizacion' },
+    // decision Franco 2026-08-20: rediseno manual de L7:O19. Los montos pasaron de N a O; el %
+    // del plan quedo en N (formulas de Franco: =IFERROR(O9/$O$9;0) y hermanas) y el % de la
+    // realidad se ELIMINO -- "nunca me iba a dar 100% y era irrelevante". Este modulo ya no
+    // escribe ningun porcentaje: esa columna es suya.
+    presupuesto: { titulo: 'L7', rotulo: 'L12', celda: 'O12', esperado: 'Capacidad de Capitalizacion' },
+    realidad:    { titulo: 'L14', rotulo: 'L19', celda: 'O19', esperado: 'Capacidad de Capitalizacion' },
     disponibilidad: {
         rotulos: { fijos: 'L23', variables: 'L24', capitalizacion: 'L25' },
         celdas:  { fijos: 'O23', variables: 'O24', capitalizacion: 'O25' },
@@ -77,28 +81,18 @@ const CAP_BLOQUES = {
     }
 };
 
-/**
- * La celda de % de la fila de INGRESOS, en cada bloque.
- *
- * Venia siendo `SUMA(<las otras tres>)`, que daba 100% por construccion mientras la capitalizacion
- * era el residuo. Al dejar de serlo, esa celda pasa a mostrar un numero flotante en la fila de
- * Ingresos -- se midio 115,99% el 2026-08-20 --, que leido literalmente dice "mis ingresos son el
- * 116% de mis ingresos". Es una categoria equivocada, no un numero mal calculado.
- *
- * decision Franco 2026-08-20: los Ingresos son la BASE contra la que se mide todo lo demas, asi
- * que su porcentaje es 100%. Los otros tres muestran su parte de los ingresos. Si esos tres suman
- * mas de 100%, el presupuesto no cierra -- y eso se ve sumandolos, y es exactamente sobre lo que
- * actua "Disponibilidad de fondos". Ya no se disfraza de otra cosa en la fila de arriba.
- */
-const CAP_PORCENTAJE_BASE = {
-    presupuesto: { celda: 'O9', monto: 'N9' },
-    realidad:    { celda: 'O16', monto: 'N16' }
-};
+// Aca vivia CAP_PORCENTAJE_BASE (los % de la fila de Ingresos, O9 y O16 en el layout viejo).
+// Se retiro el 2026-08-20: con el rediseno manual de Franco los porcentajes del plan son formulas
+// suyas en la columna N, y el bloque de la realidad no tiene porcentaje. Un modulo que escribiera
+// % hoy estaria pisando su layout.
 
 /** Las celdas de presupuesto y realidad de cada categoria, para la disponibilidad. */
 const CAP_REFS = {
-    presu: { fijos: '$N$10', variables: '$N$11', capitalizacion: '$N$12' },
-    real:  { fijos: '$N$17', variables: '$N$18', capitalizacion: '$N$19' }
+    // Reancladas al rediseno de Franco (montos en O). Con las referencias viejas a N, la
+    // Disponibilidad de fondos quedo calculando remanentes contra porcentajes y celdas vacias:
+    // MAX(0; 0,4643 - "") en vez de MAX(0; 925.178 - 506.851). Sin un solo error visible.
+    presu: { fijos: '$O$10', variables: '$O$11', capitalizacion: '$O$12' },
+    real:  { fijos: '$O$17', variables: '$O$18', capitalizacion: '$O$19' }
 };
 
 const CAP_PROP_RESPALDO = 'capitalizacion_respaldo';
@@ -323,20 +317,13 @@ function _planCap(ss, pre) {
     };
 
     proponer(CAP_BLOQUES.presupuesto.celda, 'Capacidad de capitalizacion (presupuesto)',
-        _formulaResiduoCap('N9', 'N10', 'N11'),
+        _formulaResiduoCap('O9', 'O10', 'O11'),
         'lo que queda de los ingresos despues de fijos y variables: hace cerrar el bloque en 100%');
 
     proponer(CAP_BLOQUES.realidad.celda, 'Capitalizacion efectiva del mes',
         _formulaHaciaRiqueza(RANGES.REGISTROS.sheet),
         'lo que realmente entro a los medios de ' + TIPOS_RIQUEZA.join(' e ') +
         ' en el mes; negativo significa que se saco de los frascos');
-
-    ['presupuesto', 'realidad'].forEach(function (bloque) {
-        const b = CAP_PORCENTAJE_BASE[bloque];
-        proponer(b.celda, 'Porcentaje de la fila de Ingresos (' + bloque + ')',
-            '=IFERROR(' + b.monto + '/$' + b.monto[0] + '$' + b.monto.slice(1) + '; 0)',
-            'los Ingresos son la base: 100%, no la suma de los otros tres');
-    });
 
     const d = CAP_BLOQUES.disponibilidad;
     ['fijos', 'variables', 'capitalizacion'].forEach(function (k) {
@@ -369,8 +356,8 @@ function estadoCapitalizacion() {
             });
             l.push('');
             l.push('QUE CAMBIA:');
-            l.push('  - N12 (plan): el residuo Ingresos - Fijos - Variables, que cierra el 100%.');
-            l.push('  - N19 (realidad): la capitalizacion MEDIDA, lo que entro a los frascos en el');
+            l.push('  - O12 (plan): el residuo Ingresos - Fijos - Variables, que cierra el 100%.');
+            l.push('  - O19 (realidad): la capitalizacion MEDIDA, lo que entro a los frascos en el');
             l.push('    mes. Negativo = se saco. El bloque de la realidad no suma 100%, a proposito.');
             l.push('  - Los cuatro renglones YA NO suman 100%. La diferencia es la plata que entro');
             l.push('    y no se gasto ni se capitalizo: antes se escondia adentro del residuo.');
@@ -408,9 +395,9 @@ function aplicarCapitalizacion() {
         const conf = ui.alert('Capitalizacion y disponibilidad',
             'Se van a reescribir ' + plan.cambios.length + ' celda(s) del Tablero.\n\n' +
             'CAMBIAN NUMEROS QUE VENIS MIRANDO:\n' +
-            '  - En el PLAN (N12), la Capacidad es el residuo Ingresos - Fijos - Variables: es lo\n' +
+            '  - En el PLAN (O12), la Capacidad es el residuo Ingresos - Fijos - Variables: es lo\n' +
             '    unico que hace cerrar la asignacion en 100%.\n' +
-            '  - En la REALIDAD (N19), la capitalizacion SE MIDE: lo que realmente entro a los\n' +
+            '  - En la REALIDAD (O19), la capitalizacion SE MIDE: lo que realmente entro a los\n' +
             '    medios de Ahorros e Inversiones en el mes, traspasos incluidos. Negativo\n' +
             '    significa que ese mes se saco de los frascos.\n' +
             '  - Por eso el bloque de la realidad YA NO suma 100%: la diferencia es la plata que\n' +
@@ -468,7 +455,7 @@ function aplicarCapitalizacion() {
             'QUE MIRAR:\n' +
             '  1. En el bloque del PLAN: Fijos % + Variables % + Capacidad % = 100%, exacto, en\n' +
             '     cualquier mes. Si no da 100%, algo se rompio.\n' +
-            '  2. En el bloque de la REALIDAD ese 100% NO tiene por que darse: N19 mide lo que\n' +
+            '  2. En el bloque de la REALIDAD ese 100% NO tiene por que darse: O19 mide lo que\n' +
             '     entro a los frascos, y si da negativo es que ese mes se saco de ellos.\n' +
             '  3. En un mes con las tres categorias arriba del 100%, "Disponibilidad de fondos"\n' +
             '     reparte entre las tres en vez de darle todo a una. Julio 2026 es ese caso.\n' +

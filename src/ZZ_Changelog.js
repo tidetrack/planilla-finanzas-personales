@@ -5,6 +5,24 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.31.1 - Reanclaje al rediseno manual: los montos viven en la columna O.
+ * - Franco rediseno a mano L7:O19: movio los MONTOS de la columna N a la O, dejo los % del plan
+ *   en N como formulas suyas (=IFERROR(O9/$O$9;0)) y ELIMINO el % del bloque de la realidad --
+ *   "nunca me iba a dar 100% y era irrelevante", que es exactamente correcto desde la v0.31.0.
+ * - LO QUE ESTABA ROTO EN LA HOJA, sin un solo error visible: la Disponibilidad de fondos leia
+ *   $N$10/$N$17 para sus remanentes. Con la mudanza, eso es MAX(0; 0,4643 - "") en vez de
+ *   MAX(0; 925.178 - 506.851): numeros sin sentido, cero errores. La clase de falla mas silenciosa
+ *   que tiene esta planilla, y la tercera vez que aparece en el dia.
+ * - REANCLADO: DEVTOOL_Proyeccion escribe O9:O11; DEVTOOL_Capitalizacion escribe O12 y O19 y sus
+ *   CAP_REFS enteras apuntan a O. El modulo YA NO ESCRIBE NINGUN PORCENTAJE: se retiro
+ *   CAP_PORCENTAJE_BASE. Esa columna es de Franco y un modulo que la escribiera pisaria su
+ *   trabajo en la proxima corrida.
+ * - BUG GRAVE ENCONTRADO AL PASAR: _planCap habia quedado definida CUATRO veces en el mismo
+ *   archivo, resultado de cirugias de texto acumuladas. En Apps Script la ultima definicion pisa
+ *   a las anteriores EN SILENCIO -- node --check no protesta, la planilla tampoco -- asi que se
+ *   podia estar editando un cadaver creyendo editar el codigo vivo. Quedo una sola.
+ * - GUARD NUEVO en el banco: barre todo src/ y falla si una funcion esta definida dos veces.
+ *
  * [2026-08-20] v0.31.0 - El plan asigna, la realidad se mide.
  * - decision Franco 2026-08-20: "N19 no debe ser una resta de descarte. Aca si va el valor
  *   registrado del mes: lo que se haya realmente ahorrado y/o invertido".

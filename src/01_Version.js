@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 31,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.31.0 - El plan asigna, la realidad se mide: N19 es la capitalizacion efectiva',
+ releaseName: 'v0.31.1 - Reanclaje al rediseno manual de Franco: los montos viven en la columna O',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

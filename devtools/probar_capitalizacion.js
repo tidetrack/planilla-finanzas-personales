@@ -51,7 +51,7 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_StockYFlujo.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Proyeccion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Capitalizacion.js'), 'utf8') +
-    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CAP_BLOQUES,CAP_REFS,CAP_PORCENTAJE_BASE,SYF_SALDOS_TABLERO});',
+    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CAP_BLOQUES,CAP_REFS,SYF_SALDOS_TABLERO});',
     ctx);
 
 function revisar(nombre, f) {
@@ -101,8 +101,8 @@ console.log('=== 1. LA IDENTIDAD: los tres destinos suman el 100% de los ingreso
 
 console.log('\n=== 1b. El modelo mixto: el plan asigna, la realidad se mide ===');
 {
-    const presu = ctx._formulaResiduoCap('N9', 'N10', 'N11');
-    ok(presu === '=N9-N10-N11', 'N12 (plan): el residuo que cierra el 100%. Dio ' + presu);
+    const presu = ctx._formulaResiduoCap('O9', 'O10', 'O11');
+    ok(presu === '=O9-O10-O11', 'O12 (plan): el residuo que cierra el 100%. Dio ' + presu);
     ok(!/MAX\(0/.test(presu) && presu.indexOf('{') === -1 && presu.indexOf(',') === -1,
        'el residuo: sin piso, sin arrays, sin comas');
 
@@ -230,34 +230,29 @@ console.log('\n=== 3b. El CABLEADO: que formula va a cada celda ===');
     const porCelda = {};
     plan.cambios.forEach(c => { porCelda[c.celda] = c.formulaNueva; });
 
-    ok(Object.keys(porCelda).length === 7, 'el plan propone las 7 celdas. Propuso ' + Object.keys(porCelda).length);
+    ok(Object.keys(porCelda).length === 5, 'el plan propone 5 celdas (sin porcentajes: esa columna es de Franco). Propuso ' + Object.keys(porCelda).length);
     const presu = porCelda[ctx.CAP_BLOQUES.presupuesto.celda] || '';
     const real = porCelda[ctx.CAP_BLOQUES.realidad.celda] || '';
-    ok(presu === '=N9-N10-N11',
+    ok(presu === '=O9-O10-O11',
        ctx.CAP_BLOQUES.presupuesto.celda + ' (plan) es el residuo. Dio ' + presu);
     ok(real.length > 400 && real.indexOf(ctx.RANGES.REGISTROS.sheet + '!') !== -1,
        ctx.CAP_BLOQUES.realidad.celda + ' (realidad) es la formula MEDIDA sobre el ledger, no un residuo');
-    ok(!/=N16-N17-N18/.test(real), 'N19 ya NO es la resta de descarte (decision Franco 2026-08-20)');
+    ok(!/=O16-O17-O18|=N16-N17-N18/.test(real), 'O19 ya NO es la resta de descarte (decision Franco 2026-08-20)');
     ok(!/MAX\(0;/.test(presu) && !/MAX\(0;/.test(real), 'ninguna lleva piso en cero');
-    ok(!/N1[6789]/.test(presu), 'el residuo del plan no toca celdas de la realidad');
+    ok(!/O1[6789]/.test(presu), 'el residuo del plan no toca celdas de la realidad');
 }
 
-console.log('\n=== 3c. El porcentaje de la fila de Ingresos ===');
+console.log('\n=== 3c. El modulo NO escribe porcentajes (columna de Franco) ===');
 {
     const hojaFalsa = { getRange: () => ({ getFormula: () => '', getValue: () => '', getDisplayValue: () => '' }) };
     const plan = ctx._planCap({ getSheetByName: () => hojaFalsa }, { hoja: hojaFalsa, nombre: 'Tablero' });
-    const porCelda = {}; plan.cambios.forEach(c => { porCelda[c.celda] = c.formulaNueva; });
-    ['presupuesto', 'realidad'].forEach(b => {
-        const cfg = ctx.CAP_PORCENTAJE_BASE[b];
-        const f = porCelda[cfg.celda] || '';
-        ok(!!f, cfg.celda + ' (' + b + ') entra al plan');
-        // Es la fila de INGRESOS: su porcentaje es el monto sobre si mismo, o sea 100%.
-        ok(f.indexOf(cfg.monto + '/$' + cfg.monto[0] + '$' + cfg.monto.slice(1)) !== -1,
-           cfg.celda + ' divide los Ingresos por si mismos: da 100%, la base contra la que se mide el resto');
-        ok(!/SUM\(|SUMA\(/.test(f),
-           cfg.celda + ' NO es la suma de los otros tres: eso daba 115,99% en la fila de Ingresos');
-    });
-    ok(Object.keys(porCelda).length === 7, 'el plan propone 7 celdas. Propuso ' + Object.keys(porCelda).length);
+    const celdas = plan.cambios.map(c => c.celda).sort();
+    ok(celdas.length === 5, 'el plan propone 5 celdas (O12, O19 y las tres de disponibilidad). Propuso ' + celdas.join(','));
+    ok(!celdas.some(c => /^N\d/.test(c)),
+       'NINGUNA celda de la columna N: el % del plan es de Franco y la realidad no lleva %');
+    ok(celdas.indexOf('O12') !== -1 && celdas.indexOf('O19') !== -1,
+       'reanclado al rediseno manual: montos en O');
+    ok(typeof ctx.CAP_PORCENTAJE_BASE === 'undefined', 'CAP_PORCENTAJE_BASE se retiro del modulo');
 }
 
 console.log('\n=== 3d. Ningun modulo se pisa con otro ===');
@@ -281,13 +276,25 @@ console.log('\n=== 3d. Ningun modulo se pisa con otro ===');
                                             : 'ninguna celda la proponen dos modulos distintos');
 }
 
+console.log('\n=== 3e. Reanclaje al rediseno manual de Franco (montos en O) ===');
+{
+    const claves2 = ['fijos', 'variables', 'capitalizacion'];
+    claves2.forEach(k => {
+        ok(/^\$O\$\d+$/.test(ctx.CAP_REFS.presu[k]), 'CAP_REFS.presu.' + k + ' apunta a la columna O. Dio ' + ctx.CAP_REFS.presu[k]);
+        ok(/^\$O\$\d+$/.test(ctx.CAP_REFS.real[k]), 'CAP_REFS.real.' + k + ' apunta a la columna O. Dio ' + ctx.CAP_REFS.real[k]);
+    });
+    ok(ctx.CAP_BLOQUES.presupuesto.celda === 'O12' && ctx.CAP_BLOQUES.realidad.celda === 'O19',
+       'los dos residuos/medidas van a O12 y O19');
+    const disp = ctx._formulaDisponibilidadCap('fijos');
+    ok(!/\$N\$1[0-9]/.test(disp),
+       'la disponibilidad no toca la columna N: ahi viven los % de Franco y celdas vacias');
+}
+
 console.log('\n=== 4. Coherencia con el resto de la planilla ===');
-ok(ctx.CAP_REFS.presu.capitalizacion === '$N$12' && ctx.CAP_REFS.real.capitalizacion === '$N$19',
+ok(ctx.CAP_REFS.presu.capitalizacion === '$O$12' && ctx.CAP_REFS.real.capitalizacion === '$O$19',
    'la disponibilidad lee la capitalizacion de las mismas celdas que el modulo escribe');
-ok(ctx.CAP_BLOQUES.presupuesto.celda === '$N$12'.replace(/\$/g, ''),
-   'el presupuesto de capitalizacion se escribe en N12');
-ok(ctx.CAP_BLOQUES.realidad.celda === '$N$19'.replace(/\$/g, ''),
-   'la realidad de capitalizacion se escribe en N19');
+ok(ctx.CAP_BLOQUES.presupuesto.celda === 'O12', 'el residuo del plan se escribe en O12');
+ok(ctx.CAP_BLOQUES.realidad.celda === 'O19', 'la capitalizacion efectiva se escribe en O19');
 const liq = ctx._liquidezCap();
 ctx.SYF_SALDOS_TABLERO.filas.forEach(f => ok(liq.indexOf('$' + ctx.SYF_SALDOS_TABLERO.colFlujo + '$' + f) !== -1,
    'la liquidez incluye la fila ' + f + ' del bloque de saldos'));

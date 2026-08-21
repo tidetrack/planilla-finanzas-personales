@@ -68,9 +68,13 @@ const PROY_PROP_RESPALDO = 'proyeccion_respaldo';
  * no significaria nada.
  */
 const PROY_PRESUPUESTO = [
-    { celda: 'N9', rotuloFila: 'L9', rotulo: 'Ingresos', tipoCuenta: 'Ingreso' },
-    { celda: 'N10', rotuloFila: 'L10', rotulo: 'Gastos Fijos', tipoCuenta: 'Gasto Fijo' },
-    { celda: 'N11', rotuloFila: 'L11', rotulo: 'Gastos Variables', tipoCuenta: 'Gasto Variable' }
+    // decision Franco 2026-08-20 (rediseno manual del bloque L7:O12): los MONTOS viven en la
+    // columna O y los porcentajes en la N -- y los porcentajes son formulas de Franco, no de
+    // ningun modulo. Antes los montos estaban en N; reanclar esto fue obligatorio para que un
+    // re-run no pisara su layout.
+    { celda: 'O9', rotuloFila: 'L9', rotulo: 'Ingresos', tipoCuenta: 'Ingreso' },
+    { celda: 'O10', rotuloFila: 'L10', rotulo: 'Gastos Fijos', tipoCuenta: 'Gasto Fijo' },
+    { celda: 'O11', rotuloFila: 'L11', rotulo: 'Gastos Variables', tipoCuenta: 'Gasto Variable' }
 ];
 
 /** Los meses, en el orden y la grafia que ya usa el motor del Tablero (AJ6). */
