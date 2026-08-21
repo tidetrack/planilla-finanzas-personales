@@ -79,7 +79,34 @@ function chequear(n,d,exig){
   if(p.length){fallas++;console.log('\n### FALLA '+n+': '+p.join(', '));console.log(d);}
   return !p.length;
 }
-console.log('=== 1. Las 6 celdas de RIQUEZA: lista negra -> lista blanca ===');
+console.log('=== 1. RIQ_CELDAS: retirada el 2026-08-21, tiene que seguir vacia ===');
+// GUARD DE RETIRADA. Las seis coordenadas salieron por decision de Franco (cada una tiene otro
+// duenio; ver la cabecera de DEVTOOL_RiquezaYCategorias.js). Que la lista este vacia se AFIRMA,
+// no se asume: si alguien vuelve a agregar una celda aca, tiene que ser una decision consciente y
+// este banco la obliga a pasar por sus chequeos en vez de entrar sin que nadie mire.
+if(!ctx.RIQ_CELDAS.length){
+  console.log('  OK  RIQ_CELDAS vacia: el modulo no declara administrar ninguna celda de riqueza');
+} else {
+  // NO es un aviso: es FALLA, y es una FALLA DELIBERADA. El loop de abajo sigue verificando cada
+  // entrada una por una, asi que la celda nueva SI se revisa -- lo que esta falla agrega es que
+  // reponer una coordenada retirada no pueda pasar en silencio. Las seis salieron el 2026-08-21
+  // porque cada una tiene otro duenio; volver a poner una es reabrir esa decision, y tiene que
+  // costar una linea roja que obligue a justificarlo.
+  fallas++;
+  console.log('  ### FALLA RIQ_CELDAS volvio a tener '+ctx.RIQ_CELDAS.length+' entrada(s) ('+
+    ctx.RIQ_CELDAS.map(function(x){return x.hoja+'!'+x.celda;}).join(', ')+'). Se retiraron el '+
+    '2026-08-21 por decision de Franco: cada una tiene hoy otro duenio. Si vuelve a ser de este '+
+    'modulo, actualizar la cabecera de DEVTOOL_RiquezaYCategorias.js y este guard en el mismo cambio.');
+}
+// _aListaBlanca se conserva y se prueba como REGRESION, con una entrada sintetica: la
+// transformacion tiene que seguir siendo correcta aunque hoy no se aplique a ninguna celda viva.
+{
+  const sintetica='=LET(cond; (tipos_proy<>"Hogar") * (tipos_proy<>"") > 0; SUM(cond))';
+  const t=ctx._aListaBlanca(sintetica);
+  if(t===sintetica){fallas++;console.log('  ### FALLA _aListaBlanca ya no transforma la forma que declara transformar');}
+  else if(/tipos_proy<>"Hogar"/.test(t)){fallas++;console.log('  ### FALLA _aListaBlanca dejo la lista negra puesta: '+t);}
+  else console.log('  OK  _aListaBlanca sigue convirtiendo lista negra -> lista blanca (regresion)');
+}
 for(const spec of ctx.RIQ_CELDAS){
   const clave=(spec.hoja==='INICIO'?'Inicio':'Tablero')+'!'+spec.celda;
   const antes=viva(clave);
@@ -96,31 +123,41 @@ for(const spec of ctx.RIQ_CELDAS){
     console.log('  OK  '+clave.padEnd(14)+(l?l.trim():''));
   }
 }
-console.log('\n=== 2. El bloque de categorias (RIQ_BLOQUE_CATEGORIAS) ===');
-// La celda se lee de la CONSTANTE, no se hardcodea: si RIQ_BLOQUE_CATEGORIAS.celda se corrige (o
-// se corre de nuevo), este banco prueba automaticamente contra la celda correcta.
+console.log('\n=== 2. El bloque de categorias (AA10): retirado, su duenio es BloqueCategorias ===');
+// decision Franco 2026-08-21, duenio unico: AA10 la declaraban TRES modulos. Gana
+// DEVTOOL_BloqueCategorias.js (unico con trabajo vigente ahi). Este banco dejo de exigir que la
+// celda viva tenga la forma que ESTE modulo esperaba -- exigirlo era pedirle a una celda ajena que
+// se comporte como propia, y producia una FALLA permanente que no significaba nada.
 const claveCat='Tablero!'+ctx.RIQ_BLOQUE_CATEGORIAS.celda;
-const a9=viva(claveCat);
-let d9;
-if(!a9){
-  fallas++;
-  console.log('  ### FALLA (sin formula) '+claveCat+': '+queHayEn(claveCat)+
-    '. RIQ_BLOQUE_CATEGORIAS declara administrar esta celda y no hay nada que reescribir.');
+// (a) La seguridad ante entrada vacia se conserva: es la cicatriz del 2026-08-21.
+if(ctx._conTipoEnCategorias(undefined)!==undefined || ctx._conTipoEnCategorias('')!==''){
+  fallas++; console.log('  ### FALLA _conTipoEnCategorias no es segura ante entrada vacia/undefined');
 } else {
-  // _conTipoEnCategorias tiene que sobrevivir a una entrada vacia sin explotar (cicatriz del
-  // 2026-08-21): se prueba aca, con el mismo helper, antes de usarlo con la formula real.
-  if(ctx._conTipoEnCategorias(undefined)!==undefined || ctx._conTipoEnCategorias('')!==''){
-    fallas++; console.log('  ### FALLA _conTipoEnCategorias no es segura ante entrada vacia/undefined');
-  } else {
-    console.log('  OK  _conTipoEnCategorias(undefined) y (\'\') no explotan (devuelven la entrada intacta)');
-  }
-  d9=ctx._conTipoEnCategorias(a9);
-  if(d9===a9){console.log('  !!! SIN CAMBIO '+claveCat);fallas++;}
-  else if(chequear(claveCat,d9,{})){
-    d9.split('\n').filter(x=>/condicion;|columna_tipo|columna_aj \\|columna_ak_vacia/.test(x)).forEach(x=>console.log('     '+x.trim()));
-    if(/columna_ak_vacia/.test(d9)){console.log('  !!! quedo el nombre viejo de la variable');fallas++;}
-  }
+  console.log('  OK  _conTipoEnCategorias(undefined) y (\'\') no explotan (devuelven la entrada intacta)');
 }
+// (b) La transformacion historica ya esta APLICADA en la celda viva: se afirma por su invariante
+//     (no queda el nombre viejo de la variable), no re-corriendola. Eso es lo que de verdad
+//     importa despues de la retirada, y es exactamente lo que el "SIN CAMBIO" queria decir.
+const vivaCat=F[claveCat];
+if(!vivaCat){
+  fallas++;
+  console.log('  ### FALLA '+claveCat+' no tiene formula viva: '+queHayEn(claveCat)+
+    '. Aunque el duenio sea otro modulo, esa celda tiene que tener su formula.');
+} else if(/columna_ak_vacia/.test(vivaCat)){
+  fallas++;
+  console.log('  ### FALLA '+claveCat+' todavia tiene el nombre viejo "columna_ak_vacia": la '+
+    'transformacion historica NO estaba aplicada y este modulo era el unico que la hacia.');
+} else {
+  console.log('  OK  '+claveCat+' ya no tiene "columna_ak_vacia": la transformacion historica esta aplicada');
+}
+// (c) Regresion de _conTipoEnCategorias contra una entrada sintetica con la forma vieja.
+{
+  const sint='=LET(columna_ak_vacia; A1:A; SUM(columna_ak_vacia))';
+  const t=ctx._conTipoEnCategorias(sint);
+  if(/columna_ak_vacia/.test(t)){fallas++;console.log('  ### FALLA _conTipoEnCategorias ya no renombra la variable vieja');}
+  else console.log('  OK  _conTipoEnCategorias sigue renombrando columna_ak_vacia -> columna_tipo (regresion)');
+}
+
 console.log('\n=== 3. Idempotencia ===');
 let ni=0;
 for(const spec of ctx.RIQ_CELDAS){
@@ -128,7 +165,15 @@ for(const spec of ctx.RIQ_CELDAS){
   if(!F[clave])continue;   // sin formula: ya se marco FALLA en la seccion 1, aca no hay nada que reaplicar
   const a=ctx._aListaBlanca(viva(clave)); if(a!==ctx._aListaBlanca(a)){console.log('  NO IDEMPOTENTE '+clave);ni++;}
 }
-if(a9 && d9!==ctx._conTipoEnCategorias(d9)){console.log('  NO IDEMPOTENTE '+claveCat);ni++;}
+// Las dos transformaciones ya no se aplican a ninguna celda viva de este modulo, asi que la
+// idempotencia se prueba sobre entradas sinteticas: re-aplicar sobre lo ya transformado no puede
+// cambiar nada. Es la propiedad que importa si alguna de las dos vuelve a usarse.
+{
+  const t1=ctx._aListaBlanca('=LET(cond; (tipos_proy<>"Hogar") * (tipos_proy<>"") > 0; SUM(cond))');
+  if(t1!==ctx._aListaBlanca(t1)){console.log('  NO IDEMPOTENTE _aListaBlanca');ni++;}
+  const t2=ctx._conTipoEnCategorias('=LET(columna_ak_vacia; A1:A; SUM(columna_ak_vacia))');
+  if(t2!==ctx._conTipoEnCategorias(t2)){console.log('  NO IDEMPOTENTE _conTipoEnCategorias');ni++;}
+}
 console.log(ni===0?'  OK  todas idempotentes':'  '+ni+' no idempotentes');
 console.log('\n'+(fallas+ni===0?'===> SIN FALLAS':'===> '+(fallas+ni)+' FALLA(S)'));
 process.exit(fallas+ni===0?0:1);

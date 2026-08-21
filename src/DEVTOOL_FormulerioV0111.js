@@ -209,7 +209,6 @@ const FORM_TIPO_NUEVO = 'Hogar';
  */
 const FORM_CELDAS = [
     // --- Inicio: solo el literal ---
-    { hoja: 'INICIO', celda: 'F8', anclas: false, refs: false, literal: true, nota: 'Capital Acumulado' },
     { hoja: 'INICIO', celda: 'C13', anclas: false, refs: false, literal: true, nota: 'Ingresos del mes' },
     { hoja: 'INICIO', celda: 'F13', anclas: false, refs: false, literal: true, nota: 'Egresos del mes' },
     { hoja: 'INICIO', celda: 'C15', anclas: false, refs: false, literal: true, nota: 'Delta ingresos vs mes anterior' },
@@ -218,41 +217,65 @@ const FORM_CELDAS = [
     // --- Tablero: la columna que alimenta todo el bloque "Movimientos del mes" ---
     { hoja: 'TABLERO', celda: 'AV6', anclas: true, refs: true, literal: false, nota: 'Valor convertido (raiz del bloque)' },
 
-    // --- Tablero: saldos actuales por moneda (alimentan liquidez_ars de O23:O25) ---
-    { hoja: 'TABLERO', celda: 'AF9', anclas: true, refs: false, literal: false, nota: 'Saldo actual ARS' },
-    { hoja: 'TABLERO', celda: 'AF10', anclas: true, refs: false, literal: false, nota: 'Saldo actual USD' },
-    { hoja: 'TABLERO', celda: 'AF11', anclas: true, refs: false, literal: false, nota: 'Saldo actual AUD' },
-    { hoja: 'TABLERO', celda: 'AF12', anclas: true, refs: false, literal: false, nota: 'Saldo actual EUR' },
-
-    // --- Tablero: capital por moneda ---
-    { hoja: 'TABLERO', celda: 'AG9', anclas: true, refs: false, literal: true, nota: 'Capital ARS' },
-    { hoja: 'TABLERO', celda: 'AG10', anclas: true, refs: false, literal: true, nota: 'Capital USD' },
-    { hoja: 'TABLERO', celda: 'AG11', anclas: true, refs: false, literal: true, nota: 'Capital AUD' },
-    { hoja: 'TABLERO', celda: 'AG12', anclas: true, refs: false, literal: true, nota: 'Capital EUR' },
-
-    // --- Tablero: agregaciones por cuenta. Corridas de la fila 9 a la 10 el 2026-08-21 (ver
-    // cabecera): el header que las declaraba quedo en la 9, el derrame de datos paso a la 10.
-    // rotuloCelda/rotuloEsperado son el preflight por rotulo: el header de arriba tiene que decir
-    // lo esperado o el modulo entero aborta antes de tocar nada (_verificarRotulosFormulerio).
-    { hoja: 'TABLERO', celda: 'R10', anclas: true, refs: false, literal: true, nota: 'Ingresos por cuenta',
-        rotuloCelda: 'R9', rotuloEsperado: 'Cuenta' },
-    { hoja: 'TABLERO', celda: 'U10', anclas: true, refs: false, literal: true, nota: 'Gastos fijos por cuenta',
-        rotuloCelda: 'U9', rotuloEsperado: 'Cuenta' },
-    { hoja: 'TABLERO', celda: 'X10', anclas: true, refs: false, literal: true, nota: 'Gastos variables por cuenta',
-        rotuloCelda: 'X9', rotuloEsperado: 'Cuenta' },
-    { hoja: 'TABLERO', celda: 'AA10', anclas: true, refs: true, literal: true, nota: 'Agregado por categoria',
-        rotuloCelda: 'AA9', rotuloEsperado: 'Nombre' },
     { hoja: 'TABLERO', celda: 'C18', anclas: true, refs: false, literal: false, nota: 'Detalle por medio y moneda' },
 
-    // --- Tablero: capitalizacion del mes y comprobacion de traspasos ---
-    // N19: OBSOLETO, se deja intacto a proposito. Ver "EL RECORRIDO DEL 2026-08-21" en la cabecera
-    // -- lo escribe hoy DEVTOOL_Capitalizacion.js en O19, con su propio preflight por rotulo.
-    { hoja: 'TABLERO', celda: 'N19', anclas: true, refs: true, literal: true, nota: 'Capitalizacion real del mes' },
     // "Comprobacion de traspasos": el TITULO bajo de L27 a L28 el 2026-08-21 y la formula -- que ya
     // vivia una fila debajo de su titulo -- lo siguio de L28 a L29.
     { hoja: 'TABLERO', celda: 'L29', anclas: true, refs: false, literal: false, nota: 'Comprobacion de traspasos',
         rotuloCelda: 'L28', rotuloEsperado: 'Comprobacion Traspasos' }
 ];
+
+/**
+ * ============================================================================
+ * LO QUE SE RETIRO DE FORM_CELDAS EL 2026-08-21 -- decision Franco, y por que
+ * ============================================================================
+ * Nueve coordenadas salieron de la lista de arriba. NINGUNA se saco por estar rota: todas tienen
+ * hoy un dueño distinto, verificado contra el gemelo digital celda por celda. Dejarlas declaradas
+ * costaba dos cosas a la vez -- ruido permanente en el banco (5 FALLA(S) fijas que habia que
+ * aprender a ignorar, que es justo donde se esconde el rojo nuevo) y, en dos casos, riesgo real de
+ * pisar la formula de otro modulo.
+ *
+ *   - INICIO!F8 "Capital Acumulado"     -> lo administra DEVTOOL_StockYFlujo.js. Lo dice tambien
+ *                                          la cabecera de DEVTOOL_InicioPresupuesto.js: "F8 [...]
+ *                                          DEVTOOL_StockYFlujo, fuera de jurisdiccion".
+ *   - TABLERO!AF9:AF12 "Saldo actual"   -> ESTAN VACIAS. El bloque real se corrio a AF18:AF21
+ *                                          (headers AF17 "Flujo" / AG17 "Capital") cuando se
+ *                                          inserto "Tipo de Medios" arriba. Lo escribe
+ *                                          DEVTOOL_StockYFlujo.js (SYF_SALDOS_TABLERO).
+ *   - TABLERO!AG9:AG12 "Capital"        -> RIESGO REAL, no celdas vacias: esas filas son HOY el
+ *                                          bloque "Tipo de Medios" (AG8 = "Monto"), que escribe
+ *                                          DEVTOOL_StockYFlujo.js (SYF_TIPOS_TABLERO). Con
+ *                                          literal:true, este modulo le aplicaba su reemplazo a
+ *                                          una formula ajena y viva. El "Capital" de verdad esta
+ *                                          en AG18:AG21.
+ *   - TABLERO!N19 "Capitalizacion"      -> ESTA VACIA desde el rediseno L7:O19 del 2026-08-20. La
+ *                                          escribe DEVTOOL_Capitalizacion.js en O19
+ *                                          (CAP_BLOQUES.realidad.celda).
+ *
+ * Y tres mas por la decision de duenio unico sobre el bloque de agregacion por cuenta:
+ *   - TABLERO!R10/U10/X10               -> duenio unico: DEVTOOL_TableroFaltanteProyectado.js, que
+ *                                          las REESCRIBE empotrando la QUERY original de Franco.
+ *                                          Este modulo les aplicaba _repararFormula buscando el
+ *                                          patron viejo "AL9:AL"; hoy es un no-op (todas usan
+ *                                          AL6:AL), pero el dia que ese patron reapareciera,
+ *                                          correr "Formulerio" DESPUES de "Tablero Faltante"
+ *                                          reescribia una celda que es territorio de TFP.
+ *                                          DEVTOOL_StockYFlujo.js SI se queda con estas tres
+ *                                          (SYF_ARRASTRE): hace cirugia de token -- reemplaza un
+ *                                          patron y deja el resto intacto --, asi que respeta el
+ *                                          envoltorio de TFP corra en el orden que corra.
+ *   - TABLERO!AA10 "Agregado por categoria" -> duenio unico: DEVTOOL_BloqueCategorias.js, el unico
+ *                                          con trabajo VIGENTE ahi (cambia el eje de agrupacion a
+ *                                          la categoria de la cuenta, con su propio preflight por
+ *                                          rotulo contra AA9 "Nombre").
+ *
+ * QUE QUEDA EN LA LISTA, y su overlap conocido: Inicio!C13/F13 las comparte con
+ * DEVTOOL_StockYFlujo.js (SYF_ARRASTRE) y Inicio!C15/F15 con DEVTOOL_InicioPresupuesto.js. Las
+ * tres transformaciones son de token y hoy conviven, pero NO estan resueltas por la decision de
+ * duenio unico del 2026-08-21: quedan reportadas para que Franco decida, igual que se reporto en
+ * su momento la colision de R10/U10/X10.
+ */
+
 
 /**
  * Los FORM_CELDAS que declaran rotuloCelda/rotuloEsperado se verifican por ROTULO antes de que

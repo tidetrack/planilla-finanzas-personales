@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 38,
- patch: 4,
+ patch: 5,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-21',
- releaseName: 'v0.38.4 - El modulo seguia leyendo R9/U9/X9 mientras su banco probaba R10/U10/X10',
+ releaseName: 'v0.38.5 - Duenio unico por celda: se retiran 9 coordenadas stale y los 8 bancos quedan en verde',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,35 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.38.5 (2026-08-21) - Duenio unico por celda: se retiran 9 coordenadas stale, 8 bancos en verde
+- decision Franco 2026-08-21, dos decisiones tomadas juntas: (1) retirar las coordenadas que un
+  modulo declara administrar y ya administra otro, y (2) duenio unico para las celdas que tres
+  modulos se disputaban.
+- FORM_CELDAS pasa de 13 a 7 entradas. Retiradas: Inicio!F8 y Tablero!AG9:AG12 (las escribe
+  DEVTOOL_StockYFlujo.js), Tablero!AF9:AF12 (vacias; el bloque real vive en AF18:AF21),
+  Tablero!N19 (vacia; la escribe DEVTOOL_Capitalizacion.js en O19), Tablero!R10/U10/X10 y AA10
+  (por duenio unico). AG9:AG12 no era ruido: con literal:true este modulo le aplicaba su reemplazo
+  a una formula VIVA y AJENA (el bloque "Tipo de Medios").
+- RIQ_CELDAS pasa de 6 a 0. Con AA10 tambien retirada, DEVTOOL_RiquezaYCategorias.js NO ADMINISTRA
+  NINGUNA CELDA: sus publicas lo dicen explicito en vez de contestar "nada que hacer". Sacarlo del
+  menu y del repo es una decision aparte, PENDIENTE de Franco -- es retirar un modulo, no reapuntar
+  una coordenada.
+- Duenio unico: R10/U10/X10 -> DEVTOOL_TableroFaltanteProyectado.js (las reescribe empotrando la
+  QUERY de Franco). DEVTOOL_StockYFlujo.js se queda a proposito: hace cirugia de token y respeta el
+  envoltorio de TFP corra en el orden que corra. AA10 -> DEVTOOL_BloqueCategorias.js, el unico con
+  trabajo vigente ahi.
+- CORREGIDO un comentario falso: la cabecera de DEVTOOL_RiquezaYCategorias.js afirmaba que AA10 era
+  "EXCLUSIVA de este modulo (ningun otro la escribe)" mientras otros dos la declaraban.
+- BANCOS: probar_formulerio 5 FALLA(S) -> SIN FALLAS; probar_riqueza 7 -> SIN FALLAS;
+  probar_tablero_faltante 1 -> TODO OK. Los 8 en verde por primera vez. Dos guards nuevos, ambos
+  verificados por mutacion: un tripwire que falla si vuelve a entrar una coordenada a RIQ_CELDAS, y
+  CONVIVENCIA_OK en la barrida anti-colision -- permiso EXPLICITO por modulo Y por celda, no un
+  silenciador (se probo que un modulo no autorizado, y el autorizado sobre una celda fuera de su
+  permiso, siguen saliendo como choque).
+- REPORTADO, NO RESUELTO: Inicio!C13/F13 las comparten FORM_CELDAS y SYF_ARRASTRE, e Inicio!C15/F15
+  FORM_CELDAS y DEVTOOL_InicioPresupuesto.js. Conviven hoy (las tres transformaciones son de token)
+  pero no entraron en la decision de duenio unico.
+
 v0.38.4 (2026-08-21) - El modulo seguia leyendo R9/U9/X9 mientras su banco probaba R10/U10/X10
 - La v0.38.0 corrigio el corrimiento de fila del Tablero en FORM_CELDAS, RIQ_BLOQUE_CATEGORIAS y
   BCAT_CELDA, y actualizo la seccion 5 de devtools/probar_stock_flujo.js a R10/U10/X10 -- pero NO
