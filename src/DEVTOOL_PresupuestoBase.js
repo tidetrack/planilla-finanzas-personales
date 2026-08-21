@@ -446,7 +446,8 @@ function aplicarPresupuestoBase() {
             ' meses ANTERIORES a el. Ningun mes se presupuesta con datos de su propio futuro, asi ' +
             'que el presupuesto CAMBIA al cambiar el periodo en el Tablero y el cumplimiento ' +
             'significa algo.\n\n' +
-            'Se excluyen los traspasos y los "Inicio Mes": no son gasto ni ingreso.\n' +
+            'Los traspasos entran SOLO si tocan un medio de tipo ' + TIPOS_RIQUEZA.join(' o ') +
+            ': un traspaso a un frasco\nes capitalizar. Los "Inicio Mes" nunca: son puntos de corte, no movimientos.\n' +
             'Cada cuenta se presupuesta EN SU MONEDA, y el Tablero convierte con la cotizacion de hoy.\n\n' +
             (plan.length !== conPresupuesto.length
                 ? (plan.length - conPresupuesto.length) + ' mes(es) quedan SIN presupuesto por no tener\n' +
