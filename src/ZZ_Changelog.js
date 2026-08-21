@@ -5,6 +5,41 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-21] v0.32.0 - La hoja Inicio queda terminada.
+ * - LO QUE HACE: el bloque "Presupuesto del Mes" (C17:H22) pasa a tener sus cuatro columnas vivas
+ *   -- D lo proyectado del mes desde la BD de Proyeccion, E lo realmente registrado, F una barra
+ *   de consumo 0..100% con el semaforo de la planilla anterior, y G la distribucion de fondos con
+ *   el MISMO reparto de tres regimenes del Tablero. Y los tres deltas (capital, ingresos, egresos)
+ *   contra la media de los ultimos 6 meses; C15/F15 reemplazan formulas que daban 0% eterno.
+ * - SELECTORES PROPIOS: Inicio tiene los suyos (I2/I3/I4) y son independientes de los del Tablero.
+ *   Todas las formulas nuevas anclan ahi y ninguna a N2/N3/N4.
+ *
+ * - E22 NO ES UN RESIDUO. decision Franco 2026-08-20 aplicada tambien aca: el plan asigna, la
+ *   realidad se mide. D22 es el residuo -- lo unico que cierra la asignacion en 100% -- y E22 mide
+ *   la capitalizacion efectiva del mes. Y no es una formula nueva: es LA MISMA de Tablero!O19,
+ *   parametrizando los selectores. Una copia habria divergido en el primer arreglo hecho en una
+ *   sola de las dos hojas, y entonces Inicio y Tablero mostrarian capitalizaciones distintas para
+ *   el mismo mes sin que nada lo delate.
+ *
+ * - EL PATRON DEL DELTA LLEVA PUNTO, NO COMA: '+0.0%;-0.0%'. El lenguaje de setNumberFormat es
+ *   INDEPENDIENTE DEL LOCALE ('.' siempre decimal, ',' siempre miles) y Sheets lo RENDERIZA con
+ *   coma en es_AR. Con '+0,0%' -- que es como se ve el resultado, y por eso engana -- el decimal
+ *   desaparecia: '+35%' en vez de '+34,5%', sin ningun error. Distinto de TEXT(), que si es
+ *   locale-aware; la constante venia de la C15 vieja, donde el patron vivia adentro de un TEXT().
+ *
+ * - EL MODULO ESTABA SIN CABLEAR: sus tres funciones no figuraban en MENU_CONFIG, asi que 964
+ *   lineas quedaban inalcanzables mientras sus propios dialogos mandaban a un menu inexistente.
+ *   GUARD NUEVO: el banco verifica que TODA funcion invocada por el menu exista en src/. El menu
+ *   las llama POR STRING -- un typo o un modulo sin cablear no lo detecta nada, el item aparece y
+ *   explota al apretarlo.
+ *
+ * - Inicio!C15 y F15 salen de DEVTOOL_StockYFlujo: ahora las reescribe este modulo. Es la cuarta
+ *   celda que se saca de un modulo por la misma razon (N19, O16, y estas dos): dos modulos sobre
+ *   la misma celda hacen que el numero dependa del orden en que se aprietan los botones del menu.
+ *
+ * - Verificado por mutacion (4/4): E22 de vuelta a residuo, E22 con los selectores del Tablero,
+ *   el patron con coma, y descablear el modulo del menu.
+ *
  * [2026-08-20] v0.31.1 - Reanclaje al rediseno manual: los montos viven en la columna O.
  * - Franco rediseno a mano L7:O19: movio los MONTOS de la columna N a la O, dejo los % del plan
  *   en N como formulas suyas (=IFERROR(O9/$O$9;0)) y ELIMINO el % del bloque de la realidad --

@@ -101,18 +101,31 @@ const CAP_PROP_RESPALDO = 'capitalizacion_respaldo';
 // FORMULAS
 // ============================================
 
+/**
+ * Los selectores de cada hoja. El Tablero y la hoja Inicio tienen los suyos, INDEPENDIENTES.
+ *
+ * decision Franco 2026-08-21: la capitalizacion efectiva se mide igual en las dos hojas, asi que
+ * la formula es LA MISMA y lo unico que cambia son los tres selectores. Parametrizarlos -- en vez
+ * de escribir una segunda formula para Inicio -- es lo que garantiza que las dos hojas midan con
+ * la misma vara: una copia diverge en el primer arreglo que se haga en una sola de las dos.
+ */
+const CAP_SELECTORES = {
+    tablero: { mes: '$N$2', anio: '$N$3', moneda: '$N$4' },
+    inicio:  { mes: '$I$2', anio: '$I$3', moneda: '$I$4' }
+};
+
 /** La conversion a la moneda del selector, por funcion y nunca por coordenada. */
-function _conversionCap(colMoneda) {
+function _conversionCap(colMoneda, sel) {
     return '  tasa_origen; ARRAYFORMULA(IF(' + colMoneda + '="USD"; TIDETRACK_USD(); IF(' + colMoneda +
         '="AUD"; TIDETRACK_AUD(); IF(' + colMoneda + '="EUR"; TIDETRACK_EUR(); 1))));\n' +
-        '  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; ' +
+        '  tasa_destino; IFERROR(SWITCH(' + sel.moneda + '; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; ' +
         'TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n';
 }
 
-/** El rango del mes seleccionado, derivado de los selectores N2/N3. */
-function _rangoMesCap() {
-    return '  mes_num; MATCH($N$2; SPLIT("' + PROY_MESES + '"; ","); 0);\n' +
-        '  desde; DATE($N$3; mes_num; 1);\n' +
+/** El rango del mes seleccionado, derivado de los selectores de SU hoja. */
+function _rangoMesCap(sel) {
+    return '  mes_num; MATCH(' + sel.mes + '; SPLIT("' + PROY_MESES + '"; ","); 0);\n' +
+        '  desde; DATE(' + sel.anio + '; mes_num; 1);\n' +
         '  hasta; EOMONTH(desde; 0);\n';
 }
 
@@ -142,7 +155,8 @@ function _esRiquezaCap(variable) {
  * Se excluye SOLO el arrastre (CUENTA_ARRASTRE): un "Inicio Mes" declara cuanta plata habia, no
  * mueve nada. Los traspasos SI cuentan por la pata cuyo medio es de riqueza.
  */
-function _formulaHaciaRiqueza(nombreHoja) {
+function _formulaHaciaRiqueza(nombreHoja, sel) {
+    sel = sel || CAP_SELECTORES.tablero;
     const cfg = RANGES.REGISTROS;
     const medios = RANGES.MEDIOS_PAGO;
     const col = function (clave) {
@@ -173,8 +187,8 @@ function _formulaHaciaRiqueza(nombreHoja) {
         // es un hecho que hay que poder ver. (La version "solo entradas" de la v0.28 murio con
         // el piso en cero: aca se mide, no se planifica.)
         '  signo; ARRAYFORMULA(IF(tipo_mov="Egreso"; -1; 1));\n' +
-        _rangoMesCap() +
-        _conversionCap('moneda') +
+        _rangoMesCap(sel) +
+        _conversionCap('moneda', sel) +
         '  convertido; ARRAYFORMULA(monto * signo * tasa_origen / tasa_destino);\n' +
         '  del_mes; ARRAYFORMULA(es_riqueza * no_corte * (fecha>=desde) * (fecha<=hasta));\n' +
         '  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)';

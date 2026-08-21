@@ -159,6 +159,17 @@ console.log('=== 0. Integridad de los fuentes (sin bytes de control) ===');
     const dup = Object.keys(defs).filter(k => defs[k].length > 1);
     ok(dup.length === 0, dup.length ? 'FUNCIONES DUPLICADAS (la ultima pisa en silencio): ' +
        dup.map(k => k + ' [' + defs[k].join(', ') + ']').join('; ') : 'ninguna funcion definida dos veces en src/');
+
+    // Y que TODA funcion invocada por el menu exista. MENU_CONFIG las llama POR STRING, asi que
+    // un typo o un modulo sin cablear no lo detecta nada: el item aparece y explota al apretarlo.
+    // El 2026-08-21 un modulo entero (964 lineas, la hoja Inicio) quedo sin cablear y por lo tanto
+    // inalcanzable, mientras sus propios dialogos mandaban a un menu que no existia.
+    const cfgSrc = fs.readFileSync(path.join(RAIZ, 'src/00_Config.js'), 'utf8');
+    const invocadas = [...cfgSrc.matchAll(/function:\s*'([A-Za-z_][A-Za-z0-9_]*)'/g)].map(m => m[1]);
+    const definidas = new Set(Object.keys(defs));
+    const huerfanas = [...new Set(invocadas)].filter(f => !definidas.has(f));
+    ok(huerfanas.length === 0, huerfanas.length ? 'EL MENU LLAMA A FUNCIONES QUE NO EXISTEN: ' +
+       huerfanas.join(', ') : 'las ' + new Set(invocadas).size + ' funciones del menu existen en src/');
 }
 
 const cfg = ctx.RANGES.REGISTROS;

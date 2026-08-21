@@ -152,8 +152,19 @@ const IP_COLOR_ROJO = '#da8b7b';
 /** Cantidad de meses previos completos que promedian los tres deltas. */
 const IP_MESES_MEDIA = 6;
 
-/** Formato de los tres deltas, tal cual lo pidio Franco. Se escribe, verifica y revierte. */
-const IP_FORMATO_DELTA = '+0,0%;-0,0%';
+/**
+ * Formato de los tres deltas: porcentaje con signo y un decimal.
+ *
+ * OJO CON EL PUNTO. El lenguaje de patrones de setNumberFormat es INDEPENDIENTE DEL LOCALE: '.' es
+ * siempre el separador decimal y ',' el de miles, sin importar que la planilla este en es_AR. El
+ * patron se escribe con punto y Sheets lo MUESTRA con coma. Con '+0,0%' -- que es como se ve el
+ * resultado y por eso engana -- el ',' se lee como separador de miles y los deltas saldrian
+ * '+35%' en vez de '+34,5%': el decimal desaparece sin ningun error.
+ *
+ * Distinto de TEXT(), que SI es locale-aware. La constante venia de la C15 vieja, donde el patron
+ * vivia adentro de un TEXT(); al moverlo a setNumberFormat cambio el idioma en el que se lee.
+ */
+const IP_FORMATO_DELTA = '+0.0%;-0.0%';
 
 /** Tolerancia de la identidad D19=D20+D21+D22 (y E) al releer los valores. */
 const IP_UMBRAL_IDENTIDAD = 0.01;
@@ -608,9 +619,18 @@ function _planIp(ss, pre) {
             _formulaRealidadIp(k),
             'lo que realmente paso este mes, desde el motor de la hoja (TC congelados)');
     });
+    // decision Franco 2026-08-20, aplicada aca el 2026-08-21: EL PLAN ASIGNA, LA REALIDAD SE MIDE.
+    // D22 es el residuo porque un presupuesto reparte los ingresos y el residuo es lo unico que
+    // cierra la asignacion en 100%. E22 NO: mide lo que efectivamente entro a los medios de
+    // Ahorros e Inversiones en el mes, traspasos incluidos, neteado con signo.
+    //
+    // Se reutiliza _formulaHaciaRiqueza de DEVTOOL_Capitalizacion con los selectores de ESTA hoja
+    // en vez de escribir una segunda formula: una copia diverge en el primer arreglo que se haga
+    // en una sola de las dos, y entonces Inicio y Tablero mostrarian capitalizaciones distintas
+    // para el mismo mes sin que nada lo delate.
     proponer(IP_BLOQUE.colRealidad + filas.capitalizacion.fila, 'Realidad: ' + filas.capitalizacion.rotulo,
-        _formulaResiduoIp(IP_BLOQUE.colRealidad),
-        'idem sobre lo que realmente paso');
+        _formulaHaciaRiqueza(RANGES.REGISTROS.sheet, CAP_SELECTORES.inicio),
+        'la capitalizacion MEDIDA del mes (identica a Tablero!O19, con los selectores de Inicio)');
 
     // --- Columna F: la barra de consumo ---
     Object.keys(filas).forEach(function (k) {

@@ -49,9 +49,10 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/03_SheetManager.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_FormulerioV0111.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_StockYFlujo.js'), 'utf8') + '\n' +
+    fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Proyeccion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Capitalizacion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_InicioPresupuesto.js'), 'utf8') +
-    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CUENTAS_NEUTRAS,CUENTA_ARRASTRE,' +
+    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CUENTAS_NEUTRAS,CUENTA_ARRASTRE,CAP_SELECTORES,' +
     'MONEDAS_DISPONIBLES,IP_BLOQUE,IP_RESUMEN,IP_SELECTORES,IP_MOTOR,IP_FORMATO_DELTA,IP_MESES_MEDIA});',
     ctx);
 
@@ -159,8 +160,19 @@ Object.keys(porCelda).forEach(c => { if (revisar(c, porCelda[c])) console.log(' 
 console.log('\n=== 3. LA IDENTIDAD: la Capacidad es el residuo, en las dos columnas ===');
 {
     ok(porCelda.D22 === '=D19-D20-D21', 'D22 es el residuo del presupuesto. Dio ' + porCelda.D22);
-    ok(porCelda.E22 === '=E19-E20-E21', 'E22 es el residuo de la realidad. Dio ' + porCelda.E22);
-    [porCelda.D22, porCelda.E22].forEach(f =>
+    // decision Franco 2026-08-20: el plan asigna (D22 residuo), la realidad SE MIDE (E22).
+    ok(porCelda.E22 !== '=E19-E20-E21', 'E22 NO es un residuo: la realidad se mide, no se descarta');
+    ok(porCelda.E22.indexOf(ctx.RANGES.REGISTROS.sheet + '!') !== -1,
+       'E22 lee el LEDGER: es la capitalizacion efectiva del mes');
+    ok(/\$I\$2/.test(porCelda.E22) && /\$I\$4/.test(porCelda.E22),
+       'E22 usa los selectores de INICIO ($I$2/$I$4), no los del Tablero');
+    ok(!/\$N\$[234]/.test(porCelda.E22), 'E22 no toca los selectores del Tablero ni por accidente');
+    // Y que sea LA MISMA formula que Tablero!O19: si divergen, las dos hojas mostrarian
+    // capitalizaciones distintas para el mismo mes sin que nada lo delate.
+    const oTablero = ctx._formulaHaciaRiqueza(ctx.RANGES.REGISTROS.sheet, ctx.CAP_SELECTORES.tablero);
+    ok(porCelda.E22.replace(/\$I\$([234])/g, 'S$1') === oTablero.replace(/\$N\$([234])/g, 'S$1'),
+       'E22 e Tablero!O19 son LA MISMA formula salvo los selectores de cada hoja');
+    [porCelda.D22].forEach(f =>
         ok(!/MAX\(0/.test(f), 'sin piso en cero: taparlo esconde el sobrecompromiso (' + f + ')'));
     // El espejo numerico: los tres destinos suman el 100% de los ingresos, siempre.
     const residuo = (ing, fij, vari) => ing - fij - vari;
@@ -375,7 +387,13 @@ console.log('\n=== 10. Coherencia con las constantes del modulo ===');
        'C8/F8 estan declaradas SOLO para revisarlas: el plan no las propone (verificado en 1b)');
     ok(ctx.IP_SELECTORES.mes === 'I2' && ctx.IP_SELECTORES.anio === 'I3' && ctx.IP_SELECTORES.moneda === 'I4',
        'los selectores son I2/I3/I4: la moneda vive en I4, G4 es solo el rotulo');
-    ok(ctx.IP_FORMATO_DELTA === '+0,0%;-0,0%', 'el formato de los deltas es el pedido');
+    // El lenguaje de patrones de setNumberFormat es INDEPENDIENTE DEL LOCALE: '.' es siempre el
+    // separador decimal. Con coma, Sheets lo lee como separador de MILES y el decimal desaparece
+    // ('+35%' en vez de '+34,5%'), sin ningun error. Se ve con coma porque asi lo RENDERIZA es_AR.
+    ok(ctx.IP_FORMATO_DELTA === '+0.0%;-0.0%',
+       'el patron del delta usa PUNTO decimal (se muestra con coma). Dio ' + ctx.IP_FORMATO_DELTA);
+    ok(!/,/.test(ctx.IP_FORMATO_DELTA),
+       'ninguna coma en el patron: seria separador de miles y se comeria el decimal');
 }
 
 console.log('\n' + (fallas === 0 ? '===> SIN FALLAS' : '===> ' + fallas + ' FALLA(S)'));

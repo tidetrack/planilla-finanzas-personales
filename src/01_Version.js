@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 31,
- patch: 1,
+ minor: 32,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.31.1 - Reanclaje al rediseno manual de Franco: los montos viven en la columna O',
+ releaseName: 'v0.32.0 - La hoja Inicio queda terminada: presupuesto del mes y los tres deltas',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

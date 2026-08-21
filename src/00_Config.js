@@ -532,6 +532,17 @@ const MENU_CONFIG = {
             // los medios de riqueza; y la Disponibilidad de fondos deja de volcar todo en una
             // sola fila cuando las tres categorias se pasaron del presupuesto.
             // @see DEVTOOL_Capitalizacion.js
+            // Termina la hoja Inicio: el bloque "Presupuesto del Mes" (D19:G22 -- proyectado,
+            // realidad, barra de consumo y distribucion) y los tres deltas contra la media de
+            // los ultimos 6 meses. @see DEVTOOL_InicioPresupuesto.js
+            submenu: 'Hoja Inicio (presupuesto y deltas)', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoInicioPresupuesto' },
+                { name: '2. Aplicar', function: 'aplicarInicioPresupuesto' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirInicioPresupuesto' }
+            ]
+        },
+        {
             submenu: 'Capitalizacion y disponibilidad', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoCapitalizacion' },
                 { name: '2. Aplicar', function: 'aplicarCapitalizacion' },

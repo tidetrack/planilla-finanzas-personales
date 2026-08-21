@@ -891,8 +891,10 @@ function _planSyf(ss, pre) {
      [pre.nombreTablero, 'X9', 'Gastos variables por cuenta'],
      [pre.nombreInicio, 'C13', 'Ingresos del mes'],
      [pre.nombreInicio, 'F13', 'Egresos del mes'],
-     [pre.nombreInicio, 'C15', 'Delta ingresos vs mes anterior'],
-     [pre.nombreInicio, 'F15', 'Delta egresos vs mes anterior']].forEach(function (t) {
+     // Inicio!C15 y F15 salieron de aca el 2026-08-21: las reescribe DEVTOOL_InicioPresupuesto,
+     // que las reemplaza enteras (venian dando 0% eterno). Dos modulos sobre la misma celda hacen
+     // que el numero dependa del orden del menu -- ya paso con N19 y con O16.
+     ].forEach(function (t) {
         const actual = ss.getSheetByName(t[0]).getRange(t[1]).getFormula();
         if (!actual) { avisos.push(t[0] + '!' + t[1] + ' no tiene formula: se saltea.'); return; }
         const nueva = _apagarArrastreSyf(actual);

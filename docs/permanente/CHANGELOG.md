@@ -9,6 +9,51 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.32.0 - La hoja Inicio queda terminada (2026-08-21)
+
+El bloque **"Presupuesto del Mes"** (`C17:H22`) pasa a tener sus cuatro columnas vivas:
+
+| Columna | Que muestra |
+|---|---|
+| D | Lo proyectado del mes, desde la BD de Proyeccion |
+| E | Lo realmente registrado |
+| F | Barra de consumo 0–100% con el semaforo de la planilla anterior |
+| G | Distribucion de fondos, con el mismo reparto de tres regimenes del Tablero |
+
+Mas los tres deltas (capital, ingresos, egresos) contra la media de los ultimos 6 meses. `C15`/`F15`
+reemplazan formulas que daban **0% eterno**.
+
+Inicio tiene **selectores propios** (`I2`/`I3`/`I4`), independientes de los del Tablero: todas las
+formulas nuevas anclan ahi.
+
+### E22 no es un residuo
+
+El plan asigna, la realidad se mide — la misma decision que rige el Tablero desde la v0.31.0. `D22`
+es el residuo (lo unico que cierra la asignacion en 100%) y `E22` mide la capitalizacion efectiva.
+
+Y **no es una formula nueva**: es la misma de `Tablero!O19`, parametrizando los selectores. Una
+copia habria divergido en el primer arreglo hecho en una sola de las dos hojas, y entonces Inicio y
+Tablero mostrarian capitalizaciones distintas para el mismo mes sin que nada lo delate.
+
+### El patron del delta lleva punto, no coma
+
+`'+0.0%;-0.0%'`. El lenguaje de `setNumberFormat` es **independiente del locale** (`.` siempre
+decimal, `,` siempre miles) y Sheets lo *renderiza* con coma en es_AR. Con `'+0,0%'` — que es como
+se ve el resultado, y por eso engana — el decimal desaparecia: `+35%` en vez de `+34,5%`, sin
+ningun error. Distinto de `TEXT()`, que si es locale-aware.
+
+### El modulo estaba sin cablear
+
+Sus tres funciones no figuraban en `MENU_CONFIG`: 964 lineas inalcanzables, mientras sus propios
+dialogos mandaban a un menu inexistente.
+
+**Guard nuevo:** el banco verifica que toda funcion invocada por el menu exista en `src/`. El menu
+las llama **por string** — un typo o un modulo sin cablear no lo detecta nada: el item aparece y
+explota al apretarlo.
+
+`Inicio!C15` y `F15` salen de `DEVTOOL_StockYFlujo`. Es la cuarta celda que se saca de un modulo
+por la misma razon (`N19`, `O16`, y estas dos).
+
 ## v0.31.1 - Reanclaje al rediseno manual: los montos viven en O (2026-08-20)
 
 Franco rediseno a mano `L7:O19`: movio los **montos** de la columna N a la O, dejo los % del plan en
