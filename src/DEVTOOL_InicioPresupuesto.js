@@ -885,9 +885,11 @@ function aplicarInicioPresupuesto() {
             'Se van a escribir ' + plan.cambios.length + ' celda(s) de "' + pre.nombre + '".\n\n' +
             'QUE CAMBIA:\n' +
             '  - El bloque "Presupuesto del Mes." se llena: D con lo proyectado (BD de\n' +
-            '    Proyeccion), E con la realidad (motor de la hoja), y en las dos columnas la\n' +
-            '    Capacidad de Capitalizacion es EL RESIDUO Ingresos - Fijos - Variables:\n' +
-            '    la identidad del presupuesto, verificada al releer los valores.\n' +
+            '    Proyeccion) y E con la realidad (motor de la hoja).\n' +
+            '  - EL PLAN ASIGNA, LA REALIDAD SE MIDE: D22 es EL RESIDUO Ingresos - Fijos -\n' +
+            '    Variables (la identidad del presupuesto, verificada al releer los valores),\n' +
+            '    y E22 MIDE lo que realmente entro a los frascos este mes, con la misma\n' +
+            '    formula que Tablero!O19. Por eso E22 puede dar negativo y D22 no.\n' +
             '  - F19:F22 muestran la barra de consumo con el semaforo de la planilla vieja.\n' +
             '  - G20:G22 reparten la liquidez de C8 igual que Tablero!O23:O25; G19 queda\n' +
             '    vacia porque los ingresos no reciben distribucion.\n' +
