@@ -5,6 +5,21 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-21] v0.32.1 - Una custom function calculando NO es una falla.
+ * - SINTOMA: la primera corrida de la hoja Inicio se revirtio entera con "la columna Realidad no
+ *   releyo numeros en las cuatro filas". Las formulas estaban PERFECTAS.
+ * - CAUSA: las funciones propias -- TIDETRACK_USD/AUD/EUR -- no calculan de forma sincronica. En
+ *   su primer calculo la celda devuelve el texto "Loading..." y recien despues el numero. El
+ *   verificador relee inmediatamente despues del flush(), ve un string, concluye "esto no es un
+ *   numero" y revierte. E22 empezo a llamarlas al medir la capitalizacion, y ahi aparecio.
+ * - Es un FALSO NEGATIVO caro: destruye trabajo correcto y manda a buscar el bug donde no esta.
+ * - CORRECCION: se relee con reintentos y pausas crecientes. Si al final sigue cargando, eso es
+ *   PENDIENTE, no FALLA: las formulas quedan escritas y el dialogo dice que invariantes no se
+ *   pudieron comprobar. Un #REF! sigue siendo falla y no se espera por el.
+ * - BUG PROPIO ATRAPADO POR EL BANCO en el mismo commit: G19 tiene que estar VACIA, y el lector
+ *   nuevo interpretaba el vacio como "todavia calculando". Esa celda va con lectura cruda.
+ * - APLICA A CUALQUIER MODULO que escriba formulas con custom functions y verifique releyendo.
+ *
  * [2026-08-21] v0.32.0 - La hoja Inicio queda terminada.
  * - LO QUE HACE: el bloque "Presupuesto del Mes" (C17:H22) pasa a tener sus cuatro columnas vivas
  *   -- D lo proyectado del mes desde la BD de Proyeccion, E lo realmente registrado, F una barra

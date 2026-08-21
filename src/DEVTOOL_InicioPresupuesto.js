@@ -679,15 +679,63 @@ function _planIp(ss, pre) {
  *   3. G20+G21+G22 = C8 (el reparto ni pierde ni inventa plata), si C8 es numerico.
  *   4. Los tres deltas son numeros finitos.
  */
+/**
+ * Lee una celda ESPERANDO a que las custom functions terminen de calcular.
+ *
+ * Las funciones propias -- TIDETRACK_USD/AUD/EUR -- no calculan de forma sincronica: en su primer
+ * calculo la celda devuelve el texto "Loading..." (o "Cargando..." segun el idioma) y recien
+ * despues el numero. Un verificador que relee inmediatamente despues del flush() ve ese string,
+ * concluye "esto no es un numero" y REVIERTE formulas que estaban perfectas.
+ *
+ * Paso el 2026-08-21 con E22, que empezo a llamar a TIDETRACK_* al medir la capitalizacion: la
+ * corrida entera se revirtio con el mensaje "la columna Realidad no releyo numeros". Es un falso
+ * negativo caro, porque destruye trabajo correcto y manda a buscar el bug donde no esta.
+ *
+ * Se reintenta con pausas crecientes. Si al final sigue en "cargando", se devuelve el marcador
+ * PENDIENTE: no es un numero, pero tampoco es una falla -- es una celda que todavia no resolvio,
+ * y el que decide que hacer con eso es quien llama, no esta funcion.
+ */
+const IP_PENDIENTE = { pendiente: true };
+
+function _leerYaCalculadoIp(hoja, celda) {
+    const esperas = [0, 600, 1500, 3000];
+    for (let i = 0; i < esperas.length; i++) {
+        if (esperas[i]) { SpreadsheetApp.flush(); Utilities.sleep(esperas[i]); }
+        const v = hoja.getRange(celda).getValue();
+        if (typeof v === 'number') return v;
+        // Un error de celda (#REF!, #VALUE!) SI es una falla y no hay que esperarlo.
+        if (typeof v === 'string' && v.indexOf('#') === 0) return v;
+        // Cualquier otro texto en una celda que deberia dar numero es, casi seguro, el
+        // "Loading..." de una custom function. Se le da otra oportunidad.
+    }
+    const ult = hoja.getRange(celda).getValue();
+    return typeof ult === 'number' ? ult : IP_PENDIENTE;
+}
+
 function _verificarInvariantesIp(hoja) {
     const fallas = [];
+    const avisos = [];
     const filas = IP_BLOQUE.filas;
     const orden = ['ingresos', 'fijos', 'variables', 'capitalizacion'];
-    const leer = function (celda) { return hoja.getRange(celda).getValue(); };
+    const leer = function (celda) { return _leerYaCalculadoIp(hoja, celda); };
 
     [[IP_BLOQUE.colPresupuesto, 'Presupuesto'], [IP_BLOQUE.colRealidad, 'Realidad']].forEach(function (par) {
         const col = par[0];
         const vals = orden.map(function (k) { return leer(col + filas[k].fila); });
+        const enError = vals.filter(function (v) { return typeof v === 'string' && v.indexOf('#') === 0; });
+        if (enError.length) {
+            fallas.push('la columna ' + par[1] + ' (' + col + ') quedo en error: ' + enError.join(', '));
+            return;
+        }
+        if (vals.some(function (v) { return v === IP_PENDIENTE; })) {
+            // Todavia calculando una custom function. NO es una falla: revertir aca destruiria
+            // formulas correctas. Se avisa y se saltea la identidad, que sin numeros no se puede
+            // comprobar.
+            avisos.push('la columna ' + par[1] + ' (' + col + ') todavia estaba calculando al ' +
+                'releerla (las cotizaciones tardan en resolver). Verificar a ojo que los cuatro ' +
+                'numeros aparezcan y que ' + col + filas.ingresos.fila + ' = la suma de los otros tres.');
+            return;
+        }
         if (vals.some(function (v) { return typeof v !== 'number' || !isFinite(v); })) {
             fallas.push('la columna ' + par[1] + ' (' + col + ') no releyo numeros en las cuatro filas');
             return;
@@ -700,7 +748,11 @@ function _verificarInvariantesIp(hoja) {
         }
     });
 
-    const g19 = leer(IP_BLOQUE.colDistribucion + filas.ingresos.fila);
+    // Lectura CRUDA: esta celda tiene que estar VACIA, y el lector que espera a las custom
+    // functions interpreta el vacio como "todavia calculando". Esperar por una celda cuyo valor
+    // correcto es la nada no tiene sentido, y ademas hace fallar el chequeo por el motivo opuesto
+    // al real. Lo atrapo el banco el 2026-08-21, en el mismo commit que introdujo el lector.
+    const g19 = hoja.getRange(IP_BLOQUE.colDistribucion + filas.ingresos.fila).getValue();
     if (String(g19) !== '') {
         fallas.push('G' + filas.ingresos.fila + ' (Distribucion de Ingresos) tendria que quedar vacia y muestra "' + g19 + '"');
     }
@@ -708,7 +760,10 @@ function _verificarInvariantesIp(hoja) {
     const repartos = ['fijos', 'variables', 'capitalizacion'].map(function (k) {
         return leer(IP_BLOQUE.colDistribucion + filas[k].fila);
     });
-    if (repartos.some(function (v) { return typeof v !== 'number' || !isFinite(v); })) {
+    if (repartos.some(function (v) { return v === IP_PENDIENTE; })) {
+        avisos.push('la columna Distribucion todavia estaba calculando al releerla. Verificar a ' +
+            'ojo que sus tres filas sumen el saldo de ' + IP_RESUMEN.saldo.celda + '.');
+    } else if (repartos.some(function (v) { return typeof v !== 'number' || !isFinite(v); })) {
         fallas.push('la columna Distribucion no releyo numeros en sus tres filas');
     } else {
         const liquidez = leer(IP_RESUMEN.saldo.celda);
@@ -723,12 +778,14 @@ function _verificarInvariantesIp(hoja) {
 
     [IP_RESUMEN.deltaCapital, IP_RESUMEN.deltaIngresos, IP_RESUMEN.deltaEgresos].forEach(function (d) {
         const v = leer(d.celda);
-        if (typeof v !== 'number' || !isFinite(v)) {
+        if (v === IP_PENDIENTE) {
+            avisos.push(d.celda + ' (' + d.nota + ') todavia estaba calculando al releerla.');
+        } else if (typeof v !== 'number' || !isFinite(v)) {
             fallas.push(d.celda + ' (' + d.nota + ') no releyo un numero');
         }
     });
 
-    return fallas;
+    return { fallas: fallas, avisos: avisos };
 }
 
 /**
@@ -875,8 +932,11 @@ function aplicarInicioPresupuesto() {
         SpreadsheetApp.flush();
 
         // Texto y estado de cada celda escrita, MAS los invariantes sobre los valores releidos.
-        const fallas = _verificarEscrituraSyf(ss, escritas)
-            .concat(_verificarInvariantesIp(pre.hoja));
+        // Los invariantes distinguen FALLAS de PENDIENTES: una celda que todavia esta calculando
+        // una custom function no es un error, y revertir por eso destruiria formulas correctas.
+        const inv = _verificarInvariantesIp(pre.hoja);
+        const fallas = _verificarEscrituraSyf(ss, escritas).concat(inv.fallas);
+        const pendientes = inv.avisos;
 
         if (fallas.length) {
             _revertirEscriturasIp(ss, escritas);
@@ -891,6 +951,12 @@ function aplicarInicioPresupuesto() {
 
         const filas = IP_BLOQUE.filas;
         const detalle = 'INICIO: PRESUPUESTO DEL MES Y DELTAS APLICADOS\n\n' +
+            (pendientes.length
+                ? 'SIN VERIFICAR DEL TODO (' + pendientes.length + '): las cotizaciones seguian\n' +
+                  'calculando al releer. NO es un error -- las formulas quedaron escritas -- pero\n' +
+                  'estos invariantes no se pudieron comprobar:\n' +
+                  pendientes.map(function (a) { return '  - ' + a; }).join('\n') + '\n\n'
+                : '') +
             '- Celdas escritas y verificadas: ' + escritas.length + '\n' +
             '- Respaldo en la hoja oculta "' + respaldo.nombre + '"\n' +
             '- Identidad verificada al releer: D' + filas.ingresos.fila + ' = D' + filas.fijos.fila +

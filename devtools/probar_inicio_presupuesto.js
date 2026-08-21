@@ -40,7 +40,7 @@ const ctx = {
             getSheetByName: () => null
         })
     },
-    PropertiesService: {}, Utilities: {}, Session: {}, Logger: { log() {} },
+    PropertiesService: {}, Utilities: { sleep() {},}, Session: {}, Logger: { log() {} },
     logInfo() {}, logError() {}, logSuccess() {},
 };
 vm.createContext(ctx);
@@ -52,7 +52,7 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Proyeccion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Capitalizacion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_InicioPresupuesto.js'), 'utf8') +
-    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CUENTAS_NEUTRAS,CUENTA_ARRASTRE,CAP_SELECTORES,' +
+    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CUENTAS_NEUTRAS,CUENTA_ARRASTRE,CAP_SELECTORES,IP_RESUMEN,IP_FORMATO_DELTA,' +
     'MONEDAS_DISPONIBLES,IP_BLOQUE,IP_RESUMEN,IP_SELECTORES,IP_MOTOR,IP_FORMATO_DELTA,IP_MESES_MEDIA});',
     ctx);
 
@@ -394,6 +394,56 @@ console.log('\n=== 10. Coherencia con las constantes del modulo ===');
        'el patron del delta usa PUNTO decimal (se muestra con coma). Dio ' + ctx.IP_FORMATO_DELTA);
     ok(!/,/.test(ctx.IP_FORMATO_DELTA),
        'ninguna coma en el patron: seria separador de miles y se comeria el decimal');
+}
+
+console.log('=== El verificador distingue PENDIENTE de FALLA ===');
+// Las custom functions (TIDETRACK_*) devuelven "Loading..." en su primer calculo. Un verificador
+// que relee enseguida ve un string y revierte formulas correctas: paso el 2026-08-21 con E22.
+{
+    const hojaDe = (valores) => ({
+        getRange: (celda) => ({
+            getValue: () => (celda in valores ? valores[celda] : ''),
+            getFormula: () => '', getNumberFormat: () => ctx.IP_FORMATO_DELTA
+        })
+    });
+    const F = ctx.IP_BLOQUE.filas, B = ctx.IP_BLOQUE;
+    const base = {};
+    [['colPresupuesto', [100, 40, 30, 30]], ['colRealidad', [90, 30, 30, 30]]].forEach(([c, v]) => {
+        ['ingresos','fijos','variables','capitalizacion'].forEach((k, j) => { base[B[c] + F[k].fila] = v[j]; });
+    });
+    base[B.colDistribucion + F.ingresos.fila] = '';
+    [['fijos', 10], ['variables', 20], ['capitalizacion', 70]].forEach(([k, v]) => { base[B.colDistribucion + F[k].fila] = v; });
+    base[ctx.IP_RESUMEN.saldo.celda] = 100;
+    [ctx.IP_RESUMEN.deltaCapital, ctx.IP_RESUMEN.deltaIngresos, ctx.IP_RESUMEN.deltaEgresos]
+        .forEach(d => { base[d.celda] = 0.1; });
+
+    let r = ctx._verificarInvariantesIp(hojaDe(base));
+    ok(r.fallas.length === 0 && r.avisos.length === 0, 'todo numerico y coherente: sin fallas ni avisos');
+
+    // Una celda "cargando": aviso, NUNCA falla.
+    const cargando = Object.assign({}, base);
+    cargando[B.colRealidad + F.capitalizacion.fila] = 'Loading...';
+    r = ctx._verificarInvariantesIp(hojaDe(cargando));
+    ok(r.fallas.length === 0, 'una custom function cargando NO es falla: revertir destruiria formulas buenas');
+    ok(r.avisos.length > 0, 'pero si deja aviso: el invariante quedo sin comprobar');
+
+    // Idem en castellano, que es como lo muestra esta planilla.
+    const cargando2 = Object.assign({}, base);
+    cargando2[B.colRealidad + F.capitalizacion.fila] = 'Cargando...';
+    r = ctx._verificarInvariantesIp(hojaDe(cargando2));
+    ok(r.fallas.length === 0 && r.avisos.length > 0, '"Cargando..." recibe el mismo trato que "Loading..."');
+
+    // Un ERROR de celda SI es falla, y no se espera.
+    const conError = Object.assign({}, base);
+    conError[B.colRealidad + F.fijos.fila] = '#REF!';
+    r = ctx._verificarInvariantesIp(hojaDe(conError));
+    ok(r.fallas.length > 0 && /#REF!/.test(r.fallas.join(' ')), 'un #REF! SI es falla y se nombra');
+
+    // Y la identidad rota sigue siendo falla.
+    const roto = Object.assign({}, base);
+    roto[B.colPresupuesto + F.capitalizacion.fila] = 999;
+    r = ctx._verificarInvariantesIp(hojaDe(roto));
+    ok(r.fallas.some(f => /identidad/.test(f)), 'la identidad rota sigue siendo falla');
 }
 
 console.log('\n' + (fallas === 0 ? '===> SIN FALLAS' : '===> ' + fallas + ' FALLA(S)'));

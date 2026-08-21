@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 32,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.32.0 - La hoja Inicio queda terminada: presupuesto del mes y los tres deltas',
+ releaseName: 'v0.32.1 - Una custom function calculando no es una falla: no se revierte por eso',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

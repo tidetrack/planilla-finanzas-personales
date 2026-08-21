@@ -9,6 +9,27 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.32.1 - Una custom function calculando no es una falla (2026-08-21)
+
+La primera corrida de la hoja Inicio se **revirtio entera** con *"la columna Realidad no releyo
+numeros en las cuatro filas"*. Las formulas estaban perfectas.
+
+**Causa:** las funciones propias — `TIDETRACK_USD/AUD/EUR` — no calculan de forma sincronica. En su
+primer calculo la celda devuelve el texto `"Loading..."` y recien despues el numero. El verificador
+relee inmediatamente despues del `flush()`, ve un string, concluye "esto no es un numero" y
+revierte. `E22` empezo a llamarlas al medir la capitalizacion, y ahi aparecio.
+
+Es un **falso negativo caro**: destruye trabajo correcto y manda a buscar el bug donde no esta.
+
+**Correccion:** se relee con reintentos y pausas crecientes. Si al final sigue cargando, eso es
+**pendiente, no falla**: las formulas quedan escritas y el dialogo dice que invariantes no se
+pudieron comprobar. Un `#REF!` sigue siendo falla y no se espera por el.
+
+**Bug propio atrapado por el banco en el mismo commit:** `G19` tiene que estar *vacia*, y el lector
+nuevo interpretaba el vacio como "todavia calculando". Esa celda va con lectura cruda.
+
+Aplica a cualquier modulo que escriba formulas con custom functions y verifique releyendo.
+
 ## v0.32.0 - La hoja Inicio queda terminada (2026-08-21)
 
 El bloque **"Presupuesto del Mes"** (`C17:H22`) pasa a tener sus cuatro columnas vivas:
