@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 30,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.30.0 - Ningun mes se proyecta con desahorro',
+ releaseName: 'v0.30.1 - La pata de traspaso pierde su Tipo de Cuenta: no es ingreso de ningun bloque',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

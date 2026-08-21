@@ -24116,7 +24116,7 @@ Tablero	G9		30
 Tablero	H9		31
 Tablero	I9		1
 Tablero	L9		Ingresos
-Tablero	N9	=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Ingreso") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	$1.992.567,52
+Tablero	N9	=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Ingreso") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	$1.992.582,67
 Tablero	O9	=IFERROR(N9/$N$9; 0)	100,00%
 Tablero	R9	=IFERROR(QUERY(\n  ARRAYFORMULA({\n    AL6:AL \\ \n    IF(AK6:AK="Egreso"; -AV6:AV; AV6:AV) \\ \n    AM6:AM \\ \n    IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); "") \\\n    IFERROR(VLOOKUP(IFERROR(VLOOKUP(AN6:AN; 'Plan de Cuentas'!L:N; 3; 0); ""); 'Plan de Cuentas'!P:P; 2; 0); "")\n  });\n  "SELECT Col1, SUM(Col2) \n   WHERE Col3 = 'Ingreso' \n   AND Col1 != 'Traspaso' \n   AND Col1 IS NOT NULL \n   AND Col1 != 'Inicio Mes' \n   GROUP BY Col1 \n   ORDER BY SUM(Col2) DESC \n   LABEL Col1 '', SUM(Col2) ''";\n  0\n); {"" \\ ""})	umoh
 Tablero	S9		$837.728,28
@@ -24180,8 +24180,8 @@ Tablero	G11		13
 Tablero	H11		14
 Tablero	I11		15
 Tablero	L11		Gastos Variables
-Tablero	N11	=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Gasto Variable") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	$1.385.949,56
-Tablero	O11	=IFERROR(N11/$N$9;0)	69,56%
+Tablero	N11	=LET(\n  monto; Proyeccion!B7:B;\n  cuenta; Proyeccion!D7:D;\n  tipo_cuenta; Proyeccion!E7:E;\n  moneda; Proyeccion!G7:G;\n  fecha; Proyeccion!H7:H;\n  mes_num; MATCH($N$2; SPLIT("Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"; ","); 0);\n  desde; DATE($N$3; mes_num; 1);\n  hasta; EOMONTH(desde; 0);\n  tasa_origen; ARRAYFORMULA(IF(moneda="USD"; TIDETRACK_USD(); IF(moneda="AUD"; TIDETRACK_AUD(); IF(moneda="EUR"; TIDETRACK_EUR(); 1))));\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  convertido; ARRAYFORMULA(monto * tasa_origen / tasa_destino);\n  del_mes; ARRAYFORMULA((tipo_cuenta="Gasto Variable") * (cuenta<>"Traspaso") * (cuenta<>"Inicio Mes") * (fecha>=desde) * (fecha<=hasta));\n  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)	$1.264.318,08
+Tablero	O11	=IFERROR(N11/$N$9;0)	63,45%
 Tablero	R11		Ingresos Extra
 Tablero	S11		$40.069,53
 Tablero	U11		Pago Tarjeta MP
@@ -24212,8 +24212,8 @@ Tablero	G12		20
 Tablero	H12		21
 Tablero	I12		22
 Tablero	L12		Capacidad de Capitalización
-Tablero	N12	=N9-N10-N11	-$318.561,01
-Tablero	O12	=IFERROR(N12/$N$9;0)	-15,99%
+Tablero	N12	=N9-N10-N11	-$196.914,38
+Tablero	O12	=IFERROR(N12/$N$9;0)	-9,88%
 Tablero	R12		Intereses bancos
 Tablero	S12		$785,19
 Tablero	U12		Nafta
@@ -24466,7 +24466,7 @@ Tablero	F23		USD
 Tablero	H23		$110,00
 Tablero	L23		Gastos Fijos
 Tablero	N23	=IFERROR(N17 / N10; 0)	55%
-Tablero	O23	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_fijos / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_fijos; liquidez * rem_fijos / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$99.508,14
+Tablero	O23	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_fijos / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_fijos; liquidez * rem_fijos / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$109.414,08
 Tablero	AJ23		$76.100,00
 Tablero	AK23		Egreso
 Tablero	AL23		Computación
@@ -24484,8 +24484,8 @@ Tablero	C24		Dolar Galicia
 Tablero	F24		USD
 Tablero	H24		$91,10
 Tablero	L24		Gastos Variables
-Tablero	N24	=IFERROR(N18 / N11; 0)	33%
-Tablero	O24	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_variables / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_variables; liquidez * rem_variables / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$220.061,56
+Tablero	N24	=IFERROR(N18 / N11; 0)	36%
+Tablero	O24	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_variables / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_variables; liquidez * rem_variables / suma_rem); liquidez * parte_sin_presupuesto);\n  reparto\n)	$210.155,62
 Tablero	AJ24		$8,02
 Tablero	AK24		Ingreso
 Tablero	AL24		Intereses bancos
@@ -24499,7 +24499,7 @@ Tablero	AT24		$1.071,28
 Tablero	AU24		$1.749,06
 Tablero	AV24		$8,02
 Tablero	L25		Capacidad de Capitalización
-Tablero	N25	=IFERROR(N19 / (N12); 0)	-54%
+Tablero	N25	=IFERROR(N19 / (N12); 0)	-87%
 Tablero	O25	=LET(\n  liquidez_ars; $AF$18 + ($AF$19 * TIDETRACK_USD()) + ($AF$20 * TIDETRACK_AUD()) + ($AF$21 * TIDETRACK_EUR());\n  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n  liquidez; liquidez_ars / tasa_destino;\n  rem_fijos; MAX(0; $N$10 - $N$17);\n  rem_variables; MAX(0; $N$11 - $N$18);\n  rem_capitalizacion; MAX(0; $N$12 - $N$19);\n  suma_rem; rem_fijos + rem_variables + rem_capitalizacion;\n  peso_fijos; MAX(0; $N$10);\n  peso_variables; MAX(0; $N$11);\n  peso_capitalizacion; MAX(0; $N$12);\n  suma_peso; peso_fijos + peso_variables + peso_capitalizacion;\n  parte_sin_presupuesto; IF(suma_peso > 0; peso_capitalizacion / suma_peso; 1/3);\n  reparto; IF(suma_rem > 0; MIN(rem_capitalizacion; liquidez * rem_capitalizacion / suma_rem); liquidez * parte_sin_presupuesto);\n  excedente; IF(suma_rem > 0; MAX(0; liquidez - suma_rem); 0);\n  reparto + excedente\n)	$0,00
 Tablero	AE25		Cotizaciones Monedas.
 Tablero	AJ25		$7.000,00
@@ -156490,7 +156490,7 @@ Proyeccion	E7		Gasto Fijo
 Proyeccion	F7		NaranjaX
 Proyeccion	G7		ARS
 Proyeccion	H7		1/2/2026
-Proyeccion	I7		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I7		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B8		$65.958,25
 Proyeccion	C8		Egreso
 Proyeccion	D8		Auto
@@ -156498,7 +156498,7 @@ Proyeccion	E8		Gasto Fijo
 Proyeccion	F8		NaranjaX
 Proyeccion	G8		ARS
 Proyeccion	H8		1/2/2026
-Proyeccion	I8		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I8		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B9		$48.529,98
 Proyeccion	C9		Egreso
 Proyeccion	D9		Pago tarjeta
@@ -156506,7 +156506,7 @@ Proyeccion	E9		Gasto Fijo
 Proyeccion	F9		NaranjaX
 Proyeccion	G9		ARS
 Proyeccion	H9		1/2/2026
-Proyeccion	I9		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I9		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B10		$48.505,89
 Proyeccion	C10		Egreso
 Proyeccion	D10		Prepaga
@@ -156514,7 +156514,7 @@ Proyeccion	E10		Gasto Fijo
 Proyeccion	F10		NaranjaX
 Proyeccion	G10		ARS
 Proyeccion	H10		1/2/2026
-Proyeccion	I10		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I10		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B11		$47.738,74
 Proyeccion	C11		Egreso
 Proyeccion	D11		MONOTRIBUTO
@@ -156522,7 +156522,7 @@ Proyeccion	E11		Gasto Fijo
 Proyeccion	F11		NaranjaX
 Proyeccion	G11		ARS
 Proyeccion	H11		1/2/2026
-Proyeccion	I11		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I11		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B12		$31.666,67
 Proyeccion	C12		Egreso
 Proyeccion	D12		SportClub
@@ -156530,7 +156530,7 @@ Proyeccion	E12		Gasto Fijo
 Proyeccion	F12		NaranjaX
 Proyeccion	G12		ARS
 Proyeccion	H12		1/2/2026
-Proyeccion	I12		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I12		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B13		$27.189,36
 Proyeccion	C13		Egreso
 Proyeccion	D13		Linea telefónica
@@ -156538,7 +156538,7 @@ Proyeccion	E13		Gasto Fijo
 Proyeccion	F13		NaranjaX
 Proyeccion	G13		ARS
 Proyeccion	H13		1/2/2026
-Proyeccion	I13		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I13		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B14		$7.865,95
 Proyeccion	C14		Egreso
 Proyeccion	D14		Gatos
@@ -156546,7 +156546,7 @@ Proyeccion	E14		Gasto Fijo
 Proyeccion	F14		NaranjaX
 Proyeccion	G14		ARS
 Proyeccion	H14		1/2/2026
-Proyeccion	I14		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I14		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B15		$7.209,35
 Proyeccion	C15		Egreso
 Proyeccion	D15		Deuda Viejo
@@ -156554,14 +156554,14 @@ Proyeccion	E15		Gasto Fijo
 Proyeccion	F15		NaranjaX
 Proyeccion	G15		ARS
 Proyeccion	H15		1/2/2026
-Proyeccion	I15		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I15		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B16		$4.788,53
 Proyeccion	C16		Egreso
 Proyeccion	D16		Subscripciones
 Proyeccion	E16		Gasto Fijo
 Proyeccion	G16		ARS
 Proyeccion	H16		1/2/2026
-Proyeccion	I16		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I16		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B17		$8,41
 Proyeccion	C17		Egreso
 Proyeccion	D17		Pago tarjeta
@@ -156569,7 +156569,7 @@ Proyeccion	E17		Gasto Fijo
 Proyeccion	F17		Dolar Patagonia
 Proyeccion	G17		USD
 Proyeccion	H17		1/2/2026
-Proyeccion	I17		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I17		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B18		$118.113,33
 Proyeccion	C18		Egreso
 Proyeccion	D18		Comidas
@@ -156577,7 +156577,7 @@ Proyeccion	E18		Gasto Variable
 Proyeccion	F18		NaranjaX
 Proyeccion	G18		ARS
 Proyeccion	H18		1/2/2026
-Proyeccion	I18		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I18		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B19		$75.418,17
 Proyeccion	C19		Egreso
 Proyeccion	D19		Compra USD
@@ -156585,7 +156585,7 @@ Proyeccion	E19		Gasto Variable
 Proyeccion	F19		NaranjaX
 Proyeccion	G19		ARS
 Proyeccion	H19		1/2/2026
-Proyeccion	I19		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I19		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B20		$50.740,83
 Proyeccion	C20		Egreso
 Proyeccion	D20		Salidas
@@ -156593,7 +156593,7 @@ Proyeccion	E20		Gasto Variable
 Proyeccion	F20		NaranjaX
 Proyeccion	G20		ARS
 Proyeccion	H20		1/2/2026
-Proyeccion	I20		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I20		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B21		$44.028,11
 Proyeccion	C21		Egreso
 Proyeccion	D21		Juntadas
@@ -156601,7 +156601,7 @@ Proyeccion	E21		Gasto Variable
 Proyeccion	F21		NaranjaX
 Proyeccion	G21		ARS
 Proyeccion	H21		1/2/2026
-Proyeccion	I21		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I21		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B22		$29.166,34
 Proyeccion	C22		Ingreso
 Proyeccion	D22		Comidas
@@ -156609,7 +156609,7 @@ Proyeccion	E22		Gasto Variable
 Proyeccion	F22		NaranjaX
 Proyeccion	G22		ARS
 Proyeccion	H22		1/2/2026
-Proyeccion	I22		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I22		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B23		$22.056,28
 Proyeccion	C23		Egreso
 Proyeccion	D23		Entretenimiento
@@ -156617,14 +156617,14 @@ Proyeccion	E23		Gasto Variable
 Proyeccion	F23		NaranjaX
 Proyeccion	G23		ARS
 Proyeccion	H23		1/2/2026
-Proyeccion	I23		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I23		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B24		$20.116,67
 Proyeccion	C24		Ingreso
 Proyeccion	D24		Compra USD
 Proyeccion	E24		Gasto Variable
 Proyeccion	G24		ARS
 Proyeccion	H24		1/2/2026
-Proyeccion	I24		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I24		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B25		$17.032,50
 Proyeccion	C25		Egreso
 Proyeccion	D25		Trabajo
@@ -156632,7 +156632,7 @@ Proyeccion	E25		Gasto Variable
 Proyeccion	F25		NaranjaX
 Proyeccion	G25		ARS
 Proyeccion	H25		1/2/2026
-Proyeccion	I25		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I25		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B26		$13.400,00
 Proyeccion	C26		Egreso
 Proyeccion	D26		Entrenamiento
@@ -156640,7 +156640,7 @@ Proyeccion	E26		Gasto Variable
 Proyeccion	F26		NaranjaX
 Proyeccion	G26		ARS
 Proyeccion	H26		1/2/2026
-Proyeccion	I26		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I26		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B27		$12.873,78
 Proyeccion	C27		Egreso
 Proyeccion	D27		Viajes
@@ -156648,7 +156648,7 @@ Proyeccion	E27		Gasto Variable
 Proyeccion	F27		NaranjaX
 Proyeccion	G27		ARS
 Proyeccion	H27		1/2/2026
-Proyeccion	I27		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I27		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B28		$7.883,33
 Proyeccion	C28		Ingreso
 Proyeccion	D28		Salidas
@@ -156656,7 +156656,7 @@ Proyeccion	E28		Gasto Variable
 Proyeccion	F28		NaranjaX
 Proyeccion	G28		ARS
 Proyeccion	H28		1/2/2026
-Proyeccion	I28		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I28		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B29		$6.333,33
 Proyeccion	C29		Egreso
 Proyeccion	D29		Corte Pelo
@@ -156664,7 +156664,7 @@ Proyeccion	E29		Gasto Variable
 Proyeccion	F29		NaranjaX
 Proyeccion	G29		ARS
 Proyeccion	H29		1/2/2026
-Proyeccion	I29		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I29		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B30		$5.729,20
 Proyeccion	C30		Egreso
 Proyeccion	D30		Regalos
@@ -156672,7 +156672,7 @@ Proyeccion	E30		Gasto Variable
 Proyeccion	F30		NaranjaX
 Proyeccion	G30		ARS
 Proyeccion	H30		1/2/2026
-Proyeccion	I30		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I30		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B31		$4.946,67
 Proyeccion	C31		Egreso
 Proyeccion	D31		Gastos - TT
@@ -156680,7 +156680,7 @@ Proyeccion	E31		Gasto Variable
 Proyeccion	F31		NaranjaX
 Proyeccion	G31		ARS
 Proyeccion	H31		1/2/2026
-Proyeccion	I31		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I31		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B32		$4.363,33
 Proyeccion	C32		Ingreso
 Proyeccion	D32		Gastos - TT
@@ -156688,7 +156688,7 @@ Proyeccion	E32		Gasto Variable
 Proyeccion	F32		NaranjaX
 Proyeccion	G32		ARS
 Proyeccion	H32		1/2/2026
-Proyeccion	I32		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I32		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B33		$3.750,00
 Proyeccion	C33		Egreso
 Proyeccion	D33		Medicamentos / Higiene
@@ -156696,7 +156696,7 @@ Proyeccion	E33		Gasto Variable
 Proyeccion	F33		NaranjaX
 Proyeccion	G33		ARS
 Proyeccion	H33		1/2/2026
-Proyeccion	I33		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I33		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B34		$1.500,00
 Proyeccion	C34		Ingreso
 Proyeccion	D34		Juntadas
@@ -156704,7 +156704,7 @@ Proyeccion	E34		Gasto Variable
 Proyeccion	F34		NaranjaX
 Proyeccion	G34		ARS
 Proyeccion	H34		1/2/2026
-Proyeccion	I34		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I34		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B35		$566,67
 Proyeccion	C35		Egreso
 Proyeccion	D35		Estacionamiento
@@ -156712,7 +156712,7 @@ Proyeccion	E35		Gasto Variable
 Proyeccion	F35		NaranjaX
 Proyeccion	G35		ARS
 Proyeccion	H35		1/2/2026
-Proyeccion	I35		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I35		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B36		$333,33
 Proyeccion	C36		Egreso
 Proyeccion	D36		Facultad
@@ -156720,7 +156720,7 @@ Proyeccion	E36		Gasto Variable
 Proyeccion	F36		Efectivo
 Proyeccion	G36		ARS
 Proyeccion	H36		1/2/2026
-Proyeccion	I36		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I36		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B37		$38,07
 Proyeccion	C37		Ingreso
 Proyeccion	D37		Compra USD
@@ -156728,7 +156728,7 @@ Proyeccion	E37		Gasto Variable
 Proyeccion	F37		Dolar Patagonia
 Proyeccion	G37		USD
 Proyeccion	H37		1/2/2026
-Proyeccion	I37		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I37		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B38		$7,50
 Proyeccion	C38		Egreso
 Proyeccion	D38		Entretenimiento
@@ -156736,7 +156736,7 @@ Proyeccion	E38		Gasto Variable
 Proyeccion	F38		Dolar Patagonia
 Proyeccion	G38		USD
 Proyeccion	H38		1/2/2026
-Proyeccion	I38		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I38		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B39		$6,13
 Proyeccion	C39		Egreso
 Proyeccion	D39		Compra USD
@@ -156744,7 +156744,7 @@ Proyeccion	E39		Gasto Variable
 Proyeccion	F39		Dolar Patagonia
 Proyeccion	G39		USD
 Proyeccion	H39		1/2/2026
-Proyeccion	I39		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I39		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B40		$188.400,08
 Proyeccion	C40		Ingreso
 Proyeccion	D40		Ingreso Asesor
@@ -156752,7 +156752,7 @@ Proyeccion	E40		Ingreso
 Proyeccion	F40		NaranjaX
 Proyeccion	G40		ARS
 Proyeccion	H40		1/2/2026
-Proyeccion	I40		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I40		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B41		$184.458,17
 Proyeccion	C41		Egreso
 Proyeccion	D41		Traspaso
@@ -156760,7 +156760,7 @@ Proyeccion	E41		Ingreso
 Proyeccion	F41		Frascos Naranja X
 Proyeccion	G41		ARS
 Proyeccion	H41		1/2/2026
-Proyeccion	I41		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I41		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B42		$175.441,67
 Proyeccion	C42		Ingreso
 Proyeccion	D42		Tidetrack
@@ -156768,7 +156768,7 @@ Proyeccion	E42		Ingreso
 Proyeccion	F42		NaranjaX
 Proyeccion	G42		ARS
 Proyeccion	H42		1/2/2026
-Proyeccion	I42		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I42		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B43		$152.308,17
 Proyeccion	C43		Ingreso
 Proyeccion	D43		Traspaso
@@ -156776,7 +156776,7 @@ Proyeccion	E43		Ingreso
 Proyeccion	F43		Frascos Naranja X
 Proyeccion	G43		ARS
 Proyeccion	H43		1/2/2026
-Proyeccion	I43		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I43		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B44		$146.598,92
 Proyeccion	C44		Ingreso
 Proyeccion	D44		Ingresos Extra
@@ -156784,7 +156784,7 @@ Proyeccion	E44		Ingreso
 Proyeccion	F44		Efectivo
 Proyeccion	G44		ARS
 Proyeccion	H44		1/2/2026
-Proyeccion	I44		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I44		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B45		$83.333,33
 Proyeccion	C45		Ingreso
 Proyeccion	D45		Sueldo
@@ -156792,14 +156792,14 @@ Proyeccion	E45		Ingreso
 Proyeccion	F45		NaranjaX
 Proyeccion	G45		ARS
 Proyeccion	H45		1/2/2026
-Proyeccion	I45		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I45		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B46		$37.400,00
 Proyeccion	C46		Ingreso
 Proyeccion	D46		FF
 Proyeccion	E46		Ingreso
 Proyeccion	G46		ARS
 Proyeccion	H46		1/2/2026
-Proyeccion	I46		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I46		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B47		$36.666,67
 Proyeccion	C47		Ingreso
 Proyeccion	D47		Umoh
@@ -156807,7 +156807,7 @@ Proyeccion	E47		Ingreso
 Proyeccion	F47		NaranjaX
 Proyeccion	G47		ARS
 Proyeccion	H47		1/2/2026
-Proyeccion	I47		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I47		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B48		$25.000,00
 Proyeccion	C48		Ingreso
 Proyeccion	D48		Ingresos extra
@@ -156815,7 +156815,7 @@ Proyeccion	E48		Ingreso
 Proyeccion	F48		NaranjaX
 Proyeccion	G48		ARS
 Proyeccion	H48		1/2/2026
-Proyeccion	I48		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I48		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B49		$7.822,88
 Proyeccion	C49		Ingreso
 Proyeccion	D49		Intereses bancos
@@ -156823,7 +156823,7 @@ Proyeccion	E49		Ingreso
 Proyeccion	F49		NaranjaX
 Proyeccion	G49		ARS
 Proyeccion	H49		1/2/2026
-Proyeccion	I49		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I49		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B50		$6,13
 Proyeccion	C50		Egreso
 Proyeccion	D50		Traspaso
@@ -156831,7 +156831,7 @@ Proyeccion	E50		Ingreso
 Proyeccion	F50		Dolar NaranjaX
 Proyeccion	G50		USD
 Proyeccion	H50		1/2/2026
-Proyeccion	I50		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I50		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B51		$6,13
 Proyeccion	C51		Ingreso
 Proyeccion	D51		Traspaso
@@ -156839,7 +156839,7 @@ Proyeccion	E51		Ingreso
 Proyeccion	F51		Dolar Patagonia
 Proyeccion	G51		USD
 Proyeccion	H51		1/2/2026
-Proyeccion	I51		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I51		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B52		$5,50
 Proyeccion	C52		Ingreso
 Proyeccion	D52		Plata Prestada
@@ -156847,7 +156847,7 @@ Proyeccion	E52		Ingreso
 Proyeccion	F52		Dolar Patagonia
 Proyeccion	G52		USD
 Proyeccion	H52		1/2/2026
-Proyeccion	I52		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I52		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B53		$121.113,50
 Proyeccion	C53		Egreso
 Proyeccion	D53		Nafta
@@ -156855,7 +156855,7 @@ Proyeccion	E53		Gasto Fijo
 Proyeccion	F53		NaranjaX
 Proyeccion	G53		ARS
 Proyeccion	H53		1/3/2026
-Proyeccion	I53		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I53		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B54		$66.933,41
 Proyeccion	C54		Egreso
 Proyeccion	D54		Auto
@@ -156863,7 +156863,7 @@ Proyeccion	E54		Gasto Fijo
 Proyeccion	F54		NaranjaX
 Proyeccion	G54		ARS
 Proyeccion	H54		1/3/2026
-Proyeccion	I54		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I54		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B55		$49.443,23
 Proyeccion	C55		Egreso
 Proyeccion	D55		Prepaga
@@ -156871,7 +156871,7 @@ Proyeccion	E55		Gasto Fijo
 Proyeccion	F55		NaranjaX
 Proyeccion	G55		ARS
 Proyeccion	H55		1/3/2026
-Proyeccion	I55		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I55		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B56		$48.876,07
 Proyeccion	C56		Egreso
 Proyeccion	D56		MONOTRIBUTO
@@ -156879,7 +156879,7 @@ Proyeccion	E56		Gasto Fijo
 Proyeccion	F56		NaranjaX
 Proyeccion	G56		ARS
 Proyeccion	H56		1/3/2026
-Proyeccion	I56		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I56		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B57		$47.435,87
 Proyeccion	C57		Egreso
 Proyeccion	D57		Pago tarjeta
@@ -156887,7 +156887,7 @@ Proyeccion	E57		Gasto Fijo
 Proyeccion	F57		Patagonia
 Proyeccion	G57		ARS
 Proyeccion	H57		1/3/2026
-Proyeccion	I57		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I57		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B58		$38.333,33
 Proyeccion	C58		Egreso
 Proyeccion	D58		SportClub
@@ -156895,7 +156895,7 @@ Proyeccion	E58		Gasto Fijo
 Proyeccion	F58		NaranjaX
 Proyeccion	G58		ARS
 Proyeccion	H58		1/3/2026
-Proyeccion	I58		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I58		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B59		$33.707,69
 Proyeccion	C59		Egreso
 Proyeccion	D59		Linea telefónica
@@ -156903,7 +156903,7 @@ Proyeccion	E59		Gasto Fijo
 Proyeccion	F59		NaranjaX
 Proyeccion	G59		ARS
 Proyeccion	H59		1/3/2026
-Proyeccion	I59		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I59		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B60		$5.297,70
 Proyeccion	C60		Egreso
 Proyeccion	D60		Gatos
@@ -156911,14 +156911,14 @@ Proyeccion	E60		Gasto Fijo
 Proyeccion	F60		NaranjaX
 Proyeccion	G60		ARS
 Proyeccion	H60		1/3/2026
-Proyeccion	I60		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I60		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B61		$2.395,17
 Proyeccion	C61		Egreso
 Proyeccion	D61		Subscripciones
 Proyeccion	E61		Gasto Fijo
 Proyeccion	G61		ARS
 Proyeccion	H61		1/3/2026
-Proyeccion	I61		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I61		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B62		$46,85
 Proyeccion	C62		Egreso
 Proyeccion	D62		Pago tarjeta
@@ -156926,7 +156926,7 @@ Proyeccion	E62		Gasto Fijo
 Proyeccion	F62		Dolar Patagonia
 Proyeccion	G62		USD
 Proyeccion	H62		1/3/2026
-Proyeccion	I62		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I62		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B63		$115.096,67
 Proyeccion	C63		Egreso
 Proyeccion	D63		Comidas
@@ -156934,7 +156934,7 @@ Proyeccion	E63		Gasto Variable
 Proyeccion	F63		NaranjaX
 Proyeccion	G63		ARS
 Proyeccion	H63		1/3/2026
-Proyeccion	I63		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I63		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B64		$85.984,17
 Proyeccion	C64		Egreso
 Proyeccion	D64		Salidas
@@ -156942,7 +156942,7 @@ Proyeccion	E64		Gasto Variable
 Proyeccion	F64		NaranjaX
 Proyeccion	G64		ARS
 Proyeccion	H64		1/3/2026
-Proyeccion	I64		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I64		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B65		$75.418,17
 Proyeccion	C65		Egreso
 Proyeccion	D65		Compra USD
@@ -156950,7 +156950,7 @@ Proyeccion	E65		Gasto Variable
 Proyeccion	F65		NaranjaX
 Proyeccion	G65		ARS
 Proyeccion	H65		1/3/2026
-Proyeccion	I65		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I65		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B66		$55.918,35
 Proyeccion	C66		Egreso
 Proyeccion	D66		Viajes
@@ -156958,7 +156958,7 @@ Proyeccion	E66		Gasto Variable
 Proyeccion	F66		NaranjaX
 Proyeccion	G66		ARS
 Proyeccion	H66		1/3/2026
-Proyeccion	I66		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I66		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B67		$31.134,55
 Proyeccion	C67		Egreso
 Proyeccion	D67		Juntadas
@@ -156966,7 +156966,7 @@ Proyeccion	E67		Gasto Variable
 Proyeccion	F67		NaranjaX
 Proyeccion	G67		ARS
 Proyeccion	H67		1/3/2026
-Proyeccion	I67		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I67		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B68		$22.056,28
 Proyeccion	C68		Egreso
 Proyeccion	D68		Entretenimiento
@@ -156974,7 +156974,7 @@ Proyeccion	E68		Gasto Variable
 Proyeccion	F68		NaranjaX
 Proyeccion	G68		ARS
 Proyeccion	H68		1/3/2026
-Proyeccion	I68		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I68		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B69		$20.664,91
 Proyeccion	C69		Ingreso
 Proyeccion	D69		Comidas
@@ -156982,14 +156982,14 @@ Proyeccion	E69		Gasto Variable
 Proyeccion	F69		NaranjaX
 Proyeccion	G69		ARS
 Proyeccion	H69		1/3/2026
-Proyeccion	I69		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I69		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B70		$20.116,67
 Proyeccion	C70		Ingreso
 Proyeccion	D70		Compra USD
 Proyeccion	E70		Gasto Variable
 Proyeccion	G70		ARS
 Proyeccion	H70		1/3/2026
-Proyeccion	I70		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I70		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B71		$17.175,83
 Proyeccion	C71		Egreso
 Proyeccion	D71		Trabajo
@@ -156997,7 +156997,7 @@ Proyeccion	E71		Gasto Variable
 Proyeccion	F71		NaranjaX
 Proyeccion	G71		ARS
 Proyeccion	H71		1/3/2026
-Proyeccion	I71		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I71		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B72		$16.976,20
 Proyeccion	C72		Ingreso
 Proyeccion	D72		Viajes
@@ -157005,7 +157005,7 @@ Proyeccion	E72		Gasto Variable
 Proyeccion	F72		NaranjaX
 Proyeccion	G72		ARS
 Proyeccion	H72		1/3/2026
-Proyeccion	I72		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I72		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B73		$14.303,33
 Proyeccion	C73		Ingreso
 Proyeccion	D73		Salidas
@@ -157013,7 +157013,7 @@ Proyeccion	E73		Gasto Variable
 Proyeccion	F73		NaranjaX
 Proyeccion	G73		ARS
 Proyeccion	H73		1/3/2026
-Proyeccion	I73		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I73		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B74		$13.400,00
 Proyeccion	C74		Egreso
 Proyeccion	D74		Entrenamiento
@@ -157021,7 +157021,7 @@ Proyeccion	E74		Gasto Variable
 Proyeccion	F74		NaranjaX
 Proyeccion	G74		ARS
 Proyeccion	H74		1/3/2026
-Proyeccion	I74		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I74		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B75		$6.333,33
 Proyeccion	C75		Egreso
 Proyeccion	D75		Corte Pelo
@@ -157029,7 +157029,7 @@ Proyeccion	E75		Gasto Variable
 Proyeccion	F75		NaranjaX
 Proyeccion	G75		ARS
 Proyeccion	H75		1/3/2026
-Proyeccion	I75		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I75		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B76		$4.946,67
 Proyeccion	C76		Egreso
 Proyeccion	D76		Gastos - TT
@@ -157037,7 +157037,7 @@ Proyeccion	E76		Gasto Variable
 Proyeccion	F76		NaranjaX
 Proyeccion	G76		ARS
 Proyeccion	H76		1/3/2026
-Proyeccion	I76		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I76		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B77		$4.363,33
 Proyeccion	C77		Ingreso
 Proyeccion	D77		Gastos - TT
@@ -157045,7 +157045,7 @@ Proyeccion	E77		Gasto Variable
 Proyeccion	F77		NaranjaX
 Proyeccion	G77		ARS
 Proyeccion	H77		1/3/2026
-Proyeccion	I77		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I77		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B78		$3.750,00
 Proyeccion	C78		Egreso
 Proyeccion	D78		Medicamentos / Higiene
@@ -157053,7 +157053,7 @@ Proyeccion	E78		Gasto Variable
 Proyeccion	F78		NaranjaX
 Proyeccion	G78		ARS
 Proyeccion	H78		1/3/2026
-Proyeccion	I78		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I78		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B79		$833,33
 Proyeccion	C79		Egreso
 Proyeccion	D79		Regalos
@@ -157061,7 +157061,7 @@ Proyeccion	E79		Gasto Variable
 Proyeccion	F79		NaranjaX
 Proyeccion	G79		ARS
 Proyeccion	H79		1/3/2026
-Proyeccion	I79		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I79		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B80		$650,00
 Proyeccion	C80		Egreso
 Proyeccion	D80		Estacionamiento
@@ -157069,7 +157069,7 @@ Proyeccion	E80		Gasto Variable
 Proyeccion	F80		NaranjaX
 Proyeccion	G80		ARS
 Proyeccion	H80		1/3/2026
-Proyeccion	I80		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I80		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B81		$333,33
 Proyeccion	C81		Egreso
 Proyeccion	D81		Facultad
@@ -157077,7 +157077,7 @@ Proyeccion	E81		Gasto Variable
 Proyeccion	F81		Efectivo
 Proyeccion	G81		ARS
 Proyeccion	H81		1/3/2026
-Proyeccion	I81		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I81		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B82		$38,07
 Proyeccion	C82		Ingreso
 Proyeccion	D82		Compra USD
@@ -157085,7 +157085,7 @@ Proyeccion	E82		Gasto Variable
 Proyeccion	F82		Dolar Patagonia
 Proyeccion	G82		USD
 Proyeccion	H82		1/3/2026
-Proyeccion	I82		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I82		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B83		$7,50
 Proyeccion	C83		Egreso
 Proyeccion	D83		Entretenimiento
@@ -157093,7 +157093,7 @@ Proyeccion	E83		Gasto Variable
 Proyeccion	F83		Dolar Patagonia
 Proyeccion	G83		USD
 Proyeccion	H83		1/3/2026
-Proyeccion	I83		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I83		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B84		$6,13
 Proyeccion	C84		Egreso
 Proyeccion	D84		Compra USD
@@ -157101,7 +157101,7 @@ Proyeccion	E84		Gasto Variable
 Proyeccion	F84		Dolar Patagonia
 Proyeccion	G84		USD
 Proyeccion	H84		1/3/2026
-Proyeccion	I84		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I84		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B85		$350.591,67
 Proyeccion	C85		Ingreso
 Proyeccion	D85		Tidetrack
@@ -157109,7 +157109,7 @@ Proyeccion	E85		Ingreso
 Proyeccion	F85		NaranjaX
 Proyeccion	G85		ARS
 Proyeccion	H85		1/3/2026
-Proyeccion	I85		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I85		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B86		$171.733,41
 Proyeccion	C86		Ingreso
 Proyeccion	D86		Ingreso Asesor
@@ -157117,7 +157117,7 @@ Proyeccion	E86		Ingreso
 Proyeccion	F86		NaranjaX
 Proyeccion	G86		ARS
 Proyeccion	H86		1/3/2026
-Proyeccion	I86		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I86		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B87		$154.154,48
 Proyeccion	C87		Ingreso
 Proyeccion	D87		Ingresos Extra
@@ -157125,7 +157125,7 @@ Proyeccion	E87		Ingreso
 Proyeccion	F87		NaranjaX
 Proyeccion	G87		ARS
 Proyeccion	H87		1/3/2026
-Proyeccion	I87		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I87		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B88		$142.909,48
 Proyeccion	C88		Ingreso
 Proyeccion	D88		Traspaso
@@ -157133,7 +157133,7 @@ Proyeccion	E88		Ingreso
 Proyeccion	F88		Frascos Naranja X
 Proyeccion	G88		ARS
 Proyeccion	H88		1/3/2026
-Proyeccion	I88		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I88		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B89		$134.591,50
 Proyeccion	C89		Egreso
 Proyeccion	D89		Traspaso
@@ -157141,7 +157141,7 @@ Proyeccion	E89		Ingreso
 Proyeccion	F89		Frascos Naranja X
 Proyeccion	G89		ARS
 Proyeccion	H89		1/3/2026
-Proyeccion	I89		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I89		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B90		$99.864,58
 Proyeccion	C90		Ingreso
 Proyeccion	D90		Umoh
@@ -157149,14 +157149,14 @@ Proyeccion	E90		Ingreso
 Proyeccion	F90		NaranjaX
 Proyeccion	G90		ARS
 Proyeccion	H90		1/3/2026
-Proyeccion	I90		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I90		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B91		$37.400,00
 Proyeccion	C91		Ingreso
 Proyeccion	D91		FF
 Proyeccion	E91		Ingreso
 Proyeccion	G91		ARS
 Proyeccion	H91		1/3/2026
-Proyeccion	I91		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I91		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B92		$25.000,00
 Proyeccion	C92		Ingreso
 Proyeccion	D92		Ingresos extra
@@ -157164,7 +157164,7 @@ Proyeccion	E92		Ingreso
 Proyeccion	F92		NaranjaX
 Proyeccion	G92		ARS
 Proyeccion	H92		1/3/2026
-Proyeccion	I92		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I92		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B93		$7.259,51
 Proyeccion	C93		Ingreso
 Proyeccion	D93		Intereses bancos
@@ -157172,7 +157172,7 @@ Proyeccion	E93		Ingreso
 Proyeccion	F93		NaranjaX
 Proyeccion	G93		ARS
 Proyeccion	H93		1/3/2026
-Proyeccion	I93		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I93		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B94		$8,33
 Proyeccion	C94		Ingreso
 Proyeccion	D94		Umoh
@@ -157180,7 +157180,7 @@ Proyeccion	E94		Ingreso
 Proyeccion	F94		Dolar Galicia
 Proyeccion	G94		USD
 Proyeccion	H94		1/3/2026
-Proyeccion	I94		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I94		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B95		$6,13
 Proyeccion	C95		Egreso
 Proyeccion	D95		Traspaso
@@ -157188,7 +157188,7 @@ Proyeccion	E95		Ingreso
 Proyeccion	F95		Dolar NaranjaX
 Proyeccion	G95		USD
 Proyeccion	H95		1/3/2026
-Proyeccion	I95		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I95		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B96		$6,13
 Proyeccion	C96		Ingreso
 Proyeccion	D96		Traspaso
@@ -157196,7 +157196,7 @@ Proyeccion	E96		Ingreso
 Proyeccion	F96		Dolar Patagonia
 Proyeccion	G96		USD
 Proyeccion	H96		1/3/2026
-Proyeccion	I96		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I96		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B97		$5,50
 Proyeccion	C97		Ingreso
 Proyeccion	D97		Plata Prestada
@@ -157204,21 +157204,21 @@ Proyeccion	E97		Ingreso
 Proyeccion	F97		Dolar Patagonia
 Proyeccion	G97		USD
 Proyeccion	H97		1/3/2026
-Proyeccion	I97		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I97		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B98		$50.000,00
 Proyeccion	C98		Egreso
 Proyeccion	D98		Traspaso
 Proyeccion	F98		Frascos Naranja X
 Proyeccion	G98		ARS
 Proyeccion	H98		1/4/2026
-Proyeccion	I98		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I98		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B99		$50.000,00
 Proyeccion	C99		Ingreso
 Proyeccion	D99		Traspaso
 Proyeccion	F99		Frascos Naranja X
 Proyeccion	G99		ARS
 Proyeccion	H99		1/4/2026
-Proyeccion	I99		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I99		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B100		$116.224,15
 Proyeccion	C100		Egreso
 Proyeccion	D100		Nafta
@@ -157226,7 +157226,7 @@ Proyeccion	E100		Gasto Fijo
 Proyeccion	F100		NaranjaX
 Proyeccion	G100		ARS
 Proyeccion	H100		1/4/2026
-Proyeccion	I100		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I100		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B101		$74.689,53
 Proyeccion	C101		Egreso
 Proyeccion	D101		Auto
@@ -157234,7 +157234,7 @@ Proyeccion	E101		Gasto Fijo
 Proyeccion	F101		NaranjaX
 Proyeccion	G101		ARS
 Proyeccion	H101		1/4/2026
-Proyeccion	I101		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I101		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B102		$50.512,92
 Proyeccion	C102		Egreso
 Proyeccion	D102		Prepaga
@@ -157242,7 +157242,7 @@ Proyeccion	E102		Gasto Fijo
 Proyeccion	F102		NaranjaX
 Proyeccion	G102		ARS
 Proyeccion	H102		1/4/2026
-Proyeccion	I102		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I102		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B103		$50.013,41
 Proyeccion	C103		Egreso
 Proyeccion	D103		MONOTRIBUTO
@@ -157250,7 +157250,7 @@ Proyeccion	E103		Gasto Fijo
 Proyeccion	F103		NaranjaX
 Proyeccion	G103		ARS
 Proyeccion	H103		1/4/2026
-Proyeccion	I103		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I103		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B104		$46.622,11
 Proyeccion	C104		Egreso
 Proyeccion	D104		Pago tarjeta
@@ -157258,7 +157258,7 @@ Proyeccion	E104		Gasto Fijo
 Proyeccion	F104		NaranjaX
 Proyeccion	G104		ARS
 Proyeccion	H104		1/4/2026
-Proyeccion	I104		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I104		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B105		$39.166,67
 Proyeccion	C105		Egreso
 Proyeccion	D105		SportClub
@@ -157266,7 +157266,7 @@ Proyeccion	E105		Gasto Fijo
 Proyeccion	F105		NaranjaX
 Proyeccion	G105		ARS
 Proyeccion	H105		1/4/2026
-Proyeccion	I105		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I105		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B106		$35.211,03
 Proyeccion	C106		Egreso
 Proyeccion	D106		Linea telefónica
@@ -157274,7 +157274,7 @@ Proyeccion	E106		Gasto Fijo
 Proyeccion	F106		NaranjaX
 Proyeccion	G106		ARS
 Proyeccion	H106		1/4/2026
-Proyeccion	I106		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I106		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B107		$19.732,09
 Proyeccion	C107		Egreso
 Proyeccion	D107		Deuda Eze
@@ -157282,7 +157282,7 @@ Proyeccion	E107		Gasto Fijo
 Proyeccion	F107		NaranjaX
 Proyeccion	G107		ARS
 Proyeccion	H107		1/4/2026
-Proyeccion	I107		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I107		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B108		$5.297,70
 Proyeccion	C108		Egreso
 Proyeccion	D108		Gatos
@@ -157290,7 +157290,7 @@ Proyeccion	E108		Gasto Fijo
 Proyeccion	F108		NaranjaX
 Proyeccion	G108		ARS
 Proyeccion	H108		1/4/2026
-Proyeccion	I108		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I108		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B109		$4.600,00
 Proyeccion	C109		Egreso
 Proyeccion	D109		Salud
@@ -157298,7 +157298,7 @@ Proyeccion	E109		Gasto Fijo
 Proyeccion	F109		NaranjaX
 Proyeccion	G109		ARS
 Proyeccion	H109		1/4/2026
-Proyeccion	I109		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I109		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B110		$46,01
 Proyeccion	C110		Egreso
 Proyeccion	D110		Pago tarjeta
@@ -157306,7 +157306,7 @@ Proyeccion	E110		Gasto Fijo
 Proyeccion	F110		Dolar Patagonia
 Proyeccion	G110		USD
 Proyeccion	H110		1/4/2026
-Proyeccion	I110		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I110		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B111		$458.740,55
 Proyeccion	C111		Egreso
 Proyeccion	D111		Computación
@@ -157314,7 +157314,7 @@ Proyeccion	E111		Gasto Variable
 Proyeccion	F111		Galicia
 Proyeccion	G111		ARS
 Proyeccion	H111		1/4/2026
-Proyeccion	I111		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I111		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B112		$100.330,00
 Proyeccion	C112		Egreso
 Proyeccion	D112		Comidas
@@ -157322,7 +157322,7 @@ Proyeccion	E112		Gasto Variable
 Proyeccion	F112		NaranjaX
 Proyeccion	G112		ARS
 Proyeccion	H112		1/4/2026
-Proyeccion	I112		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I112		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B113		$98.171,47
 Proyeccion	C113		Egreso
 Proyeccion	D113		Salidas
@@ -157330,7 +157330,7 @@ Proyeccion	E113		Gasto Variable
 Proyeccion	F113		NaranjaX
 Proyeccion	G113		ARS
 Proyeccion	H113		1/4/2026
-Proyeccion	I113		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I113		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B114		$75.418,17
 Proyeccion	C114		Egreso
 Proyeccion	D114		Compra USD
@@ -157338,7 +157338,7 @@ Proyeccion	E114		Gasto Variable
 Proyeccion	F114		NaranjaX
 Proyeccion	G114		ARS
 Proyeccion	H114		1/4/2026
-Proyeccion	I114		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I114		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B115		$48.948,43
 Proyeccion	C115		Egreso
 Proyeccion	D115		Viajes
@@ -157346,7 +157346,7 @@ Proyeccion	E115		Gasto Variable
 Proyeccion	F115		NaranjaX
 Proyeccion	G115		ARS
 Proyeccion	H115		1/4/2026
-Proyeccion	I115		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I115		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B116		$37.701,11
 Proyeccion	C116		Egreso
 Proyeccion	D116		Juntadas
@@ -157354,7 +157354,7 @@ Proyeccion	E116		Gasto Variable
 Proyeccion	F116		NaranjaX
 Proyeccion	G116		ARS
 Proyeccion	H116		1/4/2026
-Proyeccion	I116		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I116		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B117		$22.056,28
 Proyeccion	C117		Egreso
 Proyeccion	D117		Entretenimiento
@@ -157362,7 +157362,7 @@ Proyeccion	E117		Gasto Variable
 Proyeccion	F117		NaranjaX
 Proyeccion	G117		ARS
 Proyeccion	H117		1/4/2026
-Proyeccion	I117		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I117		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B118		$21.622,54
 Proyeccion	C118		Egreso
 Proyeccion	D118		Trabajo
@@ -157370,14 +157370,14 @@ Proyeccion	E118		Gasto Variable
 Proyeccion	F118		NaranjaX
 Proyeccion	G118		ARS
 Proyeccion	H118		1/4/2026
-Proyeccion	I118		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I118		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B119		$20.116,67
 Proyeccion	C119		Ingreso
 Proyeccion	D119		Compra USD
 Proyeccion	E119		Gasto Variable
 Proyeccion	G119		ARS
 Proyeccion	H119		1/4/2026
-Proyeccion	I119		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I119		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B120		$18.804,88
 Proyeccion	C120		Ingreso
 Proyeccion	D120		Salidas
@@ -157385,7 +157385,7 @@ Proyeccion	E120		Gasto Variable
 Proyeccion	F120		NaranjaX
 Proyeccion	G120		ARS
 Proyeccion	H120		1/4/2026
-Proyeccion	I120		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I120		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B121		$16.976,20
 Proyeccion	C121		Ingreso
 Proyeccion	D121		Viajes
@@ -157393,7 +157393,7 @@ Proyeccion	E121		Gasto Variable
 Proyeccion	F121		NaranjaX
 Proyeccion	G121		ARS
 Proyeccion	H121		1/4/2026
-Proyeccion	I121		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I121		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B122		$13.400,00
 Proyeccion	C122		Egreso
 Proyeccion	D122		Entrenamiento
@@ -157401,7 +157401,7 @@ Proyeccion	E122		Gasto Variable
 Proyeccion	F122		NaranjaX
 Proyeccion	G122		ARS
 Proyeccion	H122		1/4/2026
-Proyeccion	I122		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I122		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B123		$13.100,00
 Proyeccion	C123		Ingreso
 Proyeccion	D123		Comidas
@@ -157409,7 +157409,7 @@ Proyeccion	E123		Gasto Variable
 Proyeccion	F123		NaranjaX
 Proyeccion	G123		ARS
 Proyeccion	H123		1/4/2026
-Proyeccion	I123		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I123		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B124		$9.999,67
 Proyeccion	C124		Egreso
 Proyeccion	D124		Ropa
@@ -157417,7 +157417,7 @@ Proyeccion	E124		Gasto Variable
 Proyeccion	F124		NaranjaX
 Proyeccion	G124		ARS
 Proyeccion	H124		1/4/2026
-Proyeccion	I124		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I124		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B125		$6.356,29
 Proyeccion	C125		Egreso
 Proyeccion	D125		Medicamentos / Higiene
@@ -157425,7 +157425,7 @@ Proyeccion	E125		Gasto Variable
 Proyeccion	F125		NaranjaX
 Proyeccion	G125		ARS
 Proyeccion	H125		1/4/2026
-Proyeccion	I125		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I125		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B126		$4.946,67
 Proyeccion	C126		Egreso
 Proyeccion	D126		Gastos - TT
@@ -157433,7 +157433,7 @@ Proyeccion	E126		Gasto Variable
 Proyeccion	F126		NaranjaX
 Proyeccion	G126		ARS
 Proyeccion	H126		1/4/2026
-Proyeccion	I126		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I126		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B127		$4.500,00
 Proyeccion	C127		Egreso
 Proyeccion	D127		Corte Pelo
@@ -157441,7 +157441,7 @@ Proyeccion	E127		Gasto Variable
 Proyeccion	F127		NaranjaX
 Proyeccion	G127		ARS
 Proyeccion	H127		1/4/2026
-Proyeccion	I127		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I127		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B128		$4.363,33
 Proyeccion	C128		Ingreso
 Proyeccion	D128		Gastos - TT
@@ -157449,7 +157449,7 @@ Proyeccion	E128		Gasto Variable
 Proyeccion	F128		NaranjaX
 Proyeccion	G128		ARS
 Proyeccion	H128		1/4/2026
-Proyeccion	I128		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I128		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B129		$833,33
 Proyeccion	C129		Egreso
 Proyeccion	D129		Regalos
@@ -157457,7 +157457,7 @@ Proyeccion	E129		Gasto Variable
 Proyeccion	F129		NaranjaX
 Proyeccion	G129		ARS
 Proyeccion	H129		1/4/2026
-Proyeccion	I129		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I129		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B130		$450,00
 Proyeccion	C130		Egreso
 Proyeccion	D130		Estacionamiento
@@ -157465,7 +157465,7 @@ Proyeccion	E130		Gasto Variable
 Proyeccion	F130		Efectivo
 Proyeccion	G130		ARS
 Proyeccion	H130		1/4/2026
-Proyeccion	I130		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I130		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B131		$38,07
 Proyeccion	C131		Ingreso
 Proyeccion	D131		Compra USD
@@ -157473,7 +157473,7 @@ Proyeccion	E131		Gasto Variable
 Proyeccion	F131		Dolar Patagonia
 Proyeccion	G131		USD
 Proyeccion	H131		1/4/2026
-Proyeccion	I131		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I131		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B132		$7,50
 Proyeccion	C132		Egreso
 Proyeccion	D132		Entretenimiento
@@ -157481,7 +157481,7 @@ Proyeccion	E132		Gasto Variable
 Proyeccion	F132		Dolar Patagonia
 Proyeccion	G132		USD
 Proyeccion	H132		1/4/2026
-Proyeccion	I132		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I132		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B133		$6,13
 Proyeccion	C133		Egreso
 Proyeccion	D133		Compra USD
@@ -157489,7 +157489,7 @@ Proyeccion	E133		Gasto Variable
 Proyeccion	F133		Dolar Patagonia
 Proyeccion	G133		USD
 Proyeccion	H133		1/4/2026
-Proyeccion	I133		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I133		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B134		$506.425,00
 Proyeccion	C134		Ingreso
 Proyeccion	D134		Tidetrack
@@ -157497,7 +157497,7 @@ Proyeccion	E134		Ingreso
 Proyeccion	F134		NaranjaX
 Proyeccion	G134		ARS
 Proyeccion	H134		1/4/2026
-Proyeccion	I134		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I134		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B135		$333.318,37
 Proyeccion	C135		Ingreso
 Proyeccion	D135		Plata Prestada
@@ -157505,7 +157505,7 @@ Proyeccion	E135		Ingreso
 Proyeccion	F135		Galicia
 Proyeccion	G135		ARS
 Proyeccion	H135		1/4/2026
-Proyeccion	I135		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I135		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B136		$153.677,91
 Proyeccion	C136		Ingreso
 Proyeccion	D136		Ingreso Asesor
@@ -157513,7 +157513,7 @@ Proyeccion	E136		Ingreso
 Proyeccion	F136		NaranjaX
 Proyeccion	G136		ARS
 Proyeccion	H136		1/4/2026
-Proyeccion	I136		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I136		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B137		$149.823,90
 Proyeccion	C137		Egreso
 Proyeccion	D137		Traspaso
@@ -157521,7 +157521,7 @@ Proyeccion	E137		Ingreso
 Proyeccion	F137		Frascos Naranja X
 Proyeccion	G137		ARS
 Proyeccion	H137		1/4/2026
-Proyeccion	I137		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I137		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B138		$143.604,48
 Proyeccion	C138		Ingreso
 Proyeccion	D138		Ingresos Extra
@@ -157529,7 +157529,7 @@ Proyeccion	E138		Ingreso
 Proyeccion	F138		NaranjaX
 Proyeccion	G138		ARS
 Proyeccion	H138		1/4/2026
-Proyeccion	I138		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I138		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B139		$135.364,58
 Proyeccion	C139		Ingreso
 Proyeccion	D139		Umoh
@@ -157537,7 +157537,7 @@ Proyeccion	E139		Ingreso
 Proyeccion	F139		NaranjaX
 Proyeccion	G139		ARS
 Proyeccion	H139		1/4/2026
-Proyeccion	I139		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I139		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B140		$111.894,52
 Proyeccion	C140		Ingreso
 Proyeccion	D140		Traspaso
@@ -157545,7 +157545,7 @@ Proyeccion	E140		Ingreso
 Proyeccion	F140		Galicia Fima - Dima
 Proyeccion	G140		ARS
 Proyeccion	H140		1/4/2026
-Proyeccion	I140		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I140		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B141		$94.662,33
 Proyeccion	C141		Ingreso
 Proyeccion	D141		Ingreso Viejo
@@ -157553,14 +157553,14 @@ Proyeccion	E141		Ingreso
 Proyeccion	F141		NaranjaX
 Proyeccion	G141		ARS
 Proyeccion	H141		1/4/2026
-Proyeccion	I141		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I141		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B142		$37.400,00
 Proyeccion	C142		Ingreso
 Proyeccion	D142		FF
 Proyeccion	E142		Ingreso
 Proyeccion	G142		ARS
 Proyeccion	H142		1/4/2026
-Proyeccion	I142		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I142		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B143		$4.658,06
 Proyeccion	C143		Ingreso
 Proyeccion	D143		Intereses bancos
@@ -157568,7 +157568,7 @@ Proyeccion	E143		Ingreso
 Proyeccion	F143		NaranjaX
 Proyeccion	G143		ARS
 Proyeccion	H143		1/4/2026
-Proyeccion	I143		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I143		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B144		$8,33
 Proyeccion	C144		Ingreso
 Proyeccion	D144		Umoh
@@ -157576,7 +157576,7 @@ Proyeccion	E144		Ingreso
 Proyeccion	F144		Dolar Galicia
 Proyeccion	G144		USD
 Proyeccion	H144		1/4/2026
-Proyeccion	I144		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I144		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B145		$6,13
 Proyeccion	C145		Egreso
 Proyeccion	D145		Traspaso
@@ -157584,7 +157584,7 @@ Proyeccion	E145		Ingreso
 Proyeccion	F145		Dolar NaranjaX
 Proyeccion	G145		USD
 Proyeccion	H145		1/4/2026
-Proyeccion	I145		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I145		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B146		$6,13
 Proyeccion	C146		Ingreso
 Proyeccion	D146		Traspaso
@@ -157592,7 +157592,7 @@ Proyeccion	E146		Ingreso
 Proyeccion	F146		Dolar Patagonia
 Proyeccion	G146		USD
 Proyeccion	H146		1/4/2026
-Proyeccion	I146		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I146		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B147		$5,50
 Proyeccion	C147		Ingreso
 Proyeccion	D147		Plata Prestada
@@ -157600,21 +157600,21 @@ Proyeccion	E147		Ingreso
 Proyeccion	F147		Dolar Patagonia
 Proyeccion	G147		USD
 Proyeccion	H147		1/4/2026
-Proyeccion	I147		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I147		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B148		$91.400,62
 Proyeccion	C148		Egreso
 Proyeccion	D148		Traspaso
 Proyeccion	F148		Frascos Naranja X
 Proyeccion	G148		ARS
 Proyeccion	H148		1/5/2026
-Proyeccion	I148		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I148		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B149		$91.400,62
 Proyeccion	C149		Ingreso
 Proyeccion	D149		Traspaso
 Proyeccion	F149		Frascos Naranja X
 Proyeccion	G149		ARS
 Proyeccion	H149		1/5/2026
-Proyeccion	I149		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I149		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B150		$130.056,32
 Proyeccion	C150		Egreso
 Proyeccion	D150		Nafta
@@ -157622,7 +157622,7 @@ Proyeccion	E150		Gasto Fijo
 Proyeccion	F150		NaranjaX
 Proyeccion	G150		ARS
 Proyeccion	H150		1/5/2026
-Proyeccion	I150		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I150		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B151		$75.192,39
 Proyeccion	C151		Egreso
 Proyeccion	D151		Auto
@@ -157630,7 +157630,7 @@ Proyeccion	E151		Gasto Fijo
 Proyeccion	F151		NaranjaX
 Proyeccion	G151		ARS
 Proyeccion	H151		1/5/2026
-Proyeccion	I151		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I151		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B152		$51.675,27
 Proyeccion	C152		Egreso
 Proyeccion	D152		Prepaga
@@ -157638,7 +157638,7 @@ Proyeccion	E152		Gasto Fijo
 Proyeccion	F152		NaranjaX
 Proyeccion	G152		ARS
 Proyeccion	H152		1/5/2026
-Proyeccion	I152		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I152		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B153		$51.204,59
 Proyeccion	C153		Egreso
 Proyeccion	D153		Deuda Eze
@@ -157646,7 +157646,7 @@ Proyeccion	E153		Gasto Fijo
 Proyeccion	F153		NaranjaX
 Proyeccion	G153		ARS
 Proyeccion	H153		1/5/2026
-Proyeccion	I153		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I153		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B154		$51.150,74
 Proyeccion	C154		Egreso
 Proyeccion	D154		MONOTRIBUTO
@@ -157654,7 +157654,7 @@ Proyeccion	E154		Gasto Fijo
 Proyeccion	F154		NaranjaX
 Proyeccion	G154		ARS
 Proyeccion	H154		1/5/2026
-Proyeccion	I154		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I154		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B155		$40.057,13
 Proyeccion	C155		Egreso
 Proyeccion	D155		Pago tarjeta
@@ -157662,7 +157662,7 @@ Proyeccion	E155		Gasto Fijo
 Proyeccion	F155		NaranjaX
 Proyeccion	G155		ARS
 Proyeccion	H155		1/5/2026
-Proyeccion	I155		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I155		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B156		$38.996,03
 Proyeccion	C156		Egreso
 Proyeccion	D156		Prestamo Galicia
@@ -157670,7 +157670,7 @@ Proyeccion	E156		Gasto Fijo
 Proyeccion	F156		NaranjaX
 Proyeccion	G156		ARS
 Proyeccion	H156		1/5/2026
-Proyeccion	I156		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I156		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B157		$36.717,20
 Proyeccion	C157		Egreso
 Proyeccion	D157		Linea telefónica
@@ -157678,7 +157678,7 @@ Proyeccion	E157		Gasto Fijo
 Proyeccion	F157		NaranjaX
 Proyeccion	G157		ARS
 Proyeccion	H157		1/5/2026
-Proyeccion	I157		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I157		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B158		$33.333,33
 Proyeccion	C158		Egreso
 Proyeccion	D158		SportClub
@@ -157686,7 +157686,7 @@ Proyeccion	E158		Gasto Fijo
 Proyeccion	F158		NaranjaX
 Proyeccion	G158		ARS
 Proyeccion	H158		1/5/2026
-Proyeccion	I158		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I158		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B159		$13.736,00
 Proyeccion	C159		Egreso
 Proyeccion	D159		Pago Tarjeta
@@ -157694,7 +157694,7 @@ Proyeccion	E159		Gasto Fijo
 Proyeccion	F159		NaranjaX
 Proyeccion	G159		ARS
 Proyeccion	H159		1/5/2026
-Proyeccion	I159		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I159		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B160		$7.666,67
 Proyeccion	C160		Egreso
 Proyeccion	D160		Sportclub
@@ -157702,7 +157702,7 @@ Proyeccion	E160		Gasto Fijo
 Proyeccion	F160		NaranjaX
 Proyeccion	G160		ARS
 Proyeccion	H160		1/5/2026
-Proyeccion	I160		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I160		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B161		$5.897,15
 Proyeccion	C161		Egreso
 Proyeccion	D161		Seguro Compu
@@ -157710,7 +157710,7 @@ Proyeccion	E161		Gasto Fijo
 Proyeccion	F161		NaranjaX
 Proyeccion	G161		ARS
 Proyeccion	H161		1/5/2026
-Proyeccion	I161		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I161		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B162		$4.600,00
 Proyeccion	C162		Egreso
 Proyeccion	D162		Salud
@@ -157718,7 +157718,7 @@ Proyeccion	E162		Gasto Fijo
 Proyeccion	F162		NaranjaX
 Proyeccion	G162		ARS
 Proyeccion	H162		1/5/2026
-Proyeccion	I162		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I162		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B163		$2.634,98
 Proyeccion	C163		Egreso
 Proyeccion	D163		Gatos
@@ -157726,7 +157726,7 @@ Proyeccion	E163		Gasto Fijo
 Proyeccion	F163		NaranjaX
 Proyeccion	G163		ARS
 Proyeccion	H163		1/5/2026
-Proyeccion	I163		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I163		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B164		$2.340,74
 Proyeccion	C164		Egreso
 Proyeccion	D164		Seguro Celu
@@ -157734,7 +157734,7 @@ Proyeccion	E164		Gasto Fijo
 Proyeccion	F164		Galicia
 Proyeccion	G164		ARS
 Proyeccion	H164		1/5/2026
-Proyeccion	I164		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I164		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B165		$46,01
 Proyeccion	C165		Egreso
 Proyeccion	D165		Pago tarjeta
@@ -157742,7 +157742,7 @@ Proyeccion	E165		Gasto Fijo
 Proyeccion	F165		Dolar Patagonia
 Proyeccion	G165		USD
 Proyeccion	H165		1/5/2026
-Proyeccion	I165		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I165		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B166		$472.905,80
 Proyeccion	C166		Egreso
 Proyeccion	D166		Computación
@@ -157750,7 +157750,7 @@ Proyeccion	E166		Gasto Variable
 Proyeccion	F166		NaranjaX
 Proyeccion	G166		ARS
 Proyeccion	H166		1/5/2026
-Proyeccion	I166		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I166		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B167		$120.096,47
 Proyeccion	C167		Egreso
 Proyeccion	D167		Salidas
@@ -157758,7 +157758,7 @@ Proyeccion	E167		Gasto Variable
 Proyeccion	F167		NaranjaX
 Proyeccion	G167		ARS
 Proyeccion	H167		1/5/2026
-Proyeccion	I167		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I167		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B168		$111.598,17
 Proyeccion	C168		Egreso
 Proyeccion	D168		Comidas
@@ -157766,7 +157766,7 @@ Proyeccion	E168		Gasto Variable
 Proyeccion	F168		NaranjaX
 Proyeccion	G168		ARS
 Proyeccion	H168		1/5/2026
-Proyeccion	I168		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I168		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B169		$75.418,17
 Proyeccion	C169		Egreso
 Proyeccion	D169		Compra USD
@@ -157774,7 +157774,7 @@ Proyeccion	E169		Gasto Variable
 Proyeccion	F169		NaranjaX
 Proyeccion	G169		ARS
 Proyeccion	H169		1/5/2026
-Proyeccion	I169		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I169		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B170		$65.365,10
 Proyeccion	C170		Egreso
 Proyeccion	D170		Viajes
@@ -157782,7 +157782,7 @@ Proyeccion	E170		Gasto Variable
 Proyeccion	F170		NaranjaX
 Proyeccion	G170		ARS
 Proyeccion	H170		1/5/2026
-Proyeccion	I170		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I170		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B171		$45.351,11
 Proyeccion	C171		Egreso
 Proyeccion	D171		Juntadas
@@ -157790,7 +157790,7 @@ Proyeccion	E171		Gasto Variable
 Proyeccion	F171		NaranjaX
 Proyeccion	G171		ARS
 Proyeccion	H171		1/5/2026
-Proyeccion	I171		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I171		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B172		$28.547,35
 Proyeccion	C172		Ingreso
 Proyeccion	D172		Salidas
@@ -157798,7 +157798,7 @@ Proyeccion	E172		Gasto Variable
 Proyeccion	F172		NaranjaX
 Proyeccion	G172		ARS
 Proyeccion	H172		1/5/2026
-Proyeccion	I172		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I172		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B173		$26.125,00
 Proyeccion	C173		Ingreso
 Proyeccion	D173		Comidas
@@ -157806,7 +157806,7 @@ Proyeccion	E173		Gasto Variable
 Proyeccion	F173		Mercado Pago
 Proyeccion	G173		ARS
 Proyeccion	H173		1/5/2026
-Proyeccion	I173		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I173		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B174		$20.718,61
 Proyeccion	C174		Egreso
 Proyeccion	D174		Entretenimiento
@@ -157814,14 +157814,14 @@ Proyeccion	E174		Gasto Variable
 Proyeccion	F174		NaranjaX
 Proyeccion	G174		ARS
 Proyeccion	H174		1/5/2026
-Proyeccion	I174		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I174		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B175		$20.116,67
 Proyeccion	C175		Ingreso
 Proyeccion	D175		Compra USD
 Proyeccion	E175		Gasto Variable
 Proyeccion	G175		ARS
 Proyeccion	H175		1/5/2026
-Proyeccion	I175		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I175		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B176		$17.060,04
 Proyeccion	C176		Egreso
 Proyeccion	D176		Trabajo
@@ -157829,7 +157829,7 @@ Proyeccion	E176		Gasto Variable
 Proyeccion	F176		NaranjaX
 Proyeccion	G176		ARS
 Proyeccion	H176		1/5/2026
-Proyeccion	I176		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I176		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B177		$16.976,20
 Proyeccion	C177		Ingreso
 Proyeccion	D177		Viajes
@@ -157837,7 +157837,7 @@ Proyeccion	E177		Gasto Variable
 Proyeccion	F177		NaranjaX
 Proyeccion	G177		ARS
 Proyeccion	H177		1/5/2026
-Proyeccion	I177		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I177		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B178		$13.400,00
 Proyeccion	C178		Egreso
 Proyeccion	D178		Entrenamiento
@@ -157845,7 +157845,7 @@ Proyeccion	E178		Gasto Variable
 Proyeccion	F178		NaranjaX
 Proyeccion	G178		ARS
 Proyeccion	H178		1/5/2026
-Proyeccion	I178		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I178		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B179		$9.999,67
 Proyeccion	C179		Egreso
 Proyeccion	D179		Ropa
@@ -157853,7 +157853,7 @@ Proyeccion	E179		Gasto Variable
 Proyeccion	F179		NaranjaX
 Proyeccion	G179		ARS
 Proyeccion	H179		1/5/2026
-Proyeccion	I179		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I179		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B180		$7.333,33
 Proyeccion	C180		Egreso
 Proyeccion	D180		Corte Pelo
@@ -157861,7 +157861,7 @@ Proyeccion	E180		Gasto Variable
 Proyeccion	F180		NaranjaX
 Proyeccion	G180		ARS
 Proyeccion	H180		1/5/2026
-Proyeccion	I180		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I180		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B181		$6.356,29
 Proyeccion	C181		Egreso
 Proyeccion	D181		Medicamentos / Higiene
@@ -157869,7 +157869,7 @@ Proyeccion	E181		Gasto Variable
 Proyeccion	F181		NaranjaX
 Proyeccion	G181		ARS
 Proyeccion	H181		1/5/2026
-Proyeccion	I181		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I181		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B182		$4.946,67
 Proyeccion	C182		Egreso
 Proyeccion	D182		Gastos - TT
@@ -157877,7 +157877,7 @@ Proyeccion	E182		Gasto Variable
 Proyeccion	F182		NaranjaX
 Proyeccion	G182		ARS
 Proyeccion	H182		1/5/2026
-Proyeccion	I182		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I182		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B183		$4.363,33
 Proyeccion	C183		Ingreso
 Proyeccion	D183		Gastos - TT
@@ -157885,7 +157885,7 @@ Proyeccion	E183		Gasto Variable
 Proyeccion	F183		NaranjaX
 Proyeccion	G183		ARS
 Proyeccion	H183		1/5/2026
-Proyeccion	I183		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I183		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B184		$950,00
 Proyeccion	C184		Egreso
 Proyeccion	D184		Estacionamiento
@@ -157893,7 +157893,7 @@ Proyeccion	E184		Gasto Variable
 Proyeccion	F184		Efectivo
 Proyeccion	G184		ARS
 Proyeccion	H184		1/5/2026
-Proyeccion	I184		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I184		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B185		$833,33
 Proyeccion	C185		Egreso
 Proyeccion	D185		Regalos
@@ -157901,7 +157901,7 @@ Proyeccion	E185		Gasto Variable
 Proyeccion	F185		NaranjaX
 Proyeccion	G185		ARS
 Proyeccion	H185		1/5/2026
-Proyeccion	I185		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I185		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B186		$500,00
 Proyeccion	C186		Egreso
 Proyeccion	D186		Gastos - Tidetrack
@@ -157909,7 +157909,7 @@ Proyeccion	E186		Gasto Variable
 Proyeccion	F186		NaranjaX
 Proyeccion	G186		ARS
 Proyeccion	H186		1/5/2026
-Proyeccion	I186		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I186		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B187		$38,07
 Proyeccion	C187		Ingreso
 Proyeccion	D187		Compra USD
@@ -157917,7 +157917,7 @@ Proyeccion	E187		Gasto Variable
 Proyeccion	F187		Dolar Patagonia
 Proyeccion	G187		USD
 Proyeccion	H187		1/5/2026
-Proyeccion	I187		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I187		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B188		$7,50
 Proyeccion	C188		Egreso
 Proyeccion	D188		Entretenimiento
@@ -157925,7 +157925,7 @@ Proyeccion	E188		Gasto Variable
 Proyeccion	F188		Dolar Patagonia
 Proyeccion	G188		USD
 Proyeccion	H188		1/5/2026
-Proyeccion	I188		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I188		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B189		$648.441,67
 Proyeccion	C189		Ingreso
 Proyeccion	D189		Tidetrack
@@ -157933,7 +157933,7 @@ Proyeccion	E189		Ingreso
 Proyeccion	F189		NaranjaX
 Proyeccion	G189		ARS
 Proyeccion	H189		1/5/2026
-Proyeccion	I189		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I189		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B190		$333.318,37
 Proyeccion	C190		Ingreso
 Proyeccion	D190		Plata Prestada
@@ -157941,7 +157941,7 @@ Proyeccion	E190		Ingreso
 Proyeccion	F190		Galicia
 Proyeccion	G190		ARS
 Proyeccion	H190		1/5/2026
-Proyeccion	I190		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I190		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B191		$146.638,89
 Proyeccion	C191		Ingreso
 Proyeccion	D191		Ingresos Extra
@@ -157949,7 +157949,7 @@ Proyeccion	E191		Ingreso
 Proyeccion	F191		Efectivo
 Proyeccion	G191		ARS
 Proyeccion	H191		1/5/2026
-Proyeccion	I191		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I191		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B192		$135.364,58
 Proyeccion	C192		Ingreso
 Proyeccion	D192		Umoh
@@ -157957,7 +157957,7 @@ Proyeccion	E192		Ingreso
 Proyeccion	F192		NaranjaX
 Proyeccion	G192		ARS
 Proyeccion	H192		1/5/2026
-Proyeccion	I192		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I192		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B193		$130.334,84
 Proyeccion	C193		Ingreso
 Proyeccion	D193		Ingreso Asesor
@@ -157965,7 +157965,7 @@ Proyeccion	E193		Ingreso
 Proyeccion	F193		NaranjaX
 Proyeccion	G193		ARS
 Proyeccion	H193		1/5/2026
-Proyeccion	I193		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I193		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B194		$112.423,90
 Proyeccion	C194		Egreso
 Proyeccion	D194		Traspaso
@@ -157973,7 +157973,7 @@ Proyeccion	E194		Ingreso
 Proyeccion	F194		Galicia Fima - Dima
 Proyeccion	G194		ARS
 Proyeccion	H194		1/5/2026
-Proyeccion	I194		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I194		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B195		$111.894,52
 Proyeccion	C195		Ingreso
 Proyeccion	D195		Traspaso
@@ -157981,7 +157981,7 @@ Proyeccion	E195		Ingreso
 Proyeccion	F195		Galicia Fima - Dima
 Proyeccion	G195		ARS
 Proyeccion	H195		1/5/2026
-Proyeccion	I195		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I195		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B196		$94.662,33
 Proyeccion	C196		Ingreso
 Proyeccion	D196		Ingreso Viejo
@@ -157989,7 +157989,7 @@ Proyeccion	E196		Ingreso
 Proyeccion	F196		NaranjaX
 Proyeccion	G196		ARS
 Proyeccion	H196		1/5/2026
-Proyeccion	I196		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I196		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B197		$34.500,00
 Proyeccion	C197		Ingreso
 Proyeccion	D197		umoh
@@ -157997,7 +157997,7 @@ Proyeccion	E197		Ingreso
 Proyeccion	F197		NaranjaX
 Proyeccion	G197		ARS
 Proyeccion	H197		1/5/2026
-Proyeccion	I197		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I197		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B198		$6.252,22
 Proyeccion	C198		Ingreso
 Proyeccion	D198		Intereses bancos
@@ -158005,7 +158005,7 @@ Proyeccion	E198		Ingreso
 Proyeccion	F198		NaranjaX
 Proyeccion	G198		ARS
 Proyeccion	H198		1/5/2026
-Proyeccion	I198		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I198		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B199		$8,33
 Proyeccion	C199		Ingreso
 Proyeccion	D199		Umoh
@@ -158013,7 +158013,7 @@ Proyeccion	E199		Ingreso
 Proyeccion	F199		Dolar Galicia
 Proyeccion	G199		USD
 Proyeccion	H199		1/5/2026
-Proyeccion	I199		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I199		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B200		$5,50
 Proyeccion	C200		Ingreso
 Proyeccion	D200		Plata Prestada
@@ -158021,21 +158021,21 @@ Proyeccion	E200		Ingreso
 Proyeccion	F200		Dolar Patagonia
 Proyeccion	G200		USD
 Proyeccion	H200		1/5/2026
-Proyeccion	I200		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I200		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B201		$91.400,62
 Proyeccion	C201		Egreso
 Proyeccion	D201		Traspaso
 Proyeccion	F201		Frascos Naranja X
 Proyeccion	G201		ARS
 Proyeccion	H201		1/6/2026
-Proyeccion	I201		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I201		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B202		$91.400,62
 Proyeccion	C202		Ingreso
 Proyeccion	D202		Traspaso
 Proyeccion	F202		Frascos Naranja X
 Proyeccion	G202		ARS
 Proyeccion	H202		1/6/2026
-Proyeccion	I202		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I202		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B203		$118.250,47
 Proyeccion	C203		Egreso
 Proyeccion	D203		Nafta
@@ -158043,7 +158043,7 @@ Proyeccion	E203		Gasto Fijo
 Proyeccion	F203		NaranjaX
 Proyeccion	G203		ARS
 Proyeccion	H203		1/6/2026
-Proyeccion	I203		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I203		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B204		$75.093,42
 Proyeccion	C204		Egreso
 Proyeccion	D204		Prestamo Galicia
@@ -158051,7 +158051,7 @@ Proyeccion	E204		Gasto Fijo
 Proyeccion	F204		NaranjaX
 Proyeccion	G204		ARS
 Proyeccion	H204		1/6/2026
-Proyeccion	I204		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I204		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B205		$74.009,62
 Proyeccion	C205		Egreso
 Proyeccion	D205		Auto
@@ -158059,7 +158059,7 @@ Proyeccion	E205		Gasto Fijo
 Proyeccion	F205		NaranjaX
 Proyeccion	G205		ARS
 Proyeccion	H205		1/6/2026
-Proyeccion	I205		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I205		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B206		$70.936,67
 Proyeccion	C206		Egreso
 Proyeccion	D206		Deuda Eze
@@ -158067,7 +158067,7 @@ Proyeccion	E206		Gasto Fijo
 Proyeccion	F206		NaranjaX
 Proyeccion	G206		ARS
 Proyeccion	H206		1/6/2026
-Proyeccion	I206		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I206		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B207		$53.056,75
 Proyeccion	C207		Egreso
 Proyeccion	D207		Prepaga
@@ -158075,7 +158075,7 @@ Proyeccion	E207		Gasto Fijo
 Proyeccion	F207		NaranjaX
 Proyeccion	G207		ARS
 Proyeccion	H207		1/6/2026
-Proyeccion	I207		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I207		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B208		$52.288,07
 Proyeccion	C208		Egreso
 Proyeccion	D208		MONOTRIBUTO
@@ -158083,7 +158083,7 @@ Proyeccion	E208		Gasto Fijo
 Proyeccion	F208		NaranjaX
 Proyeccion	G208		ARS
 Proyeccion	H208		1/6/2026
-Proyeccion	I208		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I208		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B209		$38.262,54
 Proyeccion	C209		Egreso
 Proyeccion	D209		Linea telefónica
@@ -158091,7 +158091,7 @@ Proyeccion	E209		Gasto Fijo
 Proyeccion	F209		NaranjaX
 Proyeccion	G209		ARS
 Proyeccion	H209		1/6/2026
-Proyeccion	I209		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I209		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B210		$29.955,38
 Proyeccion	C210		Egreso
 Proyeccion	D210		Pago Tarjeta
@@ -158099,7 +158099,7 @@ Proyeccion	E210		Gasto Fijo
 Proyeccion	F210		Galicia
 Proyeccion	G210		ARS
 Proyeccion	H210		1/6/2026
-Proyeccion	I210		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I210		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B211		$28.085,79
 Proyeccion	C211		Egreso
 Proyeccion	D211		Pago tarjeta
@@ -158107,7 +158107,7 @@ Proyeccion	E211		Gasto Fijo
 Proyeccion	F211		NaranjaX
 Proyeccion	G211		ARS
 Proyeccion	H211		1/6/2026
-Proyeccion	I211		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I211		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B212		$26.666,67
 Proyeccion	C212		Egreso
 Proyeccion	D212		SportClub
@@ -158115,7 +158115,7 @@ Proyeccion	E212		Gasto Fijo
 Proyeccion	F212		NaranjaX
 Proyeccion	G212		ARS
 Proyeccion	H212		1/6/2026
-Proyeccion	I212		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I212		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B213		$15.616,63
 Proyeccion	C213		Ingreso
 Proyeccion	D213		Prepaga
@@ -158123,7 +158123,7 @@ Proyeccion	E213		Gasto Fijo
 Proyeccion	F213		Patagonia
 Proyeccion	G213		ARS
 Proyeccion	H213		1/6/2026
-Proyeccion	I213		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I213		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B214		$15.333,33
 Proyeccion	C214		Egreso
 Proyeccion	D214		Sportclub
@@ -158131,7 +158131,7 @@ Proyeccion	E214		Gasto Fijo
 Proyeccion	F214		NaranjaX
 Proyeccion	G214		ARS
 Proyeccion	H214		1/6/2026
-Proyeccion	I214		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I214		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B215		$10.429,98
 Proyeccion	C215		Egreso
 Proyeccion	D215		Seguro Compu
@@ -158139,7 +158139,7 @@ Proyeccion	E215		Gasto Fijo
 Proyeccion	F215		NaranjaX
 Proyeccion	G215		ARS
 Proyeccion	H215		1/6/2026
-Proyeccion	I215		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I215		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B216		$9.600,00
 Proyeccion	C216		Egreso
 Proyeccion	D216		Salud
@@ -158147,7 +158147,7 @@ Proyeccion	E216		Gasto Fijo
 Proyeccion	F216		NaranjaX
 Proyeccion	G216		ARS
 Proyeccion	H216		1/6/2026
-Proyeccion	I216		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I216		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B217		$8.468,32
 Proyeccion	C217		Egreso
 Proyeccion	D217		Gatos
@@ -158155,7 +158155,7 @@ Proyeccion	E217		Gasto Fijo
 Proyeccion	F217		NaranjaX
 Proyeccion	G217		ARS
 Proyeccion	H217		1/6/2026
-Proyeccion	I217		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I217		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B218		$4.682,74
 Proyeccion	C218		Egreso
 Proyeccion	D218		Seguro Celu
@@ -158163,7 +158163,7 @@ Proyeccion	E218		Gasto Fijo
 Proyeccion	F218		NaranjaX
 Proyeccion	G218		ARS
 Proyeccion	H218		1/6/2026
-Proyeccion	I218		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I218		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B219		$46,01
 Proyeccion	C219		Egreso
 Proyeccion	D219		Pago tarjeta
@@ -158171,7 +158171,7 @@ Proyeccion	E219		Gasto Fijo
 Proyeccion	F219		Dolar Patagonia
 Proyeccion	G219		USD
 Proyeccion	H219		1/6/2026
-Proyeccion	I219		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I219		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B220		$3,75
 Proyeccion	C220		Egreso
 Proyeccion	D220		Pago Tarjeta
@@ -158179,175 +158179,175 @@ Proyeccion	E220		Gasto Fijo
 Proyeccion	F220		Dolar Galicia
 Proyeccion	G220		USD
 Proyeccion	H220		1/6/2026
-Proyeccion	I220		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B221		$472.905,80
+Proyeccion	I220		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B221		$425.731,21
 Proyeccion	C221		Egreso
 Proyeccion	D221		Computación
 Proyeccion	E221		Gasto Variable
 Proyeccion	F221		NaranjaX
 Proyeccion	G221		ARS
 Proyeccion	H221		1/6/2026
-Proyeccion	I221		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B222		$141.042,97
+Proyeccion	I221		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B222		$126.973,26
 Proyeccion	C222		Egreso
 Proyeccion	D222		Salidas
 Proyeccion	E222		Gasto Variable
 Proyeccion	F222		NaranjaX
 Proyeccion	G222		ARS
 Proyeccion	H222		1/6/2026
-Proyeccion	I222		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B223		$128.114,83
+Proyeccion	I222		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B223		$115.334,77
 Proyeccion	C223		Egreso
 Proyeccion	D223		Comidas
 Proyeccion	E223		Gasto Variable
 Proyeccion	F223		NaranjaX
 Proyeccion	G223		ARS
 Proyeccion	H223		1/6/2026
-Proyeccion	I223		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B224		$79.247,66
+Proyeccion	I223		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B224		$71.342,33
 Proyeccion	C224		Egreso
 Proyeccion	D224		Viajes
 Proyeccion	E224		Gasto Variable
 Proyeccion	F224		NaranjaX
 Proyeccion	G224		ARS
 Proyeccion	H224		1/6/2026
-Proyeccion	I224		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B225		$63.352,78
+Proyeccion	I224		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B225		$57.033,04
 Proyeccion	C225		Egreso
 Proyeccion	D225		Juntadas
 Proyeccion	E225		Gasto Variable
 Proyeccion	F225		NaranjaX
 Proyeccion	G225		ARS
 Proyeccion	H225		1/6/2026
-Proyeccion	I225		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B226		$61.155,67
+Proyeccion	I225		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B226		$55.055,10
 Proyeccion	C226		Egreso
 Proyeccion	D226		Compra USD
 Proyeccion	E226		Gasto Variable
 Proyeccion	F226		NaranjaX
 Proyeccion	G226		ARS
 Proyeccion	H226		1/6/2026
-Proyeccion	I226		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B227		$38.092,31
+Proyeccion	I226		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B227		$34.292,42
 Proyeccion	C227		Ingreso
 Proyeccion	D227		Comidas
 Proyeccion	E227		Gasto Variable
 Proyeccion	F227		NaranjaX
 Proyeccion	G227		ARS
 Proyeccion	H227		1/6/2026
-Proyeccion	I227		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B228		$33.642,87
+Proyeccion	I227		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B228		$30.286,83
 Proyeccion	C228		Ingreso
 Proyeccion	D228		Viajes
 Proyeccion	E228		Gasto Variable
 Proyeccion	F228		NaranjaX
 Proyeccion	G228		ARS
 Proyeccion	H228		1/6/2026
-Proyeccion	I228		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B229		$31.905,69
+Proyeccion	I228		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B229		$28.722,94
 Proyeccion	C229		Ingreso
 Proyeccion	D229		Salidas
 Proyeccion	E229		Gasto Variable
 Proyeccion	F229		NaranjaX
 Proyeccion	G229		ARS
 Proyeccion	H229		1/6/2026
-Proyeccion	I229		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B230		$23.647,04
+Proyeccion	I229		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B230		$21.288,13
 Proyeccion	C230		Egreso
 Proyeccion	D230		Trabajo
 Proyeccion	E230		Gasto Variable
 Proyeccion	F230		NaranjaX
 Proyeccion	G230		ARS
 Proyeccion	H230		1/6/2026
-Proyeccion	I230		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B231		$9.999,67
+Proyeccion	I230		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B231		$9.002,15
 Proyeccion	C231		Egreso
 Proyeccion	D231		Ropa
 Proyeccion	E231		Gasto Variable
 Proyeccion	F231		NaranjaX
 Proyeccion	G231		ARS
 Proyeccion	H231		1/6/2026
-Proyeccion	I231		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B232		$6.356,29
+Proyeccion	I231		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B232		$5.722,22
 Proyeccion	C232		Egreso
 Proyeccion	D232		Medicamentos / Higiene
 Proyeccion	E232		Gasto Variable
 Proyeccion	F232		NaranjaX
 Proyeccion	G232		ARS
 Proyeccion	H232		1/6/2026
-Proyeccion	I232		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B233		$5.466,67
+Proyeccion	I232		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B233		$4.921,34
 Proyeccion	C233		Egreso
 Proyeccion	D233		Entretenimiento
 Proyeccion	E233		Gasto Variable
 Proyeccion	F233		Mercado Pago
 Proyeccion	G233		ARS
 Proyeccion	H233		1/6/2026
-Proyeccion	I233		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B234		$5.333,33
+Proyeccion	I233		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B234		$4.801,30
 Proyeccion	C234		Egreso
 Proyeccion	D234		Corte Pelo
 Proyeccion	E234		Gasto Variable
 Proyeccion	F234		NaranjaX
 Proyeccion	G234		ARS
 Proyeccion	H234		1/6/2026
-Proyeccion	I234		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B235		$3.341,67
+Proyeccion	I234		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B235		$3.008,32
 Proyeccion	C235		Egreso
 Proyeccion	D235		Perdidas
 Proyeccion	E235		Gasto Variable
 Proyeccion	F235		Efectivo
 Proyeccion	G235		ARS
 Proyeccion	H235		1/6/2026
-Proyeccion	I235		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B236		$1.533,33
+Proyeccion	I235		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B236		$1.380,37
 Proyeccion	C236		Egreso
 Proyeccion	D236		Estacionamiento
 Proyeccion	E236		Gasto Variable
 Proyeccion	F236		Efectivo
 Proyeccion	G236		ARS
 Proyeccion	H236		1/6/2026
-Proyeccion	I236		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B237		$687,50
+Proyeccion	I236		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B237		$618,91
 Proyeccion	C237		Egreso
 Proyeccion	D237		Facultad
 Proyeccion	E237		Gasto Variable
 Proyeccion	F237		NaranjaX
 Proyeccion	G237		ARS
 Proyeccion	H237		1/6/2026
-Proyeccion	I237		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B238		$583,33
+Proyeccion	I237		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B238		$525,14
 Proyeccion	C238		Egreso
 Proyeccion	D238		Gastos - TT
 Proyeccion	E238		Gasto Variable
 Proyeccion	F238		NaranjaX
 Proyeccion	G238		ARS
 Proyeccion	H238		1/6/2026
-Proyeccion	I238		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B239		$500,00
+Proyeccion	I238		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B239		$450,12
 Proyeccion	C239		Egreso
 Proyeccion	D239		Gastos - Tidetrack
 Proyeccion	E239		Gasto Variable
 Proyeccion	F239		NaranjaX
 Proyeccion	G239		ARS
 Proyeccion	H239		1/6/2026
-Proyeccion	I239		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B240		$166,67
+Proyeccion	I239		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B240		$150,04
 Proyeccion	C240		Egreso
 Proyeccion	D240		Otros
 Proyeccion	E240		Gasto Variable
 Proyeccion	F240		NaranjaX
 Proyeccion	G240		ARS
 Proyeccion	H240		1/6/2026
-Proyeccion	I240		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B241		$42,24
+Proyeccion	I240		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B241		$38,02
 Proyeccion	C241		Ingreso
 Proyeccion	D241		Compra USD
 Proyeccion	E241		Gasto Variable
 Proyeccion	F241		Dolar Patagonia
 Proyeccion	G241		USD
 Proyeccion	H241		1/6/2026
-Proyeccion	I241		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I241		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B242		$736.008,33
 Proyeccion	C242		Ingreso
 Proyeccion	D242		Tidetrack
@@ -158355,7 +158355,7 @@ Proyeccion	E242		Ingreso
 Proyeccion	F242		NaranjaX
 Proyeccion	G242		ARS
 Proyeccion	H242		1/6/2026
-Proyeccion	I242		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I242		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B243		$333.318,37
 Proyeccion	C243		Ingreso
 Proyeccion	D243		Plata Prestada
@@ -158363,7 +158363,7 @@ Proyeccion	E243		Ingreso
 Proyeccion	F243		Galicia
 Proyeccion	G243		ARS
 Proyeccion	H243		1/6/2026
-Proyeccion	I243		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I243		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B244		$135.364,58
 Proyeccion	C244		Ingreso
 Proyeccion	D244		Umoh
@@ -158371,7 +158371,7 @@ Proyeccion	E244		Ingreso
 Proyeccion	F244		NaranjaX
 Proyeccion	G244		ARS
 Proyeccion	H244		1/6/2026
-Proyeccion	I244		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I244		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B245		$116.581,07
 Proyeccion	C245		Ingreso
 Proyeccion	D245		Ingresos Extra
@@ -158379,7 +158379,7 @@ Proyeccion	E245		Ingreso
 Proyeccion	F245		NaranjaX
 Proyeccion	G245		ARS
 Proyeccion	H245		1/6/2026
-Proyeccion	I245		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I245		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B246		$112.423,90
 Proyeccion	C246		Egreso
 Proyeccion	D246		Traspaso
@@ -158387,7 +158387,7 @@ Proyeccion	E246		Ingreso
 Proyeccion	F246		Galicia Fima - Dima
 Proyeccion	G246		ARS
 Proyeccion	H246		1/6/2026
-Proyeccion	I246		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I246		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B247		$101.286,02
 Proyeccion	C247		Ingreso
 Proyeccion	D247		Traspaso
@@ -158395,7 +158395,7 @@ Proyeccion	E247		Ingreso
 Proyeccion	F247		Galicia Fima - Dima
 Proyeccion	G247		ARS
 Proyeccion	H247		1/6/2026
-Proyeccion	I247		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I247		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B248		$94.662,33
 Proyeccion	C248		Ingreso
 Proyeccion	D248		Ingreso Viejo
@@ -158403,7 +158403,7 @@ Proyeccion	E248		Ingreso
 Proyeccion	F248		NaranjaX
 Proyeccion	G248		ARS
 Proyeccion	H248		1/6/2026
-Proyeccion	I248		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I248		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B249		$41.666,67
 Proyeccion	C249		Ingreso
 Proyeccion	D249		Plata prestada
@@ -158411,7 +158411,7 @@ Proyeccion	E249		Ingreso
 Proyeccion	F249		NaranjaX
 Proyeccion	G249		ARS
 Proyeccion	H249		1/6/2026
-Proyeccion	I249		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I249		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B250		$34.500,00
 Proyeccion	C250		Ingreso
 Proyeccion	D250		umoh
@@ -158419,7 +158419,7 @@ Proyeccion	E250		Ingreso
 Proyeccion	F250		NaranjaX
 Proyeccion	G250		ARS
 Proyeccion	H250		1/6/2026
-Proyeccion	I250		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I250		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B251		$25.793,18
 Proyeccion	C251		Ingreso
 Proyeccion	D251		Ingreso Asesor
@@ -158427,7 +158427,7 @@ Proyeccion	E251		Ingreso
 Proyeccion	F251		NaranjaX
 Proyeccion	G251		ARS
 Proyeccion	H251		1/6/2026
-Proyeccion	I251		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I251		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B252		$7.815,83
 Proyeccion	C252		Ingreso
 Proyeccion	D252		Intereses bancos
@@ -158435,7 +158435,7 @@ Proyeccion	E252		Ingreso
 Proyeccion	F252		NaranjaX
 Proyeccion	G252		ARS
 Proyeccion	H252		1/6/2026
-Proyeccion	I252		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I252		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B253		$8,33
 Proyeccion	C253		Ingreso
 Proyeccion	D253		Umoh
@@ -158443,7 +158443,7 @@ Proyeccion	E253		Ingreso
 Proyeccion	F253		Dolar Galicia
 Proyeccion	G253		USD
 Proyeccion	H253		1/6/2026
-Proyeccion	I253		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I253		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B254		$5,50
 Proyeccion	C254		Ingreso
 Proyeccion	D254		Plata Prestada
@@ -158451,982 +158451,1004 @@ Proyeccion	E254		Ingreso
 Proyeccion	F254		Dolar Patagonia
 Proyeccion	G254		USD
 Proyeccion	H254		1/6/2026
-Proyeccion	I254		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I254		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B255		$91.400,62
 Proyeccion	C255		Egreso
 Proyeccion	D255		Traspaso
 Proyeccion	F255		Frascos Naranja X
 Proyeccion	G255		ARS
 Proyeccion	H255		1/7/2026
-Proyeccion	I255		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I255		Presupuesto base historico 2026-08-20_2313
 Proyeccion	B256		$91.400,62
 Proyeccion	C256		Ingreso
 Proyeccion	D256		Traspaso
 Proyeccion	F256		Frascos Naranja X
 Proyeccion	G256		ARS
 Proyeccion	H256		1/7/2026
-Proyeccion	I256		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B257		$132.860,63
+Proyeccion	I256		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B257		$0,89
 Proyeccion	C257		Egreso
-Proyeccion	D257		Nafta
-Proyeccion	E257		Gasto Fijo
-Proyeccion	F257		NaranjaX
-Proyeccion	G257		ARS
+Proyeccion	D257		Traspaso
+Proyeccion	F257		Dolar Patagonia
+Proyeccion	G257		USD
 Proyeccion	H257		1/7/2026
-Proyeccion	I257		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B258		$111.979,34
-Proyeccion	C258		Egreso
-Proyeccion	D258		Prestamo Galicia
-Proyeccion	E258		Gasto Fijo
-Proyeccion	F258		NaranjaX
-Proyeccion	G258		ARS
+Proyeccion	I257		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B258		$0,89
+Proyeccion	C258		Ingreso
+Proyeccion	D258		Traspaso
+Proyeccion	F258		Dolar Galicia
+Proyeccion	G258		USD
 Proyeccion	H258		1/7/2026
-Proyeccion	I258		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B259		$92.200,29
+Proyeccion	I258		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B259		$132.860,63
 Proyeccion	C259		Egreso
-Proyeccion	D259		Deuda Eze
+Proyeccion	D259		Nafta
 Proyeccion	E259		Gasto Fijo
 Proyeccion	F259		NaranjaX
 Proyeccion	G259		ARS
 Proyeccion	H259		1/7/2026
-Proyeccion	I259		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B260		$57.640,79
+Proyeccion	I259		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B260		$111.979,34
 Proyeccion	C260		Egreso
-Proyeccion	D260		Auto
+Proyeccion	D260		Prestamo Galicia
 Proyeccion	E260		Gasto Fijo
 Proyeccion	F260		NaranjaX
 Proyeccion	G260		ARS
 Proyeccion	H260		1/7/2026
-Proyeccion	I260		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B261		$54.514,23
+Proyeccion	I260		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B261		$92.200,29
 Proyeccion	C261		Egreso
-Proyeccion	D261		Prepaga
+Proyeccion	D261		Deuda Eze
 Proyeccion	E261		Gasto Fijo
 Proyeccion	F261		NaranjaX
 Proyeccion	G261		ARS
 Proyeccion	H261		1/7/2026
-Proyeccion	I261		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B262		$53.425,41
+Proyeccion	I261		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B262		$57.640,79
 Proyeccion	C262		Egreso
-Proyeccion	D262		MONOTRIBUTO
+Proyeccion	D262		Auto
 Proyeccion	E262		Gasto Fijo
 Proyeccion	F262		NaranjaX
 Proyeccion	G262		ARS
 Proyeccion	H262		1/7/2026
-Proyeccion	I262		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B263		$46.965,94
+Proyeccion	I262		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B263		$54.514,23
 Proyeccion	C263		Egreso
-Proyeccion	D263		Pago Tarjeta
+Proyeccion	D263		Prepaga
 Proyeccion	E263		Gasto Fijo
 Proyeccion	F263		NaranjaX
 Proyeccion	G263		ARS
 Proyeccion	H263		1/7/2026
-Proyeccion	I263		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B264		$39.864,54
+Proyeccion	I263		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B264		$53.425,41
 Proyeccion	C264		Egreso
-Proyeccion	D264		Linea telefónica
+Proyeccion	D264		MONOTRIBUTO
 Proyeccion	E264		Gasto Fijo
 Proyeccion	F264		NaranjaX
 Proyeccion	G264		ARS
 Proyeccion	H264		1/7/2026
-Proyeccion	I264		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B265		$20.000,00
+Proyeccion	I264		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B265		$46.965,94
 Proyeccion	C265		Egreso
-Proyeccion	D265		SportClub
+Proyeccion	D265		Pago Tarjeta
 Proyeccion	E265		Gasto Fijo
 Proyeccion	F265		NaranjaX
 Proyeccion	G265		ARS
 Proyeccion	H265		1/7/2026
-Proyeccion	I265		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B266		$19.521,72
-Proyeccion	C266		Ingreso
-Proyeccion	D266		Prepaga
+Proyeccion	I265		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B266		$39.864,54
+Proyeccion	C266		Egreso
+Proyeccion	D266		Linea telefónica
 Proyeccion	E266		Gasto Fijo
 Proyeccion	F266		NaranjaX
 Proyeccion	G266		ARS
 Proyeccion	H266		1/7/2026
-Proyeccion	I266		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B267		$19.495,65
+Proyeccion	I266		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B267		$20.000,00
 Proyeccion	C267		Egreso
-Proyeccion	D267		Seguro Compu
+Proyeccion	D267		SportClub
 Proyeccion	E267		Gasto Fijo
 Proyeccion	F267		NaranjaX
 Proyeccion	G267		ARS
 Proyeccion	H267		1/7/2026
-Proyeccion	I267		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B268		$17.477,42
-Proyeccion	C268		Egreso
-Proyeccion	D268		Pago tarjeta
+Proyeccion	I267		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B268		$19.521,72
+Proyeccion	C268		Ingreso
+Proyeccion	D268		Prepaga
 Proyeccion	E268		Gasto Fijo
 Proyeccion	F268		NaranjaX
 Proyeccion	G268		ARS
 Proyeccion	H268		1/7/2026
-Proyeccion	I268		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B269		$15.333,33
+Proyeccion	I268		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B269		$19.495,65
 Proyeccion	C269		Egreso
-Proyeccion	D269		Sportclub
+Proyeccion	D269		Seguro Compu
 Proyeccion	E269		Gasto Fijo
 Proyeccion	F269		NaranjaX
 Proyeccion	G269		ARS
 Proyeccion	H269		1/7/2026
-Proyeccion	I269		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B270		$9.600,00
+Proyeccion	I269		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B270		$17.477,42
 Proyeccion	C270		Egreso
-Proyeccion	D270		Salud
+Proyeccion	D270		Pago tarjeta
 Proyeccion	E270		Gasto Fijo
 Proyeccion	F270		NaranjaX
 Proyeccion	G270		ARS
 Proyeccion	H270		1/7/2026
-Proyeccion	I270		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B271		$9.366,74
+Proyeccion	I270		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B271		$15.333,33
 Proyeccion	C271		Egreso
-Proyeccion	D271		Seguro Celu
+Proyeccion	D271		Sportclub
 Proyeccion	E271		Gasto Fijo
 Proyeccion	F271		NaranjaX
 Proyeccion	G271		ARS
 Proyeccion	H271		1/7/2026
-Proyeccion	I271		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B272		$5.833,33
+Proyeccion	I271		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B272		$9.600,00
 Proyeccion	C272		Egreso
-Proyeccion	D272		Gatos
+Proyeccion	D272		Salud
 Proyeccion	E272		Gasto Fijo
 Proyeccion	F272		NaranjaX
 Proyeccion	G272		ARS
 Proyeccion	H272		1/7/2026
-Proyeccion	I272		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B273		$42,68
+Proyeccion	I272		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B273		$9.366,74
 Proyeccion	C273		Egreso
-Proyeccion	D273		Pago tarjeta
+Proyeccion	D273		Seguro Celu
 Proyeccion	E273		Gasto Fijo
-Proyeccion	F273		Dolar Patagonia
-Proyeccion	G273		USD
+Proyeccion	F273		NaranjaX
+Proyeccion	G273		ARS
 Proyeccion	H273		1/7/2026
-Proyeccion	I273		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B274		$4,68
+Proyeccion	I273		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B274		$5.833,33
 Proyeccion	C274		Egreso
-Proyeccion	D274		Pago Tarjeta
+Proyeccion	D274		Gatos
 Proyeccion	E274		Gasto Fijo
-Proyeccion	F274		Dolar Galicia
-Proyeccion	G274		USD
+Proyeccion	F274		NaranjaX
+Proyeccion	G274		ARS
 Proyeccion	H274		1/7/2026
-Proyeccion	I274		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B275		$472.905,80
+Proyeccion	I274		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B275		$42,68
 Proyeccion	C275		Egreso
-Proyeccion	D275		Computación
-Proyeccion	E275		Gasto Variable
-Proyeccion	F275		NaranjaX
-Proyeccion	G275		ARS
+Proyeccion	D275		Pago tarjeta
+Proyeccion	E275		Gasto Fijo
+Proyeccion	F275		Dolar Patagonia
+Proyeccion	G275		USD
 Proyeccion	H275		1/7/2026
-Proyeccion	I275		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B276		$140.818,81
+Proyeccion	I275		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B276		$4,68
 Proyeccion	C276		Egreso
-Proyeccion	D276		Salidas
-Proyeccion	E276		Gasto Variable
-Proyeccion	F276		NaranjaX
-Proyeccion	G276		ARS
+Proyeccion	D276		Pago Tarjeta
+Proyeccion	E276		Gasto Fijo
+Proyeccion	F276		Dolar Galicia
+Proyeccion	G276		USD
 Proyeccion	H276		1/7/2026
-Proyeccion	I276		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B277		$124.763,58
+Proyeccion	I276		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B277		$432.951,32
 Proyeccion	C277		Egreso
-Proyeccion	D277		Comidas
+Proyeccion	D277		Computación
 Proyeccion	E277		Gasto Variable
 Proyeccion	F277		NaranjaX
 Proyeccion	G277		ARS
 Proyeccion	H277		1/7/2026
-Proyeccion	I277		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B278		$73.343,80
+Proyeccion	I277		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B278		$128.921,42
 Proyeccion	C278		Egreso
-Proyeccion	D278		Viajes
+Proyeccion	D278		Salidas
 Proyeccion	E278		Gasto Variable
 Proyeccion	F278		NaranjaX
 Proyeccion	G278		ARS
 Proyeccion	H278		1/7/2026
-Proyeccion	I278		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B279		$70.119,44
+Proyeccion	I278		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B279		$114.222,65
 Proyeccion	C279		Egreso
-Proyeccion	D279		Juntadas
+Proyeccion	D279		Comidas
 Proyeccion	E279		Gasto Variable
 Proyeccion	F279		NaranjaX
 Proyeccion	G279		ARS
 Proyeccion	H279		1/7/2026
-Proyeccion	I279		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B280		$56.222,33
+Proyeccion	I279		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B280		$67.147,19
 Proyeccion	C280		Egreso
-Proyeccion	D280		Compra USD
+Proyeccion	D280		Viajes
 Proyeccion	E280		Gasto Variable
-Proyeccion	F280		Galicia
+Proyeccion	F280		NaranjaX
 Proyeccion	G280		ARS
 Proyeccion	H280		1/7/2026
-Proyeccion	I280		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B281		$37.806,20
+Proyeccion	I280		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B281		$64.195,24
 Proyeccion	C281		Egreso
-Proyeccion	D281		Trabajo
+Proyeccion	D281		Juntadas
 Proyeccion	E281		Gasto Variable
 Proyeccion	F281		NaranjaX
 Proyeccion	G281		ARS
 Proyeccion	H281		1/7/2026
-Proyeccion	I281		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B282		$33.642,87
-Proyeccion	C282		Ingreso
-Proyeccion	D282		Viajes
+Proyeccion	I281		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B282		$51.472,26
+Proyeccion	C282		Egreso
+Proyeccion	D282		Compra USD
 Proyeccion	E282		Gasto Variable
-Proyeccion	F282		NaranjaX
+Proyeccion	F282		Galicia
 Proyeccion	G282		ARS
 Proyeccion	H282		1/7/2026
-Proyeccion	I282		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B283		$33.072,36
-Proyeccion	C283		Ingreso
-Proyeccion	D283		Salidas
+Proyeccion	I282		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B283		$34.612,06
+Proyeccion	C283		Egreso
+Proyeccion	D283		Trabajo
 Proyeccion	E283		Gasto Variable
 Proyeccion	F283		NaranjaX
 Proyeccion	G283		ARS
 Proyeccion	H283		1/7/2026
-Proyeccion	I283		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B284		$27.592,31
+Proyeccion	I283		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B284		$30.800,47
 Proyeccion	C284		Ingreso
-Proyeccion	D284		Comidas
+Proyeccion	D284		Viajes
 Proyeccion	E284		Gasto Variable
 Proyeccion	F284		NaranjaX
 Proyeccion	G284		ARS
 Proyeccion	H284		1/7/2026
-Proyeccion	I284		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B285		$10.633,33
-Proyeccion	C285		Egreso
-Proyeccion	D285		Entretenimiento
+Proyeccion	I284		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B285		$30.278,17
+Proyeccion	C285		Ingreso
+Proyeccion	D285		Salidas
 Proyeccion	E285		Gasto Variable
 Proyeccion	F285		NaranjaX
 Proyeccion	G285		ARS
 Proyeccion	H285		1/7/2026
-Proyeccion	I285		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B286		$9.999,67
-Proyeccion	C286		Egreso
-Proyeccion	D286		Ropa
+Proyeccion	I285		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B286		$25.261,11
+Proyeccion	C286		Ingreso
+Proyeccion	D286		Comidas
 Proyeccion	E286		Gasto Variable
 Proyeccion	F286		NaranjaX
 Proyeccion	G286		ARS
 Proyeccion	H286		1/7/2026
-Proyeccion	I286		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B287		$8.333,33
+Proyeccion	I286		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B287		$9.734,95
 Proyeccion	C287		Egreso
-Proyeccion	D287		Deudas
+Proyeccion	D287		Entretenimiento
 Proyeccion	E287		Gasto Variable
-Proyeccion	F287		Efectivo
+Proyeccion	F287		NaranjaX
 Proyeccion	G287		ARS
 Proyeccion	H287		1/7/2026
-Proyeccion	I287		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B288		$7.001,50
+Proyeccion	I287		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B288		$9.154,82
 Proyeccion	C288		Egreso
-Proyeccion	D288		Entrenamiento
+Proyeccion	D288		Ropa
 Proyeccion	E288		Gasto Variable
 Proyeccion	F288		NaranjaX
 Proyeccion	G288		ARS
 Proyeccion	H288		1/7/2026
-Proyeccion	I288		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B289		$4.333,33
+Proyeccion	I288		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B289		$7.629,27
 Proyeccion	C289		Egreso
-Proyeccion	D289		Otros
+Proyeccion	D289		Deudas
 Proyeccion	E289		Gasto Variable
-Proyeccion	F289		NaranjaX
+Proyeccion	F289		Efectivo
 Proyeccion	G289		ARS
 Proyeccion	H289		1/7/2026
-Proyeccion	I289		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B290		$3.700,00
+Proyeccion	I289		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B290		$6.409,96
 Proyeccion	C290		Egreso
-Proyeccion	D290		Estacionamiento
+Proyeccion	D290		Entrenamiento
 Proyeccion	E290		Gasto Variable
-Proyeccion	F290		Efectivo
+Proyeccion	F290		NaranjaX
 Proyeccion	G290		ARS
 Proyeccion	H290		1/7/2026
-Proyeccion	I290		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B291		$3.341,67
+Proyeccion	I290		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B291		$3.967,21
 Proyeccion	C291		Egreso
-Proyeccion	D291		Perdidas
+Proyeccion	D291		Otros
 Proyeccion	E291		Gasto Variable
-Proyeccion	F291		Efectivo
+Proyeccion	F291		NaranjaX
 Proyeccion	G291		ARS
 Proyeccion	H291		1/7/2026
-Proyeccion	I291		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B292		$2.833,33
+Proyeccion	I291		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B292		$3.387,39
 Proyeccion	C292		Egreso
-Proyeccion	D292		Corte Pelo
+Proyeccion	D292		Estacionamiento
 Proyeccion	E292		Gasto Variable
-Proyeccion	F292		NaranjaX
+Proyeccion	F292		Efectivo
 Proyeccion	G292		ARS
 Proyeccion	H292		1/7/2026
-Proyeccion	I292		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B293		$2.606,29
+Proyeccion	I292		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B293		$3.059,34
 Proyeccion	C293		Egreso
-Proyeccion	D293		Medicamentos / Higiene
+Proyeccion	D293		Perdidas
 Proyeccion	E293		Gasto Variable
-Proyeccion	F293		NaranjaX
+Proyeccion	F293		Efectivo
 Proyeccion	G293		ARS
 Proyeccion	H293		1/7/2026
-Proyeccion	I293		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B294		$833,33
-Proyeccion	C294		Ingreso
-Proyeccion	D294		Trabajo
+Proyeccion	I293		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B294		$2.593,94
+Proyeccion	C294		Egreso
+Proyeccion	D294		Corte Pelo
 Proyeccion	E294		Gasto Variable
 Proyeccion	F294		NaranjaX
 Proyeccion	G294		ARS
 Proyeccion	H294		1/7/2026
-Proyeccion	I294		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B295		$687,50
+Proyeccion	I294		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B295		$2.386,09
 Proyeccion	C295		Egreso
-Proyeccion	D295		Facultad
+Proyeccion	D295		Medicamentos / Higiene
 Proyeccion	E295		Gasto Variable
 Proyeccion	F295		NaranjaX
 Proyeccion	G295		ARS
 Proyeccion	H295		1/7/2026
-Proyeccion	I295		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B296		$583,33
-Proyeccion	C296		Egreso
-Proyeccion	D296		Gastos - TT
+Proyeccion	I295		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B296		$762,92
+Proyeccion	C296		Ingreso
+Proyeccion	D296		Trabajo
 Proyeccion	E296		Gasto Variable
 Proyeccion	F296		NaranjaX
 Proyeccion	G296		ARS
 Proyeccion	H296		1/7/2026
-Proyeccion	I296		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B297		$500,00
+Proyeccion	I296		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B297		$629,41
 Proyeccion	C297		Egreso
-Proyeccion	D297		Gastos - Tidetrack
+Proyeccion	D297		Facultad
 Proyeccion	E297		Gasto Variable
 Proyeccion	F297		NaranjaX
 Proyeccion	G297		ARS
 Proyeccion	H297		1/7/2026
-Proyeccion	I297		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B298		$38,90
-Proyeccion	C298		Ingreso
-Proyeccion	D298		Compra USD
+Proyeccion	I297		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B298		$534,04
+Proyeccion	C298		Egreso
+Proyeccion	D298		Gastos - TT
 Proyeccion	E298		Gasto Variable
-Proyeccion	F298		Dolar Galicia
-Proyeccion	G298		USD
+Proyeccion	F298		NaranjaX
+Proyeccion	G298		ARS
 Proyeccion	H298		1/7/2026
-Proyeccion	I298		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B299		$720.954,17
-Proyeccion	C299		Ingreso
-Proyeccion	D299		Tidetrack
-Proyeccion	E299		Ingreso
+Proyeccion	I298		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B299		$457,75
+Proyeccion	C299		Egreso
+Proyeccion	D299		Gastos - Tidetrack
+Proyeccion	E299		Gasto Variable
 Proyeccion	F299		NaranjaX
 Proyeccion	G299		ARS
 Proyeccion	H299		1/7/2026
-Proyeccion	I299		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B300		$333.318,37
+Proyeccion	I299		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B300		$35,61
 Proyeccion	C300		Ingreso
-Proyeccion	D300		Plata Prestada
-Proyeccion	E300		Ingreso
-Proyeccion	F300		Galicia
-Proyeccion	G300		ARS
+Proyeccion	D300		Compra USD
+Proyeccion	E300		Gasto Variable
+Proyeccion	F300		Dolar Galicia
+Proyeccion	G300		USD
 Proyeccion	H300		1/7/2026
-Proyeccion	I300		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B301		$167.571,07
+Proyeccion	I300		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B301		$720.954,17
 Proyeccion	C301		Ingreso
-Proyeccion	D301		umoh
+Proyeccion	D301		Tidetrack
 Proyeccion	E301		Ingreso
 Proyeccion	F301		NaranjaX
 Proyeccion	G301		ARS
 Proyeccion	H301		1/7/2026
-Proyeccion	I301		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B302		$101.815,40
-Proyeccion	C302		Egreso
-Proyeccion	D302		Traspaso
+Proyeccion	I301		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B302		$333.318,37
+Proyeccion	C302		Ingreso
+Proyeccion	D302		Plata Prestada
 Proyeccion	E302		Ingreso
-Proyeccion	F302		Galicia Fima - Dima
+Proyeccion	F302		Galicia
 Proyeccion	G302		ARS
 Proyeccion	H302		1/7/2026
-Proyeccion	I302		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B303		$101.286,02
+Proyeccion	I302		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B303		$167.571,07
 Proyeccion	C303		Ingreso
-Proyeccion	D303		Traspaso
+Proyeccion	D303		umoh
 Proyeccion	E303		Ingreso
-Proyeccion	F303		Galicia Fima - Dima
+Proyeccion	F303		NaranjaX
 Proyeccion	G303		ARS
 Proyeccion	H303		1/7/2026
-Proyeccion	I303		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B304		$98.697,92
-Proyeccion	C304		Ingreso
-Proyeccion	D304		Umoh
+Proyeccion	I303		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B304		$101.815,40
+Proyeccion	C304		Egreso
+Proyeccion	D304		Traspaso
 Proyeccion	E304		Ingreso
-Proyeccion	F304		NaranjaX
+Proyeccion	F304		Galicia Fima - Dima
 Proyeccion	G304		ARS
 Proyeccion	H304		1/7/2026
-Proyeccion	I304		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B305		$94.662,33
+Proyeccion	I304		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B305		$101.286,02
 Proyeccion	C305		Ingreso
-Proyeccion	D305		Ingreso Viejo
+Proyeccion	D305		Traspaso
 Proyeccion	E305		Ingreso
-Proyeccion	F305		NaranjaX
+Proyeccion	F305		Galicia Fima - Dima
 Proyeccion	G305		ARS
 Proyeccion	H305		1/7/2026
-Proyeccion	I305		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B306		$81.581,07
+Proyeccion	I305		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B306		$98.697,92
 Proyeccion	C306		Ingreso
-Proyeccion	D306		Ingresos Extra
+Proyeccion	D306		Umoh
 Proyeccion	E306		Ingreso
-Proyeccion	F306		Efectivo
+Proyeccion	F306		NaranjaX
 Proyeccion	G306		ARS
 Proyeccion	H306		1/7/2026
-Proyeccion	I306		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B307		$41.666,67
+Proyeccion	I306		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B307		$94.662,33
 Proyeccion	C307		Ingreso
-Proyeccion	D307		Plata prestada
+Proyeccion	D307		Ingreso Viejo
 Proyeccion	E307		Ingreso
 Proyeccion	F307		NaranjaX
 Proyeccion	G307		ARS
 Proyeccion	H307		1/7/2026
-Proyeccion	I307		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B308		$25.793,18
+Proyeccion	I307		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B308		$81.581,07
 Proyeccion	C308		Ingreso
-Proyeccion	D308		Ingreso Asesor
+Proyeccion	D308		Ingresos Extra
 Proyeccion	E308		Ingreso
-Proyeccion	F308		NaranjaX
+Proyeccion	F308		Efectivo
 Proyeccion	G308		ARS
 Proyeccion	H308		1/7/2026
-Proyeccion	I308		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B309		$8.394,48
+Proyeccion	I308		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B309		$41.666,67
 Proyeccion	C309		Ingreso
-Proyeccion	D309		Intereses bancos
+Proyeccion	D309		Plata prestada
 Proyeccion	E309		Ingreso
 Proyeccion	F309		NaranjaX
 Proyeccion	G309		ARS
 Proyeccion	H309		1/7/2026
-Proyeccion	I309		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B310		$41,67
+Proyeccion	I309		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B310		$25.793,18
 Proyeccion	C310		Ingreso
-Proyeccion	D310		Umoh
+Proyeccion	D310		Ingreso Asesor
 Proyeccion	E310		Ingreso
-Proyeccion	F310		Dolar Cash
-Proyeccion	G310		USD
+Proyeccion	F310		NaranjaX
+Proyeccion	G310		ARS
 Proyeccion	H310		1/7/2026
-Proyeccion	I310		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B311		$10,00
+Proyeccion	I310		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B311		$8.394,48
 Proyeccion	C311		Ingreso
-Proyeccion	D311		umoh
+Proyeccion	D311		Intereses bancos
 Proyeccion	E311		Ingreso
-Proyeccion	F311		Dolar Galicia
-Proyeccion	G311		USD
+Proyeccion	F311		NaranjaX
+Proyeccion	G311		ARS
 Proyeccion	H311		1/7/2026
-Proyeccion	I311		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B312		$5,50
+Proyeccion	I311		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B312		$41,67
 Proyeccion	C312		Ingreso
-Proyeccion	D312		Plata Prestada
+Proyeccion	D312		Umoh
 Proyeccion	E312		Ingreso
-Proyeccion	F312		Dolar Patagonia
+Proyeccion	F312		Dolar Cash
 Proyeccion	G312		USD
 Proyeccion	H312		1/7/2026
-Proyeccion	I312		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B313		$91.400,62
-Proyeccion	C313		Egreso
-Proyeccion	D313		Traspaso
-Proyeccion	F313		Frascos Naranja X
-Proyeccion	G313		ARS
-Proyeccion	H313		1/8/2026
-Proyeccion	I313		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B314		$91.400,62
+Proyeccion	I312		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B313		$10,00
+Proyeccion	C313		Ingreso
+Proyeccion	D313		umoh
+Proyeccion	E313		Ingreso
+Proyeccion	F313		Dolar Galicia
+Proyeccion	G313		USD
+Proyeccion	H313		1/7/2026
+Proyeccion	I313		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B314		$5,50
 Proyeccion	C314		Ingreso
-Proyeccion	D314		Traspaso
-Proyeccion	F314		Frascos Naranja X
-Proyeccion	G314		ARS
-Proyeccion	H314		1/8/2026
-Proyeccion	I314		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B315		$84,23
-Proyeccion	C315		Ingreso
+Proyeccion	D314		Plata Prestada
+Proyeccion	E314		Ingreso
+Proyeccion	F314		Dolar Patagonia
+Proyeccion	G314		USD
+Proyeccion	H314		1/7/2026
+Proyeccion	I314		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B315		$91.400,62
+Proyeccion	C315		Egreso
 Proyeccion	D315		Traspaso
-Proyeccion	F315		Dolar Cash
-Proyeccion	G315		USD
+Proyeccion	F315		Frascos Naranja X
+Proyeccion	G315		ARS
 Proyeccion	H315		1/8/2026
-Proyeccion	I315		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B316		$84,23
-Proyeccion	C316		Egreso
+Proyeccion	I315		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B316		$91.400,62
+Proyeccion	C316		Ingreso
 Proyeccion	D316		Traspaso
-Proyeccion	F316		Dolar Galicia
-Proyeccion	G316		USD
+Proyeccion	F316		Frascos Naranja X
+Proyeccion	G316		ARS
 Proyeccion	H316		1/8/2026
-Proyeccion	I316		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B317		$149.595,95
-Proyeccion	C317		Egreso
-Proyeccion	D317		Prestamo Galicia
-Proyeccion	E317		Gasto Fijo
-Proyeccion	F317		NaranjaX
-Proyeccion	G317		ARS
+Proyeccion	I316		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B317		$84,23
+Proyeccion	C317		Ingreso
+Proyeccion	D317		Traspaso
+Proyeccion	F317		Dolar Cash
+Proyeccion	G317		USD
 Proyeccion	H317		1/8/2026
-Proyeccion	I317		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B318		$142.565,46
+Proyeccion	I317		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B318		$84,23
 Proyeccion	C318		Egreso
-Proyeccion	D318		Nafta
-Proyeccion	E318		Gasto Fijo
-Proyeccion	F318		NaranjaX
-Proyeccion	G318		ARS
+Proyeccion	D318		Traspaso
+Proyeccion	F318		Dolar Galicia
+Proyeccion	G318		USD
 Proyeccion	H318		1/8/2026
-Proyeccion	I318		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B319		$111.932,37
+Proyeccion	I318		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B319		$149.595,95
 Proyeccion	C319		Egreso
-Proyeccion	D319		Deuda Eze
+Proyeccion	D319		Prestamo Galicia
 Proyeccion	E319		Gasto Fijo
 Proyeccion	F319		NaranjaX
 Proyeccion	G319		ARS
 Proyeccion	H319		1/8/2026
-Proyeccion	I319		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B320		$95.127,82
+Proyeccion	I319		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B320		$142.565,46
 Proyeccion	C320		Egreso
-Proyeccion	D320		Pago Tarjeta
+Proyeccion	D320		Nafta
 Proyeccion	E320		Gasto Fijo
 Proyeccion	F320		NaranjaX
 Proyeccion	G320		ARS
 Proyeccion	H320		1/8/2026
-Proyeccion	I320		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B321		$63.748,46
+Proyeccion	I320		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B321		$111.932,37
 Proyeccion	C321		Egreso
-Proyeccion	D321		MONOTRIBUTO
+Proyeccion	D321		Deuda Eze
 Proyeccion	E321		Gasto Fijo
 Proyeccion	F321		NaranjaX
 Proyeccion	G321		ARS
 Proyeccion	H321		1/8/2026
-Proyeccion	I321		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B322		$57.935,52
+Proyeccion	I321		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B322		$95.127,82
 Proyeccion	C322		Egreso
-Proyeccion	D322		Auto
+Proyeccion	D322		Pago Tarjeta
 Proyeccion	E322		Gasto Fijo
 Proyeccion	F322		NaranjaX
 Proyeccion	G322		ARS
 Proyeccion	H322		1/8/2026
-Proyeccion	I322		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B323		$50.410,85
+Proyeccion	I322		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B323		$63.748,46
 Proyeccion	C323		Egreso
-Proyeccion	D323		Prepaga
+Proyeccion	D323		MONOTRIBUTO
 Proyeccion	E323		Gasto Fijo
 Proyeccion	F323		NaranjaX
 Proyeccion	G323		ARS
 Proyeccion	H323		1/8/2026
-Proyeccion	I323		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B324		$38.333,33
+Proyeccion	I323		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B324		$57.935,52
 Proyeccion	C324		Egreso
-Proyeccion	D324		Sportclub
+Proyeccion	D324		Auto
 Proyeccion	E324		Gasto Fijo
 Proyeccion	F324		NaranjaX
 Proyeccion	G324		ARS
 Proyeccion	H324		1/8/2026
-Proyeccion	I324		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B325		$38.173,51
+Proyeccion	I324		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B325		$50.410,85
 Proyeccion	C325		Egreso
-Proyeccion	D325		Linea telefónica
+Proyeccion	D325		Prepaga
 Proyeccion	E325		Gasto Fijo
 Proyeccion	F325		NaranjaX
 Proyeccion	G325		ARS
 Proyeccion	H325		1/8/2026
-Proyeccion	I325		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B326		$24.028,48
+Proyeccion	I325		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B326		$38.333,33
 Proyeccion	C326		Egreso
-Proyeccion	D326		Seguro Compu
+Proyeccion	D326		Sportclub
 Proyeccion	E326		Gasto Fijo
 Proyeccion	F326		NaranjaX
 Proyeccion	G326		ARS
 Proyeccion	H326		1/8/2026
-Proyeccion	I326		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B327		$19.521,72
-Proyeccion	C327		Ingreso
-Proyeccion	D327		Prepaga
+Proyeccion	I326		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B327		$38.173,51
+Proyeccion	C327		Egreso
+Proyeccion	D327		Linea telefónica
 Proyeccion	E327		Gasto Fijo
 Proyeccion	F327		NaranjaX
 Proyeccion	G327		ARS
 Proyeccion	H327		1/8/2026
-Proyeccion	I327		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B328		$13.333,33
+Proyeccion	I327		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B328		$24.028,48
 Proyeccion	C328		Egreso
-Proyeccion	D328		SportClub
+Proyeccion	D328		Seguro Compu
 Proyeccion	E328		Gasto Fijo
 Proyeccion	F328		NaranjaX
 Proyeccion	G328		ARS
 Proyeccion	H328		1/8/2026
-Proyeccion	I328		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B329		$12.519,05
-Proyeccion	C329		Egreso
-Proyeccion	D329		Pago tarjeta
+Proyeccion	I328		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B329		$19.521,72
+Proyeccion	C329		Ingreso
+Proyeccion	D329		Prepaga
 Proyeccion	E329		Gasto Fijo
 Proyeccion	F329		NaranjaX
 Proyeccion	G329		ARS
 Proyeccion	H329		1/8/2026
-Proyeccion	I329		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B330		$11.708,74
+Proyeccion	I329		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B330		$13.333,33
 Proyeccion	C330		Egreso
-Proyeccion	D330		Seguro Celu
+Proyeccion	D330		SportClub
 Proyeccion	E330		Gasto Fijo
 Proyeccion	F330		NaranjaX
 Proyeccion	G330		ARS
 Proyeccion	H330		1/8/2026
-Proyeccion	I330		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B331		$10.999,85
+Proyeccion	I330		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B331		$12.519,05
 Proyeccion	C331		Egreso
-Proyeccion	D331		Pago Tarjeta MP
+Proyeccion	D331		Pago tarjeta
 Proyeccion	E331		Gasto Fijo
 Proyeccion	F331		NaranjaX
 Proyeccion	G331		ARS
 Proyeccion	H331		1/8/2026
-Proyeccion	I331		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B332		$9.600,00
+Proyeccion	I331		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B332		$11.708,74
 Proyeccion	C332		Egreso
-Proyeccion	D332		Salud
+Proyeccion	D332		Seguro Celu
 Proyeccion	E332		Gasto Fijo
 Proyeccion	F332		NaranjaX
 Proyeccion	G332		ARS
 Proyeccion	H332		1/8/2026
-Proyeccion	I332		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B333		$5.833,33
+Proyeccion	I332		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B333		$10.999,85
 Proyeccion	C333		Egreso
-Proyeccion	D333		Gatos
+Proyeccion	D333		Pago Tarjeta MP
 Proyeccion	E333		Gasto Fijo
 Proyeccion	F333		NaranjaX
 Proyeccion	G333		ARS
 Proyeccion	H333		1/8/2026
-Proyeccion	I333		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B334		$39,35
+Proyeccion	I333		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B334		$9.600,00
 Proyeccion	C334		Egreso
-Proyeccion	D334		Pago tarjeta
+Proyeccion	D334		Salud
 Proyeccion	E334		Gasto Fijo
-Proyeccion	F334		Dolar Patagonia
-Proyeccion	G334		USD
+Proyeccion	F334		NaranjaX
+Proyeccion	G334		ARS
 Proyeccion	H334		1/8/2026
-Proyeccion	I334		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B335		$6,73
+Proyeccion	I334		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B335		$5.833,33
 Proyeccion	C335		Egreso
-Proyeccion	D335		Pago Tarjeta
+Proyeccion	D335		Gatos
 Proyeccion	E335		Gasto Fijo
-Proyeccion	F335		Dolar Galicia
-Proyeccion	G335		USD
+Proyeccion	F335		NaranjaX
+Proyeccion	G335		ARS
 Proyeccion	H335		1/8/2026
-Proyeccion	I335		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B336		$476.239,13
+Proyeccion	I335		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B336		$39,35
 Proyeccion	C336		Egreso
-Proyeccion	D336		Computación
-Proyeccion	E336		Gasto Variable
-Proyeccion	F336		NaranjaX
-Proyeccion	G336		ARS
+Proyeccion	D336		Pago tarjeta
+Proyeccion	E336		Gasto Fijo
+Proyeccion	F336		Dolar Patagonia
+Proyeccion	G336		USD
 Proyeccion	H336		1/8/2026
-Proyeccion	I336		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B337		$160.407,14
+Proyeccion	I336		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B337		$6,73
 Proyeccion	C337		Egreso
-Proyeccion	D337		Salidas
-Proyeccion	E337		Gasto Variable
-Proyeccion	F337		NaranjaX
-Proyeccion	G337		ARS
+Proyeccion	D337		Pago Tarjeta
+Proyeccion	E337		Gasto Fijo
+Proyeccion	F337		Dolar Galicia
+Proyeccion	G337		USD
 Proyeccion	H337		1/8/2026
-Proyeccion	I337		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B338		$118.866,75
+Proyeccion	I337		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B338		$434.451,19
 Proyeccion	C338		Egreso
-Proyeccion	D338		Comidas
+Proyeccion	D338		Computación
 Proyeccion	E338		Gasto Variable
 Proyeccion	F338		NaranjaX
 Proyeccion	G338		ARS
 Proyeccion	H338		1/8/2026
-Proyeccion	I338		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B339		$98.658,53
+Proyeccion	I338		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B339		$146.332,10
 Proyeccion	C339		Egreso
-Proyeccion	D339		Viajes
+Proyeccion	D339		Salidas
 Proyeccion	E339		Gasto Variable
 Proyeccion	F339		NaranjaX
 Proyeccion	G339		ARS
 Proyeccion	H339		1/8/2026
-Proyeccion	I339		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B340		$76.944,44
+Proyeccion	I339		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B340		$108.436,70
 Proyeccion	C340		Egreso
-Proyeccion	D340		Juntadas
+Proyeccion	D340		Comidas
 Proyeccion	E340		Gasto Variable
 Proyeccion	F340		NaranjaX
 Proyeccion	G340		ARS
 Proyeccion	H340		1/8/2026
-Proyeccion	I340		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B341		$51.224,54
+Proyeccion	I340		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B341		$90.001,66
 Proyeccion	C341		Egreso
-Proyeccion	D341		Trabajo
+Proyeccion	D341		Viajes
 Proyeccion	E341		Gasto Variable
 Proyeccion	F341		NaranjaX
 Proyeccion	G341		ARS
 Proyeccion	H341		1/8/2026
-Proyeccion	I341		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B342		$37.724,19
-Proyeccion	C342		Ingreso
-Proyeccion	D342		Salidas
+Proyeccion	I341		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B342		$70.192,89
+Proyeccion	C342		Egreso
+Proyeccion	D342		Juntadas
 Proyeccion	E342		Gasto Variable
 Proyeccion	F342		NaranjaX
 Proyeccion	G342		ARS
 Proyeccion	H342		1/8/2026
-Proyeccion	I342		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B343		$33.642,87
-Proyeccion	C343		Ingreso
-Proyeccion	D343		Viajes
+Proyeccion	I342		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B343		$46.729,80
+Proyeccion	C343		Egreso
+Proyeccion	D343		Trabajo
 Proyeccion	E343		Gasto Variable
 Proyeccion	F343		NaranjaX
 Proyeccion	G343		ARS
 Proyeccion	H343		1/8/2026
-Proyeccion	I343		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B344		$27.592,31
+Proyeccion	I343		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B344		$34.414,05
 Proyeccion	C344		Ingreso
-Proyeccion	D344		Comidas
+Proyeccion	D344		Salidas
 Proyeccion	E344		Gasto Variable
 Proyeccion	F344		NaranjaX
 Proyeccion	G344		ARS
 Proyeccion	H344		1/8/2026
-Proyeccion	I344		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B345		$24.316,67
-Proyeccion	C345		Egreso
-Proyeccion	D345		Reparaciones Auto
+Proyeccion	I344		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B345		$30.690,85
+Proyeccion	C345		Ingreso
+Proyeccion	D345		Viajes
 Proyeccion	E345		Gasto Variable
-Proyeccion	F345		Efectivo
+Proyeccion	F345		NaranjaX
 Proyeccion	G345		ARS
 Proyeccion	H345		1/8/2026
-Proyeccion	I345		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B346		$17.374,65
-Proyeccion	C346		Egreso
-Proyeccion	D346		Otros
+Proyeccion	I345		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B346		$25.171,20
+Proyeccion	C346		Ingreso
+Proyeccion	D346		Comidas
 Proyeccion	E346		Gasto Variable
 Proyeccion	F346		NaranjaX
 Proyeccion	G346		ARS
 Proyeccion	H346		1/8/2026
-Proyeccion	I346		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B347		$11.375,00
-Proyeccion	C347		Ingreso
-Proyeccion	D347		Deudas
+Proyeccion	I346		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B347		$22.182,98
+Proyeccion	C347		Egreso
+Proyeccion	D347		Reparaciones Auto
 Proyeccion	E347		Gasto Variable
-Proyeccion	F347		NaranjaX
+Proyeccion	F347		Efectivo
 Proyeccion	G347		ARS
 Proyeccion	H347		1/8/2026
-Proyeccion	I347		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B348		$11.333,33
+Proyeccion	I347		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B348		$15.850,09
 Proyeccion	C348		Egreso
-Proyeccion	D348		Medicamentos / Accesorios
+Proyeccion	D348		Otros
 Proyeccion	E348		Gasto Variable
 Proyeccion	F348		NaranjaX
 Proyeccion	G348		ARS
 Proyeccion	H348		1/8/2026
-Proyeccion	I348		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B349		$10.633,33
-Proyeccion	C349		Egreso
-Proyeccion	D349		Entretenimiento
+Proyeccion	I348		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B349		$10.376,89
+Proyeccion	C349		Ingreso
+Proyeccion	D349		Deudas
 Proyeccion	E349		Gasto Variable
 Proyeccion	F349		NaranjaX
 Proyeccion	G349		ARS
 Proyeccion	H349		1/8/2026
-Proyeccion	I349		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B350		$9.999,67
+Proyeccion	I349		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B350		$10.338,87
 Proyeccion	C350		Egreso
-Proyeccion	D350		Ropa
+Proyeccion	D350		Medicamentos / Accesorios
 Proyeccion	E350		Gasto Variable
 Proyeccion	F350		NaranjaX
 Proyeccion	G350		ARS
 Proyeccion	H350		1/8/2026
-Proyeccion	I350		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B351		$8.333,33
+Proyeccion	I350		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B351		$9.700,30
 Proyeccion	C351		Egreso
-Proyeccion	D351		Deudas
+Proyeccion	D351		Entretenimiento
 Proyeccion	E351		Gasto Variable
-Proyeccion	F351		Efectivo
+Proyeccion	F351		NaranjaX
 Proyeccion	G351		ARS
 Proyeccion	H351		1/8/2026
-Proyeccion	I351		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B352		$7.001,50
+Proyeccion	I351		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B352		$9.122,24
 Proyeccion	C352		Egreso
-Proyeccion	D352		Entrenamiento
+Proyeccion	D352		Ropa
 Proyeccion	E352		Gasto Variable
 Proyeccion	F352		NaranjaX
 Proyeccion	G352		ARS
 Proyeccion	H352		1/8/2026
-Proyeccion	I352		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B353		$5.854,17
+Proyeccion	I352		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B353		$7.602,11
 Proyeccion	C353		Egreso
-Proyeccion	D353		Compra USD
+Proyeccion	D353		Deudas
 Proyeccion	E353		Gasto Variable
-Proyeccion	F353		Galicia
+Proyeccion	F353		Efectivo
 Proyeccion	G353		ARS
 Proyeccion	H353		1/8/2026
-Proyeccion	I353		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B354		$3.416,67
+Proyeccion	I353		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B354		$6.387,14
 Proyeccion	C354		Egreso
-Proyeccion	D354		Estacionamiento
+Proyeccion	D354		Entrenamiento
 Proyeccion	E354		Gasto Variable
-Proyeccion	F354		Efectivo
+Proyeccion	F354		NaranjaX
 Proyeccion	G354		ARS
 Proyeccion	H354		1/8/2026
-Proyeccion	I354		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B355		$3.341,67
+Proyeccion	I354		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B355		$5.340,49
 Proyeccion	C355		Egreso
-Proyeccion	D355		Perdidas
+Proyeccion	D355		Compra USD
 Proyeccion	E355		Gasto Variable
-Proyeccion	F355		Efectivo
+Proyeccion	F355		Galicia
 Proyeccion	G355		ARS
 Proyeccion	H355		1/8/2026
-Proyeccion	I355		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B356		$2.833,33
+Proyeccion	I355		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B356		$3.116,87
 Proyeccion	C356		Egreso
-Proyeccion	D356		Corte Pelo
+Proyeccion	D356		Estacionamiento
 Proyeccion	E356		Gasto Variable
-Proyeccion	F356		NaranjaX
+Proyeccion	F356		Efectivo
 Proyeccion	G356		ARS
 Proyeccion	H356		1/8/2026
-Proyeccion	I356		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B357		$2.606,29
+Proyeccion	I356		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B357		$3.048,45
 Proyeccion	C357		Egreso
-Proyeccion	D357		Medicamentos / Higiene
+Proyeccion	D357		Perdidas
 Proyeccion	E357		Gasto Variable
-Proyeccion	F357		NaranjaX
+Proyeccion	F357		Efectivo
 Proyeccion	G357		ARS
 Proyeccion	H357		1/8/2026
-Proyeccion	I357		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B358		$2.000,00
+Proyeccion	I357		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B358		$2.584,71
 Proyeccion	C358		Egreso
-Proyeccion	D358		Imprevistos
+Proyeccion	D358		Corte Pelo
 Proyeccion	E358		Gasto Variable
 Proyeccion	F358		NaranjaX
 Proyeccion	G358		ARS
 Proyeccion	H358		1/8/2026
-Proyeccion	I358		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B359		$1.666,67
+Proyeccion	I358		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B359		$2.377,59
 Proyeccion	C359		Egreso
-Proyeccion	D359		Regalos
+Proyeccion	D359		Medicamentos / Higiene
 Proyeccion	E359		Gasto Variable
-Proyeccion	F359		Mercado Pago
+Proyeccion	F359		NaranjaX
 Proyeccion	G359		ARS
 Proyeccion	H359		1/8/2026
-Proyeccion	I359		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B360		$833,33
-Proyeccion	C360		Ingreso
-Proyeccion	D360		Trabajo
+Proyeccion	I359		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B360		$1.824,50
+Proyeccion	C360		Egreso
+Proyeccion	D360		Imprevistos
 Proyeccion	E360		Gasto Variable
 Proyeccion	F360		NaranjaX
 Proyeccion	G360		ARS
 Proyeccion	H360		1/8/2026
-Proyeccion	I360		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B361		$687,50
+Proyeccion	I360		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B361		$1.520,42
 Proyeccion	C361		Egreso
-Proyeccion	D361		Facultad
+Proyeccion	D361		Regalos
 Proyeccion	E361		Gasto Variable
-Proyeccion	F361		NaranjaX
+Proyeccion	F361		Mercado Pago
 Proyeccion	G361		ARS
 Proyeccion	H361		1/8/2026
-Proyeccion	I361		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B362		$500,00
-Proyeccion	C362		Egreso
-Proyeccion	D362		Gastos - Tidetrack
+Proyeccion	I361		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B362		$760,20
+Proyeccion	C362		Ingreso
+Proyeccion	D362		Trabajo
 Proyeccion	E362		Gasto Variable
 Proyeccion	F362		NaranjaX
 Proyeccion	G362		ARS
 Proyeccion	H362		1/8/2026
-Proyeccion	I362		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B363		$115,00
+Proyeccion	I362		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B363		$627,17
 Proyeccion	C363		Egreso
-Proyeccion	D363		Computación
+Proyeccion	D363		Facultad
 Proyeccion	E363		Gasto Variable
-Proyeccion	F363		Dolar Cash
-Proyeccion	G363		USD
+Proyeccion	F363		NaranjaX
+Proyeccion	G363		ARS
 Proyeccion	H363		1/8/2026
-Proyeccion	I363		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B364		$4,17
-Proyeccion	C364		Ingreso
-Proyeccion	D364		Compra USD
+Proyeccion	I363		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B364		$456,12
+Proyeccion	C364		Egreso
+Proyeccion	D364		Gastos - Tidetrack
 Proyeccion	E364		Gasto Variable
-Proyeccion	F364		Dolar Galicia
-Proyeccion	G364		USD
+Proyeccion	F364		NaranjaX
+Proyeccion	G364		ARS
 Proyeccion	H364		1/8/2026
-Proyeccion	I364		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B365		$822.562,50
-Proyeccion	C365		Ingreso
-Proyeccion	D365		Tidetrack
-Proyeccion	E365		Ingreso
-Proyeccion	F365		NaranjaX
-Proyeccion	G365		ARS
+Proyeccion	I364		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B365		$104,90
+Proyeccion	C365		Egreso
+Proyeccion	D365		Computación
+Proyeccion	E365		Gasto Variable
+Proyeccion	F365		Dolar Cash
+Proyeccion	G365		USD
 Proyeccion	H365		1/8/2026
-Proyeccion	I365		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B366		$333.318,37
+Proyeccion	I365		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B366		$3,80
 Proyeccion	C366		Ingreso
-Proyeccion	D366		Plata Prestada
-Proyeccion	E366		Ingreso
-Proyeccion	F366		Galicia
-Proyeccion	G366		ARS
+Proyeccion	D366		Compra USD
+Proyeccion	E366		Gasto Variable
+Proyeccion	F366		Dolar Galicia
+Proyeccion	G366		USD
 Proyeccion	H366		1/8/2026
-Proyeccion	I366		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B367		$239.862,74
+Proyeccion	I366		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B367		$822.562,50
 Proyeccion	C367		Ingreso
-Proyeccion	D367		umoh
+Proyeccion	D367		Tidetrack
 Proyeccion	E367		Ingreso
 Proyeccion	F367		NaranjaX
 Proyeccion	G367		ARS
 Proyeccion	H367		1/8/2026
-Proyeccion	I367		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B368		$130.284,84
+Proyeccion	I367		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B368		$333.318,37
 Proyeccion	C368		Ingreso
-Proyeccion	D368		Ingreso Viejo
+Proyeccion	D368		Plata Prestada
 Proyeccion	E368		Ingreso
 Proyeccion	F368		Galicia
 Proyeccion	G368		ARS
 Proyeccion	H368		1/8/2026
-Proyeccion	I368		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B369		$101.815,40
-Proyeccion	C369		Egreso
-Proyeccion	D369		Traspaso
+Proyeccion	I368		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B369		$239.862,74
+Proyeccion	C369		Ingreso
+Proyeccion	D369		umoh
 Proyeccion	E369		Ingreso
-Proyeccion	F369		Galicia Fima - Dima
+Proyeccion	F369		NaranjaX
 Proyeccion	G369		ARS
 Proyeccion	H369		1/8/2026
-Proyeccion	I369		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B370		$98.697,92
+Proyeccion	I369		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B370		$130.284,84
 Proyeccion	C370		Ingreso
-Proyeccion	D370		Umoh
+Proyeccion	D370		Ingreso Viejo
 Proyeccion	E370		Ingreso
-Proyeccion	F370		NaranjaX
+Proyeccion	F370		Galicia
 Proyeccion	G370		ARS
 Proyeccion	H370		1/8/2026
-Proyeccion	I370		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B371		$95.119,35
-Proyeccion	C371		Ingreso
+Proyeccion	I370		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B371		$101.815,40
+Proyeccion	C371		Egreso
 Proyeccion	D371		Traspaso
 Proyeccion	E371		Ingreso
 Proyeccion	F371		Galicia Fima - Dima
 Proyeccion	G371		ARS
 Proyeccion	H371		1/8/2026
-Proyeccion	I371		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B372		$80.081,07
+Proyeccion	I371		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B372		$98.697,92
 Proyeccion	C372		Ingreso
-Proyeccion	D372		Ingresos Extra
+Proyeccion	D372		Umoh
 Proyeccion	E372		Ingreso
 Proyeccion	F372		NaranjaX
 Proyeccion	G372		ARS
 Proyeccion	H372		1/8/2026
-Proyeccion	I372		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B373		$41.666,67
+Proyeccion	I372		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B373		$95.119,35
 Proyeccion	C373		Ingreso
-Proyeccion	D373		Plata prestada
+Proyeccion	D373		Traspaso
 Proyeccion	E373		Ingreso
-Proyeccion	F373		NaranjaX
+Proyeccion	F373		Galicia Fima - Dima
 Proyeccion	G373		ARS
 Proyeccion	H373		1/8/2026
-Proyeccion	I373		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B374		$8.738,36
+Proyeccion	I373		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B374		$80.081,07
 Proyeccion	C374		Ingreso
-Proyeccion	D374		Intereses bancos
+Proyeccion	D374		Ingresos Extra
 Proyeccion	E374		Ingreso
 Proyeccion	F374		NaranjaX
 Proyeccion	G374		ARS
 Proyeccion	H374		1/8/2026
-Proyeccion	I374		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B375		$83,33
+Proyeccion	I374		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B375		$41.666,67
 Proyeccion	C375		Ingreso
-Proyeccion	D375		Tidetrack
+Proyeccion	D375		Plata prestada
 Proyeccion	E375		Ingreso
-Proyeccion	F375		Dolar Galicia
-Proyeccion	G375		USD
+Proyeccion	F375		NaranjaX
+Proyeccion	G375		ARS
 Proyeccion	H375		1/8/2026
-Proyeccion	I375		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B376		$41,67
+Proyeccion	I375		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B376		$8.738,36
 Proyeccion	C376		Ingreso
-Proyeccion	D376		Umoh
+Proyeccion	D376		Intereses bancos
 Proyeccion	E376		Ingreso
-Proyeccion	F376		Dolar Cash
-Proyeccion	G376		USD
+Proyeccion	F376		NaranjaX
+Proyeccion	G376		ARS
 Proyeccion	H376		1/8/2026
-Proyeccion	I376		Presupuesto base historico 2026-08-20_2230
-Proyeccion	B377		$31,67
+Proyeccion	I376		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B377		$83,33
 Proyeccion	C377		Ingreso
-Proyeccion	D377		umoh
+Proyeccion	D377		Tidetrack
 Proyeccion	E377		Ingreso
 Proyeccion	F377		Dolar Galicia
 Proyeccion	G377		USD
 Proyeccion	H377		1/8/2026
-Proyeccion	I377		Presupuesto base historico 2026-08-20_2230
+Proyeccion	I377		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B378		$41,67
+Proyeccion	C378		Ingreso
+Proyeccion	D378		Umoh
+Proyeccion	E378		Ingreso
+Proyeccion	F378		Dolar Cash
+Proyeccion	G378		USD
+Proyeccion	H378		1/8/2026
+Proyeccion	I378		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B379		$31,67
+Proyeccion	C379		Ingreso
+Proyeccion	D379		umoh
+Proyeccion	E379		Ingreso
+Proyeccion	F379		Dolar Galicia
+Proyeccion	G379		USD
+Proyeccion	H379		1/8/2026
+Proyeccion	I379		Presupuesto base historico 2026-08-20_2313
+Proyeccion	B380		$0,01
+Proyeccion	C380		Ingreso
+Proyeccion	D380		Intereses bancos
+Proyeccion	E380		Ingreso
+Proyeccion	F380		Dolar Galicia
+Proyeccion	G380		USD
+Proyeccion	H380		1/8/2026
+Proyeccion	I380		Presupuesto base historico 2026-08-20_2313

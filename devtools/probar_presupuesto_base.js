@@ -44,8 +44,10 @@ const LEDGER = [
     ['Traspaso',      '',               'Egreso', 'ARS', 'Efectivo',  999999, new Date(2026, 3, 9)],
     ['Traspaso',      '',               'Ingreso','ARS', 'NaranjaX',  999999, new Date(2026, 3, 9)],
     // El de casa a un FRASCO si: entra la pata de Ingreso, cuyo medio es de tipo Ahorros.
+    // OJO: esta pata trae 'Ingreso' TAMBIEN en Tipo de Cuenta, como pasa en el ledger real.
+    // El lector se lo tiene que sacar: un traspaso no pertenece a ningun bloque.
     ['Traspaso',      '',               'Egreso', 'ARS', 'Efectivo',  150000, new Date(2026, 2, 4)],
-    ['Traspaso',      '',               'Ingreso','ARS', 'Frasco',    150000, new Date(2026, 2, 4)],
+    ['Traspaso',      'Ingreso',        'Ingreso','ARS', 'Frasco',    150000, new Date(2026, 2, 4)],
     // -> 150000/6 = 25000/mes de capitalizacion presupuestada.
     ['Inicio Mes',    'Ingreso',        'Ingreso','ARS', 'Frasco',   888888, new Date(2026, 3, 1)],
     // -> el arrastre NUNCA entra, ni siquiera tocando un medio de riqueza
@@ -197,6 +199,9 @@ ok(h.lineas.filter(l => l.cuenta === 'Viajes').length === 2,
 console.log('\n=== 4. Lo que NO entra ===');
 ok(porCuenta['Traspaso|ARS'] && porCuenta['Traspaso|ARS'].promedio === 25000,
    'el traspaso a un FRASCO se presupuesta: 150.000 -> 25.000/mes. Dio ' + (porCuenta['Traspaso|ARS'] || {}).promedio);
+ok(porCuenta['Traspaso|ARS'] && porCuenta['Traspaso|ARS'].tipoCuenta === '',
+   'la pata de traspaso PIERDE su Tipo de Cuenta: no es ingreso ni gasto de ningun bloque. Dio "' +
+   (porCuenta['Traspaso|ARS']||{}).tipoCuenta + '"');
 ok(porCuenta['Traspaso|ARS'] && porCuenta['Traspaso|ARS'].medio === 'Frasco',
    'entra la pata que ENTRA al frasco, no la que sale de Efectivo. Dio "' + (porCuenta['Traspaso|ARS']||{}).medio + '"');
 ok(!agoLineas.some(l => l.cuenta === 'Traspaso' && l.medio === 'Efectivo'),
@@ -266,6 +271,14 @@ console.log('\n=== 5b. NINGUN MES SE PROYECTA CON DESAHORRO (decision Franco 202
     ctx._ajustarSinDesahorroPb(ls, tasas);
     b = balance(ls);
     ok(b.capacidad >= 0, 'con montos que no dividen exacto, el piso aguanta. Capacidad ' + b.capacidad.toFixed(4));
+
+    // Caso 5b: una pata de traspaso con tipoCuenta vacio no mueve el balance del recorte.
+    ls = [linea('Ingreso','ARS',1000), linea('Gasto Variable','ARS',1200),
+          { cuenta:'Traspaso', moneda:'ARS', tipoCuenta:'', tipo:'Ingreso', medio:'Frasco', promedio:500, movimientos:1 }];
+    a = ctx._ajustarSinDesahorroPb(ls, tasas);
+    ok(a.recortado && Math.abs(a.deficit - 200) < 0.01,
+       'el traspaso proyectado NO cuenta como ingreso en el balance: deficit 200, no -300. Dio ' + a.deficit.toFixed(2));
+    ok(ls[2].promedio === 500, 'y el traspaso no se recorta: capitalizar es el objetivo, no el problema');
 
     // Caso 6: 3000 meses al azar -- el invariante capacidad >= 0 SIEMPRE tras el ajuste.
     let peor = 1;

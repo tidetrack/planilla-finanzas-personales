@@ -5,6 +5,19 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.30.1 - La pata de traspaso pierde su Tipo de Cuenta.
+ * - SINTOMA: con el recorte v0.30.0 aplicado, N12 quedo igual en -$196.914. El ajuste recorto
+ *   122 mil cuando el deficit real era 319 mil.
+ * - CAUSA: algunas patas de traspaso vienen con "Ingreso" cargado en Tipo de Cuenta. El balance
+ *   del recorte las conto como ingreso; la hoja las excluye por cuenta neutra. Dos varas: el
+ *   ajustador vio menos deficit del que el Tablero muestra, y la diferencia es exactamente el
+ *   monto de esos traspasos proyectados (196.9k).
+ * - CORRECCION: en la lectura, toda pata de traspaso pierde el Tipo de Cuenta que traiga. Un
+ *   traspaso capitaliza; no ingresa ni gasta en ningun bloque. Asi el balance del ajustador y el
+ *   del Tablero miden con la misma vara, y el traspaso tampoco se recorta: capitalizar es el
+ *   objetivo del plan, no el problema.
+ * - Se verifico en la hoja tras recargar: N12 >= 0 con la identidad intacta.
+ *
  * [2026-08-20] v0.30.0 - Ningun mes se proyecta con desahorro.
  * - decision Franco 2026-08-20: "que no se proyecte un mes con un desahorro". Se proyecta por
  *   descarte (la Capacidad es el residuo, v0.29.0), y ahora el plan ademas garantiza que ese

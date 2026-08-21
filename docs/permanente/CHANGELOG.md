@@ -9,6 +9,19 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.30.1 - La pata de traspaso pierde su Tipo de Cuenta (2026-08-20)
+
+Con el recorte v0.30.0 aplicado, `N12` quedo igual en `-$196.914`: el ajuste recorto 122 mil
+cuando el deficit real era 319 mil.
+
+**Causa:** algunas patas de traspaso vienen con "Ingreso" cargado en Tipo de Cuenta. El balance del
+recorte las conto como ingreso; la hoja las excluye por cuenta neutra. Dos varas distintas — y la
+diferencia era exactamente el monto de esos traspasos proyectados.
+
+**Correccion:** en la lectura, toda pata de traspaso pierde el Tipo de Cuenta que traiga. Un
+traspaso capitaliza; no ingresa ni gasta en ningun bloque. El traspaso tampoco se recorta:
+capitalizar es el objetivo del plan, no el problema.
+
 ## v0.30.0 - Ningun mes se proyecta con desahorro (2026-08-20)
 
 > "Cuando proyectamos entonces, lo hacemos por descarte? Eso se entiende. Ahora quiero que

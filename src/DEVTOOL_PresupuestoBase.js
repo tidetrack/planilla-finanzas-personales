@@ -141,10 +141,18 @@ function _leerLedgerPb(ss) {
 
         // Los arrastres nunca. Los traspasos, solo si esta fila toca un medio de riqueza.
         const esTraspaso = esCuentaNeutra(cuenta) && normalizarNombreCuenta(cuenta) !== normalizarNombreCuenta(CUENTA_ARRASTRE);
+        let tipoCuentaFinal = tipoCuenta;
         if (esCuentaNeutra(cuenta)) {
             const t = tipoDeMedio[normalizarNombreCuenta(medioCrudo)] || '';
             if (!esTraspaso || TIPOS_RIQUEZA.indexOf(t) === -1) { neutras++; return; }
             traspasosRiqueza++;
+            // Una pata de traspaso NO pertenece a ningun bloque: pierde el Tipo de Cuenta que
+            // traiga. Se aprendio a los golpes el 2026-08-20: algunas patas venian con
+            // "Ingreso" cargado, el balance del recorte las conto como ingreso, la hoja las
+            // excluye por cuenta neutra, y el ajuste vio un deficit de 122 mil donde habia 319
+            // mil -- N12 quedo en -$196.914 con el recorte "aplicado". El traspaso capitaliza;
+            // no ingresa ni gasta.
+            tipoCuentaFinal = '';
         } else if (!tipoCuenta) {
             // Un gasto o ingreso sin Tipo de Cuenta no se puede ubicar en ningun bloque.
             // Un traspaso NO lo necesita: no vive en ninguno de los tres.
@@ -155,7 +163,7 @@ function _leerLedgerPb(ss) {
         if (claveMin === null || clave < claveMin) claveMin = clave;
         if (claveMax === null || clave > claveMax) claveMax = clave;
         filas.push({
-            clave: clave, cuenta: cuenta, tipoCuenta: tipoCuenta,
+            clave: clave, cuenta: cuenta, tipoCuenta: tipoCuentaFinal,
             moneda: String(f[idx.moneda] || 'ARS').trim() || 'ARS',
             tipo: String(f[idx.tipo] || '').trim(),
             medio: String(f[idx.medio] || '').trim(),
