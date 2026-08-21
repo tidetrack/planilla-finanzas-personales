@@ -5,6 +5,16 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-21] v0.32.2 - Los deltas dicen contra que se comparan.
+ * - decision Franco 2026-08-21: "-10,4%" solo no se entiende, no dice contra que se compara. Los
+ *   tres deltas pasan a mostrarse como "-10,4% vs. media 6 meses".
+ * - EL TEXTO VA EN EL FORMATO DE NUMERO, no concatenado con TEXT(). Con TEXT() la celda dejaria
+ *   de ser un NUMERO y pasaria a ser una cadena: cualquier formula que despues la sume, la compare
+ *   o le aplique formato condicional dejaria de funcionar, y lo haria EN SILENCIO -- un texto que
+ *   dice "-10,4%" se ve identico a un numero que vale -0,104.
+ * - El sufijo se deriva de IP_MESES_MEDIA para que la etiqueta no pueda desfasarse de la ventana
+ *   que realmente se promedia.
+ *
  * [2026-08-21] v0.32.1 - Una custom function calculando NO es una falla.
  * - SINTOMA: la primera corrida de la hoja Inicio se revirtio entera con "la columna Realidad no
  *   releyo numeros en las cuatro filas". Las formulas estaban PERFECTAS.

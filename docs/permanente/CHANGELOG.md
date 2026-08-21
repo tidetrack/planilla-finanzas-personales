@@ -9,6 +9,20 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.32.2 - Los deltas dicen contra que se comparan (2026-08-21)
+
+> "Quiero que coloques texto concatenado a los delta porfa sino no se entiende nada." — Franco
+
+Los tres deltas pasan de `-10,4%` a **`-10,4% vs. media 6 meses`**.
+
+**El texto va en el formato de numero, no concatenado con `TEXT()`.** Con `TEXT()` la celda dejaria
+de ser un **numero** y pasaria a ser una cadena: cualquier formula que despues la sume, la compare o
+le aplique formato condicional dejaria de funcionar — y lo haria **en silencio**, porque un texto
+que dice `-10,4%` se ve identico a un numero que vale `-0,104`.
+
+El sufijo se deriva de `IP_MESES_MEDIA` para que la etiqueta no pueda desfasarse de la ventana que
+realmente se promedia.
+
 ## v0.32.1 - Una custom function calculando no es una falla (2026-08-21)
 
 La primera corrida de la hoja Inicio se **revirtio entera** con *"la columna Realidad no releyo

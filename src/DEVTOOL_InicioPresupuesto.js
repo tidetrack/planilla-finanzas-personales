@@ -153,7 +153,13 @@ const IP_COLOR_ROJO = '#da8b7b';
 const IP_MESES_MEDIA = 6;
 
 /**
- * Formato de los tres deltas: porcentaje con signo y un decimal.
+ * Formato de los tres deltas: porcentaje con signo, un decimal, y el texto que lo explica.
+ *
+ * decision Franco 2026-08-21: "-10,4%" solo no se entiende -- no dice contra que se compara. El
+ * texto va PEGADO AL FORMATO DE NUMERO, no concatenado con TEXT(): asi la celda sigue siendo un
+ * NUMERO de verdad. Con TEXT() pasaria a ser una cadena y cualquier formula que despues la sume,
+ * la compare o le aplique un formato condicional dejaria de funcionar -- y lo haria en silencio,
+ * porque un texto que dice "-10,4%" se ve identico a un numero que vale -0,104.
  *
  * OJO CON EL PUNTO. El lenguaje de patrones de setNumberFormat es INDEPENDIENTE DEL LOCALE: '.' es
  * siempre el separador decimal y ',' el de miles, sin importar que la planilla este en es_AR. El
@@ -163,8 +169,12 @@ const IP_MESES_MEDIA = 6;
  *
  * Distinto de TEXT(), que SI es locale-aware. La constante venia de la C15 vieja, donde el patron
  * vivia adentro de un TEXT(); al moverlo a setNumberFormat cambio el idioma en el que se lee.
+ *
+ * El texto se deriva de IP_MESES_MEDIA para que la etiqueta no pueda desfasarse de la ventana que
+ * realmente se promedia.
  */
-const IP_FORMATO_DELTA = '+0.0%;-0.0%';
+const IP_SUFIJO_DELTA = ' vs. media ' + IP_MESES_MEDIA + ' meses';
+const IP_FORMATO_DELTA = '+0.0%"' + IP_SUFIJO_DELTA + '";-0.0%"' + IP_SUFIJO_DELTA + '"';
 
 /** Tolerancia de la identidad D19=D20+D21+D22 (y E) al releer los valores. */
 const IP_UMBRAL_IDENTIDAD = 0.01;

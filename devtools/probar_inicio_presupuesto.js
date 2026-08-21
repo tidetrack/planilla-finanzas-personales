@@ -52,7 +52,7 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Proyeccion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Capitalizacion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_InicioPresupuesto.js'), 'utf8') +
-    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CUENTAS_NEUTRAS,CUENTA_ARRASTRE,CAP_SELECTORES,IP_RESUMEN,IP_FORMATO_DELTA,' +
+    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CUENTAS_NEUTRAS,CUENTA_ARRASTRE,CAP_SELECTORES,IP_RESUMEN,IP_FORMATO_DELTA,IP_SUFIJO_DELTA,IP_MESES_MEDIA,' +
     'MONEDAS_DISPONIBLES,IP_BLOQUE,IP_RESUMEN,IP_SELECTORES,IP_MOTOR,IP_FORMATO_DELTA,IP_MESES_MEDIA});',
     ctx);
 
@@ -390,10 +390,20 @@ console.log('\n=== 10. Coherencia con las constantes del modulo ===');
     // El lenguaje de patrones de setNumberFormat es INDEPENDIENTE DEL LOCALE: '.' es siempre el
     // separador decimal. Con coma, Sheets lo lee como separador de MILES y el decimal desaparece
     // ('+35%' en vez de '+34,5%'), sin ningun error. Se ve con coma porque asi lo RENDERIZA es_AR.
-    ok(ctx.IP_FORMATO_DELTA === '+0.0%;-0.0%',
+    ok(/^\+0\.0%"/.test(ctx.IP_FORMATO_DELTA) && ctx.IP_FORMATO_DELTA.indexOf(';-0.0%"') !== -1,
        'el patron del delta usa PUNTO decimal (se muestra con coma). Dio ' + ctx.IP_FORMATO_DELTA);
-    ok(!/,/.test(ctx.IP_FORMATO_DELTA),
-       'ninguna coma en el patron: seria separador de miles y se comeria el decimal');
+    ok(!/0,0%/.test(ctx.IP_FORMATO_DELTA),
+       'ninguna coma en la parte NUMERICA: seria separador de miles y se comeria el decimal');
+    // decision Franco 2026-08-21: el delta lleva texto que diga contra que se compara.
+    ok(ctx.IP_FORMATO_DELTA.indexOf(ctx.IP_SUFIJO_DELTA) !== -1,
+       'el patron concatena el texto explicativo: "' + ctx.IP_SUFIJO_DELTA + '"');
+    ok((ctx.IP_FORMATO_DELTA.match(/"/g) || []).length % 2 === 0,
+       'las comillas del texto literal estan balanceadas');
+    ok(ctx.IP_SUFIJO_DELTA.indexOf(String(ctx.IP_MESES_MEDIA)) !== -1,
+       'el texto nombra los ' + ctx.IP_MESES_MEDIA + ' meses que realmente se promedian: no puede desfasarse');
+    // Va en el FORMATO, no en un TEXT(): la celda tiene que seguir siendo un numero.
+    ok(!/TEXT\(/.test(ctx._formulaDeltaIp ? ctx._formulaDeltaIp('capital') : ''),
+       'el delta NO usa TEXT(): con texto la celda dejaria de ser numero y nada lo delataria');
 }
 
 console.log('=== El verificador distingue PENDIENTE de FALLA ===');

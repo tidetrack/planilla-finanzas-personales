@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 32,
- patch: 1,
+ patch: 2,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.32.1 - Una custom function calculando no es una falla: no se revierte por eso',
+ releaseName: 'v0.32.2 - Los deltas dicen contra que se comparan',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
