@@ -9,6 +9,64 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.29.0 - Vuelve el residuo: los tres destinos suman 100% (2026-08-20)
+
+> "Esa suma siempre tiene que dar 100%... seguis agregando parches sin criterio." — Franco
+
+Tenia razon, y el error era **de analisis, no de implementacion**.
+
+### La identidad
+
+"Presupuesto Asignado" es una **asignacion**: reparte los ingresos que se esperan. Cada peso va a
+fijos, a variables, o queda para capitalizar. Entonces
+
+```
+Ingresos = Gastos Fijos + Gastos Variables + Capacidad de Capitalizacion
+```
+
+no es un resultado que se observa: es la **definicion** de lo que el bloque muestra.
+
+### Que se rompio
+
+La v0.26.0 saco la capacidad del residuo y la puso a medir el flujo real hacia los medios de
+riqueza. El motivo parecia bueno — el residuo daba negativo — pero los cuatro numeros pasaron a
+salir de **cuatro fuentes independientes**, sin nada que los ate. Nunca mas cerraron: se midio
+143,98%.
+
+Lo que siguio fueron parches sobre el sintoma, ninguno capaz de funcionar: piso en cero (v0.27.0),
+contar solo las entradas (v0.28.0), reanclar el porcentaje de la fila de Ingresos (v0.28.0). El
+problema no estaba en como se calculaba cada numero, sino en que **ya no habia identidad que
+respetar**.
+
+### El dato que desarma el motivo original
+
+**El residuo da 100% incluso siendo negativo.** Con fijos+variables por encima de los ingresos, la
+capacidad sale negativa y los tres siguen sumando 100% (`46 + 116 − 62 = 100`). El negativo nunca
+rompio la suma: era la **senal** de un presupuesto sobrecomprometido. Taparlo fue el error.
+
+### Las dos cosas que se habian confundido
+
+1. **Capacidad** de capitalizacion — lo que queda despues de fijos y variables. Residuo por
+   definicion, y lo que hace cerrar el bloque. La fila se llama, literalmente, "Capacidad".
+2. **Capitalizacion efectiva** — cuanta plata entro de verdad a los frascos. Medicion util, pero no
+   puede vivir en un bloque que tiene que partir el ingreso.
+
+La formula que medía la segunda se retira junto con sus tres helpers, que quedaban sin llamador. El
+concepto queda escrito en la cabecera del modulo y el codigo en git.
+
+**Se conserva** lo que era bueno y es independiente: el reparto proporcional de la Disponibilidad
+de fondos, y los Ingresos como base del porcentaje.
+
+### Diagnostico nuevo
+
+`Presupuesto base > 1. Ver estado` muestra, mes por mes, que porcentaje de los ingresos se lleva el
+gasto presupuestado, y marca los meses sobrecomprometidos. Cuando eso pasa, nombra la causa mas
+probable: **los pagos de tarjeta contados dos veces**, una como la compra y otra como el pago del
+resumen. En Julio el deficit ($362.568) es casi identico a los pagos de tarjeta del mes
+($373.483) — exactamente la forma que deja ese doble conteo.
+
+El banco prueba ahora la identidad sobre 5000 casos al azar, deficit incluido.
+
 ## v0.28.0 - Los Ingresos son la base del porcentaje (2026-08-20)
 
 > "El % me da mas de 100%, simplemente tapaste un error con otro error." — Franco

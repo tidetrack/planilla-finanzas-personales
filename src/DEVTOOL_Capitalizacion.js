@@ -1,50 +1,60 @@
 /**
  * DEVTOOL_Capitalizacion.js
- * La Capacidad de Capitalizacion deja de ser un residuo, y la Disponibilidad de fondos deja de
- * volcar todo en una sola fila cuando el presupuesto ya se paso.
+ * Mantiene la IDENTIDAD del bloque de presupuesto y arregla el reparto de la disponibilidad.
  *
  * [CONCEPTO DE NEGOCIO]
- * Capitalizar es poner plata en un vehiculo de riqueza. Es un acto, no una sobra.
+ * "Presupuesto Asignado" es una ASIGNACION: reparte los ingresos que esperas. Cada peso que entra
+ * va a gastos fijos, a gastos variables, o queda disponible para capitalizar. Por lo tanto
  *
- * Hasta ahora el Tablero lo calculaba como `Ingresos - Fijos - Variables`, en las dos columnas.
- * Eso no mide capitalizacion: mide lo que quedo sin explicar. Y cuando los gastos superan a los
- * ingresos del mes da NEGATIVO -- el 2026-08-20 se medio en vivo -$318.561,01 en el presupuesto y
- * -$362.568,02 en la realidad --, que es un numero sin sentido: nadie "capitaliza menos cero".
+ *     Ingresos = Gastos Fijos + Gastos Variables + Capacidad de Capitalizacion
  *
- * decision Franco 2026-08-20: pasa a ser la SUMA de lo que efectivamente fue a parar a los medios
- * de tipo Ahorros e Inversiones. En la columna de presupuesto, lo proyectado hacia esos medios; en
- * la de realidad, los movimientos reales hacia esos medios.
+ * no es un resultado que se observa: es la DEFINICION de lo que el bloque muestra. Los tres
+ * destinos tienen que sumar el 100% de los ingresos, siempre, o el bloque no es un presupuesto.
  *
- * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
- * Los tipos que componen riqueza ya estaban decididos por lista blanca en TIPOS_RIQUEZA
- * (00_Config.js): Ahorros e Inversiones. Hogar y Financiacion son macrosegmentacion, no capital.
- * Este modulo no inventa un criterio nuevo: usa el que ya rige en toda la planilla.
+ * [EL ERROR QUE COSTO TRES VERSIONES, ANOTADO PARA NO REPETIRLO]
+ * La v0.26.0 saco la capacidad de capitalizacion del residuo y la puso a medir el flujo real hacia
+ * los medios de tipo Ahorros e Inversiones. El motivo parecia bueno -- el residuo daba negativo --
+ * pero rompio la identidad: los cuatro numeros pasaron a salir de CUATRO FUENTES INDEPENDIENTES de
+ * la proyeccion, sin nada que los ate. Nunca mas cerraron. Se midio 143,98%.
  *
- * CONSECUENCIA QUE HAY QUE SABER: con la capitalizacion como residuo, los cuatro renglones sumaban
- * 100% por construccion. Ahora no. Ingresos - Fijos - Variables - Capitalizacion puede no cerrar,
- * y ESA DIFERENCIA ES INFORMACION: es la plata que entro y no se gasto ni se capitalizo, o la que
- * se gasto de mas de lo que entro. Antes esa diferencia se escondia adentro de la capitalizacion y
- * la volvia negativa.
+ * Lo que siguio fueron parches sobre el sintoma: piso en cero (v0.27.0), contar solo las entradas
+ * (v0.28.0), reanclar el porcentaje de la fila de Ingresos (v0.28.0). Ninguno podia funcionar,
+ * porque el problema no estaba en como se calculaba cada numero sino en que ya no habia identidad.
+ *
+ * decision Franco 2026-08-20: "esa suma siempre tiene que dar 100%".
+ *
+ * Y el dato que desarma el motivo original: EL RESIDUO DA 100% INCLUSO SIENDO NEGATIVO. Con
+ * Fijos+Variables por encima de los Ingresos, la capacidad sale negativa y los tres siguen sumando
+ * 100% (46 + 116 - 62 = 100). El negativo nunca rompio la suma -- era la SENAL de que el
+ * presupuesto esta sobrecomprometido, y taparlo fue el error.
+ *
+ * [LAS DOS COSAS QUE SE HABIAN CONFUNDIDO]
+ * 1. CAPACIDAD de capitalizacion: lo que queda despues de fijos y variables. Es un residuo por
+ *    definicion, y es lo que hace cerrar el bloque. La fila se llama, literalmente, "Capacidad".
+ * 2. CAPITALIZACION EFECTIVA: cuanta plata entro de verdad a los frascos. Es una medicion util,
+ *    pero no puede vivir en un bloque que tiene que partir el ingreso, porque no esta atada a el.
+ *
+ * Se puso la segunda donde iba la primera. La formula que la media se retiro en la v0.29.0; el
+ * concepto queda escrito aca y el codigo en la historia de git, para cuando tenga su propio lugar.
  *
  * [LA SEGUNDA MITAD: DISPONIBILIDAD DE FONDOS]
  * El bloque reparte la plata disponible entre las tres categorias segun cuanto presupuesto le
  * queda a cada una. Cuando las tres se pasaron del 100%, no le queda presupuesto a ninguna, la
- * suma de remanentes da cero, y la formula vieja caia en un caso degenerado que le daba TODO a
- * la capitalizacion y CERO a las otras dos. Medido en vivo el 2026-08-20 con 145% / 136% / 114%:
+ * suma de remanentes da cero, y la formula vieja caia en un caso degenerado que le daba TODO a la
+ * capitalizacion y CERO a las otras dos. Medido en vivo con 145% / 136% / 114%:
  * $0,00 / $0,00 / $275.428,69.
  *
  * decision Franco 2026-08-20: cuando no queda presupuesto por cubrir, se reparte por PESO DE
  * PRESUPUESTO -- la misma prioridad relativa que rige entre 0% y 100%, sin el caso especial.
  *
- * INVARIANTE que el modulo verifica: las tres filas SIEMPRE suman la liquidez disponible, en los
- * tres regimenes (alcanza, no alcanza, y no queda presupuesto).
+ * INVARIANTE verificado: las tres filas SIEMPRE suman la liquidez, en los tres regimenes.
  *
  * QUE NO HACE
- * 1. NO toca el ledger ni la hoja Proyeccion. Solo reescribe cinco celdas del Tablero.
+ * 1. NO toca el ledger ni la hoja Proyeccion. Solo reescribe siete celdas del Tablero.
  * 2. NO cambia los rotulos: son de Franco.
  *
  * @see docs/permanente/FORMULAS_TABLERO.md
- * @version 0.26.0
+ * @version 0.29.0
  * @since 2026-08-20
  * @lastModified 2026-08-20
  */
@@ -96,86 +106,29 @@ const CAP_PROP_RESPALDO = 'capitalizacion_respaldo';
 // FORMULAS
 // ============================================
 
-/** La conversion a la moneda del selector, por funcion y nunca por coordenada. */
-function _conversionCap(colMoneda) {
-    return '  tasa_origen; ARRAYFORMULA(IF(' + colMoneda + '="USD"; TIDETRACK_USD(); IF(' + colMoneda +
-        '="AUD"; TIDETRACK_AUD(); IF(' + colMoneda + '="EUR"; TIDETRACK_EUR(); 1))));\n' +
-        '  tasa_destino; IFERROR(SWITCH($N$4; "ARS"; 1; "USD"; TIDETRACK_USD(); "AUD"; ' +
-        'TIDETRACK_AUD(); "EUR"; TIDETRACK_EUR()); 1);\n';
-}
-
-/** El rango del mes seleccionado, derivado de los selectores N2/N3. */
-function _rangoMesCap() {
-    return '  mes_num; MATCH($N$2; SPLIT("' + PROY_MESES + '"; ","); 0);\n' +
-        '  desde; DATE($N$3; mes_num; 1);\n' +
-        '  hasta; EOMONTH(desde; 0);\n';
-}
-
-/** La condicion "el medio de esta fila es un vehiculo de riqueza", desde TIPOS_RIQUEZA. */
-function _esRiquezaCap(variable) {
-    return '(' + TIPOS_RIQUEZA.map(function (t) { return '(' + variable + '="' + t + '")'; }).join(' + ') + ') > 0';
-}
+// Aca vivian _conversionCap, _rangoMesCap y _esRiquezaCap, que armaban la formula del flujo real
+// hacia los medios de riqueza. Se retiran junto con ella en la v0.29.0: sin llamador, un helper es
+// deuda que el proximo lector tiene que leer para descubrir que no hace nada.
+//
+// El concepto NO se descarta -- medir cuanta plata entro a los frascos es util --, pero necesita
+// su propio lugar en el Tablero, no la fila que tiene que cerrar el presupuesto. El codigo esta en
+// git (v0.28.0) y el razonamiento en la cabecera de este archivo.
 
 /**
- * Suma hacia los medios de riqueza, sobre una hoja con la geometria del ledger.
+ * El residuo que cierra el bloque: Ingresos menos los dos tipos de gasto.
  *
- * Sirve para las dos columnas porque "Proyeccion" es un espejo exacto de "Registros": la misma
- * formula, cambiando la hoja, mide lo proyectado o lo real. Que sean LA MISMA formula es lo que
- * hace que el porcentaje de cumplimiento signifique algo -- si cada columna sumara distinto,
- * estaria comparando peras con manzanas.
+ * Es una resta de tres celdas y no tiene ninguna gracia, y esa es exactamente la virtud: no hay
+ * forma de que no cierre. Cualquier formula mas sofisticada que mida la capitalizacion por su
+ * lado -- por buena que sea como medicion -- deja de estar atada a los ingresos, y el bloque
+ * empieza a sumar 143%.
  *
- * decision Franco 2026-08-20: las dos columnas convierten con la cotizacion de HOY. Las otras
- * filas de la realidad usan los TC congelados del motor, pero aca lo que importa es que el
- * numerador y el denominador del cumplimiento usen la misma vara. El ledger es casi todo ARS, asi
- * que la diferencia practica es despreciable; la de comparar con varas distintas, no.
+ * Puede dar NEGATIVO, y no se tapa: significa que lo presupuestado en fijos y variables ya supera
+ * a los ingresos. Los tres siguen sumando 100% igual. Esa es la lectura correcta de un
+ * presupuesto sobrecomprometido, y esconderla detras de un piso en cero (v0.27.0) fue lo que
+ * hizo falta deshacer.
  */
-function _formulaHaciaRiqueza(nombreHoja, soloEntradas) {
-    const cfg = RANGES.REGISTROS;
-    const medios = RANGES.MEDIOS_PAGO;
-    const col = function (clave) {
-        return _refHoja(nombreHoja) + '!' + cfg.columns[clave] + cfg.dataRow + ':' + cfg.columns[clave];
-    };
-    const rangoMedios = _refHoja(medios.sheet) + '!' + medios.start + ':' + medios.end;
-    const idxTipo = columnLetterToIndex(medios.columns.proyecto) - columnLetterToIndex(medios.start) + 1;
-
-    return '=LET(\n' +
-        '  monto; ' + col('monto') + ';\n' +
-        '  tipo_mov; ' + col('tipo') + ';\n' +
-        '  cuenta; ' + col('cuenta') + ';\n' +
-        '  medio; ' + col('medio') + ';\n' +
-        '  moneda; ' + col('moneda') + ';\n' +
-        '  fecha; ' + col('fecha') + ';\n' +
-        '  tipo_medio; ARRAYFORMULA(IFERROR(VLOOKUP(medio; ' + rangoMedios + '; ' + idxTipo + '; 0); ""));\n' +
-        '  es_riqueza; ARRAYFORMULA(' + _esRiquezaCap('tipo_medio') + ');\n' +
-        // Se excluye SOLO el arrastre. Los traspasos SI cuentan -- decision Franco 2026-08-20:
-        // "los traspasos indican capitalizacion si se cruza con un medio" --, y como en este
-        // ledger un traspaso son dos filas (Egreso del origen, Ingreso al destino), filtrar por
-        // "el medio de esta fila es de riqueza" hace lo correcto solo: de un traspaso de casa a
-        // un frasco entra la pata que suma y no la que resta.
-        //
-        // "Inicio Mes" no: es un punto de corte de conciliacion. Si contara, el arrastre de cada
-        // frasco se leeria como si uno hubiera capitalizado ese monto ese mes.
-        '  no_corte; ARRAYFORMULA(cuenta <> "' + CUENTA_ARRASTRE + '");\n' +
-        // El PLAN cuenta solo lo que ENTRA; la REALIDAD netea con signo.
-        //
-        // decision Franco 2026-08-20: no es una inconsistencia, es la diferencia entre una
-        // intencion y un hecho. Un plan de capitalizar es cuanto pensas apartar -- nadie planifica
-        // sacar plata del frasco --, asi que en el presupuesto los retiros no restan. En la
-        // realidad si: si ese mes sacaste mas de lo que pusiste, el neto es negativo y eso hay que
-        // poder verlo. El cumplimiento entonces se lee "de lo que pensaba apartar, cuanto aparte
-        // de verdad", y puede dar negativo, que quiere decir que en vez de apartar, saque.
-        //
-        // Esto REEMPLAZA al piso en cero de la v0.27.0, que era un parche: aplastar un neto
-        // negativo a cero no arregla el numero, lo esconde. Contando solo las entradas, el plan
-        // es positivo porque mide algo positivo, no porque se le puso un piso.
-        (soloEntradas
-            ? '  signo; ARRAYFORMULA(IF(tipo_mov="Egreso"; 0; 1));\n'
-            : '  signo; ARRAYFORMULA(IF(tipo_mov="Egreso"; -1; 1));\n') +
-        _rangoMesCap() +
-        _conversionCap('moneda') +
-        '  convertido; ARRAYFORMULA(monto * signo * tasa_origen / tasa_destino);\n' +
-        '  del_mes; ARRAYFORMULA(es_riqueza * no_corte * (fecha>=desde) * (fecha<=hasta));\n' +
-        '  SUM(IFERROR(FILTER(convertido; del_mes); 0))\n)';
+function _formulaResiduoCap(celdaIngresos, celdaFijos, celdaVariables) {
+    return '=' + celdaIngresos + '-' + celdaFijos + '-' + celdaVariables;
 }
 
 /** La liquidez disponible: el bucket cotidiano de "Saldos Actuales", convertido al selector. */
@@ -297,14 +250,13 @@ function _planCap(ss, pre) {
         cambios.push({ celda: celda, nota: nota, formulaActual: actual, formulaNueva: nueva, resumen: resumen });
     };
 
-    proponer(CAP_BLOQUES.presupuesto.celda, 'Presupuesto de capitalizacion',
-        _formulaHaciaRiqueza(SHEETS.PROYECCION, true),
-        'lo proyectado hacia medios de tipo ' + TIPOS_RIQUEZA.join(' e ') + ', con piso en cero');
+    proponer(CAP_BLOQUES.presupuesto.celda, 'Capacidad de capitalizacion (presupuesto)',
+        _formulaResiduoCap('N9', 'N10', 'N11'),
+        'lo que queda de los ingresos despues de fijos y variables: hace cerrar el bloque en 100%');
 
-    proponer(CAP_BLOQUES.realidad.celda, 'Realidad de capitalizacion',
-        _formulaHaciaRiqueza(RANGES.REGISTROS.sheet, false),
-        'lo que realmente fue a medios de tipo ' + TIPOS_RIQUEZA.join(' e ') +
-        '; puede dar negativo, y eso significa que ese mes sacaste plata de los frascos');
+    proponer(CAP_BLOQUES.realidad.celda, 'Capacidad de capitalizacion (realidad)',
+        _formulaResiduoCap('N16', 'N17', 'N18'),
+        'idem sobre lo que realmente paso');
 
     ['presupuesto', 'realidad'].forEach(function (bloque) {
         const b = CAP_PORCENTAJE_BASE[bloque];
@@ -344,9 +296,9 @@ function estadoCapitalizacion() {
             });
             l.push('');
             l.push('QUE CAMBIA:');
-            l.push('  - La Capacidad de Capitalizacion deja de ser Ingresos - Fijos - Variables y');
-            l.push('    pasa a sumar lo que va a los medios de tipo ' + TIPOS_RIQUEZA.join(' e ') + ',');
-            l.push('    traspasos incluidos. El presupuesto tiene piso en cero; la realidad no.');
+            l.push('  - La Capacidad de Capitalizacion vuelve a ser Ingresos - Fijos - Variables:');
+            l.push('    es lo unico que garantiza que los tres destinos sumen 100%.');
+            l.push('  - Puede dar negativo, y eso es una senal de sobrecompromiso, no un error.');
             l.push('  - Los cuatro renglones YA NO suman 100%. La diferencia es la plata que entro');
             l.push('    y no se gasto ni se capitalizo: antes se escondia adentro del residuo.');
             l.push('  - Cuando las tres categorias se pasan del 100%, la disponibilidad se reparte');
@@ -383,13 +335,11 @@ function aplicarCapitalizacion() {
         const conf = ui.alert('Capitalizacion y disponibilidad',
             'Se van a reescribir ' + plan.cambios.length + ' celda(s) del Tablero.\n\n' +
             'CAMBIAN NUMEROS QUE VENIS MIRANDO:\n' +
-            '  - "Capacidad de Capitalizacion" deja de ser Ingresos - Fijos - Variables y pasa a\n' +
-            '    sumar lo que va a los medios de tipo ' + TIPOS_RIQUEZA.join(' e ') + ', traspasos\n' +
-            '    incluidos. En el PRESUPUESTO tiene piso en cero: planear apartar menos que cero\n' +
-            '    no significa nada. En la REALIDAD puede dar negativo, y ahi quiere decir que ese\n' +
-            '    mes sacaste plata de los frascos.\n' +
-            '  - Los cuatro renglones YA NO SUMAN 100%, y eso es a proposito: la diferencia es la\n' +
-            '    plata que entro y no se gasto ni se capitalizo. Antes se escondia en el residuo.\n' +
+            '  - "Capacidad de Capitalizacion" vuelve a ser Ingresos - Fijos - Variables. Es lo\n' +
+            '    unico que garantiza que los tres destinos sumen el 100% de los ingresos, que es\n' +
+            '    lo que un presupuesto tiene que hacer.\n' +
+            '  - Si da NEGATIVO no esta roto: quiere decir que lo presupuestado en fijos y\n' +
+            '    variables ya supera a los ingresos. Los tres siguen sumando 100% igual.\n' +
             '  - Cuando las tres categorias se pasan del 100%, "Disponibilidad de fondos" reparte\n' +
             '    por peso de presupuesto en vez de darle todo a la capitalizacion.\n\n' +
             'No se toca el ledger ni la hoja de proyeccion.\n\nContinuar?',
@@ -441,10 +391,10 @@ function aplicarCapitalizacion() {
             '- Respaldo en la hoja oculta "' + respaldo.nombre + '"\n' +
             '- Se repartieron ' + repartido.toFixed(2) + ' entre las tres categorias\n\n' +
             'QUE MIRAR:\n' +
-            '  1. "Capacidad de Capitalizacion": N12 (presupuesto) nunca da negativo; N19\n' +
-            '     (realidad) si puede, y significa que sacaste plata de los frascos.\n' +
-            '  2. Los cuatro renglones ya no suman 100%: esa diferencia es la plata que entro y no\n' +
-            '     se gasto ni se capitalizo. Es informacion, no un error.\n' +
+            '  1. Gastos Fijos % + Gastos Variables % + Capacidad % = 100%, EXACTO, en los dos\n' +
+            '     bloques y en cualquier mes. Si alguna vez no da 100%, algo se rompio.\n' +
+            '  2. Si la Capacidad da negativo, el presupuesto esta sobrecomprometido: fijos y\n' +
+            '     variables se comen mas de lo que entra. Es una senal, no un error de calculo.\n' +
             '  3. En un mes con las tres categorias arriba del 100%, "Disponibilidad de fondos"\n' +
             '     reparte entre las tres en vez de darle todo a una. Julio 2026 es ese caso.\n' +
             '  4. Las tres filas de disponibilidad tienen que sumar la liquidez, siempre.\n\n' +

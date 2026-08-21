@@ -5,6 +5,53 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.29.0 - Vuelve el residuo. Los tres destinos suman el 100% de los ingresos.
+ *
+ * Franco: "esa suma siempre tiene que dar 100%... seguis agregando parches sin criterio".
+ * Tenia razon, y el error era de analisis, no de implementacion.
+ *
+ * LA IDENTIDAD. "Presupuesto Asignado" es una ASIGNACION: reparte los ingresos que se esperan.
+ * Cada peso va a fijos, a variables, o queda para capitalizar. Entonces
+ *     Ingresos = Fijos + Variables + Capacidad de Capitalizacion
+ * no es un resultado que se observa: es la DEFINICION de lo que el bloque muestra.
+ *
+ * QUE SE ROMPIO. La v0.26.0 saco la capacidad del residuo y la puso a medir el flujo real hacia
+ * los medios de riqueza. El motivo parecia bueno -- el residuo daba negativo -- pero los cuatro
+ * numeros pasaron a salir de CUATRO FUENTES INDEPENDIENTES, sin nada que los ate. Nunca mas
+ * cerraron: se midio 143,98%.
+ *
+ * LOS PARCHES QUE SIGUIERON, todos sobre el sintoma y ninguno capaz de funcionar: piso en cero
+ * (v0.27.0), contar solo las entradas (v0.28.0), reanclar el porcentaje de la fila de Ingresos
+ * (v0.28.0). El problema no estaba en como se calculaba cada numero, sino en que ya no habia
+ * identidad que respetar.
+ *
+ * EL DATO QUE DESARMA EL MOTIVO ORIGINAL: el residuo da 100% INCLUSO SIENDO NEGATIVO. Con
+ * fijos+variables por encima de los ingresos, la capacidad sale negativa y los tres siguen sumando
+ * 100% (46 + 116 - 62 = 100). El negativo nunca rompio la suma: era la SENAL de un presupuesto
+ * sobrecomprometido. Taparlo fue el error, no mostrarlo.
+ *
+ * LAS DOS COSAS QUE SE HABIAN CONFUNDIDO:
+ *   1. CAPACIDAD de capitalizacion -- lo que queda despues de fijos y variables. Residuo por
+ *      definicion, y lo que hace cerrar el bloque. La fila se llama, literalmente, "Capacidad".
+ *   2. CAPITALIZACION EFECTIVA -- cuanta plata entro de verdad a los frascos. Medicion util, pero
+ *      no puede vivir en un bloque que tiene que partir el ingreso.
+ * La formula que medía la segunda se retira, junto con sus tres helpers, que quedaban sin llamador.
+ * El concepto queda escrito en la cabecera del modulo y el codigo en git (v0.28.0).
+ *
+ * LO QUE SE CONSERVA de estas tres versiones, porque era bueno y es independiente: el reparto
+ * proporcional de la Disponibilidad de fondos cuando las tres categorias se pasaron del 100%, y
+ * los Ingresos como base del porcentaje en O9/O16.
+ *
+ * EL BANCO prueba ahora LA IDENTIDAD sobre 5000 casos al azar, deficit incluido, y mata tres
+ * mutaciones nuevas: ponerle piso al residuo, cruzar las celdas de los dos bloques, y sumar en
+ * vez de restar.
+ *
+ * DIAGNOSTICO NUEVO en "Presupuesto base > 1. Ver estado": muestra, mes por mes, que porcentaje de
+ * los ingresos se lleva el gasto presupuestado y marca los meses sobrecomprometidos. Y nombra la
+ * causa mas probable cuando eso pasa: los pagos de tarjeta contados dos veces, una como la compra
+ * y otra como el pago del resumen. En Julio el deficit ($362.568) es casi identico a los pagos de
+ * tarjeta del mes ($373.483), que es exactamente la forma que deja ese doble conteo.
+ *
  * [2026-08-20] v0.28.0 - El porcentaje de la fila de Ingresos, y el fin del piso en cero.
  *
  * Franco: "el % me da mas de 100%, simplemente tapaste un error con otro error". Tenia razon en

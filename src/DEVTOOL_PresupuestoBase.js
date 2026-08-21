@@ -388,6 +388,51 @@ function estadoPresupuestoBase() {
                     : '   SIN presupuesto: no hay historial anterior a ese mes'));
         });
         l.push('');
+        // EL BALANCE, que es lo que decide si el presupuesto tiene sentido.
+        //
+        // decision Franco 2026-08-20: un presupuesto reparte los ingresos, asi que si lo
+        // presupuestado en gastos ya los supera, la capacidad de capitalizar sale negativa y el
+        // Tablero lo muestra. Que se vea ACA, antes de cargar, evita tener que deducirlo despues
+        // mirando un numero raro en una celda.
+        l.push('');
+        l.push('BALANCE DEL PRESUPUESTO (en ARS, lineas en otra moneda no entran a esta cuenta):');
+        plan.forEach(function (m) {
+            if (!m.lineas.length) return;
+            let ing = 0, fij = 0, vari = 0;
+            m.lineas.forEach(function (x) {
+                if (x.moneda !== 'ARS') return;
+                if (x.tipoCuenta === 'Ingreso') ing += x.promedio;
+                else if (x.tipoCuenta === 'Gasto Fijo') fij += x.promedio;
+                else if (x.tipoCuenta === 'Gasto Variable') vari += x.promedio;
+            });
+            const capacidad = ing - fij - vari;
+            const pct = ing > 0 ? Math.round((fij + vari) / ing * 100) : 0;
+            l.push('  ' + fmt(m.mes) + '  gastos ' + String(pct).padStart(4) + '% de los ingresos' +
+                '   capacidad ' + (capacidad < 0 ? '' : '+') + Math.round(capacidad).toLocaleString('es-AR') +
+                (capacidad < 0 ? '   <-- SOBRECOMPROMETIDO' : ''));
+        });
+        const malos = plan.filter(function (m) {
+            if (!m.lineas.length) return false;
+            let ing = 0, gas = 0;
+            m.lineas.forEach(function (x) {
+                if (x.moneda !== 'ARS') return;
+                if (x.tipoCuenta === 'Ingreso') ing += x.promedio; else gas += x.promedio;
+            });
+            return ing > 0 && gas > ing;
+        });
+        if (malos.length) {
+            l.push('');
+            l.push(malos.length + ' de ' + plan.length + ' mes(es) presupuestan MAS GASTO QUE INGRESO.');
+            l.push('El Tablero lo va a mostrar como una Capacidad de Capitalizacion negativa, y los');
+            l.push('tres destinos van a sumar 100% igual. No es un error de calculo: es que el');
+            l.push('historial dice que se gasta mas de lo que entra.');
+            l.push('');
+            l.push('QUE MIRAR SI ESO NO TE CIERRA: que los pagos de tarjeta no esten contados dos');
+            l.push('veces -- una como la compra con la tarjeta y otra como el pago del resumen.');
+            l.push('Ese doble conteo infla los gastos sin tocar los ingresos, que es exactamente');
+            l.push('esta forma.');
+        }
+        l.push('');
         l.push('TOTAL A ESCRIBIR: ' + total + ' fila(s)');
         if (previas.length) {
             l.push('(se reemplazan ' + previas.length + ' fila(s) de una carga anterior; lo que hayas ' +

@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 28,
+ minor: 29,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-20',
- releaseName: 'v0.28.0 - Los Ingresos son la base del porcentaje, y el plan cuenta lo que entra en vez de tener piso',
+ releaseName: 'v0.29.0 - Vuelve el residuo: los tres destinos tienen que sumar 100% de los ingresos',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

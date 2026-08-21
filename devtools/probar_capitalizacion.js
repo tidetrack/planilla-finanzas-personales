@@ -71,34 +71,48 @@ function revisar(nombre, f) {
     return !p.length;
 }
 
-console.log('=== 1. La suma hacia los medios de riqueza ===');
-[['Proyeccion (presupuesto)', ctx.SHEETS.PROYECCION, true], ['Registros (realidad)', ctx.RANGES.REGISTROS.sheet, false]]
-    .forEach(([etiqueta, hoja, soloEntradas]) => {
-        const f = ctx._formulaHaciaRiqueza(hoja, soloEntradas);
-        if (revisar(etiqueta, f)) console.log('  OK  ' + etiqueta);
-        ok(!/\$AF\$\d+/.test(f), etiqueta + ': ninguna coordenada de cotizacion (esas se pudren)');
-        ok(/TIDETRACK_USD\(\)/.test(f), etiqueta + ': convierte con las custom functions');
-        ok(/\$N\$2/.test(f) && /\$N\$3/.test(f), etiqueta + ': filtra por el periodo del Tablero');
-        ok(/Inicio Mes/.test(f), etiqueta + ': excluye los arrastres "Inicio Mes"');
-        ctx.TIPOS_RIQUEZA.forEach(t => ok(f.indexOf('"' + t + '"') !== -1, etiqueta + ': incluye el tipo ' + t));
-        ok(!/"Hogar"|"Financ/.test(f), etiqueta + ': NO incluye Hogar ni Financiacion');
-        // Los traspasos SI cuentan: la unica cuenta excluida es el arrastre.
-        ok(!/Traspaso/.test(f), etiqueta + ': NO excluye los traspasos (capitalizar es traspasar a un frasco)');
-        ok(/signo; ARRAYFORMULA\(IF\(tipo_mov="Egreso"/.test(f),
-           etiqueta + ': aplica signo por Ingreso/Egreso, que es como se registra un traspaso (dos filas)');
-        ok(!/MAX\(0; neto\)/.test(f), etiqueta + ': SIN piso en cero -- aplastar un neto negativo lo esconde');
-        ok(soloEntradas === /IF\(tipo_mov="Egreso"; 0; 1\)/.test(f),
-           etiqueta + (soloEntradas ? ': el PLAN cuenta solo lo que entra (nadie planifica retirar)'
-                                    : ': la REALIDAD netea con signo (retirar resta)'));
-    });
+console.log('=== 1. LA IDENTIDAD: los tres destinos suman el 100% de los ingresos ===');
+// Este es EL invariante del bloque, y el que se perdio entre la v0.26.0 y la v0.28.0 cuando la
+// capacidad de capitalizacion paso a medirse por su cuenta. Se midio 143,98% en la planilla viva.
+// Se prueba numericamente sobre la definicion del residuo, incluidos los casos de deficit.
+{
+    const residuo = (ing, fij, vari) => ing - fij - vari;
+    const suman100 = (ing, fij, vari) => {
+        if (ing === 0) return true;
+        const cap = residuo(ing, fij, vari);
+        return Math.abs((fij + vari + cap) / ing - 1) < 1e-12;
+    };
+    ok(suman100(100, 40, 30), 'caso normal: 40 + 30 + 30 = 100%');
+    ok(suman100(1992567.52, 925178.97, 1385949.56),
+       'el caso REAL de Franco (deficit): los tres suman 100% aunque la capacidad de negativo');
+    ok(residuo(1992567.52, 925178.97, 1385949.56) < 0,
+       'y esa capacidad efectivamente da negativo: el presupuesto esta sobrecomprometido');
+    ok(suman100(100, 200, 300), 'deficit extremo: 200% + 300% - 400% = 100%');
+    ok(suman100(100, 0, 0), 'sin gastos: 0 + 0 + 100% = 100%');
+    let peor = 0;
+    for (let i = 0; i < 5000; i++) {
+        const r = n => ((i * 7919 + n * 104729) % 1000003) / 1000003;
+        const ing = 1 + r(1) * 5000000, fij = r(2) * 4000000, vari = r(3) * 4000000;
+        const cap = residuo(ing, fij, vari);
+        peor = Math.max(peor, Math.abs((fij + vari + cap) / ing - 1));
+    }
+    ok(peor < 1e-12, '5000 casos al azar: la identidad se cumple siempre (peor desvio ' + peor.toExponential(1) + ')');
+}
 
-// Las dos columnas tienen que medir IGUAL, o el porcentaje de cumplimiento compara varas distintas.
-const fProy = ctx._formulaHaciaRiqueza(ctx.SHEETS.PROYECCION, true);
-const fReg = ctx._formulaHaciaRiqueza(ctx.RANGES.REGISTROS.sheet, false);
-// La UNICA diferencia permitida entre las dos es la hoja y el tratamiento de los egresos.
-ok(fProy.replace(new RegExp(ctx.SHEETS.PROYECCION, 'g'), 'X').replace('"Egreso"; 0; 1', 'SIGNO') ===
-   fReg.replace(new RegExp(ctx.RANGES.REGISTROS.sheet, 'g'), 'X').replace('"Egreso"; -1; 1', 'SIGNO'),
-   'presupuesto y realidad son la misma formula salvo la hoja y el signo de los egresos');
+console.log('\n=== 1b. Las formulas del residuo ===');
+{
+    const presu = ctx._formulaResiduoCap('N9', 'N10', 'N11');
+    const real = ctx._formulaResiduoCap('N16', 'N17', 'N18');
+    ok(presu === '=N9-N10-N11', 'presupuesto: ' + presu);
+    ok(real === '=N16-N17-N18', 'realidad: ' + real);
+    [presu, real].forEach(f => {
+        ok(!/MAX\(0/.test(f), 'sin piso en cero: taparlo esconde el sobrecompromiso  (' + f + ')');
+        ok(!/Proyecc|Registros/.test(f), 'no lee ninguna hoja: solo resta celdas del propio bloque  (' + f + ')');
+        ok(f.indexOf('{') === -1 && f.indexOf(',') === -1, 'sin arrays literales ni comas  (' + f + ')');
+    });
+    ok(typeof ctx._formulaHaciaRiqueza === 'undefined',
+       'la formula de flujo hacia riqueza se retiro: no puede vivir en la fila que cierra el bloque');
+}
 
 console.log('\n=== 2. Las tres filas de la disponibilidad ===');
 const claves = ['fijos', 'variables', 'capitalizacion'];
@@ -202,18 +216,15 @@ console.log('\n=== 3b. El CABLEADO: que formula va a cada celda ===');
     ok(Object.keys(porCelda).length === 7, 'el plan propone las 7 celdas. Propuso ' + Object.keys(porCelda).length);
     const presu = porCelda[ctx.CAP_BLOQUES.presupuesto.celda] || '';
     const real = porCelda[ctx.CAP_BLOQUES.realidad.celda] || '';
-    ok(/IF\(tipo_mov="Egreso"; 0; 1\)/.test(presu),
-       ctx.CAP_BLOQUES.presupuesto.celda + ' (presupuesto) cuenta SOLO lo que entra al frasco');
-    ok(/IF\(tipo_mov="Egreso"; -1; 1\)/.test(real),
-       ctx.CAP_BLOQUES.realidad.celda + ' (realidad) netea: si sacaste mas de lo que pusiste, da negativo');
-    ok(!/MAX\(0;/.test(presu) && !/MAX\(0;/.test(real),
-       'ninguna de las dos lleva piso en cero: el parche se fue');
-    ok(presu.indexOf(ctx.SHEETS.PROYECCION + '!') !== -1,
-       ctx.CAP_BLOQUES.presupuesto.celda + ' lee la hoja de proyeccion');
-    ok(real.indexOf(ctx.RANGES.REGISTROS.sheet + '!') !== -1,
-       ctx.CAP_BLOQUES.realidad.celda + ' lee el ledger');
-    ok(presu.indexOf(ctx.RANGES.REGISTROS.sheet + '!B') === -1,
-       'el presupuesto NO lee el ledger por accidente');
+    ok(presu === '=N9-N10-N11',
+       ctx.CAP_BLOQUES.presupuesto.celda + ' es el residuo del bloque de presupuesto. Dio ' + presu);
+    ok(real === '=N16-N17-N18',
+       ctx.CAP_BLOQUES.realidad.celda + ' es el residuo del bloque de realidad. Dio ' + real);
+    ok(!/MAX\(0;/.test(presu) && !/MAX\(0;/.test(real), 'ninguna lleva piso en cero');
+    // Cada residuo tiene que restar las celdas de SU bloque. Cruzarlos daria un numero que no
+    // cierra con ninguno de los dos, y nada en la planilla lo delataria.
+    ok(!/N1[6789]/.test(presu), 'el residuo del presupuesto no toca celdas de la realidad');
+    ok(!/N9|N10|N11/.test(real), 'el residuo de la realidad no toca celdas del presupuesto');
 }
 
 console.log('\n=== 3c. El porcentaje de la fila de Ingresos ===');
