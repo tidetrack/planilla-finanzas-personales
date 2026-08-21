@@ -9,6 +9,97 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.33.0 - El semaforo no puede correr para un solo lado (2026-08-21)
+
+> "en capitalizacion, la barra debe tener color verde en 80 o mas de cumplimiento." — Franco
+>
+> "los delta no son 1 mes vista, sino 6 meses vista. Es decir, se visualiza crecimiento de
+> tendencias de ingresos / egresos." — Franco
+
+### La barra de consumo se da vuelta segun la fila
+
+Gastar el 100% del presupuesto de Gastos Variables es **agotarlo** (rojo). Capitalizar el 100%
+de lo planificado es **cumplir el plan** (verde). Son dos lecturas opuestas del mismo cociente,
+y hasta hoy un unico semaforo las servia a las dos: por eso la fila de Capitalizacion aparecia
+en rojo justo cuando el mes habia salido bien.
+
+Cada fila del bloque declara ahora su `sentido`. Ingresos entra en el grupo "mas es mejor" por
+la misma razon y no por analogia: en la corrida del 2026-08-21, cobrar $1.645.687 contra
+$1.546.662 presupuestados se pintaba de rojo.
+
+| Fila | Verde | Amarillo | Rojo |
+|---|---|---|---|
+| Ingresos, Capacidad de Capitalizacion | 80% de cumplimiento o mas | 50% a 80% | menos de 50% |
+| Gastos Fijos, Gastos Variables | menos del 50% consumido | 50% a 80% | mas de 80% |
+
+### Sin presupuesto ya no se divide
+
+El cumplimiento era `IFERROR(E/D; 0)`. Con `D` en cero eso no daba un error: daba **la respuesta
+equivocada**. Capitalizar $385.400 sobre un plan de $0 se leia como 0% de cumplimiento. Ahora la
+pregunta se resuelve antes del cociente — sin presupuesto, cumplio el que movio plata. Es la
+misma trampa que Franco marco en `N25` (`=O19/O12` con `O12 = $15,31`, dando -391830%): dividir
+por algo que tiende a cero produce un numero absurdo con cara de dato.
+
+### La paleta pasa a ser la del Tablero
+
+Salen los colores heredados de la planilla anterior y entran los de los formatos condicionales
+del Tablero. Dos paletas parecidas pero distintas para la misma idea se leen como si dijeran
+cosas distintas.
+
+| Nivel | Tinta | Fondo |
+|---|---|---|
+| Verde | `#356854` | `#e6f4ea` |
+| Amarillo | `#ffb300` | `#fef7e0` |
+| Rojo | `#c93232` | `#fce8e6` |
+
+Las barras SPARKLINE pintan con el tono **saturado**: son tinta sobre el blanco de la hoja, y el
+tono palido existe para ir detras de un texto — sobre blanco practicamente no se ve.
+
+### Los tres deltas miden tendencia, no un mes
+
+`F10` (capital), `C15` (ingresos) y `F15` (egresos) comparaban **un** mes contra la media de los
+seis previos. Eso mide cuanto se desvio ese mes, un dato que salta con cualquier sueldo que cae
+un dia antes o despues del corte. Ahora se arma la serie de seis totales mensuales y se mide la
+pendiente de su recta de minimos cuadrados, expresada como fraccion del nivel medio de la
+ventana. La etiqueta acompana: **"de tendencia a 6 meses"**.
+
+El bench deja la diferencia demostrada con la serie `[100,100,100,100,100,200]`:
+
+| | Diseno viejo | Tendencia |
+|---|---|---|
+| Un pico aislado en el ultimo mes | +100% | +61,2% |
+| El mismo salto repartido en los seis meses | +100% | mas alto que el pico |
+
+El diseno viejo daba el mismo numero para los dos casos. La tendencia los distingue, que es
+justamente lo que Franco queria ver.
+
+### La realidad ya no tiene que cerrar la identidad
+
+El verificador de la hoja Inicio exigia `Ingresos = Fijos + Variables + Capitalizacion` en las
+**dos** columnas. Desde v0.32.0 eso es falso por diseno: el plan **asigna** (`D22` es el residuo)
+pero la realidad **se mide** (`E22` es la capitalizacion efectiva del mes). El 2026-08-21 esa
+exigencia revirtio una corrida entera, con las formulas correctas, por un desvio de $230.899,99
+que era exactamente el dato buscado: la plata que entro y no se gasto ni se capitalizo. En la
+columna E eso pasa a reportarse como aviso.
+
+### Formato de medios: la regla era muda, y ademas no estaba en el menu
+
+Las cuatro reglas de color del bloque "Medios Bancarios." del Tablero referenciaban
+`'Plan de Cuentas'!$L$8:$N` de forma directa. Una formula de formato condicional **no puede
+referenciar otra hoja sin `INDIRECT()`**: las reglas se creaban sin protestar y no pintaban
+nada, en silencio. Ahora van con `INDIRECT`. La deteccion de reglas propias no exige la forma
+nueva, para poder barrer las mudas que quedaron de antes.
+
+El modulo existia desde el 2026-08-20 sin entrada en `MENU_CONFIG`, o sea que no habia forma de
+correrlo desde la planilla. Se cablea como **"Color de los medios (Tablero)"**.
+
+Correccion de una afirmacion falsa en sus comentarios: decia que "la API de Apps Script no
+permite leer el formato de una regla ya existente". `BooleanCondition` expone
+`getBackgroundObject()` y `getFontColorObject()`. La conclusion que ese motivo sostenia (rehacer
+las reglas siempre) sigue siendo la correcta por simple; el motivo, no.
+
+---
+
 ## v0.32.2 - Los deltas dicen contra que se comparan (2026-08-21)
 
 > "Quiero que coloques texto concatenado a los delta porfa sino no se entiende nada." — Franco

@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 32,
- patch: 2,
+ minor: 33,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-08-20',
- releaseName: 'v0.32.2 - Los deltas dicen contra que se comparan',
+ releaseDate: '2026-08-21',
+ releaseName: 'v0.33.0 - El semaforo no puede correr para un solo lado',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

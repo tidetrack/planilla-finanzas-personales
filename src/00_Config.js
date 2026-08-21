@@ -585,6 +585,16 @@ const MENU_CONFIG = {
             ]
         },
         {
+            // decision Franco 2026-08-21: el modulo existia desde el 2026-08-20 pero nunca se
+            // habia cableado, asi que no habia forma de correrlo desde la planilla.
+            submenu: 'Color de los medios (Tablero)', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoFormatoMedios' },
+                { name: '2. Aplicar', function: 'aplicarFormatoMedios' },
+                { separator: true },
+                { name: '3. Revertir (quita solo sus reglas)', function: 'revertirFormatoMedios' }
+            ]
+        },
+        {
             submenu: 'Categorizar cuentas', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoCategorizar' },
                 { name: '2. Aplicar', function: 'aplicarCategorizar' }

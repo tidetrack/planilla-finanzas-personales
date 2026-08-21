@@ -52,8 +52,8 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Proyeccion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Capitalizacion.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_InicioPresupuesto.js'), 'utf8') +
-    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CUENTAS_NEUTRAS,CUENTA_ARRASTRE,CAP_SELECTORES,IP_RESUMEN,IP_FORMATO_DELTA,IP_SUFIJO_DELTA,IP_MESES_MEDIA,' +
-    'MONEDAS_DISPONIBLES,IP_BLOQUE,IP_RESUMEN,IP_SELECTORES,IP_MOTOR,IP_FORMATO_DELTA,IP_MESES_MEDIA});',
+    '\n;Object.assign(globalThis,{RANGES,SHEETS,TIPOS_RIQUEZA,CUENTAS_NEUTRAS,CUENTA_ARRASTRE,CAP_SELECTORES,IP_RESUMEN,IP_FORMATO_DELTA,IP_SUFIJO_DELTA,IP_MESES_TENDENCIA,' +
+    'MONEDAS_DISPONIBLES,IP_BLOQUE,IP_RESUMEN,IP_SELECTORES,IP_MOTOR,IP_FORMATO_DELTA,IP_MESES_TENDENCIA});',
     ctx);
 
 // ============================================================================
@@ -245,12 +245,38 @@ console.log('\n=== 6. Columna F: la barra de consumo ===');
        c + ' arma las opciones con VSTACK/HSTACK, sin arrays literales');
     ok(f.indexOf('$E$' + fila + ' / $D$' + fila) !== -1, c + ' mide E' + fila + '/D' + fila);
     ok(/MAX\(0; MIN\(1;/.test(f), c + ' acota el consumo a 0..1');
-    ok(/consumo < 1\/2/.test(f) && /consumo <= 4\/5/.test(f),
+    ok(/1\/2/.test(f) && /4\/5/.test(f),
        c + ' usa los umbrales 1/2 y 4/5 (fracciones, sin decimales con coma)');
-    ok(f.indexOf('#a9bca1') !== -1 && f.indexOf('#db9940') !== -1 && f.indexOf('#da8b7b') !== -1,
-       c + ' usa el semaforo de la planilla anterior (verde/naranja/rojo)');
+    ok(f.indexOf('#356854') !== -1 && f.indexOf('#ffb300') !== -1 && f.indexOf('#c93232') !== -1,
+       c + ' usa la paleta de los formatos condicionales del Tablero');
+    ok(!/#a9bca1|#db9940|#da8b7b/.test(f), c + ' ya no trae la paleta vieja de la planilla anterior');
+    // Sin presupuesto no se divide: es la trampa de N25 (dividir por algo que tiende a cero da
+    // un numero absurdo con cara de dato, no un error).
+    ok(f.indexOf('IF($D$' + fila + ' <= 0; IF($E$' + fila + ' > 0; 1; 0);') !== -1,
+       c + ' con presupuesto <= 0 no divide: resuelve el cumplimiento antes del cociente');
 });
 ok(porCelda.F22.indexOf('$E$22 / $D$22') !== -1, 'la fila de Capacidad mide E22/D22, igual que las otras');
+
+// EL SEMAFORO SE DA VUELTA SEGUN LA FILA (decision Franco 2026-08-21).
+{
+    const masEsMejor = ['F19', 'F22'];   // Ingresos, Capacidad de Capitalizacion
+    const menosEsMejor = ['F20', 'F21']; // Gastos Fijos, Gastos Variables
+    masEsMejor.forEach(c => {
+        ok(porCelda[c].indexOf('IF(consumo >= 4/5; "#356854"') !== -1,
+           c + ' (mas es mejor) da VERDE del 80% de cumplimiento para arriba');
+        ok(porCelda[c].indexOf('IF(consumo >= 1/2; "#ffb300"; "#c93232")') !== -1,
+           c + ' (mas es mejor) cae a rojo por debajo del 50%');
+    });
+    menosEsMejor.forEach(c => {
+        ok(porCelda[c].indexOf('IF(consumo < 1/2; "#356854"') !== -1,
+           c + ' (menos es mejor) da VERDE por debajo del 50% de consumo');
+        ok(porCelda[c].indexOf('IF(consumo <= 4/5; "#ffb300"; "#c93232")') !== -1,
+           c + ' (menos es mejor) llega a rojo pasado el 80%');
+    });
+    // La mutacion que importa: si alguien uniformiza el semaforo, las dos escalas se vuelven una.
+    ok(porCelda.F19.indexOf('consumo >= 4/5') !== -1 && porCelda.F21.indexOf('consumo < 1/2') !== -1,
+       'las dos escalas conviven: uniformizarlas volveria a pintar de rojo un mes que se paso de bueno');
+}
 
 console.log('\n=== 7. Columna G: la distribucion de fondos disponibles ===');
 {
@@ -316,9 +342,12 @@ console.log('\n=== 7b. La regla de reparto (espejo en JS del diseno, como en pro
 console.log('\n=== 8. F10: el delta de capital ===');
 {
     const f = porCelda.F10;
-    ok(f.indexOf('MAP(SEQUENCE(' + ctx.IP_MESES_MEDIA + ')') !== -1,
-       'F10 recorre los ' + ctx.IP_MESES_MEDIA + ' meses previos con MAP/SEQUENCE, sin arrays literales');
-    ok(/EOMONTH\(TODAY\(\); -mes_atras\)/.test(f), 'cada cierre es el EOMONTH de TODAY() menos N meses');
+    ok(f.indexOf('MAP(SEQUENCE(' + ctx.IP_MESES_TENDENCIA + ')') !== -1,
+       'F10 recorre los ' + ctx.IP_MESES_TENDENCIA + ' meses previos con MAP/SEQUENCE, sin arrays literales');
+    ok(/EOMONTH\(TODAY\(\); k_mes - 6\)/.test(f), 'cada punto de la serie es el EOMONTH de TODAY() corrido k-6 meses');
+    // k va 1..6, asi que los corrimientos son -5..0: la ventana CIERRA en el mes en curso. Una
+    // ventana que terminara el mes pasado no veria el movimiento que Franco acaba de cargar.
+    ok(!/EOMONTH\(TODAY\(\); -k_mes\)/.test(f), 'la ventana termina en el mes en curso, no el mes pasado');
     ok(!/\$I\$2|\$I\$3/.test(f), 'F10 NO depende del selector de mes: el capital es un stock');
     ok(!/\$I\$4/.test(f), 'F10 NO depende del selector de moneda: el delta es un cociente en ARS');
     ok(f.indexOf('col_cuenta="' + ctx.CUENTA_ARRASTRE + '"') !== -1 && f.indexOf('col_fecha<=tope') !== -1,
@@ -328,9 +357,9 @@ console.log('\n=== 8. F10: el delta de capital ===');
     ok(f.indexOf("'Plan de Cuentas'!") !== -1, 'el tipo del medio sale del Plan de Cuentas vivo (no del mapa TDM)');
     ok(/TIDETRACK_USD\(\)/.test(f) && /TIDETRACK_AUD\(\)/.test(f) && /TIDETRACK_EUR\(\)/.test(f),
        'convierte las monedas por funcion, no por coordenada');
-    ok(/media_hist; AVERAGE\(cierres_previos\)/.test(f), 'la media es el promedio de los cierres');
-    ok(/capital_hoy \/ media_hist - 1/.test(f), 'el delta es capital_hoy / media - 1');
-    ok(/IF\(media_hist=0; IF\(capital_hoy>0; 1; 0\)/.test(f), 'con media cero no divide: 100% si hay capital, 0% si no');
+    ok(/SLOPE\(serie_cap; SEQUENCE\(6\)\)/.test(f), 'F10 mide la TENDENCIA de la serie (SLOPE), no un mes contra una media');
+    ok(!/capital_hoy/.test(f), 'F10 ya no compara el capital de hoy contra nada: un punto solo no es una tendencia');
+    ok(!/AVERAGE\(cierres_previos\)/.test(f), 'F10 ya no promedia cierres previos');
 }
 
 console.log('\n=== 9. C15 y F15: los deltas de flujo (reemplazan las formulas rotas) ===');
@@ -342,15 +371,18 @@ console.log('\n=== 9. C15 y F15: los deltas de flujo (reemplazan las formulas ro
     ok(!/\$I\$4/.test(f), c + ' NO depende del selector de moneda: cociente en ARS con TC congelados');
     ['tc_ars', 'tc_usd', 'tc_aud', 'tc_eur'].forEach(k =>
         ok(f.indexOf(ctx._colLedger(k)) !== -1, c + ' usa la columna congelada ' + ctx._colLedger(k)));
-    ok(/EDATE\(desde_act; -6\)/.test(f), c + ' abre la ventana 6 meses hacia atras');
-    ok(/monto_previos \/ 6/.test(f), c + ' promedia sobre 6 meses');
-    ok(/col_fecha<desde_act/.test(f), c + ' cierra la ventana previa ANTES del mes actual (sin solaparlo)');
+    ok(/MAP\(SEQUENCE\(6\); LAMBDA\(k_mes;/.test(f), c + ' arma una serie de 6 totales mensuales con MAP/SEQUENCE');
+    ok(/EDATE\(ancla_mes; k_mes - 6\)/.test(f), c + ' corre la ventana de -5 a 0 meses respecto del selector');
+    ok(/EOMONTH\(ini_k; 0\)/.test(f) && /col_fecha>=ini_k/.test(f) && /col_fecha<=fin_k/.test(f),
+       c + ' cada punto es un mes calendario cerrado');
+    ok(/SLOPE\(serie_flujo; SEQUENCE\(6\)\)/.test(f), c + ' mide la TENDENCIA de la serie, no el mes contra una media');
+    ok(!/monto_previos|media_prev|monto_actual/.test(f), c + ' ya no separa "el mes" de "los previos"');
     ctx.CUENTAS_NEUTRAS.forEach(cta => ok(f.indexOf('<>"' + cta + '"') !== -1,
        c + ' excluye la cuenta neutra "' + cta + '"'));
     ok(f.indexOf('(col_cuenta<>"")') !== -1, c + ' excluye las filas sin cuenta');
     ok(/base_mov; ARRAYFORMULA\(/.test(f),
        c + ' envuelve las condiciones en ARRAYFORMULA: la interseccion implicita es lo que rompio la formula vieja');
-    ok(/IF\(media_prev=0; IF\(monto_actual>0; 1; 0\)/.test(f), c + ' con media cero no divide');
+    ok(/IF\(nivel_tend=0; 0;/.test(f), c + ' con la serie entera en cero no divide');
     if (esIngresos) {
         ok(/col_cat="Ingreso"/.test(f), c + ' filtra Ingreso');
         ok(/="Egreso"; -/.test(f), c + ' (ingresos): un Egreso resta');
@@ -360,19 +392,48 @@ console.log('\n=== 9. C15 y F15: los deltas de flujo (reemplazan las formulas ro
     }
 });
 
-console.log('\n=== 9b. El delta contra la media (espejo en JS) ===');
+console.log('\n=== 9b. La tendencia (espejo en JS del diseno) ===');
 {
-    const delta = (actual, previos) => {
-        const media = previos.reduce((a, b) => a + b, 0) / previos.length;
-        return media === 0 ? (actual > 0 ? 1 : 0) : actual / media - 1;
+    // Espejo exacto de _tendenciaIp: pendiente de minimos cuadrados sobre los 6 puntos,
+    // multiplicada por el largo de la ventana, sobre el nivel medio.
+    const tendencia = serie => {
+        const n = serie.length;
+        const xs = serie.map((_, i) => i + 1);
+        const mx = xs.reduce((a, b) => a + b, 0) / n;
+        const my = serie.reduce((a, b) => a + b, 0) / n;
+        const num = serie.reduce((a, y, i) => a + (xs[i] - mx) * (y - my), 0);
+        const den = xs.reduce((a, x) => a + (x - mx) * (x - mx), 0);
+        const pend = den === 0 ? 0 : num / den;
+        return my === 0 ? 0 : pend * (n - 1) / Math.abs(my);
     };
     const cerca = (a, b) => Math.abs(a - b) < 1e-9;
-    ok(cerca(delta(150, [100, 100, 100, 100, 100, 100]), 0.5), 'mes 50% arriba de la media -> +50%');
-    ok(cerca(delta(50, [100, 100, 100, 100, 100, 100]), -0.5), 'mes 50% abajo -> -50%');
-    ok(cerca(delta(100, [100, 100, 100, 100, 100, 100]), 0), 'mes igual a la media -> 0%');
-    ok(cerca(delta(100, [0, 0, 0, 0, 0, 0]), 1), 'sin historia y con mes positivo -> +100%, no division por cero');
-    ok(cerca(delta(0, [0, 0, 0, 0, 0, 0]), 0), 'sin historia y sin mes -> 0%');
-    ok(cerca(delta(120, [0, 0, 0, 240, 240, 240]), 0), 'meses vacios cuentan como cero en la media (media simple)');
+
+    ok(cerca(tendencia([100, 100, 100, 100, 100, 100]), 0), 'serie plana -> 0% de tendencia');
+    ok(tendencia([100, 110, 120, 130, 140, 150]) > 0, 'serie que sube -> tendencia positiva');
+    ok(tendencia([150, 140, 130, 120, 110, 100]) < 0, 'serie que baja -> tendencia negativa');
+    ok(cerca(tendencia([100, 110, 120, 130, 140, 150]), -tendencia([150, 140, 130, 120, 110, 100])),
+       'la misma serie al reves da la tendencia opuesta: el signo es la direccion');
+    ok(cerca(tendencia([0, 0, 0, 0, 0, 0]), 0), 'serie toda en cero -> 0%, sin division por cero');
+
+    // La recta que sube 10 por mes sobre un nivel medio de 125 sube 50 en la ventana: 40%.
+    ok(cerca(tendencia([100, 110, 120, 130, 140, 150]), 50 / 125), 'una recta de +10/mes sobre nivel 125 da +40%');
+
+    // EL SIGNO SOBREVIVE A UNA SERIE NEGATIVA. Un capital en rojo que se achica es crecimiento;
+    // dividir por el promedio sin ABS() lo daria al reves y nadie lo notaria.
+    ok(tendencia([-500, -400, -300, -200, -100, -50]) > 0, 'una deuda que se achica es tendencia POSITIVA');
+
+    // POR QUE LA TENDENCIA Y NO EL MES CONTRA LA MEDIA (decision Franco 2026-08-21). Un solo mes
+    // fuera de linea movia el numero viejo el doble que la serie entera.
+    const conPico = [100, 100, 100, 100, 100, 200];
+    const viejoDelta = 200 / ((100 * 5) / 5) - 1;   // el mes contra la media de los 5 previos
+    ok(viejoDelta === 1, 'el diseno viejo leia ese pico como +100%');
+    ok(tendencia(conPico) < viejoDelta, 'la tendencia no se deja arrastrar por un mes suelto: dio ' +
+       (tendencia(conPico) * 100).toFixed(1) + '%, contra el ' + (viejoDelta * 100).toFixed(0) + '% de antes');
+    // Y el contraste que cierra el argumento: el mismo salto REPARTIDO en los seis meses -- una
+    // tendencia de verdad -- pesa MAS que el pico suelto, que es exactamente al reves de como lo
+    // leia el diseno viejo (ahi los dos daban +100%).
+    ok(tendencia([100, 120, 140, 160, 180, 200]) > tendencia(conPico),
+       'un crecimiento sostenido pesa mas que un mes aislado; el diseno viejo no los distinguia');
 }
 
 console.log('\n=== 10. Coherencia con las constantes del modulo ===');
@@ -399,8 +460,8 @@ console.log('\n=== 10. Coherencia con las constantes del modulo ===');
        'el patron concatena el texto explicativo: "' + ctx.IP_SUFIJO_DELTA + '"');
     ok((ctx.IP_FORMATO_DELTA.match(/"/g) || []).length % 2 === 0,
        'las comillas del texto literal estan balanceadas');
-    ok(ctx.IP_SUFIJO_DELTA.indexOf(String(ctx.IP_MESES_MEDIA)) !== -1,
-       'el texto nombra los ' + ctx.IP_MESES_MEDIA + ' meses que realmente se promedian: no puede desfasarse');
+    ok(ctx.IP_SUFIJO_DELTA.indexOf(String(ctx.IP_MESES_TENDENCIA)) !== -1,
+       'el texto nombra los ' + ctx.IP_MESES_TENDENCIA + ' meses que realmente se promedian: no puede desfasarse');
     // Va en el FORMATO, no en un TEXT(): la celda tiene que seguir siendo un numero.
     ok(!/TEXT\(/.test(ctx._formulaDeltaIp ? ctx._formulaDeltaIp('capital') : ''),
        'el delta NO usa TEXT(): con texto la celda dejaria de ser numero y nada lo delataria');
@@ -449,11 +510,20 @@ console.log('=== El verificador distingue PENDIENTE de FALLA ===');
     r = ctx._verificarInvariantesIp(hojaDe(conError));
     ok(r.fallas.length > 0 && /#REF!/.test(r.fallas.join(' ')), 'un #REF! SI es falla y se nombra');
 
-    // Y la identidad rota sigue siendo falla.
+    // La identidad del PLAN rota sigue siendo falla.
     const roto = Object.assign({}, base);
     roto[B.colPresupuesto + F.capitalizacion.fila] = 999;
     r = ctx._verificarInvariantesIp(hojaDe(roto));
-    ok(r.fallas.some(f => /identidad/.test(f)), 'la identidad rota sigue siendo falla');
+    ok(r.fallas.some(f => /identidad/.test(f)), 'la identidad del PLAN rota sigue siendo falla');
+
+    // Pero en la REALIDAD no aplica: ahi la capitalizacion se mide y la diferencia es el dato.
+    const realDistinta = Object.assign({}, base);
+    realDistinta[B.colRealidad + F.capitalizacion.fila] = -50;
+    r = ctx._verificarInvariantesIp(hojaDe(realDistinta));
+    ok(!r.fallas.some(f => /identidad/.test(f)),
+       'la realidad NO tiene que cerrar la identidad: E22 se mide, no es el residuo');
+    ok(r.avisos.some(a => /sin asignar/.test(a)),
+       'y la diferencia se reporta como informacion: la plata que entro y no se gasto ni capitalizo');
 }
 
 console.log('\n' + (fallas === 0 ? '===> SIN FALLAS' : '===> ' + fallas + ' FALLA(S)'));

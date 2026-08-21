@@ -107,6 +107,14 @@ const IP_MESES = 'Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,O
  * un corrimiento se detecta comparando el rotulo, no la posicion. G19:H22 son celdas
  * combinadas por fila: se escribe SOLO en las anclas G.
  */
+/**
+ * Los dos sentidos posibles del semaforo de consumo (ver IP_BLOQUE.filas).
+ * Declarados ANTES de IP_BLOQUE a proposito: son const de nivel superior en el MISMO archivo, y
+ * IP_BLOQUE las evalua al cargar. Invertir el orden tira ReferenceError al abrir la planilla.
+ */
+const IP_MENOS_ES_MEJOR = 'menos_es_mejor';
+const IP_MAS_ES_MEJOR = 'mas_es_mejor';
+
 const IP_BLOQUE = {
     titulo: { celda: 'C17', esperado: 'Presupuesto del Mes' },
     headers: [
@@ -117,11 +125,21 @@ const IP_BLOQUE = {
         { celda: 'G18', esperado: 'Distribucion de fondos disponibles' }
     ],
     colRotulo: 'C', colPresupuesto: 'D', colRealidad: 'E', colConsumo: 'F', colDistribucion: 'G',
+    // El campo `sentido` decide para que lado corre el semaforo de la barra de consumo.
+    // decision Franco 2026-08-21: en Capacidad de Capitalizacion la barra tiene que dar VERDE a
+    // partir del 80% de cumplimiento. No es un ajuste de umbral: es que ahi la escala se DA VUELTA.
+    // Gastar el 100% de lo presupuestado en Gastos Variables es agotar el presupuesto (rojo);
+    // capitalizar el 100% de lo planificado es cumplir el plan (verde). Son dos lecturas opuestas
+    // del mismo numero, y un solo semaforo no puede servir a las dos.
+    //
+    // Ingresos entra en el mismo grupo por la misma razon, no por analogia: cobrar MAS de lo
+    // presupuestado es una buena noticia, y hoy se pinta de rojo (se ve en la corrida del
+    // 2026-08-21: 1.645.687 reales contra 1.546.662 presupuestados, barra roja al tope).
     filas: {
-        ingresos:       { fila: 19, rotulo: 'Ingresos' },
-        fijos:          { fila: 20, rotulo: 'Gastos Fijos' },
-        variables:      { fila: 21, rotulo: 'Gastos Variables' },
-        capitalizacion: { fila: 22, rotulo: 'Capacidad de Capitalizacion' }
+        ingresos:       { fila: 19, rotulo: 'Ingresos',                   sentido: IP_MAS_ES_MEJOR },
+        fijos:          { fila: 20, rotulo: 'Gastos Fijos',               sentido: IP_MENOS_ES_MEJOR },
+        variables:      { fila: 21, rotulo: 'Gastos Variables',           sentido: IP_MENOS_ES_MEJOR },
+        capitalizacion: { fila: 22, rotulo: 'Capacidad de Capitalizacion', sentido: IP_MAS_ES_MEJOR }
     }
 };
 
@@ -144,13 +162,38 @@ const IP_RESUMEN = {
  */
 const IP_MOTOR = { colBloque: 'T', colValor: 'AF', filaHeader: 7, filaDatos: 8 };
 
-/** Semaforo del consumo, calcado de la planilla anterior. Umbrales como fracciones (ver cabecera). */
-const IP_COLOR_VERDE = '#a9bca1';
-const IP_COLOR_NARANJA = '#db9940';
-const IP_COLOR_ROJO = '#da8b7b';
+/**
+ * EL SEMAFORO, con la paleta de los formatos condicionales del Tablero.
+ *
+ * decision Franco 2026-08-21: los colores propios que traia el modulo (#a9bca1 / #db9940 /
+ * #da8b7b, heredados de la planilla anterior) salen. La hoja ya tiene UN lenguaje de color para
+ * verde/amarillo/rojo -- el de los formatos condicionales del Tablero -- y dos paletas parecidas
+ * pero distintas para la misma idea se leen como si dijeran cosas distintas.
+ *
+ * Cada nivel es un PAR: un tono saturado (la tinta) y uno palido (el fondo), tal como se usan
+ * juntos en el Tablero. Las barras SPARKLINE pintan con el SATURADO porque son tinta sobre el
+ * blanco de la hoja: el tono palido, que existe para ir DETRAS de un texto, sobre blanco
+ * practicamente no se ve. Los palidos quedan declarados igual para que quien pinte fondos no
+ * tenga que volver a buscar los hex.
+ */
+const IP_COLOR_VERDE = '#356854';
+const IP_COLOR_NARANJA = '#ffb300';
+const IP_COLOR_ROJO = '#c93232';
+const IP_FONDO_VERDE = '#e6f4ea';
+const IP_FONDO_NARANJA = '#fef7e0';
+const IP_FONDO_ROJO = '#fce8e6';
 
-/** Cantidad de meses previos completos que promedian los tres deltas. */
-const IP_MESES_MEDIA = 6;
+/**
+ * Largo de la ventana de los tres deltas, en meses.
+ *
+ * decision Franco 2026-08-21: los deltas NO son un mes contra la media de los seis previos --
+ * son la TENDENCIA de la ventana de seis meses. La diferencia no es cosmetica: comparar un mes
+ * contra una media mide cuanto se desvio ESE mes (un dato ruidoso, que salta con cualquier
+ * sueldo que cae un dia antes o despues), mientras que la tendencia mide para donde viene
+ * yendo la serie, que es lo que Franco quiere ver -- "crecimiento de tendencias de ingresos /
+ * egresos", y lo mismo para el capital acumulado.
+ */
+const IP_MESES_TENDENCIA = 6;
 
 /**
  * Formato de los tres deltas: porcentaje con signo, un decimal, y el texto que lo explica.
@@ -170,10 +213,10 @@ const IP_MESES_MEDIA = 6;
  * Distinto de TEXT(), que SI es locale-aware. La constante venia de la C15 vieja, donde el patron
  * vivia adentro de un TEXT(); al moverlo a setNumberFormat cambio el idioma en el que se lee.
  *
- * El texto se deriva de IP_MESES_MEDIA para que la etiqueta no pueda desfasarse de la ventana que
+ * El texto se deriva de IP_MESES_TENDENCIA para que la etiqueta no pueda desfasarse de la ventana que
  * realmente se promedia.
  */
-const IP_SUFIJO_DELTA = ' vs. media ' + IP_MESES_MEDIA + ' meses';
+const IP_SUFIJO_DELTA = ' de tendencia a ' + IP_MESES_TENDENCIA + ' meses';
 const IP_FORMATO_DELTA = '+0.0%"' + IP_SUFIJO_DELTA + '";-0.0%"' + IP_SUFIJO_DELTA + '"';
 
 /** Tolerancia de la identidad D19=D20+D21+D22 (y E) al releer los valores. */
@@ -290,16 +333,29 @@ function _formulaResiduoIp(col) {
 }
 
 /**
- * La barra de consumo (F19:F22): SPARKLINE tipo bar de E/D acotado 0..1, semaforo de la
- * planilla anterior. Las opciones van con VSTACK/HSTACK: un array literal {} no lo traduce
- * setFormula en es_AR (trampa 1). Umbrales como fracciones (ver cabecera).
+ * La barra de consumo (F19:F22): SPARKLINE tipo bar del cumplimiento E/D acotado 0..1, con el
+ * semaforo corriendo para el lado que corresponda a la fila (IP_BLOQUE.filas[k].sentido).
+ * Las opciones van con VSTACK/HSTACK: un array literal {} no lo traduce setFormula en es_AR
+ * (trampa 1). Umbrales como fracciones (ver cabecera).
+ *
+ * EL CUMPLIMIENTO CUANDO NO HAY PRESUPUESTO. El cociente E/D es una pregunta sin sentido si D
+ * es cero o negativo, y taparlo con IFERROR(...;0) daba la respuesta EQUIVOCADA: capitalizar
+ * 385.400 sobre un plan de 0 se leia como 0% de cumplimiento. Se resuelve antes de dividir:
+ * sin presupuesto, cumplio el que movio plata (1) y no cumplio el que no la movio (0). Es la
+ * misma trampa que Franco marco en N25 (=O19/O12 con O12 = 15,31 dando -391830%): dividir por
+ * algo que tiende a cero no da un error, da un numero absurdo con cara de dato.
  */
-function _formulaConsumoIp(fila) {
+function _formulaConsumoIp(fila, sentido) {
     const refReal = '$' + IP_BLOQUE.colRealidad + '$' + fila;
     const refPresu = '$' + IP_BLOQUE.colPresupuesto + '$' + fila;
+    // Para gastos el semaforo sube con el consumo (agotar el presupuesto es malo); para ingresos
+    // y capitalizacion baja (quedarse corto del plan es lo malo). Ver IP_BLOQUE.filas.
+    const escala = (sentido === IP_MAS_ES_MEJOR)
+        ? 'IF(consumo >= 4/5; "' + IP_COLOR_VERDE + '"; IF(consumo >= 1/2; "' + IP_COLOR_NARANJA + '"; "' + IP_COLOR_ROJO + '"))'
+        : 'IF(consumo < 1/2; "' + IP_COLOR_VERDE + '"; IF(consumo <= 4/5; "' + IP_COLOR_NARANJA + '"; "' + IP_COLOR_ROJO + '"))';
     return '=LET(\n' +
-        '  consumo; IFERROR(MAX(0; MIN(1; ' + refReal + ' / ' + refPresu + ')); 0);\n' +
-        '  color_nivel; IF(consumo < 1/2; "' + IP_COLOR_VERDE + '"; IF(consumo <= 4/5; "' + IP_COLOR_NARANJA + '"; "' + IP_COLOR_ROJO + '"));\n' +
+        '  consumo; IF(' + refPresu + ' <= 0; IF(' + refReal + ' > 0; 1; 0); IFERROR(MAX(0; MIN(1; ' + refReal + ' / ' + refPresu + ')); 0));\n' +
+        '  color_nivel; ' + escala + ';\n' +
         '  SPARKLINE(consumo; VSTACK(HSTACK("charttype"; "bar"); HSTACK("max"; 1); HSTACK("color1"; color_nivel)))\n)';
 }
 
@@ -341,6 +397,33 @@ function _formulaDistribucionIp(cual) {
 }
 
 /**
+ * EL CALCULO DE LA TENDENCIA, unico para los tres deltas.
+ *
+ * Recibe el nombre LET de una serie de IP_MESES_TENDENCIA valores mensuales (el mas viejo
+ * primero) y devuelve el crecimiento de su tendencia como fraccion.
+ *
+ * COMO: se ajusta la recta de minimos cuadrados sobre los seis puntos (SLOPE) y se mide cuanto
+ * SUBIO ESA RECTA de punta a punta -- pendiente * (n-1) --, expresado como fraccion del nivel
+ * medio de la ventana. En criollo: "la tendencia subio un 12% del nivel tipico de estos seis
+ * meses". Se usa la recta y no los extremos crudos (ultimo/primero - 1) justamente para no
+ * volver al problema que Franco marco: dos puntos sueltos vuelven a ser un dato de un mes.
+ *
+ * POR QUE EL PROMEDIO EN EL DENOMINADOR y no el primer valor: el primer mes de la ventana puede
+ * ser cero o casi cero (un mes sin egresos de una categoria, una cuenta recien abierta) y ahi
+ * un cociente contra el arranque explota a miles por ciento. El promedio de la ventana es el
+ * nivel tipico de la serie y no se anula salvo que la serie entera sea cero, caso que se
+ * responde con 0 y no con una division. ABS() porque una serie negativa (un capital en rojo)
+ * tiene que conservar el SIGNO de la pendiente: si la deuda se achica, eso es crecimiento.
+ */
+function _tendenciaIp(nombreSerie) {
+    return 'LET(\n' +
+        '    nivel_tend; AVERAGE(' + nombreSerie + ');\n' +
+        '    pend_tend; IFERROR(SLOPE(' + nombreSerie + '; SEQUENCE(' + IP_MESES_TENDENCIA + ')); 0);\n' +
+        '    IF(nivel_tend=0; 0; pend_tend * ' + (IP_MESES_TENDENCIA - 1) + ' / ABS(nivel_tend))\n' +
+        '  )';
+}
+
+/**
  * DELTA CAPITAL (F10): capital actual contra la media de los cierres de los 6 meses previos
  * completos. El capital de una fecha aplica la MISMA regla de saldo del sistema (el ultimo
  * "Inicio Mes" de cada medio + lo posterior, validada al centavo en DEVTOOL_StockYFlujo) con
@@ -372,10 +455,8 @@ function _formulaDeltaCapitalIp() {
         '    suma_eur; SUM(IFERROR(FILTER(neto_mov; vigente_fila; grupo_fila; col_moneda="EUR"); 0));\n' +
         '    suma_ars + (suma_usd * TIDETRACK_USD()) + (suma_aud * TIDETRACK_AUD()) + (suma_eur * TIDETRACK_EUR())\n' +
         '  ));\n' +
-        '  capital_hoy; capital_al(TODAY());\n' +
-        '  cierres_previos; MAP(SEQUENCE(' + IP_MESES_MEDIA + '); LAMBDA(mes_atras; capital_al(EOMONTH(TODAY(); -mes_atras))));\n' +
-        '  media_hist; AVERAGE(cierres_previos);\n' +
-        '  IF(media_hist=0; IF(capital_hoy>0; 1; 0); capital_hoy / media_hist - 1)\n)';
+        '  serie_cap; MAP(SEQUENCE(' + IP_MESES_TENDENCIA + '); LAMBDA(k_mes; capital_al(EOMONTH(TODAY(); k_mes - ' + IP_MESES_TENDENCIA + '))));\n' +
+        '  ' + _tendenciaIp('serie_cap') + '\n)';
 }
 
 /**
@@ -401,14 +482,14 @@ function _formulaDeltaFlujoIp(esIngresos) {
         '  tasa_congelada; ARRAYFORMULA(IF(col_moneda="ARS"; ' + _colLedger('tc_ars') + '; IF(col_moneda="USD"; ' + _colLedger('tc_usd') + '; IF(col_moneda="AUD"; ' + _colLedger('tc_aud') + '; IF(col_moneda="EUR"; ' + _colLedger('tc_eur') + '; 1)))));\n' +
         '  neto_valor; ARRAYFORMULA(IF(' + _colLedger('tipo') + '="' + tipoQueResta + '"; -' + _colLedger('monto') + '; ' + _colLedger('monto') + ') * tasa_congelada);\n' +
         '  mes_num; MATCH(' + selMes + '; SPLIT("' + IP_MESES + '"; ","); 0);\n' +
-        '  desde_act; DATE(' + selAnio + '; mes_num; 1);\n' +
-        '  hasta_act; EOMONTH(desde_act; 0);\n' +
-        '  desde_prev; EDATE(desde_act; -' + IP_MESES_MEDIA + ');\n' +
+        '  ancla_mes; DATE(' + selAnio + '; mes_num; 1);\n' +
         '  base_mov; ARRAYFORMULA(' + cond + ' * ' + _exclusionNeutrasIp('col_cuenta') + ' * (col_cuenta<>""));\n' +
-        '  monto_actual; SUM(IFERROR(FILTER(neto_valor; base_mov; col_fecha>=desde_act; col_fecha<=hasta_act); 0));\n' +
-        '  monto_previos; SUM(IFERROR(FILTER(neto_valor; base_mov; col_fecha>=desde_prev; col_fecha<desde_act); 0));\n' +
-        '  media_prev; monto_previos / ' + IP_MESES_MEDIA + ';\n' +
-        '  IF(media_prev=0; IF(monto_actual>0; 1; 0); monto_actual / media_prev - 1)\n)';
+        '  serie_flujo; MAP(SEQUENCE(' + IP_MESES_TENDENCIA + '); LAMBDA(k_mes; LET(\n' +
+        '    ini_k; EDATE(ancla_mes; k_mes - ' + IP_MESES_TENDENCIA + ');\n' +
+        '    fin_k; EOMONTH(ini_k; 0);\n' +
+        '    SUM(IFERROR(FILTER(neto_valor; base_mov; col_fecha>=ini_k; col_fecha<=fin_k); 0))\n' +
+        '  )));\n' +
+        '  ' + _tendenciaIp('serie_flujo') + '\n)';
 }
 
 // ============================================
@@ -645,8 +726,8 @@ function _planIp(ss, pre) {
     // --- Columna F: la barra de consumo ---
     Object.keys(filas).forEach(function (k) {
         proponer(IP_BLOQUE.colConsumo + filas[k].fila, 'Consumo: ' + filas[k].rotulo,
-            _formulaConsumoIp(filas[k].fila),
-            'barra de E/D acotada 0..1 con el semaforo de la planilla anterior');
+            _formulaConsumoIp(filas[k].fila, filas[k].sentido),
+            'barra de cumplimiento 0..1, semaforo ' + filas[k].sentido);
     });
 
     // --- Columna G: la distribucion. G19 queda vacia via formula (ver cabecera). ---
@@ -662,13 +743,13 @@ function _planIp(ss, pre) {
     // --- Los tres deltas del resumen ---
     proponer(IP_RESUMEN.deltaCapital.celda, IP_RESUMEN.deltaCapital.nota,
         _formulaDeltaCapitalIp(),
-        'capital de hoy contra la media de los cierres de los ' + IP_MESES_MEDIA + ' meses previos');
+        'tendencia de los cierres de capital de los ultimos ' + IP_MESES_TENDENCIA + ' meses');
     proponer(IP_RESUMEN.deltaIngresos.celda, IP_RESUMEN.deltaIngresos.nota,
         _formulaDeltaFlujoIp(true),
-        'ingresos del mes contra su media de ' + IP_MESES_MEDIA + ' meses; reemplaza la formula rota');
+        'tendencia de los ingresos en la ventana de ' + IP_MESES_TENDENCIA + ' meses que cierra en el mes del selector');
     proponer(IP_RESUMEN.deltaEgresos.celda, IP_RESUMEN.deltaEgresos.nota,
         _formulaDeltaFlujoIp(false),
-        'egresos del mes contra su media de ' + IP_MESES_MEDIA + ' meses; reemplaza la formula rota');
+        'tendencia de los egresos en la ventana de ' + IP_MESES_TENDENCIA + ' meses que cierra en el mes del selector');
 
     // --- El formato de los tres deltas es parte del plan (se verifica y se revierte) ---
     proponerFormato(IP_RESUMEN.deltaCapital.celda, 'Formato del delta de capital');
@@ -751,6 +832,22 @@ function _verificarInvariantesIp(hoja) {
             return;
         }
         const desvio = Math.abs(vals[0] - vals[1] - vals[2] - vals[3]);
+        // LA IDENTIDAD RIGE SOLO EN EL PLAN. decision Franco 2026-08-20: el plan ASIGNA -- por eso
+        // D22 es el residuo y los tres destinos suman el 100% de los ingresos por construccion --
+        // pero la realidad SE MIDE: E22 es la capitalizacion efectiva del mes, no lo que sobro.
+        //
+        // En la columna E la diferencia NO es un error: es la plata que entro y no se gasto ni se
+        // capitalizo (o el gasto por encima de lo que entro). Es informacion, y se reporta como
+        // tal. Exigirle la identidad a E revertia la corrida entera con las formulas correctas:
+        // se midio un desvio de 230.899,99 el 2026-08-21, que era exactamente ese dato.
+        if (col !== IP_BLOQUE.colPresupuesto) {
+            if (desvio >= IP_UMBRAL_IDENTIDAD) {
+                avisos.push('en ' + par[1] + ' quedaron ' + desvio.toFixed(2) + ' sin asignar: es la ' +
+                    'plata que entro y no se gasto ni se capitalizo. NO es un error -- el bloque de ' +
+                    'la realidad no tiene por que sumar 100%, a diferencia del plan.');
+            }
+            return;
+        }
         if (desvio >= IP_UMBRAL_IDENTIDAD) {
             fallas.push('la identidad de ' + par[1] + ' no cierra: |' + col + filas.ingresos.fila +
                 '-' + col + filas.fijos.fila + '-' + col + filas.variables.fila + '-' +
@@ -852,9 +949,10 @@ function estadoInicioPresupuesto() {
             l.push('  - E19:E21 con la realidad del mes (motor de la hoja) y E22 el residuo.');
             l.push('  - La identidad Ingresos = Fijos + Variables + Capacidad se cumple por');
             l.push('    construccion en las dos columnas, y se verifica al releer los valores.');
-            l.push('  - F19:F22 con la barra de consumo (verde/naranja/rojo como la planilla vieja).');
+            l.push('  - F19:F22 con la barra de cumplimiento; verde a partir del 80% en Ingresos y');
+            l.push('    Capitalizacion, verde por debajo del 50% en los dos bloques de gastos.');
             l.push('  - G20:G22 reparten la liquidez de C8 como Tablero!O23:O25; G19 queda vacia.');
-            l.push('  - F10, C15 y F15 pasan a ser deltas contra la media de ' + IP_MESES_MEDIA + ' meses,');
+            l.push('  - F10, C15 y F15 pasan a medir la TENDENCIA de la ventana de ' + IP_MESES_TENDENCIA + ' meses,');
             l.push('    con formato ' + IP_FORMATO_DELTA + '. C15/F15 reemplazan formulas rotas (0% eterno).');
         }
         if (pre.avisos.length) {
@@ -900,13 +998,13 @@ function aplicarInicioPresupuesto() {
             '    Variables (la identidad del presupuesto, verificada al releer los valores),\n' +
             '    y E22 MIDE lo que realmente entro a los frascos este mes, con la misma\n' +
             '    formula que Tablero!O19. Por eso E22 puede dar negativo y D22 no.\n' +
-            '  - F19:F22 muestran la barra de consumo con el semaforo de la planilla vieja.\n' +
+            '  - F19:F22 muestran la barra de cumplimiento con el semaforo de cada fila.\n' +
             '  - G20:G22 reparten la liquidez de C8 igual que Tablero!O23:O25; G19 queda\n' +
             '    vacia porque los ingresos no reciben distribucion.\n' +
             '  - F10 deja de decir "0% de Crecimiento historico": pasa a medir el capital de\n' +
-            '    hoy contra la media de los ultimos ' + IP_MESES_MEDIA + ' meses.\n' +
+            '    la tendencia de los cierres de los ultimos ' + IP_MESES_TENDENCIA + ' meses.\n' +
             '  - C15 y F15 REEMPLAZAN las formulas rotas (hoy dan 0% siempre) por el delta\n' +
-            '    contra la media de ' + IP_MESES_MEDIA + ' meses. Los tres deltas quedan con formato ' + IP_FORMATO_DELTA + '.\n\n' +
+            '    la tendencia de la ventana de ' + IP_MESES_TENDENCIA + ' meses. Los tres quedan con formato ' + IP_FORMATO_DELTA + '.\n\n' +
             'C8 y F8 NO se tocan. No se toca el ledger, la Proyeccion ni el Tablero.\n\nContinuar?',
             ui.ButtonSet.YES_NO);
         if (conf !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se escribio nada.' };
@@ -971,17 +1069,20 @@ function aplicarInicioPresupuesto() {
                 : '') +
             '- Celdas escritas y verificadas: ' + escritas.length + '\n' +
             '- Respaldo en la hoja oculta "' + respaldo.nombre + '"\n' +
-            '- Identidad verificada al releer: D' + filas.ingresos.fila + ' = D' + filas.fijos.fila +
-            ' + D' + filas.variables.fila + ' + D' + filas.capitalizacion.fila + ' (y lo mismo en E)\n' +
+            '- Identidad del PLAN verificada al releer: D' + filas.ingresos.fila + ' = D' + filas.fijos.fila +
+            ' + D' + filas.variables.fila + ' + D' + filas.capitalizacion.fila + '\n' +
+            '  (en E no aplica: ahi la capitalizacion se MIDE, no es el residuo)\n' +
             '- C8 revisada: ' + (pre.estadoResumen.saldo.error ? 'en ' + pre.estadoResumen.saldo.error :
                 'con formula, muestra ' + pre.estadoResumen.saldo.muestra) + '\n' +
             '- F8 revisada: ' + (pre.estadoResumen.capital.conFormula ?
                 'con formula, muestra ' + pre.estadoResumen.capital.muestra : 'SIN FORMULA (reponerla con Stock y Flujo)') + '\n\n' +
             'QUE MIRAR:\n' +
             '  1. D22 y E22 pueden dar NEGATIVO: es la senal de un mes sobrecomprometido, no un error.\n' +
-            '  2. Las barras de F: verde por debajo del 50% de consumo, naranja hasta 80%, rojo arriba.\n' +
+            '  2. Las barras de F: en Gastos, verde por debajo del 50% de consumo, naranja hasta 80% y\n' +
+            '     rojo arriba. En Ingresos y Capitalizacion la escala se da vuelta: verde del 80% de\n' +
+            '     cumplimiento para arriba.\n' +
             '  3. G20+G21+G22 tiene que dar exactamente el Saldo Actual de C8, siempre.\n' +
-            '  4. F10, C15 y F15 muestran +x,x% o -x,x% contra la media de ' + IP_MESES_MEDIA + ' meses.\n\n' +
+            '  4. F10, C15 y F15 muestran +x,x% o -x,x% de tendencia a ' + IP_MESES_TENDENCIA + ' meses.\n\n' +
             'Si algo quedo peor: revertirInicioPresupuesto (menu Tidetrack Dev).';
 
         logSuccess('aplicarInicioPresupuesto: ' + escritas.length + ' celda(s).');

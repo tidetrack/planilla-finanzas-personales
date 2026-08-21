@@ -27,11 +27,15 @@
  * directa de celdas: el bloque es un derrame que se reordena por saldo en cada recalculo, y una
  * pintura estatica quedaria pegada a la FILA; la regla queda pegada al MEDIO.
  *
- * decision Franco 2026-08-20: no hay atajo "nada que hacer" en aplicar. La API de Apps Script
- * no permite leer el formato (el color) de una regla ya existente -- solo su condicion y su
- * rango --, asi que no hay forma de saber si las reglas vivas ya tienen los colores de hoy.
- * Rehacerlas (quitar las propias, agregarlas frescas) es la unica manera de garantizar la
- * sincronizacion, y es idempotente por construccion.
+ * decision Franco 2026-08-20: no hay atajo "nada que hacer" en aplicar; se rehacen siempre
+ * (quitar las propias, agregarlas frescas), que es idempotente por construccion y garantiza la
+ * sincronizacion con el color vivo de cada rotulo.
+ *
+ * CORRECCION 2026-08-21: la version anterior de esta nota justificaba lo de arriba diciendo que
+ * "la API de Apps Script no permite leer el formato de una regla ya existente". Es FALSO:
+ * BooleanCondition expone getBackgroundObject() y getFontColorObject(), y de hecho el estado de
+ * este modulo ahora los usa para reportar con que color quedo pintado cada tipo. La conclusion
+ * (rehacer siempre) sigue siendo la correcta por simple; el motivo que la sostenia, no.
  *
  * QUE NO HACE
  * 1. NO escribe ninguna celda: ni formulas ni valores. Solo reglas de formato condicional.
@@ -103,7 +107,17 @@ function _indiceTipoMedioFmt() {
 /**
  * La formula de la regla de UN tipo. Ejemplo (tipo Ahorros):
  *
- *   =VLOOKUP($C18, 'Plan de Cuentas'!$L$8:$N, 3, 0)="Ahorros"
+ *   =VLOOKUP($C18, INDIRECT("'Plan de Cuentas'!$L$8:$N"), 3, 0)="Ahorros"
+ *
+ * EL INDIRECT NO ES DECORATIVO. Una formula de formato condicional NO PUEDE referenciar otra
+ * hoja de forma directa: es una limitacion vieja y documentada de Google Sheets, y la unica
+ * salida es envolver la referencia foranea en INDIRECT() para que se resuelva en tiempo de
+ * evaluacion. Sin el, la regla se crea sin protestar y NUNCA pinta nada -- ni un error, ni una
+ * celda en rojo: simplemente no pasa nada, que es el peor modo de fallar de esta planilla y ya
+ * nos costo una hoja vaciada en silencio. El precio del INDIRECT es que el rango deja de
+ * seguir a la hoja si Franco inserta columnas en el Plan de Cuentas; a cambio, el preflight
+ * verifica los rotulos vivos del catalogo antes de escribir nada.
+ * decision Franco 2026-08-21: se referencia con INDIRECT y se verifica MIRANDO la hoja.
  *
  * $C18: columna ABSOLUTA (aunque la regla cubre C:E por las combinadas, siempre se evalua la
  * celda del Medio) y fila RELATIVA (cada fila del rango evalua su propio medio). Si la celda
@@ -126,8 +140,8 @@ function _formulaReglaFmt(tipo) {
     // (trampa 7: un reemplazo por string expande los $ del texto).
     const rotulo = String(tipo).replace(/"/g, function () { return '""'; });
     const b = SYF_BLOQUE_MEDIOS;
-    return '=VLOOKUP($' + b.columnas[0].col + b.filaDatos + ', ' + _catalogoMediosFmt() +
-        ', ' + _indiceTipoMedioFmt() + ', 0)="' + rotulo + '"';
+    return '=VLOOKUP($' + b.columnas[0].col + b.filaDatos + ', INDIRECT("' + _catalogoMediosFmt() +
+        '"), ' + _indiceTipoMedioFmt() + ', 0)="' + rotulo + '"';
 }
 
 // ============================================
@@ -154,6 +168,9 @@ function _esReglaPropiaFmt(regla) {
     if (String(cond.getCriteriaType()) !== 'CUSTOM_FORMULA') return false;
     const formula = _formulaDeReglaFmt(regla);
     if (formula.indexOf('VLOOKUP') === -1) return false;
+    // Sin exigir INDIRECT: si quedaron reglas MUDAS de una corrida vieja (las que referenciaban
+    // el Plan de Cuentas directo y por eso nunca pintaron), este modulo tiene que reconocerlas
+    // como propias para poder reemplazarlas. Exigir la forma nueva las volveria intocables.
     if (formula.indexOf(_catalogoMediosFmt()) === -1) return false;
     const rangos = (regla.getRanges() || []).map(function (r) { return r.getA1Notation(); });
     return rangos.length === 1 && rangos[0] === _rangoMediosFmt();

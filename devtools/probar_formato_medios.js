@@ -207,9 +207,18 @@ console.log('=== 1. La formula de cada regla (sintaxis EN-US: aca la coma es OBL
            tipo + ': no toca cotizaciones ni el ledger: solo catalogo y rotulo');
     });
 
-    const esperada = '=VLOOKUP($C18, ' + catalogoEsperado + ', ' + indiceEsperado + ', 0)="Ahorros"';
+    // EL INDIRECT ES EL CORAZON DE LA REGLA. Una formula de formato condicional no puede
+    // referenciar otra hoja directo: sin INDIRECT la regla se crea igual y no pinta NUNCA, en
+    // silencio. Esta asercion existe para que nadie lo "simplifique" sacandolo.
+    const esperada = '=VLOOKUP($C18, INDIRECT("' + catalogoEsperado + '"), ' + indiceEsperado + ', 0)="Ahorros"';
     ok(ctx._formulaReglaFmt('Ahorros') === esperada,
        'formula completa exacta: ' + ctx._formulaReglaFmt('Ahorros'));
+    ['Ahorros', 'Inversiones', 'Hogar', 'Financiación'].forEach(t => {
+        const f = ctx._formulaReglaFmt(t);
+        ok(f.indexOf('INDIRECT("') !== -1, t + ': la referencia al Plan de Cuentas va por INDIRECT');
+        ok(!/,\s*'Plan de Cuentas'!/.test(f),
+           t + ': ninguna referencia DIRECTA a otra hoja (la regla quedaria muda)');
+    });
     ok(ctx._formulaReglaFmt('Fra"nco').indexOf('Fra""nco') !== -1,
        'una comilla en el rotulo se dobla (no rompe la formula)');
     ok(ctx._formulaReglaFmt('Financiación').indexOf('Financiación') !== -1,

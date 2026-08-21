@@ -5,6 +5,53 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-21] v0.33.0 - El semaforo no puede correr para un solo lado.
+ * - LA BARRA DE CONSUMO SE DA VUELTA SEGUN LA FILA. decision Franco 2026-08-21: en Capacidad de
+ *   Capitalizacion la barra tiene que dar VERDE del 80% de cumplimiento para arriba. No es mover
+ *   un umbral: es que la escala se INVIERTE. Gastar el 100% del presupuesto de Gastos Variables
+ *   es agotarlo (rojo); capitalizar el 100% de lo planificado es cumplir el plan (verde). Un solo
+ *   semaforo no puede servir a las dos lecturas. Ingresos entra en el mismo grupo por la misma
+ *   razon y no por analogia: en la corrida del 2026-08-21 cobrar 1.645.687 contra 1.546.662
+ *   presupuestados se pintaba de ROJO.
+ * - SIN PRESUPUESTO YA NO SE DIVIDE. El cumplimiento era IFERROR(E/D; 0), y con D en cero eso
+ *   daba la respuesta equivocada, no un error: capitalizar 385.400 sobre un plan de 0 se leia
+ *   como 0% de cumplimiento. Ahora se resuelve antes del cociente: sin presupuesto, cumplio el
+ *   que movio plata. Es la misma trampa que Franco marco en N25 (=O19/O12 con O12 = 15,31 dando
+ *   -391830%): dividir por algo que tiende a cero da un numero absurdo con cara de dato.
+ * - LA PALETA PASA A SER LA DEL TABLERO. Salen los colores heredados de la planilla anterior
+ *   (#a9bca1 / #db9940 / #da8b7b) y entran los de los formatos condicionales del Tablero:
+ *   #356854 verde, #ffb300 amarillo, #c93232 rojo, con sus fondos palidos #e6f4ea / #fef7e0 /
+ *   #fce8e6. Dos paletas parecidas pero distintas para la misma idea se leen como si dijeran
+ *   cosas distintas. Las barras pintan con el tono SATURADO porque son tinta sobre el blanco de
+ *   la hoja; el palido existe para ir detras de un texto y sobre blanco no se ve.
+ * - LOS TRES DELTAS MIDEN TENDENCIA, NO UN MES. decision Franco 2026-08-21: "los delta no son 1
+ *   mes vista, sino 6 meses vista... se visualiza crecimiento de tendencias". Antes F10/C15/F15
+ *   comparaban UN mes contra la media de los seis previos, que mide cuanto se desvio ese mes --
+ *   un dato que salta con cualquier sueldo que cae un dia antes o despues. Ahora se arma la serie
+ *   de seis totales mensuales y se mide la pendiente de su recta de minimos cuadrados, expresada
+ *   como fraccion del nivel medio de la ventana. El bench lo deja demostrado: la serie
+ *   [100,100,100,100,100,200] valia +100% con el diseno viejo y da +61,2% con la tendencia,
+ *   mientras que un crecimiento sostenido a los mismos 200 pesa MAS que el pico suelto. El
+ *   diseno viejo no distinguia esos dos casos. La etiqueta acompana: "de tendencia a 6 meses".
+ * - LA REALIDAD YA NO TIENE QUE CERRAR LA IDENTIDAD. El verificador de la hoja Inicio exigia
+ *   Ingresos = Fijos + Variables + Capitalizacion en las DOS columnas, y desde v0.32.0 eso es
+ *   falso por diseno: el plan ASIGNA (D22 es el residuo) pero la realidad SE MIDE (E22 es la
+ *   capitalizacion efectiva). El 2026-08-21 esa exigencia revirtio una corrida entera con las
+ *   formulas correctas por un desvio de 230.899,99 que era exactamente el dato: la plata que
+ *   entro y no se gasto ni se capitalizo. Ahora en la columna E eso se reporta como aviso.
+ * - FORMATO DE MEDIOS: LA REGLA ERA MUDA. Las cuatro reglas de color del bloque "Medios
+ *   Bancarios." del Tablero referenciaban 'Plan de Cuentas'!$L$8:$N de forma DIRECTA, y una
+ *   formula de formato condicional no puede referenciar otra hoja sin INDIRECT(): se creaban sin
+ *   protestar y no pintaban nada, en silencio. Van con INDIRECT. La deteccion de reglas propias
+ *   NO exige la forma nueva, para poder barrer las mudas que quedaron de antes.
+ * - Y EL MODULO NUNCA HABIA ESTADO EN EL MENU. Existia desde el 2026-08-20 sin entrada en
+ *   MENU_CONFIG, o sea que no habia forma de correrlo desde la planilla. Se cablea como
+ *   "Color de los medios (Tablero)".
+ * - CORRECCION DE UNA AFIRMACION FALSA EN LOS COMENTARIOS: DEVTOOL_FormatoMedios decia que "la
+ *   API de Apps Script no permite leer el formato de una regla ya existente". BooleanCondition
+ *   expone getBackgroundObject() y getFontColorObject(). La conclusion que sostenia (rehacer las
+ *   reglas siempre) sigue siendo la correcta por simple; el motivo, no.
+ *
  * [2026-08-21] v0.32.2 - Los deltas dicen contra que se comparan.
  * - decision Franco 2026-08-21: "-10,4%" solo no se entiende, no dice contra que se compara. Los
  *   tres deltas pasan a mostrarse como "-10,4% vs. media 6 meses".
