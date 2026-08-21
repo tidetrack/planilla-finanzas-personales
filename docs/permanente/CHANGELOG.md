@@ -9,6 +9,41 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.30.0 - Ningun mes se proyecta con desahorro (2026-08-20)
+
+> "Cuando proyectamos entonces, lo hacemos por descarte? Eso se entiende. Ahora quiero que
+> revises las proyecciones y hagas que no se proyecte un mes con un desahorro." — Franco
+
+Se proyecta por descarte (la Capacidad es el residuo, v0.29.0), y ahora el plan ademas garantiza
+que ese residuo no nazca negativo: **un plan con desahorro adentro no es un plan, es una
+resignacion.**
+
+### Como recorta
+
+Si el gasto historico del mes proyectado supera al ingreso historico, el plan se recorta:
+
+1. **Primero los gastos variables**, todos en la misma proporcion — es el unico lugar donde un
+   plan puede ceder: los variables son, por definicion, lo que uno decide mes a mes.
+2. **Solo si los fijos solos ya superan al ingreso** se recortan tambien los fijos, y el reporte
+   lo marca como **anomalia estructural**: ningun recorte de planilla arregla que los contratos
+   cuesten mas que el sueldo.
+
+El piso `capacidad = 0` se logra **por recorte del plan, no por tapado** — la identidad
+`Ingresos = Fijos + Variables + Capacidad` se cumple con los numeros recortados. (El tapado fue el
+error de la v0.27.0.)
+
+### Multi-moneda, y un bug que el banco atrapo
+
+El balance se convierte a ARS con `TIDETRACK_USD/AUD/EUR()` y el factor se aplica a cada linea en
+su moneda; los gastos se redondean hacia abajo para que el piso no se perfore por centavos.
+
+Probando eso aparecio un **bug preexistente**: el minimo de linea se comparaba contra el monto
+crudo, ciego a la moneda — descartaba 0,9 USD (~900 pesos) como si fueran centavos. El umbral es
+ahora en ARS equivalentes, tambien en el filtro original.
+
+Verificado por mutacion (4/4 muertas) y con 3000 meses al azar multi-moneda: capacidad ≥ 0
+siempre. El reporte de `1. Ver estado` muestra mes por mes el recorte aplicado.
+
 ## Gemelo digital vivo via n8n (2026-08-20)
 
 El refresco del gemelo deja de ser manual. Workflow **"Gemelo a TSV — Finanzas Personales"**

@@ -99,6 +99,8 @@ const ctx = {
     Session: { getScriptTimeZone: () => 'America/Argentina/Buenos_Aires' },
     Logger: { log() {} },
     logInfo() {}, logError() {}, logSuccess() {},
+    // Cotizaciones fijas para _tasasPb: el balance multi-moneda tiene que ser determinista aca.
+    TIDETRACK_USD: () => 1000, TIDETRACK_AUD: () => 700, TIDETRACK_EUR: () => 1100,
 };
 vm.createContext(ctx);
 vm.runInContext(
@@ -212,6 +214,73 @@ ok(porCuenta['Comidas|ARS'].medio === 'NaranjaX',
 
 const colIni = ctx.columnLetterToIndex(cfg.start);
 const pos = k => ctx.columnLetterToIndex(cfg.columns[k]) - colIni;
+
+console.log('\n=== 5b. NINGUN MES SE PROYECTA CON DESAHORRO (decision Franco 2026-08-20) ===');
+{
+    const tasas = { ARS: 1, USD: 1000, AUD: 700, EUR: 1100 };
+    const linea = (tc, moneda, monto, cuenta) =>
+        ({ cuenta: cuenta || (tc + ' ' + monto), moneda, tipoCuenta: tc, tipo: tc === 'Ingreso' ? 'Ingreso' : 'Egreso', medio: 'X', promedio: monto, movimientos: 1 });
+    const balance = (ls) => {
+        let ing = 0, gas = 0;
+        ls.forEach(l => { const v = l.promedio * tasas[l.moneda]; if (l.tipoCuenta === 'Ingreso') ing += v; else gas += v; });
+        return { ing, gas, capacidad: ing - gas };
+    };
+
+    // Caso 1: mes sano, no se toca nada.
+    let ls = [linea('Ingreso','ARS',1000), linea('Gasto Fijo','ARS',400), linea('Gasto Variable','ARS',300)];
+    let a = ctx._ajustarSinDesahorroPb(ls, tasas);
+    ok(!a.recortado && ls[1].promedio === 400 && ls[2].promedio === 300,
+       'mes sin deficit: intacto, sin recorte');
+
+    // Caso 2: deficit absorbible por variables. ing=1000, fij=600, var=600 -> deficit 200.
+    ls = [linea('Ingreso','ARS',1000), linea('Gasto Fijo','ARS',600),
+          linea('Gasto Variable','ARS',400,'VarA'), linea('Gasto Variable','ARS',200,'VarB')];
+    a = ctx._ajustarSinDesahorroPb(ls, tasas);
+    let b = balance(ls);
+    ok(a.recortado && a.factorFijo === 1, 'deficit chico: recortan SOLO los variables');
+    ok(ls[1].promedio === 600, 'los fijos quedan intactos: los contratos no se recortan en el plan');
+    ok(Math.abs(ls[2].promedio / ls[3].promedio - 2) < 0.01,
+       'el recorte de variables es proporcional (VarA sigue siendo el doble de VarB)');
+    ok(b.capacidad >= 0 && b.capacidad < 1,
+       'la capacidad queda en cero por RECORTE, no por tapado. Dio ' + b.capacidad.toFixed(2));
+
+    // Caso 3: los fijos solos superan al ingreso -> variables a cero y fijos recortados.
+    ls = [linea('Ingreso','ARS',1000), linea('Gasto Fijo','ARS',1400), linea('Gasto Variable','ARS',300)];
+    a = ctx._ajustarSinDesahorroPb(ls, tasas);
+    b = balance(ls);
+    ok(a.recortado && a.factorFijo < 1, 'anomalia estructural: los fijos tambien se recortan');
+    ok(!ls.some(l => l.tipoCuenta === 'Gasto Variable'),
+       'los variables quedaron en cero y salieron de la lista (debajo del minimo)');
+    ok(b.capacidad >= 0, 'aun asi la capacidad no baja de cero. Dio ' + b.capacidad.toFixed(2));
+
+    // Caso 4: multi-moneda. ing=1000 ARS; gasto variable de 1 USD (=1000 ARS) -> deficit 500 con fij 500.
+    ls = [linea('Ingreso','ARS',1000), linea('Gasto Fijo','ARS',500), linea('Gasto Variable','USD',1)];
+    a = ctx._ajustarSinDesahorroPb(ls, tasas);
+    b = balance(ls);
+    ok(a.recortado && b.capacidad >= 0 && ls[2].moneda === 'USD' && ls[2].promedio === 0.5,
+       'el balance convierte a ARS pero el recorte se aplica EN LA MONEDA de la linea (1 USD -> 0,5 USD)');
+
+    // Caso 5: el redondeo va hacia abajo -- el piso no se perfora por centavos.
+    ls = [linea('Ingreso','ARS',100), linea('Gasto Variable','ARS',33.335,'V1'),
+          linea('Gasto Variable','ARS',33.335,'V2'), linea('Gasto Variable','ARS',66.67,'V3')];
+    ctx._ajustarSinDesahorroPb(ls, tasas);
+    b = balance(ls);
+    ok(b.capacidad >= 0, 'con montos que no dividen exacto, el piso aguanta. Capacidad ' + b.capacidad.toFixed(4));
+
+    // Caso 6: 3000 meses al azar -- el invariante capacidad >= 0 SIEMPRE tras el ajuste.
+    let peor = 1;
+    for (let i = 0; i < 3000; i++) {
+        const r = n => ((i * 7919 + n * 104729) % 1000003) / 1000003;
+        const ms = ['ARS','USD','AUD','EUR'];
+        const lz = [linea('Ingreso', ms[i % 4], 1 + r(1) * 500000)];
+        for (let k = 0; k < 5; k++) {
+            lz.push(linea(k % 2 ? 'Gasto Fijo' : 'Gasto Variable', ms[(i + k) % 4], r(k + 2) * 300000, 'L' + k));
+        }
+        ctx._ajustarSinDesahorroPb(lz, tasas);
+        peor = Math.min(peor, balance(lz).capacidad);
+    }
+    ok(peor >= -0.01, '3000 meses al azar multi-moneda: la capacidad nunca baja de cero (peor ' + peor.toFixed(4) + ')');
+}
 
 console.log('\n=== 6. La matriz que se escribe ===');
 ok(meses.length === ctx.PB_MESES_DESTINO, meses.length + ' meses de destino');

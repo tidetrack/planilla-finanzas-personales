@@ -146,7 +146,13 @@ console.log('\n=== 5. Apagar el arrastre en las formulas vivas ===');
 [['Tablero!R9'],['Tablero!U9'],['Tablero!X9'],['Inicio!C13'],['Inicio!F13'],['Inicio!C15'],['Inicio!F15']].forEach(([c])=>{
   const antes=viva(c); if(!antes){console.log('  (sin snapshot) '+c);return;}
   const desp=ctx._apagarArrastreSyf(antes);
-  if(desp===antes){console.log('  !!! SIN CAMBIO '+c);fallas++;return;}
+  if(desp===antes){
+    // El gemelo se refresca en vivo desde el 2026-08-20: si la formula YA viene transformada
+    // (excluye el arrastre), "sin cambio" es idempotencia y no una falla. Falla solo si la
+    // formula viva no tiene la transformacion Y la funcion tampoco se la pone.
+    if(/Inicio Mes/.test(antes)){console.log('  OK  '+c.padEnd(12)+'ya transformada en la planilla viva (idempotente)');return;}
+    console.log('  !!! SIN CAMBIO '+c+' y la formula viva NO excluye el arrastre');fallas++;return;
+  }
   if(/OR Col5|tipo_proy_\w+\s*=/.test(desp)){console.log('  !!! quedo la clausula vieja en '+c);fallas++;return;}
   if(revisar(c,desp,{permiteLlaves:true})){
     const l=desp.split('\n').find(x=>/Inicio Mes/.test(x));

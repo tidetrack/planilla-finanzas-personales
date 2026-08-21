@@ -5,6 +5,31 @@
  * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-20] v0.30.0 - Ningun mes se proyecta con desahorro.
+ * - decision Franco 2026-08-20: "que no se proyecte un mes con un desahorro". Se proyecta por
+ *   descarte (la Capacidad es el residuo, v0.29.0), y ahora el plan ademas garantiza que ese
+ *   residuo no nazca negativo: un plan con desahorro adentro no es un plan, es una resignacion.
+ * - COMO: si el gasto historico del mes proyectado supera al ingreso historico, el plan se
+ *   RECORTA. Primero los GASTOS VARIABLES, todos en la misma proporcion -- es el unico lugar
+ *   donde un plan puede ceder. Solo si los fijos solos ya superan al ingreso se recortan tambien
+ *   los fijos, y el reporte lo marca como ANOMALIA ESTRUCTURAL: ningun recorte de planilla
+ *   arregla que los contratos cuesten mas que el sueldo.
+ * - El piso capacidad=0 se logra POR RECORTE DEL PLAN, no por tapado: la identidad
+ *   Ingresos = Fijos + Variables + Capacidad se cumple con los numeros recortados. (El tapado
+ *   fue el error de la v0.27.0; la diferencia esta documentada en la cabecera del modulo.)
+ * - MULTI-MONEDA: el balance se calcula convirtiendo a ARS con TIDETRACK_USD/AUD/EUR() -- desde
+ *   GAS directamente, son funciones del proyecto -- y el factor se aplica a cada linea EN SU
+ *   MONEDA. Redondeo de gastos hacia ABAJO para que el piso no se perfore por centavos.
+ * - BUG PREEXISTENTE ATRAPADO POR EL BANCO: el minimo de linea (PB_MINIMO) se comparaba contra
+ *   el monto crudo, ciego a la moneda: descartaba 0,9 USD (~900 pesos) como si fueran centavos.
+ *   Ahora el umbral es en ARS equivalentes, tambien en el filtro original del promedio.
+ * - El reporte de "1. Ver estado" muestra mes por mes el recorte aplicado (deficit en ARS, % en
+ *   variables, % en fijos si hubo anomalia). Un plan recortado sin aviso pareceria un error.
+ * - Verificado por mutacion (4/4 muertas: no recortar, fijos antes que variables, redondeo hacia
+ *   arriba, balance ciego a la moneda) y con 3000 meses al azar multi-moneda: capacidad >= 0
+ *   siempre. El banco de stock-flujo ademas se adapto al gemelo fresco: una formula viva que ya
+ *   viene transformada es idempotencia, no falla.
+ *
  * [2026-08-20] v0.29.0 - Vuelve el residuo. Los tres destinos suman el 100% de los ingresos.
  *
  * Franco: "esa suma siempre tiene que dar 100%... seguis agregando parches sin criterio".

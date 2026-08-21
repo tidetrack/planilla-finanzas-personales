@@ -54,7 +54,7 @@
  * 3. NO inventa cuentas: solo aparecen las que tienen movimientos en la ventana.
  *
  * @see docs/permanente/FUNCIONALIDADES.md
- * @version 0.25.0
+ * @version 0.30.0
  * @since 2026-08-20
  * @lastModified 2026-08-20
  */
@@ -74,7 +74,13 @@ const PB_MESES_VENTANA = 6;
 /** Para cuantos meses se carga el presupuesto, contando hacia atras desde el mes en curso. */
 const PB_MESES_DESTINO = 7;
 
-/** Debajo de esto, la cuenta no se presupuesta: es ruido de redondeo, no una linea. */
+/**
+ * Debajo de esto (EN ARS EQUIVALENTES), la cuenta no se presupuesta: es ruido, no una linea.
+ *
+ * En ARS equivalentes a proposito: el umbral se aplico primero sobre el monto crudo de la linea,
+ * y eso descartaba 0,9 USD (~900 pesos) como si fueran 90 centavos. Lo atrapo el banco el
+ * 2026-08-20 probando el recorte multi-moneda.
+ */
 const PB_MINIMO = 1;
 
 const PB_PROP_SELLO = 'presupuesto_base_sello';
@@ -187,7 +193,7 @@ function _tiposDeMedioPb(ss) {
  * gasto una vez en seis meses tiene un promedio mensual bajo, y eso es correcto: es lo que hay que
  * apartar por mes para poder pagarla cuando vuelva a caer.
  */
-function _promediosDeVentanaPb(filas, claveIni, claveFin) {
+function _promediosDeVentanaPb(filas, claveIni, claveFin, tasas) {
     const acum = {};
     const mesesVistos = {};
     let leidas = 0;
@@ -214,7 +220,7 @@ function _promediosDeVentanaPb(filas, claveIni, claveFin) {
             promedio: Math.round((a.total / PB_MESES_VENTANA) * 100) / 100,
             movimientos: a.n
         };
-    }).filter(function (l) { return l.promedio >= PB_MINIMO; });
+    }).filter(function (l) { return l.promedio * ((tasas && tasas[l.moneda]) || 1) >= PB_MINIMO; });
 
     lineas.sort(function (a, b) {
         if (a.tipoCuenta !== b.tipoCuenta) return a.tipoCuenta < b.tipoCuenta ? -1 : 1;
@@ -231,13 +237,78 @@ function _promediosDeVentanaPb(filas, claveIni, claveFin) {
  * vacia, para que el reporte pueda decir cuantos meses quedaron sin presupuesto y por que.
  */
 function _planPorMesPb(datos, meses) {
+    const tasas = _tasasPb();
     return meses.map(function (mes) {
         const claveFin = _claveMesPb(mes);
         const iniDate = new Date(mes.getFullYear(), mes.getMonth() - PB_MESES_VENTANA, 1);
         const claveIni = _claveMesPb(iniDate);
-        const r = _promediosDeVentanaPb(datos.filas, claveIni, claveFin);
-        return { mes: mes, desde: iniDate, lineas: r.lineas, leidas: r.leidas, mesesConDato: r.mesesConDato };
+        const r = _promediosDeVentanaPb(datos.filas, claveIni, claveFin, tasas);
+        const ajuste = _ajustarSinDesahorroPb(r.lineas, tasas);
+        return { mes: mes, desde: iniDate, lineas: r.lineas, leidas: r.leidas,
+                 mesesConDato: r.mesesConDato, ajuste: ajuste };
     });
+}
+
+/** Las cotizaciones de hoy, para poder sumar lineas de distintas monedas en una misma cuenta. */
+function _tasasPb() {
+    // Regla estricta 9: los errores de la API de cambio no se silencian. Si no hay cotizacion,
+    // el balance multi-moneda no se puede calcular y el ajuste seria mentira: se corta.
+    return { ARS: 1, USD: Number(TIDETRACK_USD()), AUD: Number(TIDETRACK_AUD()), EUR: Number(TIDETRACK_EUR()) };
+}
+
+/**
+ * Recorta el plan de un mes para que NO PROYECTE UN DESAHORRO.
+ *
+ * decision Franco 2026-08-20: "que no se proyecte un mes con un desahorro". Un presupuesto asigna
+ * los ingresos; si lo presupuestado en gastos ya los supera, el plan esta prometiendo gastar plata
+ * que no espera recibir. La Capacidad de Capitalizacion -- que es el residuo -- daria negativa
+ * DESDE EL PLAN, y un plan con desahorro adentro no es un plan: es una resignacion.
+ *
+ * COMO SE RECORTA, y el orden importa:
+ *   1. Primero los GASTOS VARIABLES, todos en la misma proporcion. Es el unico lugar donde un
+ *      plan puede ceder: los variables son, por definicion, lo que uno decide mes a mes.
+ *   2. Solo si no alcanza -- los fijos solos ya superan a los ingresos -- se recortan tambien los
+ *      FIJOS proporcionalmente. Eso es una anomalia estructural y el reporte la marca fuerte:
+ *      ningun recorte de planilla arregla que los contratos cuesten mas que el sueldo.
+ *
+ * El piso queda en capacidad = 0 por RECORTE DEL PLAN, no por taparla: la identidad
+ * Ingresos = Fijos + Variables + Capacidad se sigue cumpliendo con los numeros recortados.
+ *
+ * Multi-moneda: el balance se calcula convirtiendo todo a ARS con la cotizacion de hoy, y el
+ * factor de recorte se aplica a cada linea EN SU MONEDA -- un recorte proporcional no depende de
+ * la unidad. Los redondeos van hacia ABAJO en los gastos, para que el piso nunca se perfore por
+ * centavos.
+ */
+function _ajustarSinDesahorroPb(lineas, tasas) {
+    let ing = 0, fij = 0, vari = 0;
+    lineas.forEach(function (l) {
+        const enArs = l.promedio * (tasas[l.moneda] || 1);
+        if (l.tipoCuenta === 'Ingreso') ing += enArs;
+        else if (l.tipoCuenta === 'Gasto Fijo') fij += enArs;
+        else if (l.tipoCuenta === 'Gasto Variable') vari += enArs;
+    });
+    const deficit = fij + vari - ing;
+    if (deficit <= 0 || (fij + vari) === 0) {
+        return { recortado: false, deficit: 0, factorVar: 1, factorFijo: 1 };
+    }
+
+    const recorteVar = Math.min(deficit, vari);
+    const factorVar = vari > 0 ? (vari - recorteVar) / vari : 1;
+    const resto = deficit - recorteVar;
+    const factorFijo = (resto > 0 && fij > 0) ? Math.max(0, (fij - resto) / fij) : 1;
+
+    lineas.forEach(function (l) {
+        if (l.tipoCuenta === 'Gasto Variable') {
+            l.promedio = Math.floor(l.promedio * factorVar * 100) / 100;
+        } else if (l.tipoCuenta === 'Gasto Fijo' && factorFijo < 1) {
+            l.promedio = Math.floor(l.promedio * factorFijo * 100) / 100;
+        }
+    });
+    // Una linea recortada a menos del minimo (en ARS equivalentes) deja de ser una linea.
+    for (let i = lineas.length - 1; i >= 0; i--) {
+        if (lineas[i].promedio * (tasas[lineas[i].moneda] || 1) < PB_MINIMO) lineas.splice(i, 1);
+    }
+    return { recortado: true, deficit: deficit, factorVar: factorVar, factorFijo: factorFijo };
 }
 
 /** Los meses de destino: los de la ventana mas el mes en curso, del mas viejo al mas nuevo. */
@@ -388,49 +459,32 @@ function estadoPresupuestoBase() {
                     : '   SIN presupuesto: no hay historial anterior a ese mes'));
         });
         l.push('');
-        // EL BALANCE, que es lo que decide si el presupuesto tiene sentido.
-        //
-        // decision Franco 2026-08-20: un presupuesto reparte los ingresos, asi que si lo
-        // presupuestado en gastos ya los supera, la capacidad de capitalizar sale negativa y el
-        // Tablero lo muestra. Que se vea ACA, antes de cargar, evita tener que deducirlo despues
-        // mirando un numero raro en una celda.
+        // EL BALANCE. decision Franco 2026-08-20: ningun mes se proyecta con desahorro. Si el
+        // gasto historico supera al ingreso historico, el plan se RECORTA (variables primero,
+        // fijos solo si no alcanza) hasta que la capacidad quede en cero. Aca se muestra que
+        // recorte sufrio cada mes, porque un plan recortado sin aviso pareceria un error.
         l.push('');
-        l.push('BALANCE DEL PRESUPUESTO (en ARS, lineas en otra moneda no entran a esta cuenta):');
+        l.push('BALANCE DEL PRESUPUESTO (todo convertido a ARS con la cotizacion de hoy):');
         plan.forEach(function (m) {
             if (!m.lineas.length) return;
-            let ing = 0, fij = 0, vari = 0;
-            m.lineas.forEach(function (x) {
-                if (x.moneda !== 'ARS') return;
-                if (x.tipoCuenta === 'Ingreso') ing += x.promedio;
-                else if (x.tipoCuenta === 'Gasto Fijo') fij += x.promedio;
-                else if (x.tipoCuenta === 'Gasto Variable') vari += x.promedio;
-            });
-            const capacidad = ing - fij - vari;
-            const pct = ing > 0 ? Math.round((fij + vari) / ing * 100) : 0;
-            l.push('  ' + fmt(m.mes) + '  gastos ' + String(pct).padStart(4) + '% de los ingresos' +
-                '   capacidad ' + (capacidad < 0 ? '' : '+') + Math.round(capacidad).toLocaleString('es-AR') +
-                (capacidad < 0 ? '   <-- SOBRECOMPROMETIDO' : ''));
+            const a = m.ajuste || { recortado: false };
+            if (!a.recortado) {
+                l.push('  ' + fmt(m.mes) + '  cierra sin recorte');
+                return;
+            }
+            const pVar = Math.round((1 - a.factorVar) * 100);
+            const pFijo = Math.round((1 - a.factorFijo) * 100);
+            l.push('  ' + fmt(m.mes) + '  RECORTADO: el gasto historico superaba al ingreso por ' +
+                Math.round(a.deficit).toLocaleString('es-AR') + ' ARS. Variables -' + pVar + '%' +
+                (pFijo > 0 ? ', y FIJOS -' + pFijo + '% (ANOMALIA: los fijos solos superan al ingreso)' : '') + '.');
         });
-        const malos = plan.filter(function (m) {
-            if (!m.lineas.length) return false;
-            let ing = 0, gas = 0;
-            m.lineas.forEach(function (x) {
-                if (x.moneda !== 'ARS') return;
-                if (x.tipoCuenta === 'Ingreso') ing += x.promedio; else gas += x.promedio;
-            });
-            return ing > 0 && gas > ing;
-        });
-        if (malos.length) {
+        const recortados = plan.filter(function (m) { return m.ajuste && m.ajuste.recortado; }).length;
+        if (recortados) {
             l.push('');
-            l.push(malos.length + ' de ' + plan.length + ' mes(es) presupuestan MAS GASTO QUE INGRESO.');
-            l.push('El Tablero lo va a mostrar como una Capacidad de Capitalizacion negativa, y los');
-            l.push('tres destinos van a sumar 100% igual. No es un error de calculo: es que el');
-            l.push('historial dice que se gasta mas de lo que entra.');
-            l.push('');
-            l.push('QUE MIRAR SI ESO NO TE CIERRA: que los pagos de tarjeta no esten contados dos');
-            l.push('veces -- una como la compra con la tarjeta y otra como el pago del resumen.');
-            l.push('Ese doble conteo infla los gastos sin tocar los ingresos, que es exactamente');
-            l.push('esta forma.');
+            l.push(recortados + ' de ' + plan.length + ' mes(es) venian con desahorro y se recortaron.');
+            l.push('El recorte NO es una prediccion: es la parte del gasto historico que el ingreso');
+            l.push('no cubre. Si el numero sorprende, revisar el doble conteo de tarjetas (la compra');
+            l.push('y el pago del resumen contados los dos como gasto).');
         }
         l.push('');
         l.push('TOTAL A ESCRIBIR: ' + total + ' fila(s)');
@@ -493,6 +547,8 @@ function aplicarPresupuestoBase() {
             'significa algo.\n\n' +
             'Los traspasos entran SOLO si tocan un medio de tipo ' + TIPOS_RIQUEZA.join(' o ') +
             ': un traspaso a un frasco\nes capitalizar. Los "Inicio Mes" nunca: son puntos de corte, no movimientos.\n' +
+            'NINGUN MES SE PROYECTA CON DESAHORRO: si el gasto historico supera al ingreso, el plan\n' +
+            'se recorta (variables primero) hasta que la capacidad quede en cero.\n' +
             'Cada cuenta se presupuesta EN SU MONEDA, y el Tablero convierte con la cotizacion de hoy.\n\n' +
             (plan.length !== conPresupuesto.length
                 ? (plan.length - conPresupuesto.length) + ' mes(es) quedan SIN presupuesto por no tener\n' +
