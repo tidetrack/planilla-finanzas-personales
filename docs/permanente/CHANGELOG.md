@@ -9,6 +9,27 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## Gemelo digital vivo via n8n (2026-08-20)
+
+El refresco del gemelo deja de ser manual. Workflow **"Gemelo a TSV — Finanzas Personales"**
+(`JQmnVgb1wWLM3QjT`, instancia de clientes Tidetrack, activo): webhook → Sheets API con
+`includeGridData` → transformacion a TSV → respuesta HTTP. Refrescar `docs/permanente/celdas.tsv`
+es ahora:
+
+```
+curl -sS -o docs/permanente/celdas.tsv \
+  "https://n8n-clientes.tidetrack.com.ar/webhook/gemelo-finanzas-tsv-x7k93m2p"
+```
+
+159.224 celdas en ~20 segundos, directo de la planilla viva — sin export de Apps Script, sin
+Drive, sin descargas a mano. Es la pieza central de la Fase 3 del arnes ("scanner vivo por n8n").
+El TSV cae con `formattedValue` y fallback a `userEnteredValue` (la trampa del formato NUMBER sin
+patron, que omitia el valor formateado, esta cubierta).
+
+Con el primer refresco quedo confirmada la geometria medida a mano hoy: `Tablero!AE7` = "Tipo de
+Medios.", `AE16` = "Saldos Actuales.", `AE25` = "Cotizaciones Monedas.", y el bloque
+"Presupuesto del Mes." de Inicio en `C17:H22`.
+
 ## v0.29.0 - Vuelve el residuo: los tres destinos suman 100% (2026-08-20)
 
 > "Esa suma siempre tiene que dar 100%... seguis agregando parches sin criterio." — Franco
