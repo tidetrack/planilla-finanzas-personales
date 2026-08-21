@@ -25,7 +25,10 @@
  * @see src/DEVTOOL_RiquezaYCategorias.js
  */
 const fs=require('fs'), vm=require('vm'), path=require('path');
-const RAIZ='/Users/francodiazpizarro/Desktop/Antigravity/planilla-finanzas-personales/.claude/worktrees/gracious-kalam-00e92c';
+// La raiz se deriva de la ubicacion de ESTE archivo, no se hardcodea. Hasta el 2026-08-21 era la
+// ruta absoluta de un worktree concreto: correr el banco desde cualquier otro leia el src de ese
+// worktree y validaba codigo que no era el que se estaba editando.
+const RAIZ=path.resolve(__dirname,'..');
 const ctx={console,
   MONEDAS_DISPONIBLES:['ARS','USD','AUD','EUR'], TIPOS_RIQUEZA:['Ahorros','Inversiones'],
   NAV_CONFIG:{SHEETS:{INICIO:'Inicio',TABLERO:'Tablero'}},

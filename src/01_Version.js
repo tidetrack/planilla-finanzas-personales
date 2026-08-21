@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 38,
- patch: 3,
+ patch: 4,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-21',
- releaseName: 'v0.38.3 - El guard de las auxiliares se bloqueaba a si mismo en la segunda corrida',
+ releaseName: 'v0.38.4 - El modulo seguia leyendo R9/U9/X9 mientras su banco probaba R10/U10/X10',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,24 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.38.4 (2026-08-21) - El modulo seguia leyendo R9/U9/X9 mientras su banco probaba R10/U10/X10
+- La v0.38.0 corrigio el corrimiento de fila del Tablero en FORM_CELDAS, RIQ_BLOQUE_CATEGORIAS y
+  BCAT_CELDA, y actualizo la seccion 5 de devtools/probar_stock_flujo.js a R10/U10/X10 -- pero NO
+  toco DEVTOOL_StockYFlujo.js, que es el modulo que esa seccion prueba. El modulo siguio leyendo
+  R9/U9/X9 (el header "Cuenta", sin formula) y saliendo por un aviso mudo, "no tiene formula: se
+  saltea". La transformacion del arrastre dejo de aplicarse a las tres columnas del Tablero con el
+  banco en verde: el banco tenia su propia copia de las coordenadas y solo se actualizo esa.
+- SYF_ARRASTRE (nueva): la lista sale del modulo, con el rotulo de cada celda al lado, y
+  _preflightSyf la verifica por rotulo y aborta si no coincide. El banco deriva su seccion 5 de
+  esta constante en vez de repetirla, asi que modulo y banco no pueden volver a divergir.
+- "Sin formula" con el rotulo correcto deja de ser un aviso mudo: nombra la celda y dice que la
+  transformacion no se aplico.
+- devtools: los 6 bancos que hardcodeaban la ruta absoluta de un worktree ahora derivan RAIZ de
+  __dirname (la convencion que probar_tablero_faltante.js ya usaba). Corridos desde otro worktree
+  validaban el src de gracious-kalam, no el que se estaba editando.
+- Verificado por mutacion: con SYF_ARRASTRE de vuelta en R9/U9/X9 el banco acusa 3 FALLA(S)
+  nombrando la celda y su contenido real ("hoy tiene 'Cuenta'"). NO SE DESPLEGO.
+
 v0.38.3 (2026-08-21) - El guard de las auxiliares se bloqueaba a si mismo en la segunda corrida
 ! Con el modulo ya aplicado, correr "2. Aplicar" de nuevo abortaba en el preflight con "las celdas auxiliares (AW8, AW9, AW10) no estan vacias". Medido contra el gemelo: esa zona no tenia ningun intruso -- tenia el PROMEDIO que la propia corrida anterior habia calculado (el derrame del HSTACK de _tendenciaYPromedioIp). El guard pedia la zona VACIA sin excepcion y se mordia la cola contra su propio resultado.
 - _auxAjenaIp / _auxiliaresAjenasIp (nuevas, DEVTOOL_InicioPresupuesto.js) reemplazan el chequeo "sin formula y con valor" por uno que distingue PROPIO de AJENO: reconocen "mia" por la FORMULA de la celda ANCLA (AV8/AV9/AV10), nunca por el valor derramado en el promedio (AW8/AW9/AW10). Esta zona es exclusiva de este modulo, asi que CUALQUIER formula en el ancla -- sea cual sea su texto -- solo pudo haberla puesto una corrida anterior propia; no hace falta comparar contra el texto exacto de _formulaAuxCapitalIp/_formulaAuxFlujoIp de HOY. Misma leccion que _esFormulaDeDeltaIp ya aplico del lado del color en v0.38.2.

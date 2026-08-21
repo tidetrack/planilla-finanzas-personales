@@ -21,7 +21,10 @@
  * @since 2026-08-19
  */
 const fs=require('fs'), vm=require('vm'), path=require('path');
-const RAIZ='/Users/francodiazpizarro/Desktop/Antigravity/planilla-finanzas-personales/.claude/worktrees/gracious-kalam-00e92c';
+// La raiz se deriva de la ubicacion de ESTE archivo, no se hardcodea. Hasta el 2026-08-21 era la
+// ruta absoluta de un worktree concreto: correr el banco desde cualquier otro leia el src de ese
+// worktree y validaba codigo que no era el que se estaba editando.
+const RAIZ=path.resolve(__dirname,'..');
 const ctx={console,
   MONEDAS_DISPONIBLES:['ARS','USD','AUD','EUR'], TIPOS_RIQUEZA:['Ahorros','Inversiones'],
   CUENTA_ARRASTRE:'Inicio Mes',
@@ -39,7 +42,7 @@ vm.runInContext(
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_FormulerioV0111.js'),'utf8')+'\n'+
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_TipoDeMedios.js'),'utf8')+'\n'+
   fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_StockYFlujo.js'),'utf8')+
-  '\n;Object.assign(globalThis,{FORM_CELDAS,SYF_SALDOS_TABLERO,SYF_TIPOS_TABLERO,SYF_FILA_RESIDUO,SYF_BLOQUE_MEDIOS,TDM_TIPOS});', ctx);
+  '\n;Object.assign(globalThis,{FORM_CELDAS,SYF_SALDOS_TABLERO,SYF_TIPOS_TABLERO,SYF_FILA_RESIDUO,SYF_ARRASTRE,SYF_BLOQUE_MEDIOS,TDM_TIPOS});', ctx);
 
 const tsv=fs.readFileSync(path.join(RAIZ,'docs/permanente/celdas.tsv'),'utf8').split('\n');
 const F={}, V={};
@@ -158,11 +161,18 @@ console.log('\n=== 4. Condiciones derivadas de TIPOS_RIQUEZA (tienen que ser com
 console.log('  riqueza:   '+ctx._condTipoSyf(true,'tipo_cat'));
 console.log('  cotidiano: '+ctx._condTipoSyf(false,'tipo_cat'));
 console.log('\n=== 5. Apagar el arrastre en las formulas vivas ===');
-// R9/U9/X9 eran las celdas de agregacion por cuenta hasta el reacomodo del Tablero del
-// 2026-08-21: el header "Cuenta" quedo en la fila 9 y el derrame de datos bajo a la 10 (ver
-// FORM_CELDAS en DEVTOOL_FormulerioV0111.js). Se prueba contra R10/U10/X10, que es donde vive
-// la formula real hoy -- probar contra el header ya no prueba nada.
-[['Tablero!R10'],['Tablero!U10'],['Tablero!X10'],['Inicio!C13'],['Inicio!F13'],['Inicio!C15'],['Inicio!F15']].forEach(([c])=>{
+// LAS COORDENADAS SALEN DEL MODULO, NO DE ACA. Este banco tenia su propia copia de la lista, y
+// el 2026-08-21 esa duplicacion se cobro lo suyo: la v0.38.0 actualizo la copia del banco a
+// R10/U10/X10 (donde el reacomodo del Tablero dejo las formulas) pero no la del modulo, que
+// siguio leyendo R9/U9/X9 -- el header "Cuenta", sin formula. El banco daba SIN FALLAS mientras
+// la transformacion no se aplicaba a ninguna de las tres columnas del Tablero. Derivando de
+// SYF_ARRASTRE eso no puede volver a pasar: si el modulo apunta mal, el banco apunta mal y lo dice.
+const HOJA_DE={TABLERO:'Tablero',INICIO:'Inicio'};
+const ARRASTRE_A_PROBAR=ctx.SYF_ARRASTRE.map(s=>HOJA_DE[s.hoja]+'!'+s.celda)
+  // C15/F15 ya no las toca este modulo (las reescribe DEVTOOL_InicioPresupuesto), pero la
+  // transformacion tiene que seguir siendo correcta contra ellas: se prueban aparte, a proposito.
+  .concat(['Inicio!C15','Inicio!F15']);
+ARRASTRE_A_PROBAR.forEach((c)=>{
   const antes=viva(c);
   if(!antes){
     fallas++;

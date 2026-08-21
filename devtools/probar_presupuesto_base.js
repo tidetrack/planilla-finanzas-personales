@@ -14,7 +14,11 @@
  * @since 2026-08-20
  */
 const fs = require('fs'), vm = require('vm'), path = require('path');
-const RAIZ = '/Users/francodiazpizarro/Desktop/Antigravity/planilla-finanzas-personales/.claude/worktrees/gracious-kalam-00e92c';
+// La raiz se deriva de la ubicacion de ESTE archivo (misma convencion que
+// probar_tablero_faltante.js y probar_inicio_presupuesto.js). Hasta el 2026-08-21 era la ruta
+// absoluta de un worktree concreto: correr el banco desde cualquier otro leia el src de ese
+// worktree y validaba codigo que no era el que se estaba editando.
+const RAIZ = path.resolve(__dirname, '..');
 
 let fallas = 0;
 const ok = (c, m) => { if (c) console.log('  OK  ' + m); else { console.log('  !!! ' + m); fallas++; } };

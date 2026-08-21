@@ -9,6 +9,83 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.38.4 - El modulo seguia leyendo R9/U9/X9 mientras su banco probaba R10/U10/X10 (2026-08-21)
+
+Dos bancos (`probar_stock_flujo.js`, `probar_riqueza.js`) reventaban con
+`Cannot read properties of undefined (reading 'replace')`. Ese crash y las referencias
+`R9/U9/X9` de `FORM_CELDAS` ya se habian corregido en `v0.38.0`. Lo que quedo sin corregir es lo
+que el crash tapaba del otro lado: **`DEVTOOL_StockYFlujo.js`, el modulo que de verdad escribe**.
+
+### La causa
+
+El reacomodo del Tablero del 2026-08-21 (Franco abrio la fila 8 para "Faltante proyectado") corrio
+el header una fila. Medido contra el gemelo:
+
+| Celda | Contenido hoy |
+|---|---|
+| `Tablero!R8` / `U8` / `X8` | "Faltante proyectado" |
+| `Tablero!R9` / `U9` / `X9` | "Cuenta" (header, **sin formula**) |
+| `Tablero!R10` / `U10` / `X10` | la QUERY real |
+
+`v0.38.0` corrigio `FORM_CELDAS`, `RIQ_BLOQUE_CATEGORIAS` y `BCAT_CELDA`, y actualizo la seccion 5
+de `devtools/probar_stock_flujo.js` a `R10/U10/X10` — pero no toco el modulo que esa seccion
+prueba. `DEVTOOL_StockYFlujo.js` siguio nombrando `R9/U9/X9` en su lista de "apagar el arrastre",
+no encontraba formula en el header, y salia por un aviso mudo:
+
+```
+avisos.push(t[0] + '!' + t[1] + ' no tiene formula: se saltea.');
+```
+
+### Por que el banco no lo vio
+
+**El banco tenia su propia copia de las coordenadas.** Actualizar la copia del banco lo puso en
+verde probando `R10` contra el gemelo, mientras el modulo — contra la planilla — no aplicaba la
+transformacion a ninguna de las tres columnas del Tablero. Un banco verde sobre codigo que no se
+ejecuta es peor que un banco en rojo.
+
+### El arreglo
+
+- **`SYF_ARRASTRE`** (nueva): las 5 celdas se declaran en el modulo **con su rotulo al lado**
+  (`R10` ← "Cuenta"@`R9`, `U10`, `X10`, `Inicio!C13` ← "Ingresos."@`C12`, `F13` ← "Egresos."@`F12`).
+  `_preflightSyf` las verifica por rotulo y **aborta** si alguno no coincide, igual que ya hacia
+  con `SYF_TIPOS_TABLERO`, `SYF_SALDOS_TABLERO` y `SYF_BLOQUE_MEDIOS`.
+- `devtools/probar_stock_flujo.js` **deriva** su seccion 5 de `SYF_ARRASTRE` en vez de repetirla:
+  modulo y banco no pueden volver a divergir. `C15`/`F15` se siguen probando aparte, a proposito.
+- "Sin formula" con el rotulo ya verificado deja de ser un aviso mudo: nombra la celda y dice que
+  la transformacion no se aplico ahi.
+- **Seis bancos** (`probar_stock_flujo`, `probar_riqueza`, `probar_formulerio`,
+  `probar_capitalizacion`, `probar_formato_medios`, `probar_presupuesto_base`) hardcodeaban `RAIZ`
+  a la ruta absoluta de un worktree concreto: corridos desde otro worktree validaban el `src` de
+  **aquel**, no el que se estaba editando. Ahora derivan `RAIZ` de `__dirname`, la convencion que
+  `probar_tablero_faltante.js` y `probar_inicio_presupuesto.js` ya usaban.
+
+### Verificacion
+
+Por mutacion: con `SYF_ARRASTRE` devuelta a `R9/U9/X9`, `probar_stock_flujo.js` pasa de
+`SIN FALLAS` a `3 FALLA(S)` nombrando celda y contenido real
+(`Tablero!R9: hoy tiene "Cuenta"`). Restaurado, vuelve a `SIN FALLAS`.
+
+Los 8 bancos corren desde este worktree con los mismos resultados que el baseline:
+`probar_riqueza` 7 FALLA(S) y `probar_formulerio` 5 FALLA(S) — ambas documentadas como
+deliberadas en `v0.38.0` —, `probar_tablero_faltante` 1 FALLA, el resto limpio.
+
+### Hallazgo reportado, no resuelto
+
+Al declarar `R10/U10/X10` en `SYF_ARRASTRE`, la barrida anti-colision de
+`probar_tablero_faltante.js` (seccion 8) ahora acusa **tres** modulos sobre esas celdas:
+`DEVTOOL_FormulerioV0111.js` (ya reportado en `v0.38.0`), `DEVTOOL_TableroFaltanteProyectado.js` y
+ahora, explicitamente, `DEVTOOL_StockYFlujo.js`. **No es una colision nueva**: es la que existia
+sin declararse, porque el modulo apuntaba a la celda equivocada. Es menos riesgosa que la de
+Formulerio — `_apagarArrastreSyf` hace cirugia de token sobre la formula viva (reemplaza un patron
+y deja el resto intacto), asi que respeta el envoltorio que TFP le pone alrededor a la QUERY de
+Franco, corra en el orden que corra — y hoy es ademas un no-op: la formula viva ya excluye el
+arrastre. Que los tres modulos se declaren duenios de la misma celda sigue siendo **una decision de
+Franco**, no una correccion de coordenada.
+
+**NO SE DESPLEGO.** Cambios solo en el repo.
+
+---
+
 ## v0.38.3 - El guard de las auxiliares se bloqueaba a si mismo en la segunda corrida (2026-08-21)
 
 Con `v0.38.2` ya verificado en la planilla, correr `aplicarInicioPresupuesto()` una segunda vez
