@@ -107,7 +107,7 @@ function _indiceTipoMedioFmt() {
 /**
  * La formula de la regla de UN tipo. Ejemplo (tipo Ahorros):
  *
- *   =VLOOKUP($C18, INDIRECT("'Plan de Cuentas'!$L$8:$N"), 3, 0)="Ahorros"
+ *   =VLOOKUP($C18; INDIRECT("'Plan de Cuentas'!$L$8:$N"); 3; 0)="Ahorros"
  *
  * EL INDIRECT NO ES DECORATIVO. Una formula de formato condicional NO PUEDE referenciar otra
  * hoja de forma directa: es una limitacion vieja y documentada de Google Sheets, y la unica
@@ -124,13 +124,22 @@ function _indiceTipoMedioFmt() {
  * esta vacia el VLOOKUP da #N/A, la condicion da falso y la fila no se pinta: las filas libres
  * del bloque quedan como estan.
  *
- * EXCEPCION DOCUMENTADA A LA REGLA DE LOCALE (trampa es_AR): las formulas de este repo se
- * autoran con ';' porque viajan por setFormula contra la planilla en espanol. Esta NO: viaja
- * por la API de reglas (newConditionalFormatRule().whenFormulaSatisfied), que recibe sintaxis
- * canonica EN-US con COMA como separador -- la traduccion al locale ocurre recien en la capa
- * de UI de Sheets, no en esta API. Por eso esta fabrica usa comas y es la UNICA autorizada a
- * usarlas; copiarle el estilo a una formula destinada a setFormula seria repetir la trampa 1
- * al reves.
+ * NO HAY EXCEPCION A LA REGLA DE LOCALE. Hasta v0.33.0 este comentario afirmaba que
+ * whenFormulaSatisfied recibia sintaxis canonica EN-US con COMA, y que la traduccion al locale
+ * ocurria recien en la capa de UI. Es FALSO, y costo que las cuatro reglas existieran sin
+ * pintar nada. La formula de una regla se guarda VERBATIM y se evalua en el locale de la
+ * planilla: con comas, en una planilla es_AR, no parsea -- y una regla que no parsea no da
+ * error, simplemente nunca se cumple.
+ *
+ * Medido en la planilla el 2026-08-21, sobre C18:E29 y con los cuatro medios de tipo Hogar
+ * como testigo (Frasco Transitorio NaranjaX, Efectivo, NaranjaX, YPF):
+ *   =VLOOKUP($C18, INDIRECT("..."), 3, 0)="Hogar"   -> se acepta, no pinta NADA
+ *   =VLOOKUP($C18; INDIRECT("..."); 3; 0)="Hogar"   -> pinta exactamente esos cuatro
+ *   =VLOOKUP($C18; 'Plan de Cuentas'!$L$8:$N; 3; 0) -> "Formula no valida", Sheets la rechaza
+ * La tercera linea es la que prueba que el INDIRECT de arriba no es decorativo.
+ *
+ * O sea: esta fabrica sigue la MISMA regla que el resto del repo (';'), y ademas necesita el
+ * INDIRECT. Las dos cosas, no una.
  *
  * El rotulo del tipo se recibe LEIDO de la hoja (bloque "Tipo de Medios."), nunca de una lista
  * propia: si Franco renombra un tipo, la proxima corrida genera la regla con el nombre nuevo.
@@ -140,8 +149,8 @@ function _formulaReglaFmt(tipo) {
     // (trampa 7: un reemplazo por string expande los $ del texto).
     const rotulo = String(tipo).replace(/"/g, function () { return '""'; });
     const b = SYF_BLOQUE_MEDIOS;
-    return '=VLOOKUP($' + b.columnas[0].col + b.filaDatos + ', INDIRECT("' + _catalogoMediosFmt() +
-        '"), ' + _indiceTipoMedioFmt() + ', 0)="' + rotulo + '"';
+    return '=VLOOKUP($' + b.columnas[0].col + b.filaDatos + '; INDIRECT("' + _catalogoMediosFmt() +
+        '"); ' + _indiceTipoMedioFmt() + '; 0)="' + rotulo + '"';
 }
 
 // ============================================
@@ -168,9 +177,12 @@ function _esReglaPropiaFmt(regla) {
     if (String(cond.getCriteriaType()) !== 'CUSTOM_FORMULA') return false;
     const formula = _formulaDeReglaFmt(regla);
     if (formula.indexOf('VLOOKUP') === -1) return false;
-    // Sin exigir INDIRECT: si quedaron reglas MUDAS de una corrida vieja (las que referenciaban
-    // el Plan de Cuentas directo y por eso nunca pintaron), este modulo tiene que reconocerlas
-    // como propias para poder reemplazarlas. Exigir la forma nueva las volveria intocables.
+    // Ni el INDIRECT ni el separador entran en la identificacion, A PROPOSITO. La corrida del
+    // 2026-08-21 dejo cuatro reglas MUDAS (con coma, que no parsean en es_AR) y antes de eso
+    // pudo haber quedado alguna con la referencia directa. Si aca exigieramos la forma correcta,
+    // esas reglas rotas dejarian de reconocerse como propias y quedarian huerfanas: ni se
+    // reemplazan al aplicar ni se quitan al revertir. Se identifica por lo que NO cambia -- el
+    // VLOOKUP contra el catalogo de medios, y el rango exacto del bloque.
     if (formula.indexOf(_catalogoMediosFmt()) === -1) return false;
     const rangos = (regla.getRanges() || []).map(function (r) { return r.getA1Notation(); });
     return rangos.length === 1 && rangos[0] === _rangoMediosFmt();
@@ -359,8 +371,8 @@ function estadoFormatoMedios() {
         l.push('ver la nota en _formulaReglaFmt):');
         l.push('  ' + plan.nuevas[0].formula);
         l.push('');
-        l.push('Aplicar SIEMPRE rehace las cuatro reglas propias: el color de una regla existente');
-        l.push('no se puede leer por la API, asi que rehacerlas es la unica sincronizacion segura.');
+        l.push('Aplicar SIEMPRE rehace las cuatro reglas propias: es idempotente, y garantiza que');
+        l.push('los colores queden sincronizados con los rotulos de "Tipo de Medios." de hoy.');
 
         const t = l.join('\n');
         _mostrarFmt('Formato de medios - estado', t);

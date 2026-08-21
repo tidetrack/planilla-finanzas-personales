@@ -82,18 +82,39 @@ exigencia revirtio una corrida entera, con las formulas correctas, por un desvio
 que era exactamente el dato buscado: la plata que entro y no se gasto ni se capitalizo. En la
 columna E eso pasa a reportarse como aviso.
 
-### Formato de medios: la regla era muda, y ademas no estaba en el menu
+### Formato de medios: la regla era muda, por dos motivos independientes
 
-Las cuatro reglas de color del bloque "Medios Bancarios." del Tablero referenciaban
-`'Plan de Cuentas'!$L$8:$N` de forma directa. Una formula de formato condicional **no puede
-referenciar otra hoja sin `INDIRECT()`**: las reglas se creaban sin protestar y no pintaban
-nada, en silencio. Ahora van con `INDIRECT`. La deteccion de reglas propias no exige la forma
-nueva, para poder barrer las mudas que quedaron de antes.
+Las cuatro reglas de color del bloque "Medios Bancarios." del Tablero existian y **no pintaban
+nada**. Medido en la planilla el 2026-08-21 sobre `C18:E29`, usando los cuatro medios de tipo
+Hogar (Frasco Transitorio NaranjaX, Efectivo, NaranjaX, YPF) como testigo:
+
+| Fórmula de la regla | Resultado |
+|---|---|
+| `=VLOOKUP($C18, INDIRECT("..."), 3, 0)="Hogar"` | Sheets la acepta y no pinta **nada** |
+| `=VLOOKUP($C18; INDIRECT("..."); 3; 0)="Hogar"` | pinta **exactamente** esos cuatro |
+| `=VLOOKUP($C18; 'Plan de Cuentas'!$L$8:$N; 3; 0)` | **"Fórmula no válida"**, Sheets la rechaza |
+
+Es decir, dos defectos superpuestos:
+
+1. **La referencia directa a otra hoja.** Una formula de formato condicional no puede
+   referenciar otra hoja sin `INDIRECT()`. La tercera fila de la tabla es la prueba.
+2. **El separador.** El modulo documentaba una "excepcion de locale": que la API de reglas
+   recibe sintaxis canonica EN-US con coma y que la traduccion ocurre en la capa de UI. Esa
+   afirmacion es **falsa**. La formula se guarda verbatim y se evalua en el locale de la
+   planilla; con coma, en es_AR, no parsea. Y una regla que no parsea **no da error**:
+   simplemente nunca se cumple.
+
+El banco de pruebas **exigia la coma**, asi que daba verde sobre cuatro reglas mudas. Se dio
+vuelta, y ahora las dos mutaciones (volver a la coma, sacar el `INDIRECT`) lo matan.
+
+La identificacion de reglas propias no mira ni el separador ni el `INDIRECT`, a proposito: si
+exigiera la forma correcta, las reglas rotas que ya quedaron escritas dejarian de reconocerse
+como propias y no habria manera de reemplazarlas ni de quitarlas.
 
 El modulo existia desde el 2026-08-20 sin entrada en `MENU_CONFIG`, o sea que no habia forma de
 correrlo desde la planilla. Se cablea como **"Color de los medios (Tablero)"**.
 
-Correccion de una afirmacion falsa en sus comentarios: decia que "la API de Apps Script no
+Correccion de otra afirmacion falsa en sus comentarios: decia que "la API de Apps Script no
 permite leer el formato de una regla ya existente". `BooleanCondition` expone
 `getBackgroundObject()` y `getFontColorObject()`. La conclusion que ese motivo sostenia (rehacer
 las reglas siempre) sigue siendo la correcta por simple; el motivo, no.

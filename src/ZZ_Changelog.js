@@ -39,11 +39,22 @@
  *   capitalizacion efectiva). El 2026-08-21 esa exigencia revirtio una corrida entera con las
  *   formulas correctas por un desvio de 230.899,99 que era exactamente el dato: la plata que
  *   entro y no se gasto ni se capitalizo. Ahora en la columna E eso se reporta como aviso.
- * - FORMATO DE MEDIOS: LA REGLA ERA MUDA. Las cuatro reglas de color del bloque "Medios
- *   Bancarios." del Tablero referenciaban 'Plan de Cuentas'!$L$8:$N de forma DIRECTA, y una
- *   formula de formato condicional no puede referenciar otra hoja sin INDIRECT(): se creaban sin
- *   protestar y no pintaban nada, en silencio. Van con INDIRECT. La deteccion de reglas propias
- *   NO exige la forma nueva, para poder barrer las mudas que quedaron de antes.
+ * - FORMATO DE MEDIOS: LA REGLA ERA MUDA, POR DOS MOTIVOS INDEPENDIENTES. Las cuatro reglas de
+ *   color del bloque "Medios Bancarios." del Tablero existian y no pintaban nada. Medido en la
+ *   planilla el 2026-08-21 sobre C18:E29, con los cuatro medios de tipo Hogar como testigo:
+ *     (a) referenciaban 'Plan de Cuentas'!$L$8:$N de forma DIRECTA. Sheets rechaza eso en una
+ *         formula de formato condicional: al intentarlo a mano contesta "Formula no valida".
+ *         Va envuelto en INDIRECT().
+ *     (b) usaban COMA como separador. El modulo documentaba una "excepcion de locale" -- que la
+ *         API de reglas recibe sintaxis canonica EN-US -- y esa afirmacion es FALSA: la formula
+ *         se guarda verbatim y se evalua en el locale de la planilla. Con coma, en es_AR, no
+ *         parsea; y una regla que no parsea no da error, simplemente nunca se cumple. Con ';'
+ *         pinta exactamente los cuatro medios Hogar y ninguno mas.
+ *   El banco de pruebas EXIGIA la coma, asi que daba verde sobre reglas mudas. Se dio vuelta, y
+ *   las dos mutaciones (volver a la coma, sacar el INDIRECT) ahora lo matan.
+ *   La identificacion de reglas propias NO mira ni el separador ni el INDIRECT, a proposito: si
+ *   exigiera la forma correcta, las reglas rotas que quedaron dejarian de reconocerse como
+ *   propias y no habria forma de reemplazarlas ni de quitarlas.
  * - Y EL MODULO NUNCA HABIA ESTADO EN EL MENU. Existia desde el 2026-08-20 sin entrada en
  *   MENU_CONFIG, o sea que no habia forma de correrlo desde la planilla. Se cablea como
  *   "Color de los medios (Tablero)".

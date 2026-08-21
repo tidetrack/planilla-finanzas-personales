@@ -4,10 +4,11 @@
  *
  * Tres mitades:
  *
- * 1. LA FORMULA de cada regla: derivada entera de RANGES y SYF_BLOQUE_MEDIOS, con la
- *    EXCEPCION de locale al reves que el resto del repo -- el formato condicional viaja por la
- *    API de reglas en sintaxis EN-US con COMA, no por setFormula con ';'. El banco lo exige:
- *    aca una ';' es falla, exactamente al reves que en probar_capitalizacion.
+ * 1. LA FORMULA de cada regla: derivada entera de RANGES y SYF_BLOQUE_MEDIOS, con el MISMO
+ *    separador que todo el resto del repo (';') y con la referencia al Plan de Cuentas
+ *    envuelta en INDIRECT(). Hasta v0.33.0 este banco exigia lo contrario -- comas, por una
+ *    "excepcion de locale" que resulto ser falsa -- y por eso daba verde sobre cuatro reglas
+ *    que no pintaban nada. Ver la nota medida en la cabecera de _formulaReglaFmt.
  *
  * 2. EL CICLO agregar/quitar sobre un mock de getConditionalFormatRules /
  *    setConditionalFormatRules: las reglas AJENAS sobreviven SIEMPRE (misma referencia, mismo
@@ -16,7 +17,7 @@
  *
  * 3. EL CODIGO FUENTE: sin hex hardcodeado (la SSOT del color es el formato de Franco), sin
  *    setFormula/setValue (el modulo no escribe celdas), sin el patron que barre el sweep de
- *    colisiones de probar_capitalizacion, y con la excepcion EN-US documentada inline.
+ *    colisiones de probar_capitalizacion, y con la medicion del 2026-08-21 documentada inline.
  *
  * USO:  node devtools/probar_formato_medios.js
  * @version 0.31.0
@@ -159,7 +160,7 @@ const TIPOS = ['Ahorros', 'Financiación', 'Hogar', 'Inversiones'];
 // 1. LA FORMULA
 // ============================================
 
-console.log('=== 1. La formula de cada regla (sintaxis EN-US: aca la coma es OBLIGATORIA) ===');
+console.log('=== 1. La formula de cada regla (locale es_AR: aca el ";" es OBLIGATORIO) ===');
 {
     const cfg = ctx.RANGES.MEDIOS_PAGO;
     const catalogoEsperado = "'" + cfg.sheet + "'!$" + cfg.columns.nombre + '$' +
@@ -186,8 +187,8 @@ console.log('=== 1. La formula de cada regla (sintaxis EN-US: aca la coma es OBL
         const p = [];
         if (f[0] !== '=') p.push('no empieza con =');
         if (f.indexOf('{') !== -1) p.push('tiene un array literal {}');
-        if (f.indexOf(';') !== -1) p.push('usa ";" -- el formato condicional viaja por API en EN-US con coma');
-        if (f.indexOf(',') === -1) p.push('no tiene comas: no es sintaxis EN-US');
+        if (f.indexOf(',') !== -1) p.push('usa "," -- con coma la regla no parsea en es_AR y no pinta nunca');
+        if (f.indexOf(';') === -1) p.push('no tiene ";": la regla se evalua en el locale de la planilla');
         let par = 0, com = 0;
         for (const ch of f) { if (ch === '(') par++; else if (ch === ')') par--; else if (ch === '"') com++; }
         if (par !== 0) p.push('parentesis desbalanceados (' + par + ')');
@@ -195,29 +196,36 @@ console.log('=== 1. La formula de cada regla (sintaxis EN-US: aca la coma es OBL
         if (p.length) { fallas++; console.log('  !!! ' + tipo + ': ' + p.join(', ')); }
         else console.log('  OK  ' + tipo + ': estructura sana');
 
-        ok(f.indexOf('$' + b.columnas[0].col + b.filaDatos + ',') !== -1,
+        ok(f.indexOf('$' + b.columnas[0].col + b.filaDatos + ';') !== -1,
            tipo + ': evalua $C18 (columna absoluta, fila relativa)');
         ok(f.indexOf('$' + b.columnas[0].col + '$' + b.filaDatos) === -1,
            tipo + ': la fila NO es absoluta (cada fila del rango evalua su propio medio)');
         ok(f.indexOf(catalogoEsperado) !== -1, tipo + ': consulta el catalogo derivado de RANGES');
-        ok(f.indexOf(', ' + indiceEsperado + ', 0)') !== -1,
+        ok(f.indexOf('; ' + indiceEsperado + '; 0)') !== -1,
            tipo + ': indice derivado y busqueda exacta (ultimo argumento 0)');
         ok(f.indexOf('="' + tipo + '"') !== -1, tipo + ': compara contra el rotulo LEIDO, intacto');
         ok(!/TIDETRACK_|Registros!|Proyeccion!/.test(f),
            tipo + ': no toca cotizaciones ni el ledger: solo catalogo y rotulo');
     });
 
-    // EL INDIRECT ES EL CORAZON DE LA REGLA. Una formula de formato condicional no puede
-    // referenciar otra hoja directo: sin INDIRECT la regla se crea igual y no pinta NUNCA, en
-    // silencio. Esta asercion existe para que nadie lo "simplifique" sacandolo.
-    const esperada = '=VLOOKUP($C18, INDIRECT("' + catalogoEsperado + '"), ' + indiceEsperado + ', 0)="Ahorros"';
+    // LAS DOS COSAS QUE HACEN QUE LA REGLA PINTE, medidas en la planilla el 2026-08-21 sobre
+    // C18:E29 con los cuatro medios de tipo Hogar como testigo:
+    //   con COMA  -> Sheets acepta la regla y no pinta NADA (no parsea en es_AR, y no avisa)
+    //   con ';'   -> pinta exactamente los cuatro medios Hogar
+    //   sin INDIRECT -> "Formula no valida": Sheets rechaza la referencia a otra hoja
+    // Las dos aserciones de abajo existen para que nadie "simplifique" ninguna de las dos.
+    const esperada = '=VLOOKUP($C18; INDIRECT("' + catalogoEsperado + '"); ' + indiceEsperado + '; 0)="Ahorros"';
     ok(ctx._formulaReglaFmt('Ahorros') === esperada,
        'formula completa exacta: ' + ctx._formulaReglaFmt('Ahorros'));
     ['Ahorros', 'Inversiones', 'Hogar', 'Financiación'].forEach(t => {
         const f = ctx._formulaReglaFmt(t);
         ok(f.indexOf('INDIRECT("') !== -1, t + ': la referencia al Plan de Cuentas va por INDIRECT');
-        ok(!/,\s*'Plan de Cuentas'!/.test(f),
-           t + ': ninguna referencia DIRECTA a otra hoja (la regla quedaria muda)');
+        ok(!/[,;]\s*'Plan de Cuentas'!/.test(f),
+           t + ': ninguna referencia DIRECTA a otra hoja (Sheets la rechaza como invalida)');
+        // El separador: mismo locale que TODO el resto del repo, sin excepciones.
+        ok(f.indexOf(', ') === -1 && f.indexOf(',') === -1,
+           t + ': ni una coma. Con coma la regla se guarda pero no parsea en es_AR y no pinta nunca');
+        ok((f.match(/;/g) || []).length === 3, t + ': los tres separadores del VLOOKUP son ";"');
     });
     ok(ctx._formulaReglaFmt('Fra"nco').indexOf('Fra""nco') !== -1,
        'una comilla en el rotulo se dobla (no rompe la formula)');
@@ -429,8 +437,10 @@ console.log('\n=== 5. El codigo fuente del modulo ===');
        'el modulo no escribe NINGUNA celda: solo reglas de formato condicional');
     ok(/getFontColorObject/.test(src) && /asRgbColor/.test(src) && /asHexString/.test(src),
        'los colores se leen en vivo con getFontColorObject().asRgbColor().asHexString()');
-    ok(/EN-US/.test(src) && /coma/i.test(src),
-       'la excepcion de locale (API de reglas = EN-US con coma) esta documentada inline');
+    ok(/Formula no valida/.test(src) && /2026-08-21/.test(src),
+       'la medicion en la planilla (coma no pinta / sin INDIRECT es invalida) esta documentada inline');
+    ok(!/EXCEPCION DOCUMENTADA A LA REGLA DE LOCALE/.test(src),
+       'ya no queda la "excepcion de locale": era falsa y es lo que dejo las reglas mudas');
     // El sweep de colisiones de probar_capitalizacion busca este patron en TODOS los DEVTOOL_.
     const sweep = /proponer\(\s*(?:[A-Za-z_.]+\s*,\s*)?'([A-Z]{1,2}\d{1,3})'/g;
     ok(!sweep.test(src),
