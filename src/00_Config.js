@@ -703,7 +703,13 @@ const MENU_CONFIG = {
         { separator: true },
         { seccion: 'MANTENIMIENTO' },
         { name: 'On/Off proteccion del Plan de Cuentas', function: 'togglePlanCuentasProtection' },
-        { name: 'Exportar arquitectura (gemelo digital)', function: 'exportarArquitecturaTotal' }
+        { name: 'Exportar arquitectura (gemelo digital)', function: 'exportarArquitecturaTotal' },
+        // ENTRADA TEMPORAL -- decision Franco 2026-08-21: auditoria de desplegables de Plan de
+        // Cuentas y Cargas (columna R en rojo + desplegables cerrados). Correrla UNA vez, copiar
+        // la hoja "DIAG_Desplegables_TEMP" que genera, y despues BORRAR esta entrada junto con
+        // src/DEVTOOL_DIAG_Desplegables.js entero. @see DEVTOOL_DIAG_Desplegables.js
+        { separator: true },
+        { name: 'DIAG TEMPORAL: medir desplegables (Plan de Cuentas + Cargas)', function: '_DIAG_medirDesplegables' }
     ]
 };
 
