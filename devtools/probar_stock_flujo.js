@@ -8,8 +8,16 @@
  * Existe por la cicatriz de la v0.12.0: una formula que no parseaba llego a produccion porque
  * nadie corrio la transformacion contra una entrada real antes de deployar.
  *
+ * CICATRIZ DEL 2026-08-21: este banco imprimia "(sin snapshot) Tablero!R9" para las tres celdas
+ * de agregacion por cuenta -- que se habian corrido a R10/U10/X10 por el reacomodo del Tablero --
+ * y terminaba en "SIN FALLAS". Trataba "la celda que el modulo declara administrar no tiene
+ * formula" como benigno, que es precisamente el modo de falla que este repo viene sufriendo: un
+ * banco en verde sobre una geometria que ya cambio. Ahora es FALLA, con un mensaje que dice la
+ * celda y que se encontro en su lugar (rotulo o valor), y los tres nombres de celda se actualizan
+ * a R10/U10/X10 para volver a probar algo real.
+ *
  * USO:  node devtools/probar_stock_flujo.js
- * @version 0.15.0
+ * @version 0.16.0
  * @since 2026-08-19
  */
 const fs=require('fs'), vm=require('vm'), path=require('path');
@@ -34,8 +42,15 @@ vm.runInContext(
   '\n;Object.assign(globalThis,{FORM_CELDAS,SYF_SALDOS_TABLERO,SYF_TIPOS_TABLERO,SYF_FILA_RESIDUO,SYF_BLOQUE_MEDIOS,TDM_TIPOS});', ctx);
 
 const tsv=fs.readFileSync(path.join(RAIZ,'docs/permanente/celdas.tsv'),'utf8').split('\n');
-const F={}; for(const l of tsv){const p=l.split('\t'); if(p.length<3||!p[2])continue;
-  F[p[0]+'!'+p[1]]=p[2].replace(/\\\\/g,'\x00').replace(/\\n/g,'\n').replace(/\x00/g,'\\');}
+const F={}, V={};
+for(const l of tsv){
+  const p=l.split('\t'); if(p.length<4) continue;
+  const clave=p[0]+'!'+p[1];
+  if(p[2]) F[clave]=p[2].replace(/\\\\/g,'\x00').replace(/\\n/g,'\n').replace(/\x00/g,'\\');
+  if(p[3]) V[clave]=p[3];
+}
+/** Que hay HOY en una celda, para el mensaje de falla ("y que se encontro en su lugar"). */
+function queHayEn(clave){ return V[clave] ? 'hoy tiene "'+V[clave]+'"' : 'esta vacia'; }
 const pre={anclas:ctx._anclasMotorTablero()};
 function viva(clave){
   const spec=ctx.FORM_CELDAS.find(s=>((s.hoja==='INICIO'?'Inicio':'Tablero')+'!'+s.celda)===clave);
@@ -143,8 +158,18 @@ console.log('\n=== 4. Condiciones derivadas de TIPOS_RIQUEZA (tienen que ser com
 console.log('  riqueza:   '+ctx._condTipoSyf(true,'tipo_cat'));
 console.log('  cotidiano: '+ctx._condTipoSyf(false,'tipo_cat'));
 console.log('\n=== 5. Apagar el arrastre en las formulas vivas ===');
-[['Tablero!R9'],['Tablero!U9'],['Tablero!X9'],['Inicio!C13'],['Inicio!F13'],['Inicio!C15'],['Inicio!F15']].forEach(([c])=>{
-  const antes=viva(c); if(!antes){console.log('  (sin snapshot) '+c);return;}
+// R9/U9/X9 eran las celdas de agregacion por cuenta hasta el reacomodo del Tablero del
+// 2026-08-21: el header "Cuenta" quedo en la fila 9 y el derrame de datos bajo a la 10 (ver
+// FORM_CELDAS en DEVTOOL_FormulerioV0111.js). Se prueba contra R10/U10/X10, que es donde vive
+// la formula real hoy -- probar contra el header ya no prueba nada.
+[['Tablero!R10'],['Tablero!U10'],['Tablero!X10'],['Inicio!C13'],['Inicio!F13'],['Inicio!C15'],['Inicio!F15']].forEach(([c])=>{
+  const antes=viva(c);
+  if(!antes){
+    fallas++;
+    console.log('  ### FALLA (sin formula) '+c+': '+queHayEn(c)+
+      '. Este banco declara probar esta celda y no hay ninguna formula viva que transformar.');
+    return;
+  }
   const desp=ctx._apagarArrastreSyf(antes);
   if(desp===antes){
     // El gemelo se refresca en vivo desde el 2026-08-20: si la formula YA viene transformada

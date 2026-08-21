@@ -29,7 +29,12 @@
  * haberlos, que los parentesis queden balanceados y las comillas cerradas, y que aplicar la
  * transformacion dos veces de el mismo resultado que aplicarla una (idempotencia).
  *
- * @version 0.12.1
+ * CICATRIZ DEL 2026-08-21: una celda declarada en FORM_CELDAS/FORM_MONEDA_INICIO sin formula viva
+ * imprimia "(sin snapshot)" y el banco seguia de largo sin marcar falla -- el mismo agujero que
+ * se corrigio el mismo dia en probar_stock_flujo.js. Ahora es FALLA, con el rotulo o valor que
+ * hoy ocupa esa celda.
+ *
+ * @version 0.12.2
  * @since 2026-08-19
  * @see src/DEVTOOL_FormulerioV0111.js
  * @see docs/permanente/celdas.tsv (las formulas contra las que se prueba)
@@ -68,12 +73,16 @@ vm.runInContext(fuente + `
 
 // --- Formulas reales del snapshot ---
 const tsv = fs.readFileSync(path.join(RAIZ, 'docs/permanente/celdas.tsv'), 'utf8').split('\n');
-const F = {};
+const F = {}, V = {};
 for (const linea of tsv) {
   const p = linea.split('\t');
-  if (p.length < 3 || !p[2]) continue;
-  F[p[0] + '!' + p[1]] = p[2].replace(/\\\\/g, '\x00').replace(/\\n/g, '\n').replace(/\x00/g, '\\');
+  if (p.length < 4) continue;
+  const clave = p[0] + '!' + p[1];
+  if (p[2]) F[clave] = p[2].replace(/\\\\/g, '\x00').replace(/\\n/g, '\n').replace(/\x00/g, '\\');
+  if (p[3]) V[clave] = p[3];
 }
+/** Que hay HOY en una celda, para el mensaje de falla ("y que se encontro en su lugar"). */
+function queHayEn(clave) { return V[clave] ? 'hoy tiene "' + V[clave] + '"' : 'esta vacia'; }
 
 const anclas = ctx._anclasMotorTablero();
 const pre = { anclas, nombreInicio: 'Inicio', nombreTablero: 'Tablero' };
@@ -104,7 +113,15 @@ console.log('=== 1. Las celdas del formulerio (defectos 1, 2 y 4) ===');
 for (const spec of ctx.FORM_CELDAS) {
   const clave = (spec.hoja === 'INICIO' ? 'Inicio' : 'Tablero') + '!' + spec.celda;
   const antes = F[clave];
-  if (!antes) { console.log('  (sin snapshot) ' + clave); continue; }
+  if (!antes) {
+    // CICATRIZ DEL 2026-08-21: esto imprimia "(sin snapshot)" y seguia de largo sin marcar falla
+    // -- el mismo agujero que probar_stock_flujo.js tenia el mismo dia con R9/U9/X9. FORM_CELDAS
+    // declara administrar esta celda; que no tenga formula viva es una senal, no un dato benigno.
+    fallas++;
+    console.log('  ### FALLA (sin formula) ' + clave + ' (' + spec.nota + '): ' + queHayEn(clave) +
+      '. FORM_CELDAS declara administrar esta celda y no hay nada que reparar.');
+    continue;
+  }
   const despues = ctx._repararFormula(antes, spec, pre);
   const ok = chequear(clave, antes, despues, { sinRef: spec.refs, sinLiquidez: spec.literal, sinAnclas: spec.anclas });
   if (ok) console.log('  OK  ' + clave.padEnd(16) + ' ' + (ctx._resumirCambio(antes, despues, spec, pre)));
@@ -134,7 +151,13 @@ if (/\$N\$N/.test(reparado)) { console.log('  !!! SIGUE ROTO'); fallas++; }
 
 console.log('\n=== 4. Sexto defecto: la conversion de moneda de Inicio ===');
 for (const spec of ctx.FORM_MONEDA_INICIO) {
-  const antes = F['Inicio!'+spec.celda]; if (!antes) { console.log('  (sin snapshot) '+spec.celda); continue; }
+  const antes = F['Inicio!'+spec.celda];
+  if (!antes) {
+    fallas++;
+    console.log('  ### FALLA (sin formula) Inicio!'+spec.celda+' ('+spec.nota+'): '+queHayEn('Inicio!'+spec.celda)+
+      '. FORM_MONEDA_INICIO declara administrar esta celda y no hay nada que reparar.');
+    continue;
+  }
   const despues = ctx._repararMonedaInicio(antes, spec);
   const ok = chequear('Inicio!'+spec.celda, antes, despues, {});
   if (ok) {

@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 37,
- patch: 1,
+ minor: 38,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-21',
- releaseName: 'v0.37.0 - Los deltas dicen cuanto, no solo cuanto por ciento',
+ releaseName: 'v0.38.0 - Cuatro direcciones se corrieron una fila; los bancos ahora lo notan solos',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,14 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.38.0 (2026-08-21) - Cuatro direcciones se corrieron una fila; los bancos ahora lo notan solos
+! Franco reacomodo el Tablero a mano para dejar lugar al "Faltante proyectado" (v0.36.0): el header de los cuatro bloques de agregacion bajo de la fila 8 a la 9 y el derrame de datos de la 9 a la 10. Corregido por rotulo (nunca por coordenada memorizada) en FORM_CELDAS/RIQ_BLOQUE_CATEGORIAS/BCAT_CELDA: R9->R10, U9->U10, X9->X10, AA9->AA10, AB8->AB9, L28->L29.
++ Preflight por rotulo nuevo en DEVTOOL_FormulerioV0111.js (_verificarRotulosFormulerio) y DEVTOOL_BloqueCategorias.js (_preflightRotuloBcat): abortan ruidosamente si el rotulo vivo no coincide con lo esperado. Verificado por mutacion.
+- Investigado, no inventado: Tablero!N19 esta vacia -- quedo obsoleta el 2026-08-20 cuando DEVTOOL_Capitalizacion.js paso a escribir ese concepto en O19. Tablero!AG9:AG12 e Inicio!F8 (RIQ_CELDAS) tampoco son trabajo de este modulo: DEVTOOL_StockYFlujo.js y DEVTOOL_InicioPresupuesto.js ya los administran en otras coordenadas. Documentado inline, RIQ_CELDAS no se edita sin decision de Franco.
+- _conTipoEnCategorias ya no explota con una celda sin formula (mismo criterio que _repararFormula v0.36.1): devuelve la entrada intacta.
+! "La celda que el modulo declara administrar no tiene formula" deja de ser benigno en probar_stock_flujo.js, probar_riqueza.js y probar_formulerio.js: ahora es FALLA con la celda y que se encontro en su lugar. probar_formulerio.js pasa a 5 FALLA(S) fijas (los stale de arriba) hasta que se retiren o Franco los de por buenos: es la senal funcionando, no una regresion.
++ Hallazgo nuevo sin resolver: la barrida anti-colision de probar_tablero_faltante.js acusa que DEVTOOL_FormulerioV0111.js y DEVTOOL_TableroFaltanteProyectado.js nombran las mismas R10/U10/X10. Hoy es inocuo (verificado), pero fragil; queda para que Franco decida.
+
 v0.22.1 (2026-08-19) - La columna Q se borra de verdad
 ! Se revierte la decision de la v0.21.0 de solo vaciarla. El bloque "Categorias" ocupa P:Q y solo usa P: queda una columna de aire ADENTRO del recuadro mientras los otros cuatro bloques estan ajustados. Vaciarla no alcanza -- el recuadro la sigue abarcando.
 + LA RED QUE FALTABA: se guarda la regla del desplegable de Cuenta de Cargas ANTES de borrar y se comprueba DESPUES que siga viva; si el corrimiento de columnas la rompio, se repone apuntando a la consolidada en su posicion nueva. Era el unico riesgo real y ahora esta cubierto.

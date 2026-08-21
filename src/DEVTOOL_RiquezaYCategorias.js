@@ -71,9 +71,40 @@
  * _errorDeCelda. Se reusan a proposito en vez de duplicarlos: son genericos y estan probados
  * en produccion. Si ese modulo se retira, estos tres helpers se mudan, no se copian.
  *
- * @version 0.13.0
+ * ============================================================================
+ * ESTADO AL 2026-08-21 -- RIQ_CELDAS quedo en gran parte OBSOLETO, y se deja asi a proposito
+ * ============================================================================
+ * Medido contra el gemelo del 2026-08-21 (docs/permanente/celdas.tsv) con devtools/probar_riqueza.js:
+ *
+ *   - "Inicio"!F8 ya NO es la formula que este modulo espera reemplazar. Desde v0.32.0 la
+ *     mantiene DEVTOOL_InicioPresupuesto.js, con una estructura completamente distinta (ya trae
+ *     el filtro Ahorros+Inversiones incorporado). El patron `_aListaBlanca` no matchea porque no
+ *     hay nada que matchear: la celda pertenece a otro modulo. No se toca.
+ *   - "Tablero"!AG9:AG12 tampoco son las que se buscan. En este layout viven CUATRO CELDAS con
+ *     ese nombre de coordenada, en dos bloques distintos: filas 9-12 es "Tipo de Medios" (bloque
+ *     nuevo, DEVTOOL_StockYFlujo.js SYF_TIPOS_TABLERO, agrupa por Ahorros/Financiacion/Hogar/
+ *     Inversiones) y filas 18-21 es "Saldos Actuales" (SYF_SALDOS_TABLERO), que es el sucesor real
+ *     de lo que esta constante llama "Capital ARS/USD/AUD/EUR". El bloque que RIQ_CELDAS declara
+ *     administrar en AG9:AG12 se corrio a AG18:AG21 cuando "Tipo de Medios" se inserto arriba
+ *     -- y esa correccion ya no es trabajo de este modulo: DEVTOOL_StockYFlujo.js escribe y
+ *     verifica ese bloque con su propio preflight por rotulo.
+ *   - "Tablero"!N19 (Capitalizacion real del mes) esta VACIA (sin formula, sin valor): la celda
+ *     de este concepto es hoy "Tablero"!O19, y la escribe DEVTOOL_Capitalizacion.js (decision
+ *     Franco 2026-08-20: "N19 no debe ser una resta de descarte. Aca si va el valor registrado
+ *     del mes").
+ *
+ * Ninguna de las tres se corrige aca: no le pertenecen mas a este modulo, y reapuntarlas
+ * duplicaria el trabajo que YA hacen DEVTOOL_InicioPresupuesto.js, DEVTOOL_StockYFlujo.js y
+ * DEVTOOL_Capitalizacion.js con su propia geometria medida en vivo. Se documenta aca para que la
+ * proxima persona que mida "por que RIQ_CELDAS no cambia nada" no repita la investigacion.
+ *
+ * LO QUE SI SE CORRIGIO: RIQ_BLOQUE_CATEGORIAS. Esa celda es EXCLUSIVA de este modulo (ningun
+ * otro la escribe) y se corrio de fila por el mismo rediseno del 2026-08-21 (ver
+ * DEVTOOL_FormulerioV0111.js, "EL RECORRIDO DEL 2026-08-21"): AA9 -> AA10, AB8 -> AB9.
+ *
+ * @version 0.13.1
  * @since 2026-08-19
- * @lastModified 2026-08-19
+ * @lastModified 2026-08-21
  * @see docs/permanente/FUNCIONALIDADES.md
  */
 
@@ -97,11 +128,18 @@ const RIQ_CELDAS = [
     { hoja: 'TABLERO', celda: 'AG12', nota: 'Capital EUR' }
 ];
 
-/** El bloque de categorias del Tablero: donde vive la columna del Tipo. */
+/**
+ * El bloque de categorias del Tablero: donde vive la columna del Tipo.
+ *
+ * Corrido de fila el 2026-08-21 (AA9 -> AA10, AB8 -> AB9): Franco le agrego una fila al bloque
+ * para dejar lugar al "Faltante proyectado" (ver DEVTOOL_TableroFaltanteProyectado.js), y el
+ * header que rotulaba la columna del Tipo bajo con el resto. celdaRotuloTipo sigue siendo la
+ * defensa: si el rotulo vivo no dice "Tipo", el preflight aborta sin tocar nada.
+ */
 const RIQ_BLOQUE_CATEGORIAS = {
     hoja: 'TABLERO',
-    celda: 'AA9',
-    celdaRotuloTipo: 'AB8',
+    celda: 'AA10',
+    celdaRotuloTipo: 'AB9',
     rotuloTipoEsperado: 'Tipo',
     varVieja: 'columna_ak_vacia',
     varNueva: 'columna_tipo'
@@ -506,6 +544,11 @@ function _aListaBlanca(formula) {
  * parsearia y la relectura del VALOR aborta el lote entero: el modo de falla es seguro.
  */
 function _conTipoEnCategorias(formula) {
+    // UNA CELDA SIN FORMULA NO ES UN ERROR, ES UN ESTADO (mismo criterio que _repararFormula en
+    // DEVTOOL_FormulerioV0111.js, cicatriz del 2026-08-21): si la geometria se movio y la celda
+    // que RIQ_BLOQUE_CATEGORIAS declara ya no tiene formula, esta funcion no puede morirse -- eso
+    // tapa justo la senal que importa. El diagnostico de "por que esta vacia" lo hace quien llama.
+    if (typeof formula !== 'string' || !formula) return formula;
     const b = RIQ_BLOQUE_CATEGORIAS;
     const cfg = RANGES.PROYECTOS;
     const rango = "'" + cfg.sheet + "'!" + cfg.start + ':' + cfg.end;

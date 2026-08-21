@@ -134,9 +134,38 @@
  * Ademas, este modulo repara ahora el artefacto "$N$N$10 - 7" que aquella corrida dejo escrito:
  * sin eso, re-correr "Aplicar" contestaria "nada que hacer" con tres celdas rotas a la vista.
  *
- * @version 0.12.1
+ * ============================================================================
+ * EL RECORRIDO DEL 2026-08-21 -- cuatro celdas mas, misma raiz
+ * ============================================================================
+ * Franco agrego a mano una fila a los cuatro bloques de agregacion (Ingresos, Gastos Fijos,
+ * Gastos Variables, Categorias) para dejar lugar al "Faltante proyectado" (ver
+ * DEVTOOL_TableroFaltanteProyectado.js, v0.36.0): el header que vivia en la fila 8 paso a la 9 y
+ * el derrame de datos que vivia en la 9 paso a la 10. FORM_CELDAS declaraba R9/U9/X9/AA9 -- ahora
+ * apuntaban al HEADER ("Cuenta"/"Nombre"), no al derrame. `_planFormulerio` no se cae con esto
+ * (getFormula() de un header vacio de formula es "" y el aviso ya lo cubre), pero es el MISMO modo
+ * de falla documentado en la cabecera de este archivo: una direccion que el rediseno dejo
+ * apuntando a otra cosa. Se corrige a R10/U10/X10/AA10, con preflight por ROTULO (nuevo, ver
+ * FORM_ROTULOS_CELDAS): antes de tocar cualquiera de las cuatro, se lee la fila de header y se
+ * verifica que diga lo esperado. Si no, el modulo entero aborta -- no silba en falso.
+ *
+ * "Comprobacion de traspasos" tuvo el mismo movimiento por un motivo distinto: el titulo bajo de
+ * L27 a L28 (mismo rediseno), y la formula -- que YA vivia una fila debajo de su titulo, en L28 --
+ * bajo con el a L29. FORM_CELDAS declaraba L28 (el titulo viejo se movio, la formula lo siguio):
+ * se corrige a L29, tambien con preflight por rotulo contra L28.
+ *
+ * NO se tocan N19 ("Capitalizacion real del mes") ni AF9:AF12/AG9:AG12 ("Saldo actual"/"Capital"
+ * por moneda): quedaron OBSOLETOS mucho antes de este movimiento. N19 lo escribe hoy
+ * DEVTOOL_Capitalizacion.js en O19 (decision Franco 2026-08-20, rediseno L7:O19: "los montos
+ * pasaron de N a O"). El bloque de saldos por moneda se corrio de las filas 9-12 a las 18-21
+ * cuando se inserto el bloque "Tipo de Medios" arriba (DEVTOOL_StockYFlujo.js, SYF_SALDOS_TABLERO)
+ * -- y las filas 9-12 de AG hoy son ESE bloque nuevo, no el viejo: tienen formula, pero de otra
+ * cosa. Dejar estas cuatro entradas en FORM_CELDAS no escribe nada malo (el aviso de "sin formula"
+ * o el "SIN CAMBIO" del patron que no matchea las protegen), pero repararlas ya no es trabajo de
+ * este modulo. Ver docs/permanente/HISTORIAL_DESARROLLO.md v0.38.0 para el detalle completo.
+ *
+ * @version 0.12.2
  * @since 2026-08-19
- * @lastModified 2026-08-19
+ * @lastModified 2026-08-21
  * @see docs/permanente/FUNCIONALIDADES.md (seccion formulerio)
  */
 
@@ -201,17 +230,52 @@ const FORM_CELDAS = [
     { hoja: 'TABLERO', celda: 'AG11', anclas: true, refs: false, literal: true, nota: 'Capital AUD' },
     { hoja: 'TABLERO', celda: 'AG12', anclas: true, refs: false, literal: true, nota: 'Capital EUR' },
 
-    // --- Tablero: agregaciones por cuenta ---
-    { hoja: 'TABLERO', celda: 'R9', anclas: true, refs: false, literal: true, nota: 'Ingresos por cuenta' },
-    { hoja: 'TABLERO', celda: 'U9', anclas: true, refs: false, literal: true, nota: 'Gastos fijos por cuenta' },
-    { hoja: 'TABLERO', celda: 'X9', anclas: true, refs: false, literal: true, nota: 'Gastos variables por cuenta' },
-    { hoja: 'TABLERO', celda: 'AA9', anclas: true, refs: true, literal: true, nota: 'Agregado por categoria' },
+    // --- Tablero: agregaciones por cuenta. Corridas de la fila 9 a la 10 el 2026-08-21 (ver
+    // cabecera): el header que las declaraba quedo en la 9, el derrame de datos paso a la 10.
+    // rotuloCelda/rotuloEsperado son el preflight por rotulo: el header de arriba tiene que decir
+    // lo esperado o el modulo entero aborta antes de tocar nada (_verificarRotulosFormulerio).
+    { hoja: 'TABLERO', celda: 'R10', anclas: true, refs: false, literal: true, nota: 'Ingresos por cuenta',
+        rotuloCelda: 'R9', rotuloEsperado: 'Cuenta' },
+    { hoja: 'TABLERO', celda: 'U10', anclas: true, refs: false, literal: true, nota: 'Gastos fijos por cuenta',
+        rotuloCelda: 'U9', rotuloEsperado: 'Cuenta' },
+    { hoja: 'TABLERO', celda: 'X10', anclas: true, refs: false, literal: true, nota: 'Gastos variables por cuenta',
+        rotuloCelda: 'X9', rotuloEsperado: 'Cuenta' },
+    { hoja: 'TABLERO', celda: 'AA10', anclas: true, refs: true, literal: true, nota: 'Agregado por categoria',
+        rotuloCelda: 'AA9', rotuloEsperado: 'Nombre' },
     { hoja: 'TABLERO', celda: 'C18', anclas: true, refs: false, literal: false, nota: 'Detalle por medio y moneda' },
 
     // --- Tablero: capitalizacion del mes y comprobacion de traspasos ---
+    // N19: OBSOLETO, se deja intacto a proposito. Ver "EL RECORRIDO DEL 2026-08-21" en la cabecera
+    // -- lo escribe hoy DEVTOOL_Capitalizacion.js en O19, con su propio preflight por rotulo.
     { hoja: 'TABLERO', celda: 'N19', anclas: true, refs: true, literal: true, nota: 'Capitalizacion real del mes' },
-    { hoja: 'TABLERO', celda: 'L28', anclas: true, refs: false, literal: false, nota: 'Comprobacion de traspasos' }
+    // "Comprobacion de traspasos": el TITULO bajo de L27 a L28 el 2026-08-21 y la formula -- que ya
+    // vivia una fila debajo de su titulo -- lo siguio de L28 a L29.
+    { hoja: 'TABLERO', celda: 'L29', anclas: true, refs: false, literal: false, nota: 'Comprobacion de traspasos',
+        rotuloCelda: 'L28', rotuloEsperado: 'Comprobacion Traspasos' }
 ];
+
+/**
+ * Los FORM_CELDAS que declaran rotuloCelda/rotuloEsperado se verifican por ROTULO antes de que
+ * el modulo toque nada: es la defensa contra exactamente el bug del 2026-08-21 (una fila se
+ * inserta arriba, la celda declarada pasa a ser el header, y sin este chequeo el modulo la
+ * hubiera visto "sin formula" y seguido de largo en silencio). Devuelve la lista de desvios; una
+ * lista vacia significa que todos los rotulos vivos coinciden con lo declarado.
+ */
+function _verificarRotulosFormulerio(ss, nombreTablero) {
+    const hoja = ss.getSheetByName(nombreTablero);
+    const desvios = [];
+    if (!hoja) return desvios;
+    FORM_CELDAS.forEach(function (spec) {
+        if (!spec.rotuloCelda) return;
+        const vivo = String(hoja.getRange(spec.rotuloCelda).getValue() || '').trim();
+        if (_normalizarRotulo(vivo) !== _normalizarRotulo(spec.rotuloEsperado)) {
+            desvios.push(spec.hoja + '!' + spec.celda + ' (' + spec.nota + '): su rotulo ' +
+                spec.rotuloCelda + ' dice "' + vivo + '" y se esperaba "' + spec.rotuloEsperado +
+                '". La geometria se movio de nuevo: hay que remedir antes de tocar nada.');
+        }
+    });
+    return desvios;
+}
 
 /** Geometria del motor de "Inicio": derrama desde la fila 8, con sus rotulos en la fila 7. */
 const FORM_FILA_DERRAME_INICIO = 8;
@@ -423,7 +487,7 @@ function aplicarFormulerioV0111() {
             '- Respaldo congelado y verificado en la hoja oculta "' + respaldo.nombre + '" (' + respaldo.filas + ' formulas)\n' +
             (respaldo.acotados.length ? '- ATENCION, el respaldo se acoto: ' + respaldo.acotados.join('; ') + '\n' : '') + '\n' +
             'QUE MIRAR AHORA:\n' +
-            '  1. "Tablero"!L28 debe decir "Traspasos balanceados" (o declarar el descuadre real).\n' +
+            '  1. "Tablero"!L29 debe decir "Traspasos balanceados" (o declarar el descuadre real).\n' +
             '  2. El bloque "Movimientos del Mes" (N16:N19) debe dejar de estar en $0,00.\n' +
             '  3. "Tablero"!O23:O25 debe dejar de estar en #REF!.\n' +
             '  4. "Inicio"!F8 (Capital Acumulado) debe BAJAR: hoy incluye el gasto cotidiano.\n\n' +
@@ -634,6 +698,13 @@ function _preflightFormulerio(ss) {
             'mover las formulas seria repetir el error original con otro orden.');
     }
 
+    // --- 5. Las celdas de FORM_CELDAS que declaran rotuloCelda siguen apuntando a lo que dicen ---
+    const desviosRotulo = _verificarRotulosFormulerio(ss, nombreTablero);
+    if (desviosRotulo.length) {
+        throw new Error('La geometria del Tablero volvio a moverse: ' + desviosRotulo.join(' | ') +
+            '. No se toco nada.');
+    }
+
     return {
         nombreInicio: nombreInicio,
         nombreTablero: nombreTablero,
@@ -728,8 +799,10 @@ function _planFormulerio(ss, pre) {
         const actual = hoja.getRange(spec.celda).getFormula();
 
         if (!actual) {
-            avisos.push(nombreHoja + '!' + spec.celda + ' (' + spec.nota + ') no tiene formula: se saltea. ' +
-                'Si esa celda deberia tener una, el formulerio no esta completo.');
+            const vivo = String(hoja.getRange(spec.celda).getValue() || '').trim();
+            avisos.push(nombreHoja + '!' + spec.celda + ' (' + spec.nota + ') no tiene formula' +
+                (vivo ? ' -- hoy tiene "' + vivo + '"' : ' -- esta vacia') + ': se saltea. ' +
+                'Si esa celda deberia tener una, el formulerio no esta completo o la geometria se movio de nuevo.');
             return;
         }
 

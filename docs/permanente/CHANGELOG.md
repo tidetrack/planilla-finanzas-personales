@@ -9,6 +9,94 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.38.0 - Cuatro direcciones se corrieron una fila; los bancos ahora lo notan solos (2026-08-21)
+
+Franco reacomodo la hoja **Tablero** a mano para dejar lugar al bloque "Faltante proyectado"
+(v0.36.0): en los cuatro bloques de agregacion (Ingresos, Gastos Fijos, Gastos Variables,
+Categorias) el header que vivia en la fila 8 bajo a la 9, y el derrame de datos que vivia en la 9
+bajo a la 10. Cuatro direcciones cableadas en `DEVTOOL_FormulerioV0111.js` y
+`DEVTOOL_RiquezaYCategorias.js` / `DEVTOOL_BloqueCategorias.js` quedaron apuntando al header en
+vez del derrame de datos.
+
+### Corregido, verificado por rotulo contra el gemelo y matado por mutacion
+
+| Declarada | Corregida | Que administra |
+|---|---|---|
+| `Tablero!R9` | `Tablero!R10` | Ingresos por cuenta (`FORM_CELDAS`) |
+| `Tablero!U9` | `Tablero!U10` | Gastos fijos por cuenta (`FORM_CELDAS`) |
+| `Tablero!X9` | `Tablero!X10` | Gastos variables por cuenta (`FORM_CELDAS`) |
+| `Tablero!AA9` | `Tablero!AA10` | Agregado por categoria (`FORM_CELDAS`, `RIQ_BLOQUE_CATEGORIAS.celda`, `BCAT_CELDA`) |
+| `Tablero!AB8` | `Tablero!AB9` | Rotulo "Tipo" del bloque de categorias (`RIQ_BLOQUE_CATEGORIAS.celdaRotuloTipo`) |
+| `Tablero!L28` | `Tablero!L29` | Comprobacion de traspasos (`FORM_CELDAS`) |
+
+Cada correccion se verifico dos veces: contra el rotulo vivo en `docs/permanente/celdas.tsv`, y
+por **mutacion** — revertir la coordenada a la version vieja, confirmar que el banco correspondiente
+la acusa con un mensaje que dice la celda y que hay hoy en su lugar, y recien despues restaurar.
+
+### Preflight por rotulo, para que esto no vuelva a pasar en silencio
+
+- `DEVTOOL_FormulerioV0111.js`: `FORM_CELDAS` gana los campos opcionales `rotuloCelda`/
+  `rotuloEsperado`; `_verificarRotulosFormulerio()` los recorre y el preflight **aborta el modulo
+  entero** si algun rotulo vivo no coincide.
+- `DEVTOOL_BloqueCategorias.js`: `_preflightRotuloBcat()` nuevo, verifica `AA9="Nombre"` antes de
+  tocar `AA10`.
+- `DEVTOOL_RiquezaYCategorias.js` ya tenia este preflight; solo se corrigio la coordenada.
+
+### Investigado, no inventado
+
+- **`Tablero!N19`** ("Capitalizacion real del mes") esta **vacia** en el gemelo: sin formula y sin
+  valor. No es un efecto del reacomodo de hoy — quedo obsoleta el **2026-08-20**, un dia antes,
+  cuando el rediseno manual de Franco sobre `L7:O19` movio los montos de la columna N a la O. Hoy
+  esa celda la escribe `DEVTOOL_Capitalizacion.js` en **`Tablero!O19`** (decision Franco
+  2026-08-20: *"N19 no debe ser una resta de descarte. Aca si va el valor registrado del mes"*),
+  con su propio preflight por rotulo, y calcula exactamente eso: el flujo neto medido hacia
+  Ahorros + Inversiones, excluyendo el arrastre "Inicio Mes". No se escribio ninguna formula en
+  N19 ni se borro la declaracion vieja — se documento el hallazgo inline en los dos modulos que la
+  declaran, para que la proxima persona no repita la investigacion.
+- **`Tablero!AG9:AG12`** e **`Inicio!F8`** (`RIQ_CELDAS`): `probar_riqueza.js` los reportaba "SIN
+  CAMBIO" y la pregunta era si eso es idempotencia (bien) o desalineacion (bug). Diagnostico:
+  ninguna de las dos — ambas celdas fueron **repurposadas por un modulo mas nuevo**. `Inicio!F8`
+  pertenece a `DEVTOOL_InicioPresupuesto.js` desde v0.32.0, con una estructura de formula
+  enteramente distinta. `Tablero!AG9:AG12` hoy son el bloque **"Tipo de Medios"**
+  (`DEVTOOL_StockYFlujo.js`, agrupa por Ahorros/Financiacion/Hogar/Inversiones) — el bloque
+  "Capital por moneda" que `RIQ_CELDAS` cree administrar ahi se corrio a **`AG18:AG21`** cuando
+  "Tipo de Medios" se inserto arriba, y ese bloque ya lo escribe y verifica
+  `DEVTOOL_StockYFlujo.js` por su cuenta.
+
+### `_conTipoEnCategorias` ya no explota
+
+Moria con `Cannot read properties of undefined (reading 'replace')` al recibir la celda de `AA9`
+(ya sin formula) desde `probar_riqueza.js`. Mismo criterio que `_repararFormula` en v0.36.1: una
+celda sin formula es un estado, no un error; ahora devuelve la entrada intacta.
+
+### Tres bancos dejan de tratar "sin formula" como benigno
+
+`probar_stock_flujo.js` imprimia `(sin snapshot) Tablero!R9` para las tres celdas corridas y
+terminaba en **"SIN FALLAS"** — el mismo modo de falla que este repo viene sufriendo: un banco en
+verde sobre una geometria que ya cambio. Ahora es **FALLA**, con un mensaje que dice la celda y
+que se encontro en su lugar. Se aplico el mismo criterio en `probar_riqueza.js` y
+`probar_formulerio.js`.
+
+**Consecuencia aceptada:** `probar_formulerio.js` pasa de "SIN FALLAS" a **5 FALLA(S) fijas**
+(`AF9:AF12` y `N19`, los stale documentados arriba) hasta que Franco decida retirarlos de
+`FORM_CELDAS` o los de por buenos. Es la senal funcionando, no una regresion.
+
+### Hallazgo nuevo, sin resolver
+
+Al corregir `FORM_CELDAS` a `R10/U10/X10`, la barrida anti-colision de
+`probar_tablero_faltante.js` (preexistente) empezo a acusar que `DEVTOOL_FormulerioV0111.js` y
+`DEVTOOL_TableroFaltanteProyectado.js` nombran las mismas tres celdas. Es real. Verificado que hoy
+es **inocuo** — el "anclas" de `FORM_CELDAS` busca el patron viejo `AL9:AL` y ni la formula real
+de Franco ni la version que envuelve `DEVTOOL_TableroFaltanteProyectado.js` lo contienen — pero es
+**fragil**: si el patron viejo reaparece alguna vez, correr "Formulerio v0.11 > Aplicar" despues
+de "Tablero Faltante Proyectado" reescribiria una celda que hoy es territorio exclusivo del
+segundo modulo. Queda para que Franco decida (no es una correccion de coordenada, es una decision
+de quien es dueno de la celda).
+
+No se desplego: cambios solo en el repo (`fix/tablero-pendientes`).
+
+---
+
 ## v0.37.0 - Los deltas dicen cuanto, no solo cuanto por ciento (2026-08-21)
 
 > "Podes ponerme ingresos / egresos y capitalizacion promedio? Como para entender valores y por

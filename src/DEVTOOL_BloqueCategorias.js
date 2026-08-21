@@ -23,12 +23,24 @@
  * 1. NO toca ninguna otra celda del Tablero. Es una sola formula.
  * 2. NO cambia la estructura del bloque ni sus rotulos.
  *
- * @version 0.22.0
+ * ============================================================================
+ * CORRIDA DE FILA EL 2026-08-21
+ * ============================================================================
+ * Franco le agrego una fila al bloque "Categorias" para dejar lugar al "Faltante proyectado"
+ * (ver DEVTOOL_TableroFaltanteProyectado.js): el header "Nombre" que rotulaba la columna bajo de
+ * la fila 8 a la 9, y la formula que agrupa bajo con el, de AA9 a AA10. BCAT_CELDA se corrige a
+ * AA10, con preflight por rotulo contra AA9 ("Nombre"): si el rotulo no coincide, aborta sin
+ * tocar nada, en vez del `if (!actual) throw` generico que antes solo confirmaba "no hay formula"
+ * sin decir si es porque la geometria se movio o porque la celda esta legitimamente vacia.
+ *
+ * @version 0.22.1
  * @since 2026-08-19
- * @lastModified 2026-08-19
+ * @lastModified 2026-08-21
  */
 
-const BCAT_CELDA = 'AA9';
+const BCAT_CELDA = 'AA10';
+const BCAT_ROTULO_CELDA = 'AA9';
+const BCAT_ROTULO_ESPERADO = 'Nombre';
 const BCAT_PROP_RESPALDO = 'bloque_categorias_respaldo';
 
 /**
@@ -71,6 +83,25 @@ function _colMotorTablero(clave) {
 }
 
 // ============================================
+// PREFLIGHT
+// ============================================
+
+/**
+ * BCAT_CELDA es un dato de derrame (formula, no rotulo fijo), asi que no se puede verificar por
+ * su propio contenido. Se verifica por el rotulo de la celda de ARRIBA (el header "Nombre" que
+ * encabeza la columna): si ese rotulo no coincide, la geometria se movio de nuevo y no hay que
+ * escribir a ciegas. Aborta ruidosamente en vez de seguir de largo.
+ */
+function _preflightRotuloBcat(hoja) {
+    const vivo = String(hoja.getRange(BCAT_ROTULO_CELDA).getValue() || '').trim();
+    if (_normalizarRotulo(vivo) !== _normalizarRotulo(BCAT_ROTULO_ESPERADO)) {
+        throw new Error(BCAT_ROTULO_CELDA + ' dice "' + vivo + '" y se esperaba "' +
+            BCAT_ROTULO_ESPERADO + '". Sin ese rotulo no hay evidencia de que ' + BCAT_CELDA +
+            ' siga siendo la columna del bloque "Categorias". No se toco nada.');
+    }
+}
+
+// ============================================
 // PUBLICAS
 // ============================================
 
@@ -80,6 +111,7 @@ function estadoBloqueCategorias() {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const hoja = ss.getSheetByName(NAV_CONFIG.SHEETS.TABLERO);
         if (!hoja) throw new Error('No existe la hoja "' + NAV_CONFIG.SHEETS.TABLERO + '".');
+        _preflightRotuloBcat(hoja);
         const actual = hoja.getRange(BCAT_CELDA).getFormula();
         if (!actual) throw new Error(BCAT_CELDA + ' no tiene formula.');
         const nueva = _reapuntarBloqueCategorias(actual);
@@ -113,6 +145,7 @@ function aplicarBloqueCategorias() {
         ss = SpreadsheetApp.getActiveSpreadsheet();
         const hoja = ss.getSheetByName(NAV_CONFIG.SHEETS.TABLERO);
         if (!hoja) throw new Error('No existe la hoja "' + NAV_CONFIG.SHEETS.TABLERO + '".');
+        _preflightRotuloBcat(hoja);
         const rango = hoja.getRange(BCAT_CELDA);
         previa = rango.getFormula();
         if (!previa) throw new Error(BCAT_CELDA + ' no tiene formula.');

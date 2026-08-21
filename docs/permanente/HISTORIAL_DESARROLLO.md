@@ -6,6 +6,132 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-21 - Realineacion post-reacomodo del Tablero + bancos endurecidos contra el silencio (v0.38.0)
+
+### Evento
+
+Franco reacomodo la hoja Tablero a mano el 2026-08-21 para dejar lugar al bloque "Faltante
+proyectado" que `DEVTOOL_TableroFaltanteProyectado.js` (v0.36.0) agrego el mismo dia: en los
+cuatro bloques de agregacion (Ingresos, Gastos Fijos, Gastos Variables, Categorias) el header
+que vivia en la fila 8 bajo a la 9 y el derrame de datos que vivia en la 9 bajo a la 10. Cuatro
+direcciones cableadas en `DEVTOOL_FormulerioV0111.js` (`FORM_CELDAS`) y una en
+`DEVTOOL_RiquezaYCategorias.js` / `DEVTOOL_BloqueCategorias.js` quedaron apuntando al header en
+vez del derrame. Sesion dedicada a: (1) realinear las seis direcciones, siempre verificando por
+ROTULO contra el gemelo (`docs/permanente/celdas.tsv`) y nunca por coordenada memorizada; (2)
+agregar preflight por rotulo donde faltaba; (3) investigar (sin inventar) dos hallazgos que
+`probar_riqueza.js` y `probar_stock_flujo.js` ya venian senalando: `Tablero!N19` vacia y
+`Tablero!AG9:AG12`/`Inicio!F8` "SIN CAMBIO"; (4) endurecer tres bancos de pruebas que trataban
+"la celda declarada no tiene formula" como benigno.
+
+### Direcciones corregidas (verificadas por rotulo y por mutacion)
+
+| Declarada | Corregida | Modulo | Rotulo de control |
+|---|---|---|---|
+| `Tablero!R9` | `Tablero!R10` | `FORM_CELDAS` | `R9`="Cuenta" |
+| `Tablero!U9` | `Tablero!U10` | `FORM_CELDAS` | `U9`="Cuenta" |
+| `Tablero!X9` | `Tablero!X10` | `FORM_CELDAS` | `X9`="Cuenta" |
+| `Tablero!AA9` | `Tablero!AA10` | `FORM_CELDAS`, `RIQ_BLOQUE_CATEGORIAS.celda`, `BCAT_CELDA` | `AA9`="Nombre" |
+| `Tablero!AB8` | `Tablero!AB9` | `RIQ_BLOQUE_CATEGORIAS.celdaRotuloTipo` | `AB9`="Tipo" |
+| `Tablero!L28` | `Tablero!L29` | `FORM_CELDAS` | `L28`="Comprobacion Traspasos" |
+
+Metodo de verificacion: para cada una, se revirtio la coordenada a la version vieja, se corrio el
+banco correspondiente y se confirmo que reportaba FALLA con el mensaje correcto (celda + que hay
+hoy en su lugar), y recien despues se restauro la correccion. Documentado con el output completo
+en el reporte de la sesion.
+
+### Preflight por rotulo (defensa nueva)
+
+- `DEVTOOL_FormulerioV0111.js`: `FORM_CELDAS` gana los campos opcionales `rotuloCelda`/
+  `rotuloEsperado` en las cuatro entradas de agregacion por cuenta y en "Comprobacion de
+  traspasos". `_verificarRotulosFormulerio(ss, nombreTablero)` los recorre y
+  `_preflightFormulerio()` aborta el modulo entero (no escribe nada) si algun rotulo vivo no
+  coincide. Verificado mockeando `R9="Fecha"`: el preflight lo detecta y lo reporta.
+- `DEVTOOL_BloqueCategorias.js`: `_preflightRotuloBcat()` nuevo, verifica `AA9="Nombre"` antes de
+  tocar `AA10`, tanto en `estadoBloqueCategorias()` como en `aplicarBloqueCategorias()`.
+- `DEVTOOL_RiquezaYCategorias.js` ya tenia este preflight (`rotuloTipoOk` contra
+  `celdaRotuloTipo`); solo se corrigio la coordenada de control (AB8 -> AB9).
+
+### Investigado, no inventado
+
+**`Tablero!N19`** — declarada en `FORM_CELDAS` y en `RIQ_CELDAS` como "Capitalizacion real del
+mes", esta **vacia** en el gemelo (sin formula, sin valor). No es efecto del reacomodo de hoy:
+quedo obsoleta el **2026-08-20**, un dia antes, cuando el rediseno manual de Franco sobre
+`L7:O19` movio los montos de la columna N a la O. Esa celda la escribe hoy
+`DEVTOOL_Capitalizacion.js` en **`Tablero!O19`** (decision Franco 2026-08-20: *"N19 no debe ser
+una resta de descarte. Aca si va el valor registrado del mes"*), con preflight por rotulo propio
+(`L19`="Capacidad de Capitalizacion") y calcula exactamente eso — el flujo neto medido hacia
+Ahorros + Inversiones, excluyendo el arrastre "Inicio Mes" — verificado contra el gemelo:
+`-$59.989,12` hoy. No se escribio ninguna formula en N19 ni se removio la declaracion de
+`FORM_CELDAS`/`RIQ_CELDAS`: se documento el hallazgo inline en ambos modulos.
+
+**`Tablero!AG9:AG12`** e **`Inicio!F8`** (seis celdas de `RIQ_CELDAS`) — `probar_riqueza.js` las
+reportaba "SIN CAMBIO: el patron no matcheo", y hacia falta distinguir idempotencia (ok) de
+desalineacion (bug). Ninguna de las dos: las dos celdas fueron **repurposadas por un modulo mas
+nuevo**, con estructura de formula enteramente distinta.
+- `Inicio!F8` pertenece a `DEVTOOL_InicioPresupuesto.js` desde v0.32.0.
+- `Tablero!AG9:AG12` en el layout de hoy son el bloque **"Tipo de Medios"**
+  (`DEVTOOL_StockYFlujo.js`, `SYF_TIPOS_TABLERO`, agrupa por Ahorros/Financiacion/Hogar/
+  Inversiones — otra pregunta de negocio, "donde esta la finalidad de la plata"). El bloque
+  "Capital por moneda" que `RIQ_CELDAS`/`FORM_CELDAS` creen administrar ahi se corrio a
+  **`Tablero!AG18:AG21`** cuando "Tipo de Medios" se inserto arriba de el; ese bloque
+  (`SYF_SALDOS_TABLERO`) ya lo escribe y verifica `DEVTOOL_StockYFlujo.js` con su propio
+  preflight por rotulo. Confirmado contra el gemelo, celda por celda.
+
+`RIQ_CELDAS`/`FORM_CELDAS` no se editan para retirar estas entradas: es una decision de Franco
+(formalizar el retiro o no), documentada pero no ejecutada.
+
+### `_conTipoEnCategorias` ya no explota (crash reportado por el coordinador)
+
+Moria con `Cannot read properties of undefined (reading 'replace')` al procesar `Tablero!AA9`
+(ya sin formula, corrida a `AA10`) desde `probar_riqueza.js`. Mismo criterio que
+`_repararFormula` (v0.36.1): una celda sin formula es un ESTADO, no un error. Ahora
+`_conTipoEnCategorias` devuelve la entrada intacta si no recibe un string no vacio, y el
+diagnostico de "por que esta vacia" lo hace quien llama.
+
+### Tres bancos dejan de tratar "sin formula" como benigno
+
+`probar_stock_flujo.js` imprimia `(sin snapshot) Tablero!R9` para las tres celdas corridas y
+terminaba en **"SIN FALLAS"**: trataba "la celda que el modulo declara administrar no tiene
+formula" como un estado benigno, que es precisamente el modo de falla que este repo viene
+sufriendo — un banco en verde sobre una geometria que ya cambio. Se aplico el mismo criterio, con
+el mismo mensaje ("celda + que se encontro en su lugar", leido de la columna VALOR del gemelo, no
+solo FORMULA), en `probar_riqueza.js` (secciones 1 y 2, y la celda del bloque de categorias pasa
+a leerse de `RIQ_BLOQUE_CATEGORIAS.celda` en vez de estar hardcodeada) y en
+`probar_formulerio.js` (secciones 1 y 4).
+
+**Consecuencia aceptada, no una regresion**: `probar_formulerio.js` pasa de "SIN FALLAS" a
+**5 FALLA(S) fijas** (`Tablero!AF9:AF12` y `Tablero!N19`, los mismos stale documentados arriba) y
+`probar_riqueza.js` de 5 a **7 hallazgos**. Van a seguir en rojo hasta que Franco decida retirar
+esas entradas de `FORM_CELDAS`/`RIQ_CELDAS` o las de por formalmente aceptadas.
+
+### Hallazgo nuevo, sin resolver: colision de territorio
+
+Al corregir `FORM_CELDAS` a `R10/U10/X10`, la barrida anti-colision preexistente de
+`probar_tablero_faltante.js` (seccion 8: busca sus propias celdas como literal de string en el
+resto de `src/DEVTOOL_*.js`) empezo a acusar que `DEVTOOL_FormulerioV0111.js` y
+`DEVTOOL_TableroFaltanteProyectado.js` nombran las mismas tres celdas. Es real. Verificado que hoy
+es **inocuo**: el "anclas" de `FORM_CELDAS` busca el patron viejo `AL9:AL` (bug del swap v0.11) y
+ni la formula real de Franco en R10/U10/X10 ni la version que la envuelve
+`DEVTOOL_TableroFaltanteProyectado.js` lo contienen (las dos ya usan `AL6:AL`), asi que
+`_repararFormula` es un no-op contra las dos. Pero es **fragil**: si el patron viejo reapareciera,
+correr "Formulerio v0.11 > Aplicar" despues de "Tablero Faltante Proyectado > Aplicar"
+reescribiria una celda que hoy es territorio exclusivo del segundo modulo, potencialmente
+corrompiendo la sub-formula `tabla_real` que este ultimo empotra. No se resolvio en esta sesion
+(retirar la entrada de `FORM_CELDAS` es una decision de ownership, no una correccion de
+coordenada); queda para que Franco decida.
+
+### Archivos NO tocados (jurisdiccion de otra sesion en paralelo)
+
+Por instruccion explicita: `src/DEVTOOL_InicioPresupuesto.js`,
+`devtools/probar_inicio_presupuesto.js` y `docs/permanente/celdas.tsv`.
+
+### No desplegado
+
+Todos los cambios quedan en el repo, branch `fix/tablero-pendientes`. El deploy real a la
+planilla productiva lo hace Franco por `sync_targets.command`.
+
+---
+
 ## 2026-08-18 - Swap de hojas Fix: el rediseno de Franco pasa a ser canonico (v0.11.0)
 
 ### Evento

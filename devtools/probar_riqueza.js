@@ -9,9 +9,18 @@
  * Existe por la misma cicatriz que probar_formulerio.js: la v0.12.0 escribio formulas que no
  * parseaban porque nadie corrio las transformaciones contra una entrada real antes de deployar.
  *
+ * CICATRIZ DEL 2026-08-21: una celda declarada (Tablero!AA9, Tablero!N19) que perdio su formula
+ * porque el Tablero se reacomodo se leia como "sin snapshot" y el banco seguia de largo SIN
+ * marcar falla -- el mismo agujero que se corrigio en probar_stock_flujo.js el mismo dia. "La
+ * celda que el modulo declara administrar no tiene formula" es una senal, no un estado benigno:
+ * ahora CUALQUIER declaracion de RIQ_CELDAS o RIQ_BLOQUE_CATEGORIAS sin formula viva es FALLA, y
+ * el mensaje dice que hay hoy en su lugar (rotulo o valor) para no tener que ir a mirar el gemelo
+ * a mano. De paso, `_conTipoEnCategorias` se probaba solo con una formula viva de verdad: ahora
+ * tambien se prueba que sobrevive a una celda sin formula sin explotar (ver seccion 2).
+ *
  * USO:  node devtools/probar_riqueza.js       (exit 0 si pasa, 1 si algo sale invalido)
  *
- * @version 0.13.0
+ * @version 0.14.0
  * @since 2026-08-19
  * @see src/DEVTOOL_RiquezaYCategorias.js
  */
@@ -33,9 +42,21 @@ const src = fs.readFileSync(path.join(RAIZ,'src/DEVTOOL_FormulerioV0111.js'),'ut
           + '\n;Object.assign(globalThis,{FORM_CELDAS,RIQ_CELDAS,RIQ_BLOQUE_CATEGORIAS});';
 vm.runInContext(src, ctx);
 
+// F: formula viva por celda. V: VALOR vivo por celda (formula o literal) -- para poder decir QUE
+// hay hoy en una celda que perdio su formula, no solo que la perdio.
 const tsv=fs.readFileSync(path.join(RAIZ,'docs/permanente/celdas.tsv'),'utf8').split('\n');
-const F={}; for(const l of tsv){const p=l.split('\t'); if(p.length<3||!p[2])continue;
-  F[p[0]+'!'+p[1]]=p[2].replace(/\\\\/g,'\x00').replace(/\\n/g,'\n').replace(/\x00/g,'\\');}
+const F={}, V={};
+for(const l of tsv){
+  const p=l.split('\t'); if(p.length<4) continue;
+  const clave=p[0]+'!'+p[1];
+  if(p[2]) F[clave]=p[2].replace(/\\\\/g,'\x00').replace(/\\n/g,'\n').replace(/\x00/g,'\\');
+  if(p[3]) V[clave]=p[3];
+}
+/** Que hay HOY en una celda, para el mensaje de falla ("y que se encontro en su lugar"). */
+function queHayEn(clave){
+  if(V[clave]) return 'hoy tiene "'+V[clave]+'"';
+  return 'esta vacia';
+}
 const pre={anclas:ctx._anclasMotorTablero(), nombreInicio:'Inicio', nombreTablero:'Tablero'};
 // llevar cada formula a su estado POST-formulerio, que es contra el que corre este modulo
 function viva(clave){
@@ -58,7 +79,13 @@ function chequear(n,d,exig){
 console.log('=== 1. Las 6 celdas de RIQUEZA: lista negra -> lista blanca ===');
 for(const spec of ctx.RIQ_CELDAS){
   const clave=(spec.hoja==='INICIO'?'Inicio':'Tablero')+'!'+spec.celda;
-  const antes=viva(clave); if(!antes){console.log('  (sin snapshot) '+clave);continue;}
+  const antes=viva(clave);
+  if(!antes){
+    fallas++;
+    console.log('  ### FALLA (sin formula) '+clave+' ('+spec.nota+'): '+queHayEn(clave)+
+      '. RIQ_CELDAS declara administrar esta celda y no hay nada que reescribir.');
+    continue;
+  }
   const desp=ctx._aListaBlanca(antes);
   if(desp===antes){console.log('  !!! SIN CAMBIO: '+clave+' -- el patron no matcheo');fallas++;continue;}
   if(chequear(clave,desp,{sinListaNegra:true})){
@@ -66,21 +93,39 @@ for(const spec of ctx.RIQ_CELDAS){
     console.log('  OK  '+clave.padEnd(14)+(l?l.trim():''));
   }
 }
-console.log('\n=== 2. El bloque de categorias (Tablero!AA9) ===');
-const a9=viva('Tablero!AA9'); const d9=ctx._conTipoEnCategorias(a9);
-if(d9===a9){console.log('  !!! SIN CAMBIO');fallas++;}
-else if(chequear('Tablero!AA9',d9,{})){
-  d9.split('\n').filter(x=>/condicion;|columna_tipo|columna_aj \\|columna_ak_vacia/.test(x)).forEach(x=>console.log('     '+x.trim()));
-  if(/columna_ak_vacia/.test(d9)){console.log('  !!! quedo el nombre viejo de la variable');fallas++;}
+console.log('\n=== 2. El bloque de categorias (RIQ_BLOQUE_CATEGORIAS) ===');
+// La celda se lee de la CONSTANTE, no se hardcodea: si RIQ_BLOQUE_CATEGORIAS.celda se corrige (o
+// se corre de nuevo), este banco prueba automaticamente contra la celda correcta.
+const claveCat='Tablero!'+ctx.RIQ_BLOQUE_CATEGORIAS.celda;
+const a9=viva(claveCat);
+let d9;
+if(!a9){
+  fallas++;
+  console.log('  ### FALLA (sin formula) '+claveCat+': '+queHayEn(claveCat)+
+    '. RIQ_BLOQUE_CATEGORIAS declara administrar esta celda y no hay nada que reescribir.');
+} else {
+  // _conTipoEnCategorias tiene que sobrevivir a una entrada vacia sin explotar (cicatriz del
+  // 2026-08-21): se prueba aca, con el mismo helper, antes de usarlo con la formula real.
+  if(ctx._conTipoEnCategorias(undefined)!==undefined || ctx._conTipoEnCategorias('')!==''){
+    fallas++; console.log('  ### FALLA _conTipoEnCategorias no es segura ante entrada vacia/undefined');
+  } else {
+    console.log('  OK  _conTipoEnCategorias(undefined) y (\'\') no explotan (devuelven la entrada intacta)');
+  }
+  d9=ctx._conTipoEnCategorias(a9);
+  if(d9===a9){console.log('  !!! SIN CAMBIO '+claveCat);fallas++;}
+  else if(chequear(claveCat,d9,{})){
+    d9.split('\n').filter(x=>/condicion;|columna_tipo|columna_aj \\|columna_ak_vacia/.test(x)).forEach(x=>console.log('     '+x.trim()));
+    if(/columna_ak_vacia/.test(d9)){console.log('  !!! quedo el nombre viejo de la variable');fallas++;}
+  }
 }
 console.log('\n=== 3. Idempotencia ===');
 let ni=0;
 for(const spec of ctx.RIQ_CELDAS){
   const clave=(spec.hoja==='INICIO'?'Inicio':'Tablero')+'!'+spec.celda;
-  if(!F[clave])continue;
+  if(!F[clave])continue;   // sin formula: ya se marco FALLA en la seccion 1, aca no hay nada que reaplicar
   const a=ctx._aListaBlanca(viva(clave)); if(a!==ctx._aListaBlanca(a)){console.log('  NO IDEMPOTENTE '+clave);ni++;}
 }
-if(d9!==ctx._conTipoEnCategorias(d9)){console.log('  NO IDEMPOTENTE Tablero!AA9');ni++;}
+if(a9 && d9!==ctx._conTipoEnCategorias(d9)){console.log('  NO IDEMPOTENTE '+claveCat);ni++;}
 console.log(ni===0?'  OK  todas idempotentes':'  '+ni+' no idempotentes');
 console.log('\n'+(fallas+ni===0?'===> SIN FALLAS':'===> '+(fallas+ni)+' FALLA(S)'));
 process.exit(fallas+ni===0?0:1);
