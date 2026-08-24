@@ -71,6 +71,37 @@ Sigue al modo:
 "Guardar Proyeccion" escribe el periodo presupuestado en la BD (`Proyeccion`), para poder medirlo
 y seguirlo desde el Tablero.
 
+## Lo que ya existe, medido el 2026-08-24
+
+La hoja es hoy un **cascaron**: la estructura esta, el contenido no.
+
+| Existe y funciona | Existe y NO esta cableado | No existe |
+|---|---|---|
+| espejo vivo del Plan de Cuentas en `I`/`M`/`Q`/`U`, 1:1 por formula | el selector de Modo (`E7`): CERO formulas de la hoja lo referencian | todo el contenido de `J`,`K`,`N`,`O`,`R`,`S`,`V`,`W` (filas 9-38): vacias |
+| dos tablas resumen (`C9:F14` y `C16:F21`) con formulas | el selector de periodo (`J2`/`J3`/`J4`): tampoco lo lee ninguna formula | el guardado a la BD |
+
+Los totales de la fila 8 son `SUM` de rangos vacios, por eso dan $0,00.
+
+**Conclusion**: no hay que "hacer que el filtro cambie las columnas". Hay que construir las
+columnas Y el filtro. El unico cimiento reutilizable es el espejo del Plan de Cuentas.
+
+## Dos correcciones de Franco (2026-08-24)
+
+1. **`F19:F21` (los porcentajes de la Tabla 2) dividian por `$E$11`**, que es el Ingresos de la
+   Tabla 1. Franco confirmo que **es un error de copiar-pegar**: tienen que dividir por `$E$18`,
+   el Ingresos de su propia tabla.
+2. **La asimetria de filas ya no existe**: Franco emparejo los cuatro bloques, todos espejan
+   ahora 30 filas.
+
+## Un hueco conocido que hay que tener presente
+
+La hoja `Proyeccion` (la BD) **no tiene cotizaciones congeladas**: 4 celdas con contenido en las
+columnas de TC contra 13.916 en `Registros`. Es un volcado batch del 2026-08-20, no un flujo
+vivo. Consecuencia: una proyeccion cargada en USD/AUD/EUR no se puede convertir con la cotizacion
+del dia en que se proyecto, solo con la del dia en que se mira -- lo que distorsiona cualquier
+seguimiento a varios meses. Franco ya lo habia marcado. **No se resuelve en este trabajo, pero
+quien construya el guardado tiene que saber que existe.**
+
 ## Historia previa, para no tropezar
 
 `src/DEVTOOL_Presupuesto.js` y `src/DEVTOOL_CableadoPresupuesto.js` construian una version
