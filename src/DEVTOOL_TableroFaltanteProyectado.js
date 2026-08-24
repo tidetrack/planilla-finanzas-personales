@@ -227,14 +227,84 @@
  *    `_respaldarFormulerio`, que solo fotografia formulas) para que
  *    `revertirTableroFaltanteProyectado` lo pueda devolver exacto.
  *
+ * 13. [NUEVA v0.42.0] EL INVARIANTE "ANTES" SE DERIVA DEL RENDER VIVO, NUNCA DE UN CONTEO DE
+ *    FILAS. v0.41.0 se desplego y la propia verificacion la atrapo y revirtio sola (funcionando
+ *    exactamente como debe -- ver ZZ_Changelog.js para el reporte completo): el preflight media
+ *    "cuentas reales antes" contando FILAS no vacias del rango de Cuenta, una suposicion que solo
+ *    vale en la PRIMERA MIGRACION (la celda ancla todavia es la QUERY cruda de Franco, una fila =
+ *    una cuenta). En un UPGRADE (v0.40.0 o v0.41.0 ya aplicados) el rango YA es un bloque de DOS
+ *    SECCIONES, y contar filas suma cuentas reales y de faltante juntas -- en la corrida real,
+ *    Ingresos tiene 4 cuentas reales pero el preflight leyo 9 (4 reales + 5 de faltante del
+ *    bloque v0.40.0 ya aplicado). El "despues" (nombres DISTINTOS renderizados, 6: la union de
+ *    reales y faltantes) nunca podia coincidir contra esa cardinalidad -- eran dos magnitudes
+ *    distintas por diseño, no un bug de conteo.
+ *    La correccion, `_nombresRealesVivosTfp`: el "antes" pasa a ser el CONJUNTO de nombres reales,
+ *    leido del render vivo AHORA MISMO, sin escribir nada (el preflight jamas escribe) y sin
+ *    evaluar ninguna formula -- usando la señal que cada estado ya deja en los VALORES: la fila
+ *    separadora rotulada (v0.41.0 ya aplicado, todo arriba de ella es real) o el tipo de dato del
+ *    Monto (v0.40.0 ya aplicado, NUMERO = real, STRING = faltante via su TEXT(), decision #7 de
+ *    v0.40.0); sin ninguna de las dos señales, es la QUERY cruda de Franco (primera migracion),
+ *    una fila = una cuenta, el comportamiento de siempre.
+ *    Y la verificacion (`_verificarInvariantesTfp`) deja de comparar CARDINALIDADES para comparar
+ *    el CONJUNTO por NOMBRE: cada cuenta del "antes" tiene que seguir apareciendo en el "despues"
+ *    -- mas estricto que un piso numerico (un SWAP que perdiera una cuenta real y ganara otra por
+ *    otro motivo daria la misma cardinalidad, pero es exactamente la perdida que el invariante
+ *    existe para atrapar). El caso de TRUNCADO esperado (mas cuentas reales que filas disponibles)
+ *    sigue usando el piso por cardinalidad de siempre -- ahi el diseño trunca a proposito, no toda
+ *    cuenta del "antes" tiene que sobrevivir. Probado por mutacion en la seccion 8 del banco:
+ *    reaplicar sobre un bloque v0.40.0 ya aplicado (sin cambios reales) NO dispara el invariante;
+ *    si de ese mismo estado desaparece una cuenta real de verdad, SI lo dispara.
+ *
+ * 14. [NUEVA v0.42.0] LA SECCION REAL VA EN NEGRITA -- COMPLEMENTO EXACTO DEL GRIS, NO UNA SEÑAL
+ *    NUEVA. Franco, con el bloque de Ingresos delante: "quiero que las filas de los faltantes
+ *    proyectados queden como estan, pero que los ingresos de verdad aparezcan en negrito." Osea:
+ *    la seccion de faltante NO se toca (gris, exactamente como esta hoy); la seccion real pasa a
+ *    negrita. Misma idea que ya venia pidiendo (separar mas las dos secciones), resuelta del otro
+ *    lado -- en vez de apagar mas lo proyectado, resaltar lo real.
+ *    La regla de negrita (`_formulaReglaNegritaTfp`) reusa el MISMO COUNTIF expansivo posicional
+ *    del gris (decision #8) y le pide la condicion CONTRARIA (`=0` en vez de `>0`): es su
+ *    complemento exacto, no un mecanismo nuevo que pudiera desincronizarse del gris con el tiempo.
+ *    Tres decisiones puntuales, pedidas explicitamente por Franco para resolver:
+ *      (a) LA FILA SEPARADORA (que tambien cae del lado "COUNTIF = 0", en su propia fila el rango
+ *          expansivo todavia no la incluye a ella misma) queda EXCLUIDA de la negrita, con una
+ *          guarda explicita en la formula (`<> rotulo_separador`). No es un ingreso real -- es un
+ *          rotulo de seccion -- y "QUE NO HACE" punto 4 ya habia decidido, desde v0.41.0, que la
+ *          fila separadora se queda con tratamiento default, sin que ninguna regla propia la
+ *          persiga. Ponerla en negrita la haria leer como una cuenta mas, exactamente la ambiguedad
+ *          que todo este modulo viene resolviendo (separar mas lo real de lo que no lo es).
+ *      (b) LAS FILAS VACIAS (mas alla de lo que el derrame llego a llenar) no se pintan: la guarda
+ *          usa COMPARACION DE VALOR (`$col$filaDatos<>""`), nunca un SUMIF/COUNTIF con criterio a
+ *          secas -- esa es exactamente la ambiguedad Sheets-especifica que causo el bug real de
+ *          v0.40.0 (una celda de derrame que muestra "" cuenta como "con contenido" para un
+ *          SUMIF/COUNTIF sin operando, pero SI es "" para una comparacion de valor directa: ver el
+ *          diagnostico permanente de la seccion 3c del banco).
+ *      (c) ABARCA LAS DOS COLUMNAS (Cuenta y Monto), no solo una -- a diferencia del gris y el
+ *          aviso, que solo pintan Monto. La regla vive en un rango de DOS columnas (_rangoDatosTfp)
+ *          con la columna del operando de "fila actual" ANCLADA en Cuenta ($colCuenta, nunca se
+ *          corre a Monto): la MISMA fila decide el estilo de sus dos celdas.
+ *    NO SE PISA FORMATO EXISTENTE: la regla SOLO llama setBold(true), nunca setBold(false) -- en
+ *    una fila donde la condicion no matchea (faltante, separador, vacia), la regla ni se evalua
+ *    para esa celda, y cualquier formato manual que hubiera ahi queda intacto. Si el Monto de la
+ *    seccion real ya tenia negrita ESTATICA (a mano, de antes de este modulo -- posible segun la
+ *    captura de Franco), setBold(true) sobre una celda ya en negrita no cambia nada visualmente.
+ *    Y si "ya en negrito" resultara ser otra regla condicional ajena en vez de formato manual, la
+ *    clasificacion propia/ajena ya existente (`_esReglaPropiaTfp`) la reconoce como ajena (no
+ *    calza formula+rango exactos con esta) y el plan la preserva intacta -- de cualquiera de las
+ *    dos formas, nada de Franco se pisa. Esta sesion no tiene forma de leer la planilla real en
+ *    vivo para CONFIRMAR cual de las dos es (manual o regla ajena): queda para la corrida final.
+ *    Probado por mutacion en la seccion 5 del banco (extension del simulador de la regla gris):
+ *    la seccion real se marca en negrita, la fila separadora NO, la seccion de faltante NO, y
+ *    quitarle la negrita a una fila real hace fallar la prueba.
+ *
  * QUE NO HACE
  * 1. NO cambia el titulo de los bloques (R7/U7/X7) ni la geometria del Plan de Cuentas.
  * 2. NO toca "Categorias" ni ningun otro bloque del Tablero.
  * 3. NO agranda el bloque mas alla de R10:S30 / U10:V30 / X10:Y30: si no entra todo, TRUNCA a
  *    las cuentas de mayor monto y lo dice en la ultima fila del bloque.
- * 4. NO le da a la fila separadora ningun formato condicional propio (ni gris, ni cursiva): su
- *    tratamiento visual es el default (oscuro, igual que la seccion 1) -- es la senal del gris de
- *    LAS DEMAS filas (decision #8) la que la deja afuera, no una regla que la persiga a ella.
+ * 4. NO le da a la fila separadora ningun formato condicional propio (ni gris, ni cursiva, ni
+ *    negrita desde v0.42.0): su tratamiento visual es el default (oscuro, sin negrita) -- tanto
+ *    la senal del gris de LAS DEMAS filas (decision #8) como la guarda explicita de la regla de
+ *    negrita (decision #14) la dejan afuera a proposito, no una regla que la persiga a ella.
  *
  * Contrato de las tres publicas: { ok: boolean, detalle?: string, error?: string }.
  *   estadoTableroFaltanteProyectado()    -> solo lectura. Se corre PRIMERO.
@@ -247,7 +317,7 @@
  * (DEVTOOL_Proyeccion).
  *
  * @see docs/permanente/FORMULAS_TABLERO.md
- * @version 0.41.0
+ * @version 0.42.0
  * @since 2026-08-21
  * @lastModified 2026-08-24
  */
@@ -320,6 +390,15 @@ const TFP_PATRON_MONTO_DEFECTO = '#,##0.00';
  */
 const TFP_ROTULO_SEPARADOR = 'Faltante proyectado';
 
+/**
+ * El placeholder que el propio `combinado` de `_formulaCuentasTfp` escribe cuando el universo
+ * ENTERO (real + faltante) esta vacio (`cant_total_bruto = 0`): ni es una cuenta real ni una de
+ * faltante. `_nombresRealesVivosTfp` (v0.42.0) lo excluye del "antes" por el mismo motivo que
+ * `cant_real` ya excluia el placeholder de QUERY-sin-resultados de Franco (decision #5): ninguno
+ * de los dos es una cuenta.
+ */
+const TFP_ROTULO_SIN_DATOS = 'Sin movimientos ni proyeccion';
+
 // ============================================
 // GEOMETRIA DERIVADA
 // ============================================
@@ -368,6 +447,17 @@ function _rangoColTfp(b, col) {
 /** La celda (o rango de 2 columnas) fija donde vive el aviso de truncado de un bloque. */
 function _rangoAvisoTfp(b) {
     return b.colCuenta + b.filaFin + ':' + b.colMonto + b.filaFin;
+}
+
+/**
+ * El rango de DATOS en las DOS COLUMNAS (Cuenta:Monto) de un bloque -- mismo alcance vertical que
+ * _rangoColTfp (excluye la fila de aviso), pero las dos columnas juntas. Lo usa la regla de
+ * negrita (decision #14): a diferencia del gris y el aviso, que solo pintan Monto, la negrita
+ * tiene que marcar nombre Y monto de la seccion real (Franco: "los ingresos de verdad aparezcan
+ * en negrito", y ya tenia los montos en negrito estatico -- ver decision #14 para el detalle).
+ */
+function _rangoDatosTfp(b) {
+    return b.colCuenta + b.filaDatos + ':' + b.colMonto + _filaFinDatosTfp(b);
 }
 
 /** El catalogo de cuentas del Plan que corresponde a cada bloque (fuente del desplegable de Cargas). */
@@ -479,7 +569,7 @@ function _formulaCuentasTfp(b, formulaRealVerbatim) {
         '  cant_faltante; SUMPRODUCT(N(faltante_por_cuenta > 0));\n' +
         '  cant_total_bruto; cant_real + cant_faltante;\n' +
         '  cant_total; IF(cant_total_bruto = 0; 1; cant_total_bruto);\n' +
-        '  combinado; IF(cant_total_bruto = 0; HSTACK("Sin movimientos ni proyeccion"; 0);\n' +
+        '  combinado; IF(cant_total_bruto = 0; HSTACK("' + TFP_ROTULO_SIN_DATOS + '"; 0);\n' +
         '    IF(cant_real = 0; tabla_faltante; VSTACK(tabla_real; tabla_faltante)));\n' +
         // La fila separadora se cobra una de las filas de DATOS solo si va a hacer falta
         // (decision #10): si no hay ninguna cuenta con faltante en TODO el universo, no hay
@@ -583,9 +673,57 @@ function _reglasAvisoTfp() {
     });
 }
 
-/** Las seis reglas propias de este modulo: tres de falta (gris) + tres de aviso (gris cursiva). */
+// ============================================
+// LA NEGRITA DE LA SECCION REAL (formato condicional, v0.42.0)
+// ============================================
+
+/**
+ * La formula de la regla de negrita (decision #14 de la cabecera, v0.42.0). Franco, sobre el
+ * bloque ya con la fila separadora: "quiero que las filas de los faltantes proyectados queden
+ * como estan, pero que los ingresos de verdad aparezcan en negrito." El gris (_formulaReglaGrisTfp)
+ * ya resuelve "que fila es de faltante" con un COUNTIF expansivo posicional; la negrita es su
+ * COMPLEMENTO EXACTO -- las filas donde ese mismo COUNTIF todavia da CERO -- mas dos guardas que
+ * el gris no necesita porque el gris nunca se aplica a una fila sin dato:
+ *   1. `$col$filaDatos<>""` (comparacion de VALOR, no un SUMIF/COUNTIF con criterio a secas --
+ *      esa ambiguedad es EXACTAMENTE el bug de v0.40.0 diagnosticado en la seccion 3c del banco;
+ *      la comparacion directa de valor SI distingue una celda vacia de verdad de una celda de
+ *      derrame que muestra "", ver decision #1/#3) para que las filas VACIAS del bloque (mas alla
+ *      de lo que el derrame llego a llenar) no se pinten.
+ *   2. `$col$filaDatos<>"` + TFP_ROTULO_SEPARADOR + `"` para EXCLUIR la fila separadora misma. La
+ *      fila separadora tambien cae del lado "COUNTIF = 0" (en su propia fila, el rango expansivo
+ *      todavia no la incluye a ella misma) -- pero no es un ingreso real, es un rotulo de seccion.
+ *      "QUE NO HACE" punto 4 (mas abajo en la cabecera) ya habia decidido que la fila separadora
+ *      se queda con tratamiento default, sin ninguna regla propia que la persiga: esta guarda
+ *      preserva esa decision en vez de pisarla con la negrita nueva.
+ * El operando `$col$filaDatos` (columna ANCLADA, fila SIN ancla) es el mismo patron que usa el
+ * COUNTIF del gris para "la fila actual": con fila relativa, Sheets lo reescribe por cada celda
+ * del rango DE DOS COLUMNAS al que se aplica esta regla (ver _rangoDatosTfp) -- la columna queda
+ * fija en Cuenta (nunca se corre a Monto), asi que la MISMA fila decide el estilo de sus dos
+ * celdas (nombre y monto), resolviendo el pedido de "que abarque las dos columnas" sin necesitar
+ * dos reglas por bloque.
+ */
+function _formulaReglaNegritaTfp(b) {
+    const filaAncla = b.filaDatos - 1;
+    return '=AND(COUNTIF($' + b.colCuenta + '$' + filaAncla + ':' + b.colCuenta + filaAncla +
+        '; "' + TFP_ROTULO_SEPARADOR + '")=0; $' + b.colCuenta + b.filaDatos + '<>""; $' +
+        b.colCuenta + b.filaDatos + '<>"' + TFP_ROTULO_SEPARADOR + '")';
+}
+
+/**
+ * Las tres reglas "de negrita": una por bloque, sobre el rango de DOS COLUMNAS (Cuenta:Monto) de
+ * los datos (_rangoDatosTfp) -- a diferencia del gris y el aviso, que solo pintan Monto, porque
+ * Franco pidio explicitamente que la negrita cubra nombre Y monto de la seccion real.
+ */
+function _reglasNegritaTfp() {
+    return TFP_ORDEN.map(function (k) {
+        const b = TFP_BLOQUES[k];
+        return { clave: k, tipo: 'negrita', celda: _rangoDatosTfp(b), formula: _formulaReglaNegritaTfp(b) };
+    });
+}
+
+/** Las nueve reglas propias de este modulo: tres de falta (gris) + tres de aviso (cursiva) + tres de real (negrita). */
 function _reglasPropiasTfp() {
-    return _reglasGrisTfp().concat(_reglasAvisoTfp());
+    return _reglasGrisTfp().concat(_reglasAvisoTfp()).concat(_reglasNegritaTfp());
 }
 
 /** Una regla viva es propia si es CUSTOM_FORMULA, con la formula EXACTA de un bloque y su MISMO rango. */
@@ -606,7 +744,7 @@ function _clasificarReglasTfp(reglas) {
     return { propias: propias, ajenas: ajenas };
 }
 
-/** true si faltan, sobran o difieren las reglas propias respecto de las seis esperadas. */
+/** true si faltan, sobran o difieren las reglas propias respecto de las nueve esperadas. */
 function _reglasHacenFaltaTfp(clases) {
     const quiero = _reglasPropiasTfp();
     if (clases.propias.length !== quiero.length) return true;
@@ -632,6 +770,26 @@ function _construirReglaAvisoTfp(hoja, item) {
         .whenFormulaSatisfied(item.formula)
         .setFontColor(TFP_COLOR_GRIS)
         .setItalic(true)
+        .setRanges([hoja.getRange(item.celda)])
+        .build();
+}
+
+/**
+ * La regla "de real": SOLO negrita, sin tocar color de fuente (decision #14) -- no se le pone
+ * ningun setFontColor, para no reemplazar el color por default de la celda (negro/automatico) por
+ * uno propio que no hace falta. Si el Monto de la seccion real ya tenia negrita ESTATICA (Franco,
+ * a mano, de antes de este modulo), esta regla no la reemplaza ni la limpia: setBold(true) sobre
+ * una celda ya en negrita no cambia nada visualmente, y si la condicion no matchea en una celda
+ * (gris, aviso, separador, vacia) esta regla ni siquiera se evalua para esa celda -- el formato
+ * manual que hubiera ahi queda intacto. Y si "ya en negrito" resultara ser, en cambio, OTRA regla
+ * condicional ajena (no manual): la clasificacion propia/ajena existente (_esReglaPropiaTfp) la
+ * reconoce como ajena por no calzar formula+rango exactos con esta, y el plan la preserva
+ * intacta (plan.reglas.ajenas) -- de cualquiera de las dos formas, nada de Franco se pisa.
+ */
+function _construirReglaNegritaTfp(hoja, item) {
+    return SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(item.formula)
+        .setBold(true)
         .setRanges([hoja.getRange(item.celda)])
         .build();
 }
@@ -677,10 +835,60 @@ function _anclaYaEsNuestraTfp(formula) {
 }
 
 /**
- * Verifica los tres bloques por ROTULO antes de que nadie escriba, cuenta las cuentas reales
- * vivas de cada uno (informativo: estado() lo reporta, _verificarInvariantesTfp lo usa despues
- * de escribir -- nunca frena el preflight) y captura su total real ANTES del cambio (para el
- * invariante: el total real no se puede mover ni un centavo por este refactor).
+ * El "ANTES" correcto: el CONJUNTO de nombres de cuenta con movimiento real, derivado de lo que
+ * esta VIVO en la hoja AHORA MISMO -- sin escribir nada (el preflight jamas escribe) y sin
+ * evaluar ninguna formula. Ver decision #13 de la cabecera para el diagnostico completo del bug
+ * que esta funcion reemplaza (v0.41.0 se desplego y la propia verificacion la atrapo y revirtio
+ * sola: contaba FILAS del rango de Cuenta, una suposicion que solo vale en la primera migracion).
+ *
+ * Funciona en los DOS caminos de entrada leyendo la señal que cada estado YA deja en los
+ * VALORES, sin necesitar saber que version exacta escribio:
+ *   - v0.41.0 ya aplicado: hay una fila con el rotulo EXACTO TFP_ROTULO_SEPARADOR en la columna
+ *     Cuenta (decision #8). Todo lo de ARRIBA de esa fila es la seccion real.
+ *   - v0.40.0 ya aplicado (sin separador): la seccion de faltante pasaba el Monto por TEXT() para
+ *     pintarlo gris (decision #7 de v0.40.0, ver ZZ_Changelog.js) -- una celda de Monto de tipo
+ *     STRING marca una fila de faltante; de tipo NUMBER marca una fila real. La señal vive en el
+ *     TIPO DE DATO ya escrito, no en la formula que lo escribio.
+ *   - PRIMERA MIGRACION (ninguna señal presente): todo el rango es la QUERY cruda de Franco, una
+ *     fila = una cuenta real -- el comportamiento de siempre.
+ * Tambien excluye el placeholder propio TFP_ROTULO_SIN_DATOS (el fallback de `combinado` cuando
+ * el universo entero esta vacio): no es una cuenta, igual que el placeholder de QUERY-sin-
+ * resultados de Franco (decision #5) tampoco lo es.
+ *
+ * Devuelve nombres DISTINTOS (Franco agrupa por cuenta, no deberia haber duplicados dentro de la
+ * seccion real, pero se dedupe de todas formas por robustez).
+ */
+function _nombresRealesVivosTfp(hoja, b) {
+    const valoresCuenta = hoja.getRange(_rangoColTfp(b, b.colCuenta)).getValues();
+    const valoresMonto = hoja.getRange(_rangoColTfp(b, b.colMonto)).getValues();
+
+    let idxSeparador = -1;
+    for (let i = 0; i < valoresCuenta.length; i++) {
+        if (String(valoresCuenta[i][0] || '').trim() === TFP_ROTULO_SEPARADOR) { idxSeparador = i; break; }
+    }
+
+    // Sin separador vivo (limite = todo el rango): primera migracion o v0.40.0 ya aplicado. Con
+    // separador vivo, el limite corta ANTES de esa fila -- todo lo de abajo es faltante, ni se
+    // recorre.
+    const limite = idxSeparador === -1 ? valoresCuenta.length : idxSeparador;
+    const nombres = [];
+    for (let i = 0; i < limite; i++) {
+        const nombre = String(valoresCuenta[i][0] || '').trim();
+        if (nombre === '' || nombre === TFP_ROTULO_SIN_DATOS) continue;
+        // Sin separador vivo, la señal de v0.40.0 es el TIPO del Monto: STRING = TEXT() de una
+        // fila de faltante (decision #7 de v0.40.0), se descarta. En primera migracion el Monto
+        // de la QUERY de Franco siempre es NUMBER, asi que esta rama nunca descarta nada ahi.
+        if (idxSeparador === -1 && typeof valoresMonto[i][0] === 'string') continue;
+        nombres.push(nombre);
+    }
+    return nombres.filter(function (v, i) { return nombres.indexOf(v) === i; });
+}
+
+/**
+ * Verifica los tres bloques por ROTULO antes de que nadie escriba, deriva el conjunto de cuentas
+ * reales vivas de cada uno (informativo: estado() lo reporta, _verificarInvariantesTfp lo usa
+ * despues de escribir -- nunca frena el preflight) y captura su total real ANTES del cambio (para
+ * el invariante: el total real no se puede mover ni un centavo por este refactor).
  */
 function _preflightTfp(ss) {
     const nombre = NAV_CONFIG.SHEETS.TABLERO;
@@ -780,8 +988,12 @@ function _preflightTfp(ss) {
         const rotuloFaltanteVivo = String(hoja.getRange(b.rotuloFaltante.celda).getValue() || '').trim();
         const rotuloYaEsta = _normalizarRotulo(rotuloFaltanteVivo) === _normalizarRotulo(b.rotuloFaltante.esperado);
 
-        const valoresCuenta = hoja.getRange(_rangoColTfp(b, b.colCuenta)).getValues();
-        const cuentasVivas = valoresCuenta.filter(function (f) { return String(f[0] || '').trim() !== ''; }).length;
+        // CORRECCION v0.42.0 (decision #13 de la cabecera): el "antes" ya no es un conteo de
+        // FILAS del rango de Cuenta -- eso cuenta cuentas reales Y de faltante juntas si el
+        // bloque ya viene de un upgrade. Es el CONJUNTO de nombres reales, correcto en los dos
+        // caminos de entrada (primera migracion y upgrade desde v0.40.0 o v0.41.0).
+        const nombresRealVivos = _nombresRealesVivosTfp(hoja, b);
+        const cuentasVivas = nombresRealVivos.length;
         const capacidadFilas = _capacidadFilasTfp(b);
         const capacidadPeorCaso = _capacidadPeorCasoTfp(b);
         // decision Franco 2026-08-21: nunca aborta si cuentasVivas > capacidad. La formula nueva
@@ -799,6 +1011,7 @@ function _preflightTfp(ss) {
             formulaTotalFaltanteEsperada: formulaTotalFaltanteEsperada,
             faltanteEsNuestra: faltanteEsNuestra, faltanteFormulaVieja: faltanteFormula,
             faltanteValorVieja: faltanteValor, rotuloYaEsta: rotuloYaEsta, cuentasVivas: cuentasVivas,
+            nombresRealVivos: nombresRealVivos,
             capacidadFilas: capacidadFilas, capacidadPeorCaso: capacidadPeorCaso
         };
     });
@@ -906,14 +1119,19 @@ function _leerYaCalculadoTfp(hoja, celda) {
 }
 
 /**
- * Cuenta los nombres DISTINTOS no vacios en el rango vivo de Cuenta, con los mismos reintentos:
- * mientras la formula ancla no termino de calcular, la columna entera puede mostrar "Cargando...".
- * Distintos, no filas: con el layout de dos secciones un nombre puede repetirse (real + faltante).
- * EXCLUYE el rotulo de la fila separadora (TFP_ROTULO_SEPARADOR, v0.41.0): no es una cuenta, y
- * contarlo infla el piso de "nombres distintos" -- podria enmascarar una cuenta real perdida por
- * exactamente uno.
+ * Lee los nombres DISTINTOS no vacios del rango vivo de Cuenta, con reintentos: mientras la
+ * formula ancla no termino de calcular, la columna entera puede mostrar "Cargando...". Distintos,
+ * no filas: con el layout de dos secciones un nombre puede repetirse (real + faltante). EXCLUYE
+ * el rotulo de la fila separadora (TFP_ROTULO_SEPARADOR, v0.41.0): no es una cuenta, y contarlo
+ * infla el "despues" -- podria enmascarar una cuenta real perdida por exactamente uno.
+ *
+ * CORRECCION v0.42.0: antes devolvia solo la CANTIDAD (se llamaba
+ * _contarNombresDistintosYaCalculadoTfp). Ahora devuelve el ARRAY de nombres:
+ * _verificarInvariantesTfp necesita el CONJUNTO, no solo su tamaño, para comparar por NOMBRE
+ * contra el "antes" (nombresRealVivos) en vez de por cardinalidad -- ver decision #13 de la
+ * cabecera.
  */
-function _contarNombresDistintosYaCalculadoTfp(hoja, rangoA1) {
+function _leerNombresDistintosYaCalculadoTfp(hoja, rangoA1) {
     const esperas = [0, 600, 1500, 3000];
     for (let i = 0; i < esperas.length; i++) {
         if (esperas[i]) { SpreadsheetApp.flush(); Utilities.sleep(esperas[i]); }
@@ -926,8 +1144,7 @@ function _contarNombresDistintosYaCalculadoTfp(hoja, rangoA1) {
         if (!pendiente) {
             const nombres = valores.map(function (f) { return String(f[0] || '').trim(); })
                 .filter(function (v) { return v !== '' && v !== TFP_ROTULO_SEPARADOR; });
-            const distintos = nombres.filter(function (v, i) { return nombres.indexOf(v) === i; });
-            return distintos.length;
+            return nombres.filter(function (v, i) { return nombres.indexOf(v) === i; });
         }
     }
     return TFP_PENDIENTE;
@@ -939,9 +1156,22 @@ function _contarNombresDistintosYaCalculadoTfp(hoja, rangoA1) {
  *      construccion (S7 suma directo la QUERY de Franco), pero se releen igual: la construccion
  *      correcta en la formula generadora no reemplaza la verificacion contra la planilla viva.
  *   2. El total faltante es un numero finito y no negativo.
- *   3. Cuantos NOMBRES DISTINTOS con contenido quedaron en el rango de datos (excluida la fila de
- *      aviso): un piso, no una igualdad exacta, salvo en el caso de truncado real (mismo espiritu
- *      que la version anterior, adaptado a que ahora un nombre puede repetirse en dos filas).
+ *   3. NINGUNA cuenta con movimiento real (el conjunto "ANTES", `info.nombresRealVivos`, derivado
+ *      por `_nombresRealesVivosTfp` -- correcto en los dos caminos de entrada, ver decision #13
+ *      de la cabecera) desaparecio del render vivo "DESPUES".
+ *
+ *      CORRECCION v0.42.0: hasta esta version se comparaba una CANTIDAD contra otra CANTIDAD
+ *      (nombres distintos despues vs. filas vivas antes) -- dos cardinalidades de cosas DISTINTAS
+ *      que en un upgrade nunca podian coincidir (v0.41.0 se desplego y la propia verificacion la
+ *      atrapo y revirtio sola por esto mismo). Ahora se compara por NOMBRE: cada cuenta del
+ *      "antes" tiene que seguir apareciendo en el "despues", en cualquier posicion (real o
+ *      faltante). Esto es TAMBIEN mas estricto que un piso numerico: un SWAP que perdiera una
+ *      cuenta real y ganara otra distinta por otro motivo daria la MISMA cardinalidad, pero es
+ *      exactamente la perdida que este invariante existe para atrapar.
+ *
+ *      Con TRUNCADO esperado (mas cuentas reales que filas de datos disponibles) la comparacion
+ *      por nombre no aplica -- el diseño trunca a proposito a las cuentas mas importantes -- asi
+ *      que se mantiene el PISO por cardinalidad de la version anterior, sin cambios en ese caso.
  */
 function _verificarInvariantesTfp(pre) {
     const fallas = [], avisos = [];
@@ -971,24 +1201,31 @@ function _verificarInvariantesTfp(pre) {
                 '): el MAX(0; proyectado - real) de la formula no esta funcionando.');
         }
 
-        const distintosAhora = _contarNombresDistintosYaCalculadoTfp(pre.hoja, _rangoColTfp(b, b.colCuenta));
-        if (distintosAhora === TFP_PENDIENTE) {
+        const nombresAhora = _leerNombresDistintosYaCalculadoTfp(pre.hoja, _rangoColTfp(b, b.colCuenta));
+        if (nombresAhora === TFP_PENDIENTE) {
             avisos.push('"' + nombreBloque + '": la columna Cuenta todavia estaba calculando al releerla.');
         } else if (info.cuentasVivas > info.capacidadFilas) {
             // TRUNCADO ESPERADO (caso extremo: mas cuentas reales que filas de datos disponibles
-            // incluso usando una sola fila cada una): el piso pasa a ser la capacidad completa.
-            if (distintosAhora < info.capacidadFilas) {
+            // incluso usando una sola fila cada una): el diseño trunca a las cuentas mas
+            // importantes a proposito, asi que no toda cuenta del "antes" tiene que sobrevivir --
+            // el piso sigue siendo la capacidad completa (sin cambios respecto de la version
+            // anterior, salvo que info.cuentasVivas ahora es correcto -- ver decision #13).
+            if (nombresAhora.length < info.capacidadFilas) {
                 fallas.push('"' + nombreBloque + '": con truncado esperado (' + info.cuentasVivas +
                     ' cuenta(s) real(es) para ' + info.capacidadFilas + ' fila(s) de datos) quedaron ' +
-                    distintosAhora + ' nombre(s) distinto(s) y se esperaban al menos ' + info.capacidadFilas +
+                    nombresAhora.length + ' nombre(s) distinto(s) y se esperaban al menos ' + info.capacidadFilas +
                     '. Una cuenta real no puede perderse.');
             }
-        } else if (distintosAhora < info.cuentasVivas) {
-            // SIN truncado esperado: todos los nombres reales de antes tienen que seguir
-            // apareciendo (piso, no igualdad: el universo union con el catalogo puede sumar
-            // proyectadas-sin-real ademas, y esas SUMAN nombres distintos, no los reemplazan).
-            fallas.push('"' + nombreBloque + '": quedaron ' + distintosAhora + ' nombre(s) distinto(s) y ' +
-                'antes habia ' + info.cuentasVivas + ' cuenta(s) con movimiento real. Una cuenta real no puede perderse.');
+        } else {
+            // SIN truncado esperado: cada cuenta del "antes" (nombresRealVivos) tiene que seguir
+            // apareciendo en el "despues" -- comparacion por NOMBRE, no por cardinalidad (ver el
+            // comentario de la funcion).
+            const perdidas = info.nombresRealVivos.filter(function (n) { return nombresAhora.indexOf(n) === -1; });
+            if (perdidas.length) {
+                fallas.push('"' + nombreBloque + '": se perdio la cuenta real ' +
+                    perdidas.map(function (n) { return '"' + n + '"'; }).join(', ') +
+                    ' (tenia movimiento antes de este cambio y ya no aparece). Una cuenta real no puede perderse.');
+            }
         }
     });
     return { fallas: fallas, avisos: avisos };
@@ -1067,14 +1304,15 @@ function estadoTableroFaltanteProyectado() {
                 l.push('      ' + c.resumen);
             });
             l.push('');
-            l.push('Reglas de formato condicional (gris de faltante + cursiva de aviso): ' +
-                (_reglasHacenFaltaTfp(plan.reglas) ? 'se escriben/rehacen las 6 propias (3 + 3)' : 'ya estan correctas'));
+            l.push('Reglas de formato condicional (gris de faltante + cursiva de aviso + negrita de real): ' +
+                (_reglasHacenFaltaTfp(plan.reglas) ? 'se escriben/rehacen las 9 propias (3 + 3 + 3)' : 'ya estan correctas'));
         }
         l.push('Reglas ajenas de la hoja que se reponen intactas: ' + plan.reglas.ajenas.length);
         l.push('');
         l.push('NOTA: los montos de las dos secciones son NUMEROS (no texto, decision #7 v0.41.0): ' +
             'seleccionar celdas de la columna Monto suma en la barra de estado de Sheets, real y ' +
-            'faltante juntos si se seleccionan ambos.');
+            'faltante juntos si se seleccionan ambos. La seccion real (arriba del separador) va en ' +
+            'negrita; la de faltante queda gris, sin cambios (decision #14 v0.42.0).');
         const t = l.join('\n');
         _mostrarTfp('Tablero: faltante proyectado - estado', t);
         logInfo('estadoTableroFaltanteProyectado: ' + plan.cambios.length + ' celda(s) pendientes.');
@@ -1108,12 +1346,13 @@ function aplicarTableroFaltanteProyectado() {
 
         const conf = ui.alert('Tablero: faltante proyectado',
             'Se van a escribir ' + plan.cambios.length + ' celda(s) en "' + pre.nombre + '"' +
-            (tocarReglas ? ', y se rehacen las 6 reglas de color (3 gris de faltante + 3 cursiva de aviso)' : '') + '.\n\n' +
+            (tocarReglas ? ', y se rehacen las 9 reglas de color (3 gris de faltante + 3 cursiva de ' +
+                'aviso + 3 negrita de real)' : '') + '.\n\n' +
             'QUE CAMBIA en Ingresos, Gastos Fijos y Gastos Variables:\n' +
             '  - El bloque pasa a tener DOS SECCIONES separadas por una FILA ROTULADA explicita\n' +
             '    ("' + TFP_ROTULO_SEPARADOR + '"): arriba TODO lo real (una fila por cuenta con\n' +
-            '    movimiento, sin cambios de fondo), abajo TODO lo faltante (una fila por cuenta con\n' +
-            '    faltante > 0 este mes, gris, REPITIENDO el nombre de la cuenta).\n' +
+            '    movimiento, en NEGRITA), abajo TODO lo faltante (una fila por cuenta con faltante\n' +
+            '    > 0 este mes, gris, REPITIENDO el nombre de la cuenta -- sin cambios).\n' +
             '  - Los montos de las dos secciones son NUMEROS reales (no texto): sumar en la barra\n' +
             '    de estado al seleccionar celdas vuelve a funcionar en toda la columna Monto.\n' +
             '  - Los totales de la fila 7 (S7/V7/Y7) se recalculan por construccion desde la QUERY\n' +
@@ -1159,7 +1398,8 @@ function aplicarTableroFaltanteProyectado() {
         previos.tocaronReglas = tocarReglas;
         if (tocarReglas) {
             const nuevasReglas = _reglasGrisTfp().map(function (item) { return _construirReglaGrisTfp(pre.hoja, item); })
-                .concat(_reglasAvisoTfp().map(function (item) { return _construirReglaAvisoTfp(pre.hoja, item); }));
+                .concat(_reglasAvisoTfp().map(function (item) { return _construirReglaAvisoTfp(pre.hoja, item); }))
+                .concat(_reglasNegritaTfp().map(function (item) { return _construirReglaNegritaTfp(pre.hoja, item); }));
             pre.hoja.setConditionalFormatRules(plan.reglas.ajenas.concat(nuevasReglas));
         }
         SpreadsheetApp.flush();
@@ -1189,13 +1429,14 @@ function aplicarTableroFaltanteProyectado() {
                   'un error:\n' + inv.avisos.map(function (a) { return '  - ' + a; }).join('\n') + '\n\n'
                 : '') +
             '- Celdas escritas y verificadas: ' + escritas.length + '\n' +
-            '- Reglas de color (gris de faltante + cursiva de aviso): ' +
-            (tocarReglas ? 'rehechas (6 propias: 3 + 3)' : 'ya estaban correctas') + '\n' +
+            '- Reglas de color (gris de faltante + cursiva de aviso + negrita de real): ' +
+            (tocarReglas ? 'rehechas (9 propias: 3 + 3 + 3)' : 'ya estaban correctas') + '\n' +
             '- Respaldo en la hoja oculta "' + respaldo.nombre + '"\n\n' +
             'QUE MIRAR:\n' +
-            '  1. Arriba de cada bloque, una fila por cuenta con movimiento real (oscuro). Despues,\n' +
-            '     una fila que dice "' + TFP_ROTULO_SEPARADOR + '" (Monto vacio). Debajo de esa,\n' +
-            '     una fila por cuenta con faltante > 0 (gris), repitiendo el nombre de la cuenta.\n' +
+            '  1. Arriba de cada bloque, una fila por cuenta con movimiento real, en NEGRITA.\n' +
+            '     Despues, una fila que dice "' + TFP_ROTULO_SEPARADOR + '" (Monto vacio, sin\n' +
+            '     negrita). Debajo de esa, una fila por cuenta con faltante > 0 (gris), repitiendo\n' +
+            '     el nombre de la cuenta -- esta seccion no cambio.\n' +
             '  2. Los montos son NUMEROS: seleccionar celdas de la columna Monto (real y/o\n' +
             '     faltante) tiene que mostrar la SUMA en la barra de estado de Sheets.\n' +
             '  3. Los totales de la fila 7 no se movieron (se verifico); el total de faltantes de\n' +

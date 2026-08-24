@@ -1,9 +1,9 @@
 /**
  * devtools/probar_tablero_faltante.js
  * Banco de pruebas de DEVTOOL_TableroFaltanteProyectado.js (layout de DOS SECCIONES con FILA
- * SEPARADORA explicita y montos NUMERICOS, v0.41.0).
+ * SEPARADORA explicita, montos NUMERICOS y seccion real en NEGRITA, v0.42.0).
  *
- * Once mitades:
+ * Trece mitades:
  *
  * 1. LA FORMULA ANCLA de cada bloque: la QUERY real de Franco se EMPOTRA VERBATIM (no se
  *    reconstruye), seccion 1 (real) y seccion 2 (faltante) apiladas -- nunca intercaladas --,
@@ -51,14 +51,16 @@
  *    NUMEROS (no texto) en las dos secciones -- la seleccion suma.
  *
  * 6. FORMATO CONDICIONAL: la regla de aviso (absoluta, cursiva) y la clasificacion propia/ajena
- *    (gris + aviso, las mutaciones que en DEVTOOL_FormatoMedios dejaron una regla muda).
+ *    (gris + aviso + negrita, las mutaciones que en DEVTOOL_FormatoMedios dejaron una regla muda).
  *
  * 7. EL CICLO preflight/plan sobre una hoja simulada: recien migrado, truncado (preflight NO
- *    aborta), ya aplicado (con las SEIS reglas propias vivas), rechazo de datos ajenos.
+ *    aborta), ya aplicado (con las NUEVE reglas propias vivas), rechazo de datos ajenos.
  *
  * 8. _verificarInvariantesTfp POR MUTACION: total real que se mueve, faltante negativo, cuenta
- *    real perdida (piso sin truncar, numero exacto con truncado -- contando NOMBRES DISTINTOS,
- *    EXCLUYENDO el rotulo de la fila separadora, que no es una cuenta).
+ *    real perdida por NOMBRE (no por cardinalidad -- CORRECCION v0.42.0, ver decision #13 del
+ *    modulo), EXCLUYENDO el rotulo de la fila separadora, que no es una cuenta, y probado contra
+ *    los DOS caminos de entrada: primera migracion y upgrade desde un bloque v0.40.0 ya aplicado
+ *    (reaplicar no dispara falsos positivos; perder una cuenta real de ese mismo estado si).
  *
  * 9. BARRIDO ANTI-COLISION: ninguna otra celda del repo escribe donde este modulo escribe.
  *
@@ -67,8 +69,16 @@
  *    plan lo propone cuando el formato vivo de S8 no coincide con el de S7 (aunque la FORMULA ya
  *    sea la correcta), y la escritura/revert respaldan y restauran el formato previo.
  *
+ * 11. LA NEGRITA DE LA SECCION REAL (decision #14, v0.42.0): complemento exacto del gris (mismo
+ *    COUNTIF expansivo, condicion contraria) con dos guardas -- la fila separadora EXCLUIDA a
+ *    proposito (no es un ingreso real) y las filas vacias excluidas por COMPARACION DE VALOR
+ *    (nunca un SUMIF/COUNTIF a secas, la misma ambiguedad Sheets-especifica de la seccion 3c).
+ *    Abarca las DOS columnas (Cuenta y Monto) con una sola regla por bloque. Probado por mutacion
+ *    con una extension del simulador de la seccion 5: la seccion real se marca, la fila
+ *    separadora y la seccion de faltante no.
+ *
  * USO:  node devtools/probar_tablero_faltante.js
- * @version 0.41.0
+ * @version 0.42.0
  * @since 2026-08-21
  */
 const fs = require('fs'), vm = require('vm'), path = require('path');
@@ -107,7 +117,7 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_TableroFaltanteProyectado.js'), 'utf8') +
     '\n;Object.assign(globalThis,{RANGES,SHEETS,NAV_CONFIG,MONEDAS_DISPONIBLES,TIPOS_RIQUEZA,' +
     'CUENTAS_NEUTRAS,CUENTA_ARRASTRE,CAP_SELECTORES,PROY_MESES,TFP_BLOQUES,TFP_ORDEN,TFP_COLOR_GRIS,' +
-    'TFP_FILA_FIN,TFP_PATRON_MONTO_DEFECTO,TFP_ROTULO_SEPARADOR});',
+    'TFP_FILA_FIN,TFP_PATRON_MONTO_DEFECTO,TFP_ROTULO_SEPARADOR,TFP_ROTULO_SIN_DATOS});',
     ctx);
 
 // ============================================================================
@@ -253,6 +263,23 @@ function marcarGrisPorReglaTfp(filas, rotulo) {
     return soloDatos.map((f, i) => {
         const vistosArriba = soloDatos.slice(0, i).map(x => x.nombre);
         return vistosArriba.indexOf(rotulo) !== -1;
+    });
+}
+
+/**
+ * Simula la propia REGLA de negrita (decision #14, v0.42.0): el COMPLEMENTO EXACTO del gris
+ * (misma pregunta posicional, condicion contraria) mas las dos guardas que la formula real
+ * agrega -- nunca la fila separadora misma (aunque tambien cae del lado "COUNTIF = 0"), nunca una
+ * fila sin nombre (el simulador no genera filas vacias en una corrida normal, pero la guarda se
+ * deja explicita para documentar la intencion de _formulaReglaNegritaTfp).
+ */
+function marcarNegritaPorReglaTfp(filas, rotulo) {
+    const soloDatos = filas.filter(f => !f.esAviso);
+    const marcasGris = marcarGrisPorReglaTfp(filas, rotulo);
+    return soloDatos.map((f, i) => {
+        if (f.esSeparador) return false;
+        if (!f.nombre) return false;
+        return marcasGris[i] === false;
     });
 }
 
@@ -589,6 +616,97 @@ console.log('\n=== 5. El gris de la seccion de faltante (COUNTIF posicional) y p
        'MUTACION -- confirmado: ninguna fila del derrame es separadora en ese caso');
 }
 
+console.log('\n=== 5b. La negrita de la seccion real (decision #14, v0.42.0): complemento exacto del gris ===');
+{
+    ctx.TFP_ORDEN.forEach(clave => {
+        const b = ctx.TFP_BLOQUES[clave];
+        const filaAncla = b.filaDatos - 1;
+        const f = ctx._formulaReglaNegritaTfp(b);
+        ok(f === '=AND(COUNTIF($' + b.colCuenta + '$' + filaAncla + ':' + b.colCuenta + filaAncla +
+           '; "' + ctx.TFP_ROTULO_SEPARADOR + '")=0; $' + b.colCuenta + b.filaDatos + '<>""; $' +
+           b.colCuenta + b.filaDatos + '<>"' + ctx.TFP_ROTULO_SEPARADOR + '")',
+           clave + ': formula exacta de la negrita (complemento del gris + las dos guardas). Dio: ' + f);
+        ok(f.indexOf(',') === -1, clave + ': libre de comas (el guardado silencioso sin pintar nada)');
+        ok(f.indexOf('COUNTIF($' + b.colCuenta) !== -1 && f.indexOf(')=0') !== -1,
+           clave + ': reusa el MISMO COUNTIF expansivo del gris, con la condicion CONTRARIA (=0, no >0)');
+
+        const item = ctx._reglasNegritaTfp().find(r => r.clave === clave);
+        ok(item.celda === b.colCuenta + b.filaDatos + ':' + b.colMonto + (b.filaFin - 1),
+           clave + ': el rango de la negrita abarca las DOS columnas (Cuenta:Monto), excluye el aviso. Dio: ' + item.celda);
+        ok(item.tipo === 'negrita', clave + ': el item se identifica como tipo "negrita"');
+    });
+
+    // LA MUTACION QUE IMPORTA: sobre el MISMO universo de la seccion 5 (una cuenta que repite en
+    // las dos secciones, una que SOLO tiene faltante), la negrita tiene que marcar EXACTAMENTE lo
+    // contrario que el gris, salvo la fila separadora (excluida de las dos por decision #14a).
+    const tablaReal = [['umoh', 837728.28], ['Tidetrack', 260000]];
+    const universoFaltante = [['umoh', 162271.72], ['Ingresos Extra', 45000]];
+    const rotulo = ctx.TFP_ROTULO_SEPARADOR;
+    const sim = simularSeccionesConSeparadorTfp(tablaReal, universoFaltante, 20, rotulo);
+    const soloDatos = sim.filas.filter(f => !f.esAviso);
+    const marcasGris = marcarGrisPorReglaTfp(sim.filas, rotulo);
+    const marcasNegrita = marcarNegritaPorReglaTfp(sim.filas, rotulo);
+    const idxSeparador = soloDatos.findIndex(f => f.esSeparador);
+    const idxUmohReal = soloDatos.findIndex(f => f.nombre === 'umoh' && !f.esSeparador);
+    const idxUmohFaltante = soloDatos.findIndex((f, i) => f.nombre === 'umoh' && i > idxSeparador);
+    const idxTidetrackReal = soloDatos.findIndex(f => f.nombre === 'Tidetrack');
+    const idxSoloFaltante = soloDatos.findIndex(f => f.nombre === 'Ingresos Extra');
+
+    ok(marcasNegrita[idxUmohReal] === true && marcasNegrita[idxTidetrackReal] === true,
+       'las DOS filas de la seccion real (arriba del separador) se marcan en negrita');
+    ok(marcasNegrita[idxUmohFaltante] === false,
+       'la fila de FALTANTE de umoh (abajo del separador) NO se marca en negrita');
+    ok(marcasNegrita[idxSoloFaltante] === false,
+       'la cuenta SIN ningun movimiento real (solo vive en la seccion de faltante) NO se marca en negrita');
+    ok(marcasNegrita[idxSeparador] === false,
+       'DECISION #14a -- LA FILA SEPARADORA NO se marca en negrita (no es un ingreso real, es un rotulo de ' +
+       'seccion), aunque su COUNTIF tambien de cero como las filas reales');
+
+    ok(soloDatos.every((f, i) => marcasGris[i] !== marcasNegrita[i] || f.esSeparador),
+       'gris y negrita son COMPLEMENTARIOS en toda fila de datos, salvo la separadora (que queda afuera de ' +
+       'las dos): ninguna fila queda sin marcar y ninguna se marca doble');
+
+    // MUTACION: sin ninguna cuenta con faltante (todo el bloque es la seccion real, sin
+    // separador), TODA la seccion real tiene que quedar en negrita -- el gris nunca vio el rotulo.
+    const simSinFaltante = simularSeccionesConSeparadorTfp(tablaReal, [], 20, rotulo);
+    const marcasNegritaSinFaltante = marcarNegritaPorReglaTfp(simSinFaltante.filas, rotulo);
+    ok(marcasNegritaSinFaltante.length === 2 && marcasNegritaSinFaltante.every(m => m === true),
+       'MUTACION -- sin ninguna cuenta con faltante, TODA la seccion real (la unica que existe) va en negrita');
+
+    // MUTACION: si _formulaReglaNegritaTfp perdiera la guarda del rotulo (bug hipotetico: la
+    // fila separadora se marcaria en negrita), el chequeo de arriba (idxSeparador) fallaria. Se
+    // prueba la guarda de forma aislada tambien sobre el simulador, quitandola a mano.
+    function marcarNegritaSinGuardaTfp(filas, rotuloTxt) {
+        const soloDatos2 = filas.filter(f => !f.esAviso);
+        const marcasGris2 = marcarGrisPorReglaTfp(filas, rotuloTxt);
+        return soloDatos2.map((f, i) => (!f.nombre ? false : marcasGris2[i] === false));   // sin excluir esSeparador
+    }
+    const marcasSinGuarda = marcarNegritaSinGuardaTfp(sim.filas, rotulo);
+    ok(marcasSinGuarda[idxSeparador] === true,
+       'MUTACION -- confirmado: SIN la guarda explicita del rotulo, la fila separadora se marcaria en ' +
+       'negrita (comparte COUNTIF=0 con la seccion real); la guarda de _formulaReglaNegritaTfp es lo que ' +
+       'la excluye, no una coincidencia del simulador');
+
+    // _construirReglaNegritaTfp pide SOLO setBold(true), nunca setFontColor ni setItalic -- no
+    // reemplaza el color de fuente ni pisa una cursiva que hubiera.
+    let pidioBold = false, pidioColorNegrita = 'sin-llamar', pidioItalicNegrita = 'sin-llamar';
+    const hojaFalsaNegrita = { getRange: () => ({}) };
+    ctx.SpreadsheetApp.newConditionalFormatRule = () => {
+        const b2 = {
+            whenFormulaSatisfied: () => b2,
+            setFontColor: c => { pidioColorNegrita = c; return b2; },
+            setItalic: v => { pidioItalicNegrita = v; return b2; },
+            setBold: v => { pidioBold = v; return b2; },
+            setRanges: () => b2, build: () => ({})
+        };
+        return b2;
+    };
+    ctx._construirReglaNegritaTfp(hojaFalsaNegrita, { formula: '=TRUE', celda: 'A1:B1' });
+    ok(pidioBold === true, 'la regla de negrita pide setBold(true)');
+    ok(pidioColorNegrita === 'sin-llamar', 'MUTACION -- la regla de negrita NO toca setFontColor (no pisa el color por default)');
+    ok(pidioItalicNegrita === 'sin-llamar', 'MUTACION -- la regla de negrita NO toca setItalic (no pisa una cursiva ajena)');
+}
+
 console.log('\n=== 6. El aviso de truncado: formula absoluta, rango de UNA fila, cursiva ===');
 {
     ctx.TFP_ORDEN.forEach(clave => {
@@ -645,6 +763,11 @@ console.log('\n=== 6b. Clasificacion propia/ajena: gris + aviso, y las mutacione
     ok(ctx._esReglaPropiaTfp(reglaFalsa(formulaAviso, rangoAviso)) === true,
        'MUTACION -- formula de AVISO correcta + su rango -> tambien propia (no solo el gris)');
 
+    const formulaNegrita = ctx._formulaReglaNegritaTfp(b);
+    const rangoNegrita = ctx._rangoDatosTfp(b);
+    ok(ctx._esReglaPropiaTfp(reglaFalsa(formulaNegrita, rangoNegrita)) === true,
+       'MUTACION -- formula de NEGRITA correcta + su rango de dos columnas -> tambien propia');
+
     const otroRango = ctx.TFP_BLOQUES.fijos.colMonto + b.filaDatos + ':' + ctx.TFP_BLOQUES.fijos.colMonto + (b.filaFin - 1);
     ok(ctx._esReglaPropiaTfp(reglaFalsa(formulaPropia, otroRango)) === false,
        'MUTACION rango equivocado: la MISMA formula en OTRO rango es AJENA (no se toca)');
@@ -658,7 +781,7 @@ console.log('\n=== 6b. Clasificacion propia/ajena: gris + aviso, y las mutacione
     ok(clases.propias.length === 1 && clases.ajenas.length === 1 && clases.ajenas[0] === ajena,
        'de dos reglas (una propia, una ajena), se separan 1 y 1, y la ajena es la MISMA referencia');
 
-    ok(ctx._reglasPropiasTfp().length === 6, '_reglasPropiasTfp junta 3 gris + 3 aviso = 6');
+    ok(ctx._reglasPropiasTfp().length === 9, '_reglasPropiasTfp junta 3 gris + 3 aviso + 3 negrita = 9');
 }
 
 // ============================================================================
@@ -698,6 +821,10 @@ function hojaTableroSimulada(opts) {
         } else {
             celdas[b.colCuenta + b.filaDatos] = celda('umoh', fixtureReal(b.categoria));
         }
+        // Monto de la fila ancla: NUMERO (nunca vacio), igual que produciria la QUERY real de
+        // Franco -- _nombresRealesVivosTfp (v0.42.0) usa el TIPO del Monto para distinguir real de
+        // faltante cuando no hay separador vivo, asi que el mock tiene que respetar esa senal.
+        celdas[b.colMonto + b.filaDatos] = celda(999);
 
         const formatoReal = (opts.formatoTotalReal !== undefined) ? opts.formatoTotalReal : '#,##0.00';
         if (opts.yaAplicado) {
@@ -716,12 +843,16 @@ function hojaTableroSimulada(opts) {
             celdas[b.totalFaltante] = celda('', '', formatoFaltante);
         }
 
-        // Columna Cuenta: N cuentas con nombre, el resto vacio, hasta filaFin.
+        // Columna Cuenta: N cuentas con nombre, el resto vacio, hasta filaFin. Monto: NUMERO en
+        // cada fila con nombre (mismo motivo que el Monto de la fila ancla, arriba), vacio en las
+        // demas -- sin esto, _nombresRealesVivosTfp leeria Monto="" (string) en todas las filas de
+        // datos y las descartaria a todas, dejando cuentasVivas en cero pase lo que pase.
         const n = cuentasPorBloque[clave] || 0;
         for (let f = b.filaDatos; f <= b.filaFin; f++) {
             if (f === b.filaDatos) continue;   // ya seteada arriba (ancla)
             const conNombre = (f - b.filaDatos) < n;
             celdas[b.colCuenta + f] = celda(conNombre ? ('Cuenta' + f) : '');
+            if (conNombre) celdas[b.colMonto + f] = celda(1000 + f);
         }
     });
     celdas['N2'] = celda('Agosto');
@@ -812,7 +943,7 @@ console.log('\n=== 7c. En el borde de la capacidad de filas: preflight NO aborta
        'el plan propone reescribir la ancla de Variables igual en el borde de la capacidad');
 }
 
-console.log('\n=== 7d. Ya aplicado en los tres bloques (v0.41.0): nada que hacer (con las SEIS reglas propias) ===');
+console.log('\n=== 7d. Ya aplicado en los tres bloques (v0.42.0): nada que hacer (con las NUEVE reglas propias) ===');
 {
     function reglaViva(item) {
         return {
@@ -831,7 +962,7 @@ console.log('\n=== 7d. Ya aplicado en los tres bloques (v0.41.0): nada que hacer
     ctx.TFP_ORDEN.forEach(clave => ok(pre.bloques[clave].anclaVigente === true, clave + ': ancla vigente (v0.41.0), nada que reescribir'));
     const plan = ctx._planTfp(pre);
     ok(plan.cambios.length === 0, 'CERO celdas a escribir. Dio ' + plan.cambios.length);
-    ok(ctx._reglasHacenFaltaTfp(plan.reglas) === false, 'las seis reglas (3 gris + 3 aviso) ya estan correctas');
+    ok(ctx._reglasHacenFaltaTfp(plan.reglas) === false, 'las nueve reglas (3 gris + 3 aviso + 3 negrita) ya estan correctas');
 
     const hojaSoloGris = hojaTableroSimulada({
         yaAplicado: true,
@@ -840,7 +971,16 @@ console.log('\n=== 7d. Ya aplicado en los tres bloques (v0.41.0): nada que hacer
     const preSoloGris = ctx._preflightTfp(ssSimulada(hojaSoloGris));
     const planSoloGris = ctx._planTfp(preSoloGris);
     ok(ctx._reglasHacenFaltaTfp(planSoloGris.reglas) === true,
-       'MUTACION -- con solo 3 reglas vivas (sin las de aviso) SI hace falta escribir');
+       'MUTACION -- con solo 3 reglas vivas (sin las de aviso ni las de negrita) SI hace falta escribir');
+
+    const hojaGrisYAviso = hojaTableroSimulada({
+        yaAplicado: true,
+        reglasVivas: ctx._reglasGrisTfp().concat(ctx._reglasAvisoTfp()).map(reglaViva)
+    });
+    const preGrisYAviso = ctx._preflightTfp(ssSimulada(hojaGrisYAviso));
+    const planGrisYAviso = ctx._planTfp(preGrisYAviso);
+    ok(ctx._reglasHacenFaltaTfp(planGrisYAviso.reglas) === true,
+       'MUTACION -- con 6 reglas vivas (gris + aviso, sin las de negrita nuevas) SI hace falta escribir');
 }
 
 console.log('\n=== 7e. Dato ajeno en el total de faltantes: NO se pisa ===');
@@ -870,7 +1010,12 @@ console.log('\n=== 8. _verificarInvariantesTfp: total real, faltante no-negativo
 {
     function preFalso(overrides) {
         const sano = {
-            totalReal: 1000, totalFaltante: 200, cuentasCol: ['umoh', 'Tidetrack', 'umoh', 'Tidetrack'],
+            totalReal: 1000, totalFaltante: 200,
+            // nombresRealVivos: el "ANTES" -- el CONJUNTO de cuentas con movimiento real (lo que
+            // _nombresRealesVivosTfp deriva del render vivo, ver decision #13). cuentasCol: el
+            // "DESPUES" -- lo que quedo renderizado en la columna Cuenta al releer.
+            nombresRealVivos: ['umoh', 'Tidetrack'],
+            cuentasCol: ['umoh', 'Tidetrack', 'umoh', 'Tidetrack'],
             cuentasVivas: 2, capacidadFilas: 20
         };
         const estados = {};
@@ -897,7 +1042,8 @@ console.log('\n=== 8. _verificarInvariantesTfp: total real, faltante no-negativo
             bloques[clave] = {
                 b: ctx.TFP_BLOQUES[clave],
                 totalRealValorPrevio: st.totalRealPrevio !== undefined ? st.totalRealPrevio : 1000,
-                cuentasVivas: st.cuentasVivas, capacidadFilas: st.capacidadFilas
+                cuentasVivas: st.cuentasVivas, capacidadFilas: st.capacidadFilas,
+                nombresRealVivos: st.nombresRealVivos
             };
         });
         return { hoja: hoja, bloques: bloques };
@@ -952,9 +1098,13 @@ console.log('\n=== 8. _verificarInvariantesTfp: total real, faltante no-negativo
     }
     {
         const ochoNombres = Array.from({ length: 8 }, (_, i) => 'Cuenta' + i);
-        const inv = ctx._verificarInvariantesTfp(preFalso({ cuentasVivas: 9, capacidadFilas: 20, cuentasCol: ochoNombres }));
-        ok(inv.fallas.some(f => /no puede perderse/.test(f)),
-           'MUTACION -- 8 nombres distintos contra 9 cuentas reales esperadas: la falla lo detecta');
+        const nueveNombres = Array.from({ length: 9 }, (_, i) => 'Cuenta' + i);
+        const inv = ctx._verificarInvariantesTfp(preFalso({
+            cuentasVivas: 9, capacidadFilas: 20, cuentasCol: ochoNombres, nombresRealVivos: nueveNombres
+        }));
+        ok(inv.fallas.some(f => /no puede perderse/.test(f) && f.indexOf('Cuenta8') !== -1),
+           'MUTACION -- 8 nombres distintos contra 9 cuentas reales esperadas: la falla lo detecta y NOMBRA ' +
+           'la perdida (Cuenta8). Dio: ' + inv.fallas.join('; '));
     }
 
     console.log('\n--- 8c. Con truncado: piso sobre la capacidad completa ---');
@@ -969,6 +1119,71 @@ console.log('\n=== 8. _verificarInvariantesTfp: total real, faltante no-negativo
         const inv = ctx._verificarInvariantesTfp(preFalso({ cuentasVivas: 25, capacidadFilas: 20, cuentasCol: diecinueveNombres }));
         ok(inv.fallas.some(f => /truncado esperado/.test(f)),
            'MUTACION -- truncado con UN nombre distinto de menos (19 de 20) SI es falla. Dio: ' + inv.fallas.join('; '));
+    }
+
+    console.log('\n--- 8d. EL CAMINO DE UPGRADE (v0.40.0 ya aplicado): la causa raiz del bug real del 2026-08-24 ---');
+    {
+        // El caso REAL de la corrida del 2026-08-24 en Ingresos: 4 cuentas con movimiento real,
+        // 2 de ellas TAMBIEN con faltante pendiente, y 2 cuentas SOLO con faltante (sin ningun
+        // real este mes) -- 9 filas en total en el bloque v0.40.0 ya aplicado (sin separador,
+        // Monto de la seccion de faltante en TEXTO), 6 nombres distintos en la union. El
+        // preflight VIEJO leia "9 cuentas reales antes" (filas del bloque); el correcto son 4.
+        const b = ctx.TFP_BLOQUES.ingresos;
+        const realesV040 = [['umoh', 837728.28], ['Tidetrack', 260000], ['Ingresos Extra', 40069.53], ['Intereses bancos', 785.19]];
+        const faltanteV040 = [
+            ['umoh', 162271.72], ['Tidetrack', 40000], ['Ingresos Extra', 5000],
+            ['Plata Prestada', 50000], ['Ingreso Viejo', 30000]
+        ];
+        const nombresReales = realesV040.map(f => f[0]);
+        ok(realesV040.length + faltanteV040.length === 9 && new Set(nombresReales.concat(faltanteV040.map(f => f[0]))).size === 6,
+           'sanidad del fixture: 9 filas totales, 6 nombres distintos en la union -- los mismos numeros que reporto Franco');
+
+        // PASO 1: _nombresRealesVivosTfp sobre el RENDER v0.40.0 (sin separador, Monto de la
+        // seccion de faltante en STRING via TEXT()) tiene que leer EXACTAMENTE las 4 cuentas
+        // reales -- nunca las 9 filas del bloque ni los 6 nombres distintos de la union.
+        function hojaV040Aplicada() {
+            const filas = realesV040.concat(faltanteV040);
+            const capacidad = ctx._capacidadFilasTfp(b);
+            const relleno = Array.from({ length: capacidad - filas.length }, () => ['']);
+            const cuenta = filas.map(f => [f[0]]).concat(relleno);
+            const monto = filas.map((f, i) => [i < realesV040.length ? f[1] : String(f[1])]).concat(relleno);
+            return {
+                getRange(a1) {
+                    if (a1 === ctx._rangoColTfp(b, b.colCuenta)) return { getValues: () => cuenta };
+                    if (a1 === ctx._rangoColTfp(b, b.colMonto)) return { getValues: () => monto };
+                    return { getValues: () => [['']] };
+                }
+            };
+        }
+        const nombresAntes = ctx._nombresRealesVivosTfp(hojaV040Aplicada(), b);
+        ok(JSON.stringify(nombresAntes.slice().sort()) === JSON.stringify(nombresReales.slice().sort()),
+           'EL BUG REAL, reproducido: sobre las 9 filas de un bloque v0.40.0 ya aplicado (4 reales + 5 de ' +
+           'faltante), _nombresRealesVivosTfp lee las 4 cuentas reales -- no 9, no 6. Dio: ' + nombresAntes.join(','));
+
+        // PASO 2 (lo que pidio Franco): REAPLICAR sobre ese mismo universo (el render v0.41.0, con
+        // separador) no puede disparar el invariante -- ninguna cuenta real desaparecio, solo
+        // cambio la forma en que se muestran (con la fila separadora nueva).
+        const rotulo = ctx.TFP_ROTULO_SEPARADOR;
+        const simReaplicado = simularSeccionesConSeparadorTfp(realesV040, faltanteV040, ctx._capacidadFilasTfp(b), rotulo);
+        const nombresDespuesReaplicado = simReaplicado.filas.filter(f => !f.esAviso).map(f => f.nombre);
+
+        const invReaplicado = ctx._verificarInvariantesTfp(preFalso({
+            nombresRealVivos: nombresAntes, cuentasCol: nombresDespuesReaplicado, cuentasVivas: nombresAntes.length
+        }));
+        ok(invReaplicado.fallas.length === 0,
+           'MUTACION (el caso pedido por Franco) -- reaplicar sobre un bloque v0.40.0 ya aplicado, sin que ' +
+           'ninguna cuenta real cambie, NO dispara el invariante. Dio: ' + invReaplicado.fallas.join('; '));
+
+        // PASO 3 (el otro lado pedido por Franco): si de ESE MISMO estado desaparece una cuenta
+        // real DE VERDAD (ej. "Intereses bancos" no vuelve a tener movimiento en el render nuevo),
+        // el invariante SI tiene que dispararse, y nombrarla.
+        const nombresDespuesConPerdida = nombresDespuesReaplicado.filter(n => n !== 'Intereses bancos');
+        const invConPerdida = ctx._verificarInvariantesTfp(preFalso({
+            nombresRealVivos: nombresAntes, cuentasCol: nombresDespuesConPerdida, cuentasVivas: nombresAntes.length
+        }));
+        ok(invConPerdida.fallas.some(f => /no puede perderse/.test(f) && f.indexOf('Intereses bancos') !== -1),
+           'MUTACION -- del mismo estado, si desaparece una cuenta real de verdad ("Intereses bancos"), el ' +
+           'invariante SI se dispara y la NOMBRA. Dio: ' + invConPerdida.fallas.join('; '));
     }
 }
 

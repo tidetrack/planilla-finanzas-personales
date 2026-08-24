@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 41,
+ minor: 42,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.41.0 - Faltante proyectado: fila separadora explicita + montos numericos',
+ releaseName: 'v0.42.0 - Invariante del faltante corregido (bug de v0.41.0) + seccion real en negrita',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,14 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.42.0 (2026-08-24) - Invariante del faltante corregido (bug de v0.41.0) + seccion real en negrita
+! v0.41.0 SE DESPLEGO Y SE AUTOREVIRTIO: la propia verificacion (_verificarInvariantesTfp) atrapo una discrepancia y revirtio todo el lote solo. El guard funciono perfecto; el bug estaba en el invariante, no en la escritura.
+- CAUSA: el preflight contaba FILAS del rango de Cuenta como "cuentas reales antes" -- valido en la primera migracion (QUERY cruda, una fila = una cuenta), falso en un UPGRADE (la planilla ya tenia v0.40.0 aplicada, dos secciones sin separador): Ingresos tiene 4 cuentas reales pero el preflight leia 9 (4 reales + 5 de faltante). Comparaba esa cardinalidad contra los 6 nombres distintos del render nuevo -- dos magnitudes distintas por diseno.
++ _nombresRealesVivosTfp (nueva): deriva el "antes" correcto -- el CONJUNTO de cuentas reales -- leyendo la senal que cada estado ya deja en el render vivo (fila separadora si viene de v0.41.0, tipo de dato del Monto si viene de v0.40.0), sin escribir nada y sin evaluar formulas.
+* _verificarInvariantesTfp compara por NOMBRE, no por cardinalidad: cada cuenta del "antes" tiene que seguir en el "despues". Probado por mutacion contra el camino de upgrade exacto que fallo en produccion (seccion 8d del banco).
++ LA SECCION REAL PASA A NEGRITA (pedido de Franco en el mismo release): complemento exacto del gris (mismo COUNTIF, condicion contraria), con la fila separadora excluida a proposito y sin pisar formato existente (solo setBold(true)).
+! devtools/probar_tablero_faltante.js: seccion 8 reescrita + nueva 8d (upgrade real), nueva seccion 5b (negrita). Los ocho bancos en verde.
+
 v0.41.0 (2026-08-24) - Faltante proyectado: fila separadora explicita + montos numericos
 ! Franco, sobre la v0.40.0 ya desplegada: "se separe mas lo proyectado de lo ingresado realmente... busca la manera de diferenciarlos mas" y "la columna de monto debe dejarme que, al seleccionar celdas, te de la suma total". La v0.40.0 pasaba los importes de faltante por TEXT() para pintarlos gris con ISTEXT() -- un texto no suma al seleccionarlo, asi que las dos cosas eran el mismo problema.
 + FILA SEPARADORA EXPLICITA entre las dos secciones: rotulo "Faltante proyectado" en la columna Cuenta, Monto vacio, insertada por el mismo mecanismo que ya insertaba la fila de aviso de truncado (una posicion calculada dentro del mismo MAP).
