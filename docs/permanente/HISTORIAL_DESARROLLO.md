@@ -6,6 +6,168 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-24 - Presupuesto: categorias (V/W), mes de referencia y el bug de Tabla 2 (v0.46.0)
+
+### El pedido
+
+Segunda etapa de la hoja "Presupuesto", sobre el selector de Modo ya desplegado y verificado
+(v0.45.1): construir el agrupado por categoria (la columna que el encargo llamaba "V"), hacer que
+el cuadro "Movimientos Promedio historicos." (C9:F14) diga cual es el mes de referencia, y
+corregir el bug de copiar-pegar de F19:F21 en "Presupuesto del Mes." (dividian por el Ingresos de
+la OTRA tabla).
+
+### No era una columna, eran dos -- medido antes de escribir la primera formula
+
+El encargo (docs/permanente/DISENO_HOJA_PRESUPUESTO.md, seccion "La columna V") describe una
+unica columna agrupada, con una regla de que fuente usar segun el modo: "en el modo proyectado
+suma desde 'Monto a Proyectar' (K/O/S)... en Historico, desde la columna del modo (J/N/R)". Antes
+de construir nada, se midio la geometria real contra docs/permanente/celdas.tsv (snapshot
+2026-08-18) -- la misma disciplina "no asumas, medi" que ya le costo caro a este repo tres veces
+(CLAUDE.md, memoria del proyecto).
+
+La hoja real tiene DOS columnas de agrupado, no una, y las dos ya estaban tituladas con sus totales
+esperando contenido:
+
+    V7 = "Monto Historico"    V8 = SUM(V9:V)   -> agrupa J/N/R (la columna "modo")
+    W7 = "Monto Proyectado"   W8 = SUM(W9:W)   -> agrupa K/O/S ("Monto a Proyectar", sin modo)
+
+Y las dos tablas resumen ya apuntaban cada una a SU propio total: Tabla 1 "Movimientos Promedio
+historicos." (E11=J8, E12=N8, E13=R8, E14=**V8**) y Tabla 2 "Presupuesto del Mes." (E18=K8, E19=O8,
+E20=S8, E21=**W8**). Ninguna tabla mezcla fuentes -- cada una se explica sola con su propia
+columna de agrupado.
+
+Esto resuelve la ambiguedad del encargo de la unica forma consistente con la geometria: V SIEMPRE
+agrupa J/N/R (que ya resuelve Proyeccion/Historico internamente desde v0.45.0) y W SIEMPRE agrupa
+K/O/S. Ninguna de las dos columnas cambia de fuente por su cuenta -- el "modo" ya esta resuelto
+adentro de J/N/R, y V simplemente re-parte ese resultado por categoria. La frase del encargo "en
+el modo proyectado suma desde Monto a Proyectar" describe exactamente a W (que siempre suma desde
+K/O/S), no a una columna V que cambiaria de fuente.
+
+**Consecuencia sobre el invariante propuesto** ("V8 debe ser igual a K8-O8-S8 en modo
+Proyeccion"): con la geometria real esa igualdad es la de W8, no la de V8. El par correcto -- y
+mas fuerte, porque vale en los DOS modos, no solo Proyeccion -- es:
+
+    V8 = J8 - N8 - R8      (siempre)
+    W8 = K8 - O8 - S8      (siempre)
+
+Este es el invariante que quedo implementado, verificado en JS puro de forma independiente de las
+formulas de Sheets.
+
+### El signo, verificado contra la formula viva del Tablero antes de construir
+
+El encargo pedia expresamente confirmar la convencion de signo contra el bloque "Categorias." del
+Tablero antes de asumir nada -- "es la misma convencion que ya usa el bloque Categorias. del
+Tablero (Negocios propios positivo, Otros negativo)". Se midio la formula viva de esa celda
+(Tablero!AA10, via docs/permanente/TIDETRACK_ARQUITECTURA_ESTRICTA.json, el gemelo digital -- en
+el snapshot todavia aparece como AA9, la corrida de fila del 2026-08-21 documentada en
+DEVTOOL_BloqueCategorias.js). La primera linea del LET:
+
+    monto_neto; ARRAYFORMULA(IF(AJ6:AJ=""; 0; IF(AK9:AK="Egreso"; -AJ6:AJ; AJ6:AJ)))
+
+Confirma la convencion: un Egreso resta, un Ingreso suma, y ese monto con signo es lo que despues
+se agrupa por categoria via QUERY. La hoja "Presupuesto" no tiene un "Tipo" de movimiento por
+fila como el ledger -- I/M/Q son espejos de BLOQUE del Plan de Cuentas (el bloque Ingresos SOLO
+tiene cuentas de ingreso, Gastos Fijos y Variables SOLO cuentas de egreso). El bloque de origen
+reemplaza al "Tipo" como portador del signo: una cuenta espejada desde I suma, desde M o Q resta.
+Misma convencion, expresada con el dato que esta hoja realmente tiene disponible.
+
+### El mes de referencia, en C9
+
+Franco: "en el cuadro C9:F14 deberia decir el mes de referencia". Se eligio ampliar C9 (el titulo
+existente de la Tabla 1, "Movimientos Promedio historicos.") en vez de escribir en una celda
+nueva, por dos razones pesadas antes de decidir:
+
+1. C9 es la unica celda SIEMPRE segura para escribir sin medir en vivo si esta libre: si el
+   titulo esta combinado con las columnas de al lado (un patron ya visto en otras hojas de este
+   repo), C9 es el ANCLA de esa combinada -- la unica celda de un merge donde `setFormula()` hace
+   algo. Elegir una celda nueva (D9, G9...) hubiera exigido primero confirmar en vivo que esa
+   celda no es la mitad muda de otra combinada ni esta ocupada -- exactamente el tipo de
+   geometria no medida que este repo ya pago caro.
+2. El pedido dice "que lo diga", no "que lo diga en una celda aparte".
+
+El rotulo se deriva EN VIVO de E7/J2/J3, reusando `_fragmentoMesRefPm()` y
+`_condModoHistoricoPm()` de DEVTOOL_PresupuestoModo.js verbatim (nunca redeclarados): en
+Proyeccion, "Movimientos Promedio historicos. (Agosto 2026)"; en Historico, "... (Marzo 2026 -
+Agosto 2026)", la ventana completa de 6 meses. Los nombres de mes salen de IP_MESES via `INDEX`,
+no de `TEXT(fecha;"MMMM")` -- ese formato depende del locale del documento, y el locale ya generó
+mas de un bug documentado en este repo (IP_BLOQUE, 00_Config.js).
+
+### El bug de F19:F21
+
+Franco, textual: "Tabla 2: Debe filtrar por E18. Es un error de copiar-pegar". Medido: F19/F20/F21
+eran `=IFERROR(E19/$E$11;0)` (y analogas) -- dividen por $E$11, el Ingresos de la TABLA 1, en vez
+de $E$18, el Ingresos de su propia tabla. Se corrigio por cirugia de token
+(`_repararReferenciaTabla2Pc`): se reusa la formula viva completa y se reemplaza SOLO el token
+`$E$11` por `$E$18`, nunca se reescribe de memoria -- el mismo patron que
+`_repararRangoTipoBcat` en DEVTOOL_BloqueCategorias.js (v0.43.0).
+
+### El invariante, en JS puro
+
+Igual que DEVTOOL_PresupuestoModo.js, `_verificarInvariantesPc` recalcula en JS PURO -- sin
+ninguna formula de Sheets, leyendo I..W de "Presupuesto" y los tres catalogos del Plan de Cuentas
+con `getValues()` -- el agrupado por categoria, y lo compara celda por celda contra V/W en vivo, y
+contra V8=J8-N8-R8 / W8=K8-O8-S8.
+
+Una diferencia deliberada sobre el patron de PresupuestoModo: una cuenta del Plan de Cuentas SIN
+categoria asignada hace que su monto se "escape" del agrupado (no hay ningun U que lo reciba), asi
+que V8/W8 pueden no cerrar exacto contra J8-N8-R8/K8-O8-S8 sin que sea un bug de formula -- es un
+hueco del catalogo, no del codigo. El invariante calcula el monto exacto de ese hueco
+(`gapMontoV`/`gapMontoW`) y solo lo acepta como AVISO si explica el desvio COMPLETO; si el desvio
+no cierra con el hueco conocido, es FALLA real y revierte todo. Mismo criterio que
+`_contarCategoriasSinTipoBcat` en DEVTOOL_BloqueCategorias.js: reportar un hueco de catalogo, no
+confundirlo con un bug de formula.
+
+### El banco, verificado por mutacion
+
+`devtools/probar_presupuesto_resumen.js` (el banco doce) tiene las mismas cuatro mitades que el
+banco de PresupuestoModo: estructura de formulas (incluida la verificacion textual de que V9 suma
+ingresos y resta fijos/variables, y que V lee J/N/R mientras W lee K/O/S), el cableado exacto (64
+celdas: 30 V + 30 W + C9 + F19:F21, nunca J/N/R/K/O/S), la matematica del agrupado espejada en JS
+sobre un fixture sintetico (filas de ETIQUETA de categoria y filas de CUENTA deliberadamente
+separadas, para que el test no pueda acoplar accidentalmente una cuenta a la categoria de su misma
+fila -- la misma independencia que tienen en la hoja real), con una mutacion (vaciar el mapa de
+categorias de Ingresos hace que una categoria 100% de ingreso pase de 1200 a 0, confirmando que el
+resultado depende REALMENTE del mapa y no de una casualidad del fixture), y el preflight con un
+mock de hoja y once mutaciones dirigidas (rotulo corrido en U7/U8/C9, C9 combinada, mirror de
+categorias sin formula, un valor a mano en V15/W20, los totales V8/W8 sin formula, F19/F20 con un
+patron desconocido o sin formula). Los doce bancos del repo en verde.
+
+### Limpieza
+
+Se retiran los dos diagnosticos temporales que ya cumplieron su proposito:
+DEVTOOL_DIAG_Desplegables.js (auditoria de desplegables de Plan de Cuentas y Cargas) y
+DEVTOOL_DIAG_PresupuestoTitulos.js (incidente de v0.45.0, ya confirmado y cerrado en el release
+anterior) -- archivo y entrada de MENU_CONFIG de cada uno.
+
+Al borrar DEVTOOL_DIAG_PresupuestoTitulos.js, su entrada CONVIVENCIA_OK en
+devtools/probar_tablero_faltante.js (`'S7'`, un falso positivo del barrido anti-colision) dejo de
+hacer falta y se retiro. Pero el modulo nuevo introdujo su PROPIO falso positivo: `U8` aparece
+literal en DEVTOOL_PresupuestoResumen.js (`PC_ROTULO_NOMBRE`, el header "Nombre" del espejo de
+categorias de Presupuesto) y colisiona por token con el `U8` real de DEVTOOL_TableroFaltanteProyectado.js
+(`rotuloFaltante` del bloque Gastos Fijos, en el Tablero) -- dos hojas y dos conceptos totalmente
+distintos, el mismo tipo de coincidencia de texto plano que ya paso con `S7`. Se agrego una nueva
+entrada CONVIVENCIA_OK, con la misma justificacion documentada.
+
+### Que no se toco (a proposito)
+
+J/N/R, K/O/S y sus titulos (J7/N7/R7): son de DEVTOOL_PresupuestoModo.js. "Guardar Proyeccion":
+encargo posterior segun el contrato de diseno. El ledger, el Plan de Cuentas, la BD de Proyeccion,
+Inicio y el Tablero: sin tocar.
+
+### Pendiente
+
+Confirmar en vivo (Franco corre "Presupuesto: categorias y resumen > 1. Ver estado" antes de
+"2. Aplicar"). El hueco conocido de la BD de Proyeccion (sin cotizaciones congeladas,
+docs/permanente/DISENO_HOJA_PRESUPUESTO.md) sigue sin resolverse -- no era parte de este encargo.
+docs/permanente/DISENO_HOJA_PRESUPUESTO.md queda con la descripcion original de "una columna V":
+la correccion (dos columnas, V y W) esta documentada aca y en la cabecera de
+DEVTOOL_PresupuestoResumen.js; actualizar el contrato mismo es una decision de Franco, no tomada
+unilateralmente en esta sesion.
+
+Version: v0.46.0.
+
+---
+
 ## 2026-08-24 - El bug real detras del incidente de v0.45.0
 
 ### Lo que reporto Franco

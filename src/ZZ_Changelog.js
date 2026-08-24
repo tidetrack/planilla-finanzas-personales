@@ -3,6 +3,69 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.46.0 - Presupuesto: categorias (V/W), mes de referencia y el bug de Tabla 2.
+ * + Segunda etapa de la hoja "Presupuesto", sobre el selector de Modo ya desplegado (v0.45.1).
+ *   DEVTOOL_PresupuestoResumen.js (nuevo) construye el agrupado por categoria, el rotulo del mes
+ *   de referencia de la Tabla 1 ("Movimientos Promedio historicos.") y corrige el bug de
+ *   copiar-pegar de la Tabla 2 ("Presupuesto del Mes.").
+ * ! DESCUBIERTO ANTES DE CONSTRUIR, MEDIDO CONTRA celdas.tsv (nunca asumido): el encargo describia
+ *   "la columna V" como si fuera una unica columna que cambia de fuente segun el modo de E7. La
+ *   geometria real de la hoja tiene DOS columnas de agrupado, ya tituladas y con SUM() esperando
+ *   contenido -- V7="Monto Historico" / V8=SUM(V9:V) agrupa J/N/R (la columna "modo", que ya
+ *   resuelve internamente Proyeccion/Historico desde v0.45.0); W7="Monto Proyectado" /
+ *   W8=SUM(W9:W) agrupa K/O/S ("Monto a Proyectar", fijo, SIN modo). Las dos tablas resumen ya
+ *   apuntaban cada una a SU propio total -- Tabla 1 (E14=V8), Tabla 2 (E21=W8) -- ninguna mezcla
+ *   fuentes. CONSECUENCIA sobre el invariante que proponia el encargo ("V8 = K8-O8-S8 en modo
+ *   Proyeccion"): esa igualdad es la de W8, no la de V8. El invariante correcto -- y mas fuerte,
+ *   porque vale en LOS DOS MODOS, no solo Proyeccion, ya que V/W no miran el modo y solo
+ *   re-parten lo que J/N/R/K/O/S ya tienen calculado -- es el par V8=J8-N8-R8 y W8=K8-O8-S8.
+ * + SIGNO VERIFICADO CONTRA LA FORMULA VIVA DEL TABLERO antes de construir (pedido explicito del
+ *   encargo, no asumido): la primera linea del LET de Tablero!AA10 (bloque "Categorias.") es
+ *   monto_neto=IF(tipo="Egreso"; -monto; monto) -- Ingreso suma, Egreso resta, agrupado despues
+ *   por categoria. Esta hoja no tiene un "Tipo" por fila como el ledger (I/M/Q son espejos de
+ *   BLOQUE del Plan de Cuentas, no de movimientos individuales): el bloque de origen reemplaza esa
+ *   senal -- una cuenta espejada desde I (Ingresos) suma, desde M o Q (Gastos Fijos/Variables)
+ *   resta. Misma convencion, expresada con el dato que esta hoja realmente tiene.
+ * + C9 (titulo de la Tabla 1) agrega el mes de referencia entre parentesis, derivado EN VIVO de
+ *   E7/J2/J3 -- reusa _fragmentoMesRefPm y _condModoHistoricoPm de DEVTOOL_PresupuestoModo.js
+ *   VERBATIM, nunca redeclarados. Nombres de mes via IP_MESES + INDEX (no TEXT(): evita la trampa
+ *   de locale en nombres de mes en letras, ya documentada en este repo). Se elige ampliar C9 (el
+ *   titulo existente) en vez de una celda nueva: el ancla de una combinada es la unica celda
+ *   siempre segura para escribir sin medir en vivo si otra celda esta libre o combinada.
+ * - F19:F21 (Tabla 2) dividian por $E$11 (el Ingresos de la Tabla 1) en vez de $E$18 (el de su
+ *   propia tabla) -- confirmado por Franco como error de copiar-pegar. Cirugia de token
+ *   (_repararReferenciaTabla2Pc): reemplaza SOLO el token roto, reusa el resto de la formula viva
+ *   intacto (mismo patron que _repararRangoTipoBcat, DEVTOOL_BloqueCategorias.js).
+ * + INVARIANTE EN JS PURO (_recalcularAgrupadoPc), independiente de las formulas de Sheets:
+ *   recalcula el agrupado por categoria leyendo I..W de "Presupuesto" y los tres catalogos del
+ *   Plan de Cuentas via getValues(), compara celda por celda contra V/W y contra
+ *   V8=J8-N8-R8/W8=K8-O8-S8. Una cuenta sin categoria en el Plan de Cuentas se reporta como AVISO
+ *   (no aborta): el desvio de total que produce se prueba EXPLICADO por esa cuenta puntual antes
+ *   de darlo por bueno -- si el desvio no cierra exacto con el hueco conocido, es FALLA real y
+ *   revierte todo.
+ * + Cableado en MENU_CONFIG: "Presupuesto: categorias y resumen" (estado/aplicar/revertir).
+ *   devtools/probar_presupuesto_resumen.js (nuevo, banco 12): estructura de formulas, cableado
+ *   exacto (64 celdas: 30 V + 30 W + C9 + F19:F21, NUNCA J/N/R/K/O/S), la matematica del agrupado
+ *   espejada en JS con mutacion dirigida (sin mapa de categorias, una categoria 100% Ingreso pasa
+ *   de 1200 a 0), deteccion de cuentas sin categoria, y el preflight con mock de hoja y ONCE
+ *   mutaciones dirigidas (rotulo corrido, C9 combinada, mirror sin formula, valor a mano en V/W,
+ *   totales sin formula, F19/F20 con patron desconocido o sin formula).
+ * - Limpieza: se retiran los dos diagnosticos temporales que ya cumplieron su proposito --
+ *   DEVTOOL_DIAG_Desplegables.js (auditoria de desplegables de Plan de Cuentas/Cargas) y
+ *   DEVTOOL_DIAG_PresupuestoTitulos.js (incidente de v0.45.0, ya confirmado y cerrado) -- y sus
+ *   dos entradas de MENU_CONFIG.
+ * - devtools/probar_tablero_faltante.js: la entrada CONVIVENCIA_OK de
+ *   'DEVTOOL_DIAG_PresupuestoTitulos.js' (['S7'], un falso positivo del barrido anti-colision) se
+ *   retira junto con ese diagnostico y se reemplaza por 'DEVTOOL_PresupuestoResumen.js': ['U8'] --
+ *   mismo tipo de falso positivo: Presupuesto!U8 ("Nombre", header del espejo de categorias)
+ *   colisiona por token con Tablero!U8 (rotuloFaltante del bloque Gastos Fijos de TFP), hojas y
+ *   conceptos totalmente distintos.
+ * ! NO TOCADO A PROPOSITO: J/N/R, K/O/S y sus titulos (J7/N7/R7) son de
+ *   DEVTOOL_PresupuestoModo.js. "Guardar Proyeccion" es un encargo posterior segun el contrato de
+ *   diseno (docs/permanente/DISENO_HOJA_PRESUPUESTO.md).
+ * ! Los doce bancos en verde. SIN DEPLOY: corre primero "Presupuesto: categorias y resumen >
+ *   1. Ver estado" antes de "2. Aplicar".
+ *
  * [2026-08-24] v0.45.1 - Presupuesto: el bug real detras del incidente de v0.45.0.
  * ! v0.45.0 SE DESPLEGO Y SE APLICO EN LA PLANILLA REAL: "2. Aplicar" NO VERIFICO y se revirtio
  *   solo -- "Presupuesto!J7/N7/R7 no quedo con el valor escrito". Fallaron SOLO los tres

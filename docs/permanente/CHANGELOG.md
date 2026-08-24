@@ -9,6 +9,45 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.46.0 - Presupuesto: categorias (V/W), mes de referencia y el bug de Tabla 2 (2026-08-24)
+
+Segunda etapa de la hoja "Presupuesto", sobre el selector de Modo ya desplegado (`v0.45.1`).
+Nuevo `DEVTOOL_PresupuestoResumen.js`: agrupado por categoria, rotulo del mes de referencia en la
+Tabla 1 y correccion del bug de copiar-pegar en la Tabla 2.
+
+**Descubierto antes de construir, medido contra `celdas.tsv` (nunca asumido):** el encargo
+describia "la columna V" como si fuera una unica columna que cambia de fuente segun el modo de
+`E7`. La geometria real tiene DOS columnas de agrupado, ya tituladas y con `SUM()` esperando
+contenido -- `V7`="Monto Historico" / `V8`=`SUM(V9:V)` agrupa `J`/`N`/`R` (la columna "modo", que
+ya resuelve Proyeccion/Historico desde `v0.45.0`); `W7`="Monto Proyectado" / `W8`=`SUM(W9:W)`
+agrupa `K`/`O`/`S` ("Monto a Proyectar", fijo, sin modo). Las dos tablas resumen ya apuntaban cada
+una a su propio total -- Tabla 1 (`E14`=`V8`), Tabla 2 (`E21`=`W8`) -- ninguna mezcla fuentes. El
+invariante que proponia el encargo (`V8 = K8-O8-S8` en modo Proyeccion) es el de `W8`, no el de
+`V8`. El par correcto -- y mas fuerte, porque vale en los DOS modos -- es `V8=J8-N8-R8` y
+`W8=K8-O8-S8`.
+
+**Signo verificado contra la formula viva del Tablero** antes de construir (pedido explicito del
+encargo): la primera linea del `LET` de `Tablero!AA10` (bloque "Categorias.") es
+`monto_neto=IF(Egreso;-monto;monto)` -- Ingreso suma, Egreso resta. Esta hoja no tiene un "Tipo"
+por fila como el ledger: el bloque de origen (Ingresos vs. Gastos Fijos/Variables) reemplaza esa
+senal.
+
+`C9` (titulo de la Tabla 1) agrega el mes de referencia entre parentesis, derivado en vivo de
+`E7`/`J2`/`J3` -- reusa `_fragmentoMesRefPm`/`_condModoHistoricoPm` de `DEVTOOL_PresupuestoModo.js`
+verbatim. `F19:F21` (Tabla 2) dividian por `$E$11` (Ingresos de la Tabla 1) en vez de `$E$18` (el
+de su propia tabla) -- confirmado por Franco como error de copiar-pegar, corregido por cirugia de
+token.
+
+Invariante en JS puro (`_recalcularAgrupadoPc`), independiente de las formulas de Sheets: una
+cuenta sin categoria en el Plan de Cuentas se reporta como aviso (no aborta) solo si el desvio de
+total que produce queda totalmente explicado por esa cuenta -- si no cierra, es falla real y
+revierte. Cableado en `MENU_CONFIG`: "Presupuesto: categorias y resumen".
+`devtools/probar_presupuesto_resumen.js` (nuevo, banco 12). Se retiran los dos diagnosticos
+temporales que ya cumplieron (`DEVTOOL_DIAG_Desplegables.js`,
+`DEVTOOL_DIAG_PresupuestoTitulos.js`) y sus entradas de menu. Los doce bancos en verde.
+
+---
+
 ## v0.45.1 - Presupuesto: el bug real detras del incidente de v0.45.0 (2026-08-24)
 
 `v0.45.0` se desplego y se aplico en la planilla real de Franco. `"1. Ver estado"` salio
