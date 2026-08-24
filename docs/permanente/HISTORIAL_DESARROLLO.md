@@ -6,6 +6,117 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-24 - La cursiva del faltante se vuelve uniforme en los tres bloques (v0.42.1)
+
+### Evento
+
+v0.42.0 (la negrita de la seccion real, entrada anterior de este historial) se desplego y aplico
+bien -- la negrita quedo correcta en los tres bloques -- pero Franco reporto que **los tres
+bloques no quedaron iguales**:
+
+| | Ingresos | Gastos Fijos |
+|---|---|---|
+| filas reales | negrita | negrita |
+| fila "Faltante proyectado" | CURSIVA | normal |
+| filas de faltante | gris + CURSIVA | gris, sin cursiva |
+
+Los tres bloques los escribe el mismo codigo en la misma corrida, asi que esa diferencia no podia
+venir de ninguna regla de este modulo -- tenia que venir de otro lado. La entrada anterior de este
+historial ya dejaba anotado, sobre la negrita: "esta sesion no tuvo forma de confirmar en vivo
+[si el formato es manual o una regla ajena] -- queda para la corrida final de Franco." Esta
+entrada es esa corrida final, aplicada al mismo problema pero del lado de la cursiva.
+
+### La medicion, antes de suponer nada
+
+Se reviso primero el codigo (sin tocar la planilla): el historial de git de las seis versiones de
+`DEVTOOL_TableroFaltanteProyectado.js` (v0.36.0 a v0.42.0) muestra que `_construirReglaGrisTfp`
+(la regla que pinta gris la seccion de faltante) NUNCA llamo `setItalic()` en ninguna version --
+solo la regla de aviso (la fila 30, "y N cuentas mas") lo hace, y esa vive en una sola celda fija,
+no en la seccion de faltante entera. Eso acotaba el diagnostico (casi seguro no era una regla
+huerfana de este modulo) pero no lo resolvia: podia ser formato ESTATICO de Franco, o una regla
+condicional de otro origen pisando ese rango.
+
+Se escribio un diagnostico de solo lectura (`DEVTOOL_DIAG_CursivaFaltante.js`, temporal, cableado
+en el menu Tidetrack Dev, ya retirado) que volcaba a una hoja el formato estatico
+(`getFontStyles`/`getFontWeights`/`getFontColorObjects`) y todas las reglas de formato condicional
+vivas de "Tablero". Franco lo desplego y lo corrio. El resultado, inequivoco:
+
+- **Bloque Ingresos**: filas 14 a 18 con `FontStyle` = `italic` (estatico). La fila 14 es la
+  separadora, 15 a 18 son de faltante. La fila 19, TAMBIEN de faltante, NO estaba en cursiva -- la
+  prueba de que el formato estaba pegado a un RANGO DE FILAS FIJO, no al CONTENIDO de la fila: la
+  misma trampa que este modulo ya documenta para el gris (que un formato estatico "quedaria pegado
+  a la fila"), esta vez materializada del lado de Franco en vez del lado del modulo.
+- **Bloque Gastos Fijos**: cero celdas en cursiva, en ninguna fila.
+- El gris (`#757575`) SI aparecia en los dos bloques -- es la regla propia, funcionando. Lo unico
+  que faltaba en Fijos era el `italic`.
+
+Conclusion: no habia ninguna regla huerfana que barrer (la arqueologia de codigo tenia razon). El
+origen es 100% formato estatico, puesto a mano por Franco alguna vez sobre el bloque de Ingresos,
+y nunca replicado en Fijos ni Variables.
+
+### La resolucion, en dos partes
+
+Franco, al pedir la negrita, ya habia dicho que "los faltantes proyectados queden como estan" --
+refiriendose a su captura de Ingresos, que era gris + cursiva. El estado deseado es entonces
+cursiva en la seccion de faltante de los TRES bloques, por mecanismo del modulo, no por accidente
+de formato:
+
+1. **`_construirReglaGrisTfp` ahora tambien llama `setItalic(true)`.** Es la MISMA regla que ya
+   pintaba gris (mismo COUNTIF expansivo posicional de la decision #8), aplicada igual en los tres
+   bloques via `_reglasGrisTfp()`. La cursiva pasa a seguir al CONTENIDO (la seccion de faltante)
+   en vez de a una fila fija: si el bloque crece o se reordena, la cursiva se mueve con el, no se
+   queda pegada donde estaba el dia que alguien la pinto a mano.
+2. **El FontStyle estatico se limpia como parte de `aplicar()`, de forma GENERICA en los tres
+   bloques -- no hardcodeado a "Ingresos R14:S18".** El preflight lee (solo lectura, sin evaluar
+   ninguna formula) el `FontStyle` del rango de datos completo de cada bloque (`_rangoDatosTfp`,
+   la misma geometria de dos columnas que ya usa la negrita); si algun bloque tiene aunque sea una
+   celda en `italic`, el plan agrega un item aparte (`plan.cursivaEstatica`, fuera de
+   `plan.cambios`: no es contenido de una celda, es una propiedad de formato sobre un rango de
+   varias). `aplicar()` respalda el rango completo (`getFontStyles()`) antes de limpiarlo
+   (`setFontStyle('normal')`) y `revertir()` lo repone exacto (`setFontStyles(matriz)`). Se toca
+   SOLO el FontStyle: color de fuente y negrita estatica que hubiera quedan intactos -- el mismo
+   principio de "no pisar formato existente" que ya rige la negrita.
+
+   Es generico a proposito, no una rama especial para Ingresos: si algun dia OTRO bloque quedara
+   con cursiva estatica pegada a una fila, la misma corrida de `aplicar` la detecta y la limpia sin
+   que haga falta tocar el modulo de nuevo -- el pedido explicito de Franco de que "los tres
+   bloques reciban el mismo tratamiento".
+
+### El ajuste que hacia falta para que lo anterior funcionara de verdad
+
+`_reglasHacenFaltaTfp` (la funcion que decide si `aplicar()` tiene que reescribir las nueve reglas
+de formato condicional) comparaba SOLO formula+rango. La regla gris de v0.42.0, ya vigente en la
+planilla de Franco, tiene la MISMA formula y el MISMO rango que la de v0.42.1 -- lo unico que
+cambia es el estilo. `_esReglaPropiaTfp` la sigue reconociendo como propia (correcto: formula+rango
+es y debe seguir siendo su unico criterio de identidad, para no terminar con dos reglas
+superpuestas sobre el mismo rango), pero comparar SOLO por esa identidad hacia que
+`_reglasHacenFaltaTfp` dijera "ya esta correcta" con un estilo VIEJO -- `aplicar()` nunca la iba a
+reescribir en un segundo "Aplicar" sobre la planilla real.
+
+La correccion: ahora tambien compara bold/italic/color (via `_hexDeColorTfp`, mismo patron que
+`_hexDeColorIp` de `DEVTOOL_InicioPresupuesto.js`: prueba `asRgbColor()` con try/catch, sin
+depender de `SpreadsheetApp.ColorType`). Es exactamente el mismo diagnostico y la misma solucion
+que ya se aplico en ese otro modulo: "una regla propia con la formula correcta pero el color viejo
+tiene que reescribirse."
+
+### Banco de pruebas
+
+`devtools/probar_tablero_faltante.js`: nueva seccion 5c (mutacion sobre `_construirReglaGrisTfp`
+verificando que pide `setItalic(true)`; los nueve items de `_reglasGrisTfp`/`_reglasAvisoTfp`/
+`_reglasNegritaTfp` declaran su bold/italic/color esperado; `_hexDeColorTfp` con color RGB, sin
+color y con un color de tema que no se puede convertir; y la mutacion central -- una regla viva
+con formula+rango correctos pero estilo viejo SI dispara `_reglasHacenFaltaTfp`, cosa que antes de
+este cambio NO pasaba). Nueva seccion 7g (deteccion y limpieza del FontStyle estatico: el caso
+medido de Franco reproducido exacto, la mutacion de que el mecanismo escala a DOS bloques a la vez
+-- no se queda pegado al primero --, que la limpieza no toca valor ni numberFormat, idempotencia, y
+el round-trip fiel de `getFontStyles`/`setFontStyles` que respaldo y reversion necesitan). Los ocho
+bancos del repo (`node devtools/probar_*.js`) en verde; las tres mutaciones centrales (quitar el
+`setItalic` de la regla gris, revertir el freshness-check a formula+rango solamente, y limitar la
+limpieza a un solo bloque) se confirmaron a mano contra el banco real antes de dar el cambio por
+cerrado.
+
+---
+
 ## 2026-08-24 - El invariante del faltante se corrige (v0.41.0 se autoreviritio) + seccion real en negrita (v0.42.0)
 
 ### Evento

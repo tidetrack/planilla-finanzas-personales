@@ -9,6 +9,44 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.42.1 - Cursiva del faltante uniforme en los tres bloques del Tablero (2026-08-24)
+
+v0.42.0 se desplego y aplico bien -- la negrita de la seccion real quedo correcta -- pero Franco
+reporto que Ingresos, Gastos Fijos y Gastos Variables **no quedaron iguales**: en Ingresos la fila
+separadora y las filas de faltante se ven en cursiva; en los otros dos, no. Los tres bloques los
+escribe el mismo codigo en la misma corrida, asi que la diferencia no podia venir de ninguna regla
+de este modulo.
+
+### Lo medido (antes de tocar nada)
+
+Con un diagnostico de solo lectura (ya retirado), en Ingresos SOLO R14:S18 tenian FontStyle
+**estatico** `italic` -- la fila separadora mas cuatro filas de faltante. La fila 19, tambien de
+faltante, NO estaba en cursiva: la prueba de que el formato quedo pegado a un rango de FILAS
+FIJAS, no al CONTENIDO de la fila -- la misma trampa que este modulo ya documenta para el gris,
+esta vez del lado de Franco. En Gastos Fijos y Variables, cero celdas en cursiva. Se habia
+revisado antes, por las dudas, el historial de git de las seis versiones del modulo: ninguna
+version de `_construirReglaGrisTfp` llamo jamas `setItalic()` -- no habia ninguna regla huerfana
+que barrer, el origen es 100% formato estatico.
+
+### La resolucion
+
+- `_construirReglaGrisTfp` ahora tambien llama `setItalic(true)`: la MISMA regla que ya pintaba
+  gris, igual en los tres bloques, para que la cursiva siga al contenido (el mismo COUNTIF
+  posicional de siempre) en vez de a una fila fija.
+- El FontStyle estatico se limpia como parte de `aplicar()`, GENERICO en los tres bloques (no
+  hardcodeado a "Ingresos"): el preflight lo detecta por bloque, `aplicar` respalda el rango
+  completo antes de limpiarlo y `revertir` lo repone exacto. Solo toca FontStyle -- color de
+  fuente y negrita estatica que hubiera quedan intactos.
+- Ajuste imprescindible para que lo anterior funcione en un segundo "Aplicar": `_reglasHacenFaltaTfp`
+  comparaba solo formula+rango, asi que una regla gris ya vigente (misma formula, mismo rango,
+  sin cursiva) pasaba como "ya esta correcta" y nunca se iba a reescribir. Ahora compara tambien
+  bold/italic/color.
+
+Detalle completo, incluidas las mutaciones probadas, en `docs/permanente/HISTORIAL_DESARROLLO.md`
+y `src/ZZ_Changelog.js`.
+
+---
+
 ## v0.42.0 - Invariante del faltante corregido (v0.41.0 se autoreviritio) + seccion real en negrita (2026-08-24)
 
 `aplicarTableroFaltanteProyectado()` (v0.41.0) se corrio contra la planilla real y **la propia
