@@ -40,13 +40,17 @@
  *    no son altas: son ERRORES DE TIPEO de medios que si existen, y se arreglan unificandolos en
  *    el ledger, no duplicandolos en el catalogo.
  *
- * @version 0.15.0
+ * @version 0.15.1
  * @since 2026-08-19
- * @lastModified 2026-08-19
+ * @lastModified 2026-08-24
  * @see docs/permanente/FUNCIONALIDADES.md
  */
 
 const ALTA_PROP_RESPALDO = 'alta_cuentas_respaldo';
+// decision Franco 2026-08-24: nombrado (antes literal inline) para que
+// DEVTOOL_PurgaRespaldos.js pueda derivar el patron de respaldo de ESTE modulo en vez de
+// reinventar el prefijo -- regla SSOT, la misma razon por la que RANGES centraliza columnas.
+const ALTA_PREFIJO_RESPALDO = 'Respaldo Plan de Cuentas ';
 
 /** Cuentas que no son cuentas: son mecanismos del sistema y nunca van al catalogo. */
 const ALTA_NEUTRAS = ['Traspaso', 'Inicio Mes'];
@@ -269,7 +273,7 @@ function _primeraFilaLibre(hoja, col, desde) {
 
 /** Congela el Plan de Cuentas entero a VALORES en una hoja oculta, y lo relee para verificarlo. */
 function _respaldarCatalogo(ss, hojaPC, sello) {
-    const nombre = _nombreHojaLibreFormulerio(ss, 'Respaldo Plan de Cuentas ' + sello);
+    const nombre = _nombreHojaLibreFormulerio(ss, ALTA_PREFIJO_RESPALDO + sello);
     const filas = hojaPC.getLastRow();
     const cols = hojaPC.getLastColumn();
     const destino = ss.insertSheet(nombre);

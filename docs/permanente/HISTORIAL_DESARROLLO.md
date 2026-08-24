@@ -6,6 +6,120 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-24 - Purga de las hojas de respaldo acumuladas (v0.44.0)
+
+### El pedido
+
+Franco: *"Las 50 hojas de respaldo acumuladas eliminalas. Generan ruido"*. La planilla tiene 69
+hojas, de las cuales ~50 son respaldos que los devtools de este repo dejan en cada corrida: antes
+de escribir sobre "Inicio", "Tablero" o "Plan de Cuentas", cada modulo congela una copia -- una
+hoja nueva, oculta, fechada -- por si la escritura sale mal. Es la garantia que sostiene todo el
+patron estado/aplicar/revertir del repo (CLAUDE.md, seccion 6). El costo de esa garantia es que
+esas hojas se acumulan sin borrarse solas.
+
+### Tratado como lo unico irreversible de este repo
+
+`src/DEVTOOL_PurgaRespaldos.js` (nuevo) tiene **solo dos publicas** -- `estadoPurgaRespaldos`
+(lectura) y `aplicarPurgaRespaldos` (borra) -- y **no tiene `revertirPurgaRespaldos`**. No es un
+olvido: Sheets no tiene papelera de reciclaje para una hoja dentro de un spreadsheet
+(`DriveApp.getTrash()` aplica a archivos enteros, no a hojas de un archivo), asi que borrar una
+hoja de esta planilla es definitivo en el momento en que se confirma. Un boton de "revertir" que
+prometiera deshacer algo estructuralmente imposible de deshacer seria peor que no tenerlo: invita
+a confiar justo cuando mas importa no confiar. La cabecera del modulo lo dice en letras grandes.
+
+### Los patrones, derivados de los modulos que los crean
+
+Se barrio `src/` completo buscando cada `insertSheet(` que crea una hoja de respaldo.
+Aparecieron **ocho** prefijos distintos, no los tres que nombro Franco. Investigando cada uno:
+
+| Prefijo | Modulo | Estado |
+|---|---|---|
+| `Respaldo formulerio ` | `DEVTOOL_FormulerioV0111.js` (`_respaldarFormulerio`) | VIVO -- compartido por 8 modulos mas (BloqueCategorias, Capitalizacion, InicioPresupuesto, RiquezaYCategorias, Proyeccion, TipoDeMedios, TableroFaltanteProyectado, StockYFlujo) |
+| `Respaldo Plan de Cuentas ` | `DEVTOOL_AltaCuentas.js` | VIVO |
+| `RESP_REGISTROS_v031_` | `MIGRACION_v031_Historico.js` | VIVO |
+| `RESP_CABLEADO_` | `DEVTOOL_CableadoPresupuesto.js` | fuera del menu (Presupuesto diferido) |
+| `RESP_PRESUPUESTO_` | `DEVTOOL_Presupuesto.js` | fuera del menu (Presupuesto diferido) |
+| `RESP_ROBUSTEZ_` | `DEVTOOL_RobustezVistas.js` | fuera del menu (post swap v0.11) |
+| `RESP_TC_v095_` | `MIGRACION_v0.9.5_LayoutNuevo.js` | superado por el swap v0.11 |
+| `RESP_FORMULAS_v095_` | `MIGRACION_v0.9.5_LayoutNuevo.js` | superado por el swap v0.11 |
+
+Los tres primeros son los unicos que hoy pueden crear una hoja nueva (sus modulos estan en
+`MENU_CONFIG`); los otros cinco pertenecen a modulos que Franco ya saco del menu en decisiones
+anteriores y ninguna hoja con esos nombres aparece en el gemelo digital
+(`docs/permanente/celdas.tsv`). **Quedan afuera del alcance de esta purga a proposito**, no por
+descuido -- documentado en la cabecera del modulo para que no se asuman cubiertos. Si alguna vez
+aparece una hoja con alguno de esos cinco prefijos, este modulo no la toca (no matchea ningun
+patron): queda para que Franco decida si se suma.
+
+`Cuarentena Plan (2026-08-18)` -- la hoja que Franco nombro explicitamente como "no es un
+respaldo, no la toques" -- no matchea ningun patron por construccion: no hizo falta excluirla a
+mano con un caso especial, la forma de su nombre ya es otra (contenido real que el swap v0.11
+movio fuera del catalogo, no un respaldo fechado por un modulo).
+
+### Tres guardas, en orden de evaluacion
+
+1. **Registrada en Document Properties para el revertir de otro modulo.** Trece modulos guardan
+   ahi el nombre de su ultimo respaldo (`BCAT_PROP_RESPALDO`, `IP_PROP_RESPALDO`,
+   `RIQ_PROP_RESPALDO`... trece en total). En vez de mantener una lista de esas trece claves
+   (que quedaria vieja el dia que un modulo catorce sume la suya), el modulo lee **todos los
+   valores** de Document Properties: cualquier hoja cuyo nombre aparezca como valor de
+   *cualquier* propiedad del documento queda protegida, sin importar la clave.
+2. **Los 3 mas recientes de cada patron se conservan igual**, aunque nadie los tenga registrados
+   -- son la red de las corridas de hoy. `PURGA_RESPALDOS_N_CONSERVAR = 3` es una constante
+   visible, no un numero suelto en medio del codigo. La cuenta es **por patron**, no global:
+   mezclar la recencia entre "Respaldo formulerio" (compartido por nueve modulos, docenas de
+   corridas por dia) y "RESP_REGISTROS_v031" (una migracion que corre una vez cada tanto) dejaria
+   a este ultimo sin ningun respaldo conservado la primera vez que el otro tipo generara mas de
+   tres hojas el mismo dia.
+3. **Ninguna hoja visible se borra.** Los respaldos se crean siempre ocultos
+   (`.hideSheet()`); una visible es evidencia de que alguien la destapo a proposito para mirarla.
+
+### El contrato
+
+`estadoPurgaRespaldos()` no borra nada: lista exactamente que se borraria y que se conserva, con
+el motivo de cada excepcion, y el total de hojas antes/despues. `aplicarPurgaRespaldos()` pide
+confirmacion con el numero **exacto** de hojas a borrar y la advertencia explicita de que la
+accion no se puede deshacer, borra, y reporta cuantas borro y cuantas quedaron. Cableado en
+`MENU_CONFIG` (00_Config.js), seccion MANTENIMIENTO: "Purgar respaldos acumulados
+(IRREVERSIBLE)", con "1. Ver estado" primero y "2. Aplicar" despues -- sin "3. Revertir".
+
+### Verificacion
+
+`devtools/probar_purga_respaldos.js` (nuevo, el decimo banco) prueba el filtro de patrones contra
+una lista de **nombres reales**, sacada del gemelo digital: el snapshot de la planilla real de
+Franco (~2026-08-21) tenia 50 hojas de respaldo (37 "Respaldo formulerio", 11 "Respaldo Plan de
+Cuentas", 2 "RESP_REGISTROS_v031") mas 10 hojas reales, incluida "Cuarentena Plan
+(2026-08-18)" -- exactamente la que el encargo pidio verificar. Las tres guardas se prueban **por
+mutacion**, tal como se pidio:
+
+- **Borrar una hoja que no matchea el patron, la mata**: una hoja sintetica sin forma de respaldo
+  ("Notas personales de Franco") nunca entra a la lista de candidatas, este oculta o no,
+  registrada o no.
+- **Borrar el respaldo registrado en Properties, la mata**: se saca la proteccion de un respaldo
+  que estaba protegido por eso (deliberadamente el mas viejo de su patron, para probar que la
+  proteccion no depende de la recencia) y se confirma que pasa a la lista de borrado; se restaura
+  y se confirma que vuelve a protegerse.
+- **Borrar mas de la cuenta, la mata**: se evalua con el limite de recencia efectivo en 0 (via un
+  segundo parametro opcional de `_purgaRespaldosEvaluar`, agregado solo para este test -- la
+  constante real `PURGA_RESPALDOS_N_CONSERVAR` sigue siendo `const`, nunca se reasigna) y se
+  confirma que la cantidad a borrar sube exactamente en las que dejaron de estar protegidas por
+  recencia, ni una mas ni una menos; restaurado el comportamiento por defecto, vuelve al numero
+  original.
+
+Los diez bancos en verde (los nueve existentes, sin tocar, mas este). De paso, el literal inline
+`'Respaldo Plan de Cuentas '` de `DEVTOOL_AltaCuentas.js` paso a ser la constante nombrada
+`ALTA_PREFIJO_RESPALDO` (regla SSOT: el prefijo de un respaldo se declara una vez, en el modulo
+que lo crea, y el modulo de purga lo deriva de ahi en vez de retipearlo).
+
+### Despliegue
+
+Este cambio queda en el repo para que Franco lo despliegue via `sync_targets.command`. Por pedido
+explicito, la corrida en la planilla real la hace el mismo: primero `1. Ver estado` (solo
+lectura), revisa la lista completa, y recien despues `2. Aplicar`. Ningun `clasp push` se disparo
+desde esta sesion.
+
+---
+
 ## 2026-08-24 - El rango del VLOOKUP del Tipo, reparado en el bloque Categorias del Tablero (v0.43.0)
 
 ### El bug, medido por Franco antes de tocar nada

@@ -3,9 +3,9 @@
  * Configuración global del sistema Tidetrack
  * Define constantes, rangos de columnas, y enums
  *
- * @version 0.11.1
+ * @version 0.11.2
  * @since 0.1.0
- * @lastModified 2026-08-18
+ * @lastModified 2026-08-24
  */
 
 // [CONCEPTO DE NEGOCIO] Single Source of Truth de nombres de hoja y rangos; ningun modulo hardcodea posiciones.
@@ -704,6 +704,18 @@ const MENU_CONFIG = {
         { seccion: 'MANTENIMIENTO' },
         { name: 'On/Off proteccion del Plan de Cuentas', function: 'togglePlanCuentasProtection' },
         { name: 'Exportar arquitectura (gemelo digital)', function: 'exportarArquitecturaTotal' },
+        {
+            // decision Franco 2026-08-24: "Las 50 hojas de respaldo acumuladas eliminalas.
+            // Generan ruido". Lo UNICO irreversible de este repo (una hoja borrada no vuelve):
+            // por eso, a diferencia de sus vecinos de este menu, NO tiene "3. Revertir".
+            // Corre SIEMPRE primero "1. Ver estado" -- no borra nada -- y recien despues
+            // "2. Aplicar", que pide confirmacion explicita con el numero exacto de hojas.
+            // @see DEVTOOL_PurgaRespaldos.js
+            submenu: 'Purgar respaldos acumulados (IRREVERSIBLE)', items: [
+                { name: '1. Ver estado (no borra nada)', function: 'estadoPurgaRespaldos' },
+                { name: '2. Aplicar (borra, no se puede deshacer)', function: 'aplicarPurgaRespaldos' }
+            ]
+        },
         // ENTRADA TEMPORAL -- decision Franco 2026-08-21: auditoria de desplegables de Plan de
         // Cuentas y Cargas (columna R en rojo + desplegables cerrados). Correrla UNA vez, copiar
         // la hoja "DIAG_Desplegables_TEMP" que genera, y despues BORRAR esta entrada junto con

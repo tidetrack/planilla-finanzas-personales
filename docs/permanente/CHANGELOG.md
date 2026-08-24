@@ -9,6 +9,34 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.44.0 - Purga de hojas de respaldo acumuladas (2026-08-24)
+
+Franco: "Las 50 hojas de respaldo acumuladas eliminalas. Generan ruido". Nuevo
+`DEVTOOL_PurgaRespaldos.js`, tratado como lo unico irreversible que hace este repo: SOLO
+`estadoPurgaRespaldos` (lectura) y `aplicarPurgaRespaldos` (borra), sin `revertirPurgaRespaldos`
+-- Sheets no tiene papelera para una hoja dentro de un spreadsheet, asi que un `revertir` de
+mentira seria peor que no tenerlo.
+
+Tres patrones, derivados de las constantes reales de los modulos que crean cada respaldo (nunca
+retipeados): `Respaldo formulerio <fecha>_<hora>` (compartido por nueve modulos),
+`Respaldo Plan de Cuentas <fecha>_<hora>` y `RESP_REGISTROS_v031_<fecha>_<hora>`. Barrido src/
+completo: aparecieron ocho prefijos en total; los otros cinco pertenecen a modulos fuera del menu
+y quedan afuera a proposito, documentado en la cabecera. `Cuarentena Plan (<fecha>)` no matchea
+ningun patron: no se toca.
+
+Tres guardas: cualquier hoja registrada en Document Properties para el revertir de otro modulo
+(trece hoy) se conserva; los 3 mas recientes de cada patron se conservan igual (constante
+visible, `PURGA_RESPALDOS_N_CONSERVAR`); ninguna hoja visible se borra. `estado()` lista exacto
+que se borraria y por que se conserva cada excepcion; `aplicar()` confirma con el numero exacto y
+la advertencia de que no se puede deshacer.
+
+Nuevo banco `devtools/probar_purga_respaldos.js` (el decimo): filtro probado contra nombres
+reales del gemelo digital (incluida "Cuarentena Plan (2026-08-18)") y las tres guardas probadas
+por mutacion. Cableado en el menu, seccion Mantenimiento. Sin deploy: queda para que Franco corra
+primero el estado.
+
+---
+
 ## v0.43.0 - El rango del VLOOKUP del Tipo, reparado (bloque Categorias del Tablero) (2026-08-24)
 
 Franco midio en vivo la linea `columna_tipo` del `LET` de `Tablero!AA10`: pedia la columna 2 a

@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 43,
+ minor: 44,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.43.0 - El rango del VLOOKUP del Tipo, reparado (bloque Categorias del Tablero)',
+ releaseName: 'v0.44.0 - Purga de hojas de respaldo acumuladas',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,16 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.44.0 (2026-08-24) - Purga de hojas de respaldo acumuladas
++ DEVTOOL_PurgaRespaldos.js (nuevo): "Las 50 hojas de respaldo acumuladas eliminalas. Generan ruido" (Franco). Dos publicas SOLAMENTE -- estadoPurgaRespaldos (solo lectura) y aplicarPurgaRespaldos (borra) -- SIN revertirPurgaRespaldos: es lo unico irreversible de este repo, y la cabecera explica por que no hay un "deshacer" de mentira.
++ Tres patrones de respaldo conocidos, derivados de las constantes REALES de los modulos que los crean (nunca retipeados): FORM_PREFIJO_RESPALDO ('Respaldo formulerio ', compartido por 9 modulos via _respaldarFormulerio), ALTA_PREFIJO_RESPALDO ('Respaldo Plan de Cuentas ', nueva -- antes literal inline en DEVTOOL_AltaCuentas.js) y V031_PREFIJO_RESPALDO ('RESP_REGISTROS_v031_'). Barrido todo src/: aparecieron OCHO prefijos en total; los otros cinco pertenecen a modulos fuera del menu y se dejan afuera a proposito (documentado en la cabecera). 'Cuarentena Plan (<fecha>)' no matchea ningun patron: no es un respaldo, no se toca.
++ TRES GUARDAS: (1) cualquier hoja registrada como VALOR en Document Properties (13 modulos guardan ahi el nombre de su ultimo respaldo para su propio revertir) queda protegida, sin importar la clave; (2) los 3 mas recientes de CADA patron se conservan igual (PURGA_RESPALDOS_N_CONSERVAR, constante visible); (3) ninguna hoja VISIBLE se borra -- los respaldos se crean siempre ocultos, una visible es evidencia de que alguien la destapo a proposito.
+* estadoPurgaRespaldos lista EXACTO que se borraria y que se conserva, con el motivo de cada excepcion, y el total de hojas antes/despues. aplicarPurgaRespaldos pide confirmacion con el numero EXACTO de hojas y la advertencia de que no se puede deshacer, y reporta cuantas borro.
++ Cableado en MENU_CONFIG, seccion MANTENIMIENTO: "Purgar respaldos acumulados (IRREVERSIBLE)".
++ devtools/probar_purga_respaldos.js (nuevo, banco 10): filtro probado contra una lista de NOMBRES REALES sacada del gemelo digital (50 respaldos + 10 hojas reales, incluida "Cuarentena Plan (2026-08-18)"), y las tres guardas probadas POR MUTACION -- desactivar cada una y confirmar que el numero a borrar cambia en la direccion esperada, despues restaurar y confirmar que vuelve al baseline. _purgaRespaldosEvaluar gana un segundo parametro opcional (nConservar) SOLO para esta mutacion, sin tocar la constante real (const a proposito).
+* DEVTOOL_AltaCuentas.js: el literal inline 'Respaldo Plan de Cuentas ' pasa a ALTA_PREFIJO_RESPALDO (regla SSOT: el prefijo de un respaldo se declara una vez, en el modulo que lo crea).
+! Los diez bancos en verde.
+
 v0.43.0 (2026-08-24) - El rango del VLOOKUP del Tipo, reparado (bloque Categorias del Tablero)
 - Franco midio en vivo la linea "columna_tipo" del LET de Tablero!AA10: VLOOKUP(columna_aj; 'Plan de Cuentas'!P:P; 2; 0). Le pide la columna 2 a P:P, que tiene UNA sola columna -- #REF!, tapado por el IFERROR. La columna Tipo del bloque "Categorias" no podia mostrar nada, nunca, ni con la columna Q del Plan de Cuentas llena.
 * DUENIO: la coordenada la declara RIQ_BLOQUE_CATEGORIAS (DEVTOOL_RiquezaYCategorias.js), pero ese modulo dejo de tocar AA10 el 2026-08-21 (decision de duenio unico, ver su cabecera). El duenio unico de AA10 es DEVTOOL_BloqueCategorias.js: la reparacion entra ahi, como SEGUNDA cirugia de token (_repararRangoTipoBcat) independiente de _reapuntarBloqueCategorias -- esa toca la variable "proyecto" (el agrupamiento), esta toca "columna_tipo" (otra linea del mismo LET). Un solo escritor para toda la celda.

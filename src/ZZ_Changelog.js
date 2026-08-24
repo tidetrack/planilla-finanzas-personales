@@ -3,6 +3,71 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.44.0 - Purga de hojas de respaldo acumuladas (DEVTOOL_PurgaRespaldos.js, nuevo).
+ * - Franco: "Las 50 hojas de respaldo acumuladas eliminalas. Generan ruido". La planilla tiene
+ *   69 hojas, de las cuales ~50 son respaldos que los devtools de este repo dejan en cada
+ *   corrida (una hoja nueva, oculta, fechada, antes de cada escritura -- la garantia que sostiene
+ *   TODO el patron estado/aplicar/revertir del repo). Ese respaldo, pasado el punto en que podria
+ *   hacer falta, es puro ruido.
+ * - LO UNICO IRREVERSIBLE DE ESTE REPO, tratado como tal: DEVTOOL_PurgaRespaldos.js tiene SOLO
+ *   dos publicas -- `estadoPurgaRespaldos` (solo lectura) y `aplicarPurgaRespaldos` (borra) --
+ *   SIN `revertirPurgaRespaldos`. La cabecera explica por que no es un olvido: Sheets no tiene
+ *   papelera de reciclaje para una hoja dentro de un spreadsheet (DriveApp.getTrash() aplica a
+ *   archivos enteros, no a hojas), asi que borrar una hoja es definitivo en el momento en que se
+ *   confirma. Un `revertir` que promete deshacer algo que estructuralmente no se puede deshacer
+ *   seria peor que no tenerlo.
+ * - TRES PATRONES, DERIVADOS NO INVENTADOS: se barrio TODO src/ buscando cada `insertSheet(` que
+ *   crea un respaldo. Aparecieron OCHO prefijos distintos, no tres. Los TRES que Franco nombro
+ *   son los unicos VIVOS hoy (sus modulos estan en el menu): `FORM_PREFIJO_RESPALDO` ('Respaldo
+ *   formulerio ', DEVTOOL_FormulerioV0111.js -- compartido via `_respaldarFormulerio()` por OCHO
+ *   modulos mas: BloqueCategorias, Capitalizacion, InicioPresupuesto, RiquezaYCategorias,
+ *   Proyeccion, TipoDeMedios, TableroFaltanteProyectado, StockYFlujo), `ALTA_PREFIJO_RESPALDO`
+ *   ('Respaldo Plan de Cuentas ', DEVTOOL_AltaCuentas.js -- NUEVA constante, antes un literal
+ *   inline: se nombro para que este modulo pudiera derivarla en vez de retipearla) y
+ *   `V031_PREFIJO_RESPALDO` ('RESP_REGISTROS_v031_', MIGRACION_v031_Historico.js). Los otros
+ *   CINCO (`RESP_CABLEADO_`, `RESP_PRESUPUESTO_`, `RESP_ROBUSTEZ_`, `RESP_TC_v095_`,
+ *   `RESP_FORMULAS_v095_`) pertenecen a modulos que MENU_CONFIG ya saco del menu por decision
+ *   previa de Franco -- no pueden crear una hoja hoy y ninguna aparece en el gemelo digital -- y
+ *   quedan AFUERA A PROPOSITO, documentado en la cabecera para que no se asuman cubiertos.
+ *   `Cuarentena Plan (<fecha>)` no matchea ningun patron (no es un respaldo, es contenido real
+ *   que el swap v0.11 movio fuera del catalogo): no hizo falta excluirla a mano.
+ * - TRES GUARDAS, en orden de evaluacion: (1) cualquier hoja cuyo NOMBRE aparezca como VALOR de
+ *   CUALQUIER Document Property queda protegida -- trece modulos guardan ahi el nombre de su
+ *   ultimo respaldo para su propio "3. Revertir"; se lee el valor, no una lista fija de claves,
+ *   para no quedar vieja el dia que un modulo catorce sume la suya. (2) los `PURGA_RESPALDOS_
+ *   N_CONSERVAR` (=3, constante visible) mas recientes de CADA patron se conservan igual, aunque
+ *   nadie los tenga registrados -- la red de las corridas de hoy; la cuenta es POR PATRON, no
+ *   global, porque cada patron es el mecanismo de revertir de un grupo de modulos distinto. (3)
+ *   ninguna hoja VISIBLE se borra -- los respaldos se crean siempre ocultos; una visible es
+ *   evidencia de que alguien la destapo a proposito para mirarla.
+ * - `estadoPurgaRespaldos` lista EXACTO que se borraria y que se conserva (con el motivo de cada
+ *   excepcion) y el total de hojas antes/despues, sin escribir nada. `aplicarPurgaRespaldos` pide
+ *   confirmacion con el numero EXACTO de hojas a borrar y la advertencia explicita de que no se
+ *   puede deshacer, borra, y reporta cuantas borro y cuantas quedaron (con las que fallaron, si
+ *   las hubo).
+ * - Cableado en MENU_CONFIG (00_Config.js), seccion MANTENIMIENTO: "Purgar respaldos acumulados
+ *   (IRREVERSIBLE)", con "1. Ver estado" primero y "2. Aplicar" despues -- sin "3. Revertir".
+ * - devtools/probar_purga_respaldos.js (NUEVO, decimo banco): el filtro de patrones se prueba
+ *   contra una lista de NOMBRES REALES sacada del gemelo digital (docs/permanente/celdas.tsv,
+ *   snapshot de la planilla real de Franco: 50 hojas de respaldo + 10 hojas reales, INCLUIDA
+ *   "Cuarentena Plan (2026-08-18)"). Las tres guardas se prueban POR MUTACION, tal como pidio el
+ *   encargo: (a) una hoja sintetica sin forma de respaldo nunca entra a `matcheadas` ni a
+ *   `aBorrar`, aunque este oculta y sin registrar; (b) se saca la proteccion de Document
+ *   Properties de un respaldo YA protegido por eso y se confirma que pasa a `aBorrar` -- se
+ *   restaura y se confirma que vuelve a protegerse; (c) se evalua con
+ *   `PURGA_RESPALDOS_N_CONSERVAR` efectivo en 0 (via un segundo parametro opcional de
+ *   `_purgaRespaldosEvaluar`, SOLO para este test -- la constante real queda `const`, nunca se
+ *   reasigna) y se confirma que `aBorrar` sube exactamente en las que dejaron de estar protegidas
+ *   por recencia, ni una mas ni una menos; restaurado el default, vuelve al baseline. Los diez
+ *   bancos en verde (los nueve existentes, sin tocar, mas este).
+ * - DEVTOOL_AltaCuentas.js: el literal `'Respaldo Plan de Cuentas '` pasa a la constante nombrada
+ *   `ALTA_PREFIJO_RESPALDO` (regla SSOT: el prefijo de un respaldo se declara una vez, en el
+ *   modulo que lo crea; el modulo de purga lo deriva de ahi, no lo retipea).
+ * - DESPLIEGUE: este release queda en el repo para que Franco lo despliegue via
+ *   `sync_targets.command` y corra PRIMERO "1. Ver estado" -- solo el, con su propia sesion de
+ *   Google -- antes de considerar siquiera "2. Aplicar". Ningun `clasp push` se disparo desde
+ *   esta sesion.
+ *
  * [2026-08-24] v0.43.0 - El rango del VLOOKUP del Tipo, reparado (bloque Categorias del Tablero).
  * - Franco midio en vivo, sobre la planilla real, la linea `columna_tipo` del LET de Tablero!AA10
  *   (el bloque "Categorias" del Tablero): `VLOOKUP(columna_aj; 'Plan de Cuentas'!P:P; 2; 0)`. Le
