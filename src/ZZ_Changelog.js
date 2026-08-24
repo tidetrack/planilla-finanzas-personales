@@ -3,6 +3,52 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.43.0 - El rango del VLOOKUP del Tipo, reparado (bloque Categorias del Tablero).
+ * - Franco midio en vivo, sobre la planilla real, la linea `columna_tipo` del LET de Tablero!AA10
+ *   (el bloque "Categorias" del Tablero): `VLOOKUP(columna_aj; 'Plan de Cuentas'!P:P; 2; 0)`. Le
+ *   pide la COLUMNA 2 a P:P, que tiene UNA sola columna: es #REF!, tapado por el IFERROR que lo
+ *   envuelve. Consecuencia: la columna Tipo del bloque no podia mostrar nada, nunca -- ni con la
+ *   columna Q del Plan de Cuentas llena. No lee una columna vacia: lee un rango invalido y lo
+ *   esconde.
+ * - QUIEN LO REPARA Y POR QUE: la coordenada la declara RIQ_BLOQUE_CATEGORIAS en
+ *   DEVTOOL_RiquezaYCategorias.js, pero ese modulo dejo de tocar AA10 el 2026-08-21 por la
+ *   decision de duenio unico (ver su propia cabecera, seccion "ESTADO AL 2026-08-21"): su
+ *   `_planRiqueza` lo dice explicito, y `_conTipoEnCategorias` -- que YA sabia construir el
+ *   VLOOKUP correcto -- quedo retenida solo como prueba de regresion en probar_riqueza.js, sin
+ *   ejecutar sobre esta celda. El duenio unico de AA10, decidido por Franco, es
+ *   DEVTOOL_BloqueCategorias.js. La reparacion entra ahi como una SEGUNDA cirugia de token,
+ *   `_repararRangoTipoBcat`, independiente de `_reapuntarBloqueCategorias` (esa toca la variable
+ *   `proyecto`, el agrupamiento; esta toca `columna_tipo`, otra linea del mismo LET): un solo
+ *   escritor para toda la celda, tal como pide la regla de duenio unico que el propio repo se dio.
+ * - `_repararRangoTipoBcat` DERIVA el rango de RANGES.PROYECTOS (P:Q: nombre en P, tipo en Q; el
+ *   indice de columna sale de `columns.tipo`), nunca hardcodeado. Probado por mutacion: mutar
+ *   RANGES.PROYECTOS.end mueve el resultado con el config (devtools/probar_bloque_categorias.js,
+ *   seccion 2). No toca ninguna otra linea del LET (verificado linea por linea contra la formula
+ *   real): en particular deja INTACTA `tipo_proy` (linea 7), que tiene la MISMA forma rota pero
+ *   esta MUERTA -- sin ningun lector, desde que RiquezaYCategorias le saco el filtro que la
+ *   consumia (`_conTipoEnCategorias`, paso 3, ya aplicado sobre esta celda). Sin lectores, su
+ *   #REF! tapado no cambia ningun resultado visible: no es el bug que Franco midio.
+ * - `estadoBloqueCategorias`/`aplicarBloqueCategorias` corren ahora las DOS cirugias via
+ *   `_diagnosticarBcat` y reportan cual de las dos, si alguna, hace falta. Medido contra el
+ *   gemelo digital (docs/permanente/celdas.tsv): la cascada de categoria YA esta aplicada
+ *   (`grupoCambia=false`) y solo el rango del Tipo hacia falta (`tipoCambia=true`) -- consistente
+ *   con que `aplicarBloqueCategorias` ya se habia corrido en produccion para el primer defecto.
+ *   `aplicar()` relee la FORMA de lo escrito para verificar la reparacion del Tipo (no alcanza con
+ *   el texto ni con el error de celda: el IFERROR tapa el #REF!, tal como tapaba el original).
+ * - Nueva `_contarCategoriasSinTipoBcat` (solo lectura): cuenta, sobre el catalogo vivo
+ *   (RANGES.PROYECTOS), cuantas categorias tienen nombre y no tienen Tipo. `estado()`/`aplicar()`
+ *   lo muestran para avisar, con un numero medido y no inventado, que la columna Tipo del Tablero
+ *   puede seguir en blanco despues del arreglo -- ya no por una formula rota, por catalogo
+ *   incompleto (la columna Q del Plan de Cuentas, ademas, no tiene desplegable hoy: se carga a
+ *   mano; agregarle uno queda propuesto, no aplicado, a la espera de que Franco lo pida).
+ * - devtools/probar_bloque_categorias.js (NUEVO): el modulo no tenia banco propio -- las dos
+ *   publicas se probaban solo de paso, en la seccion 2 de probar_riqueza.js. Corre las
+ *   transformaciones REALES contra la formula REAL de Tablero!AA10 (leida del gemelo): confirma
+ *   el bug medido, la reparacion, que ninguna otra linea del LET se toca, que tipo_proy queda
+ *   intacto a proposito, idempotencia sola y combinada con `_reapuntarBloqueCategorias`, la
+ *   mutacion que prueba la dependencia de RANGES, seguridad de entrada (undefined/vacio/formula
+ *   ajena) y `_contarCategoriasSinTipoBcat` sobre una hoja simulada. Los nueve bancos en verde.
+ *
  * [2026-08-24] v0.42.1 - Cursiva del faltante uniforme en los tres bloques (era formato estatico pegado a filas fijas en Ingresos).
  * - v0.42.0 SE DESPLEGO Y APLICO BIEN (la negrita de la seccion real quedo correcta), pero Franco reporto
  *   que los tres bloques del Tablero NO quedaron iguales: en Ingresos la fila separadora y las filas de

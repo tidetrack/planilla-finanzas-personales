@@ -9,6 +9,29 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.43.0 - El rango del VLOOKUP del Tipo, reparado (bloque Categorias del Tablero) (2026-08-24)
+
+Franco midio en vivo la linea `columna_tipo` del `LET` de `Tablero!AA10`: pedia la columna 2 a
+`'Plan de Cuentas'!P:P`, un rango de una sola columna -- `#REF!`, tapado por el `IFERROR`. La
+columna Tipo del bloque "Categorias" no podia mostrar nada, nunca. El rango correcto, derivado de
+`RANGES.PROYECTOS` y no hardcodeado, es `P:Q`.
+
+La coordenada la declara `RIQ_BLOQUE_CATEGORIAS` (`DEVTOOL_RiquezaYCategorias.js`), pero ese
+modulo dejo de tocar `AA10` el 2026-08-21 por la decision de duenio unico ya tomada (ver
+`ZZ_Changelog.js` v0.39.1). El duenio unico es `DEVTOOL_BloqueCategorias.js`: la reparacion entra
+ahi como una segunda cirugia de token (`_repararRangoTipoBcat`), independiente de la que ya
+reapunta la variable de agrupamiento. Queda sin tocar a proposito una segunda variable con el
+mismo bug de rango (`tipo_proy`), porque esta muerta -- sin ningun lector, no cambia ningun
+resultado visible.
+
+Reparado el rango, la columna Tipo sigue en blanco para las 22 categorias del catalogo (columna Q
+vacia hoy) -- ya no por formula rota, por catalogo incompleto; `estado()`/`aplicar()` lo reportan
+con un numero medido. Nuevo banco `devtools/probar_bloque_categorias.js` (el modulo no tenia uno
+propio), probado contra la formula real del gemelo y por mutacion. Los nueve bancos en verde. Sin
+deploy: queda para que Franco lo corra via `sync_targets.command`.
+
+---
+
 ## v0.42.1 - Cursiva del faltante uniforme en los tres bloques del Tablero (2026-08-24)
 
 v0.42.0 se desplego y aplico bien -- la negrita de la seccion real quedo correcta -- pero Franco

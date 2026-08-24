@@ -6,6 +6,99 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-24 - El rango del VLOOKUP del Tipo, reparado en el bloque Categorias del Tablero (v0.43.0)
+
+### El bug, medido por Franco antes de tocar nada
+
+El bloque "Categorias." del Tablero (ancla `AA10`) es un `LET` largo. La linea que llena la
+columna Tipo dice:
+
+```
+columna_tipo; ARRAYFORMULA(IFERROR(VLOOKUP(columna_aj; 'Plan de Cuentas'!P:P; 2; 0); ""))
+```
+
+Le pide la **columna 2** a `P:P`, que tiene **una sola columna**. Eso es `#REF!`, tapado por el
+`IFERROR` que lo envuelve. Resultado: la columna Tipo del bloque "Categorias" del Tablero no
+podia mostrar nada, **nunca** -- ni aunque la columna Q del Plan de Cuentas estuviera llena. No
+lee una columna vacia: lee un rango invalido y lo esconde.
+
+El destino correcto es `'Plan de Cuentas'!P:Q` (nombre en P, tipo en Q) -- exactamente lo que
+`RANGES.PROYECTOS` (`start: 'P'`, `end: 'Q'`, `columns.tipo: 'Q'`) ya declara en
+`src/00_Config.js`.
+
+### Quien la repara, y por que no es el modulo que la declara
+
+`RIQ_BLOQUE_CATEGORIAS` (`src/DEVTOOL_RiquezaYCategorias.js`) declara la celda `AA10` y tiene
+preflight por rotulo contra `AB9` ("Tipo"). Es tentador asumir que ese es el lugar natural para
+el arreglo. Midiendo el codigo antes de tocarlo, la respuesta es que NO: ese modulo dejo de tocar
+`AA10` el 2026-08-21, por una decision de Franco anterior (duenio unico por celda, ver
+`ZZ_Changelog.js` v0.39.1). Su propio `_planRiqueza` lo dice explicito ("YA NO SE TOCA DESDE
+ACA"), y `_conTipoEnCategorias` -- la funcion que en su momento SI sabia construir el VLOOKUP
+correcto -- quedo retenida solo como prueba de regresion en `probar_riqueza.js`, sin ejecutar
+sobre esta celda.
+
+El duenio unico de `AA10`, por esa misma decision, es `src/DEVTOOL_BloqueCategorias.js`. Ese
+modulo ya escribe la celda (`_reapuntarBloqueCategorias`, que reapunta la variable `proyecto` --
+el agrupamiento -- de "tipo del medio" a "categoria de la cuenta"), con su propio preflight por
+rotulo (`AA9` = "Nombre") y su propio respaldo/verificacion. La reparacion del Tipo entra ahi como
+una **segunda cirugia de token**, `_repararRangoTipoBcat`, independiente de la primera: cada una
+toca una linea distinta del mismo LET. Es la misma logica de "duenio unico" que el repo ya se
+dio -- extenderla a este bug nuevo, en vez de reabrir un segundo escritor sobre la misma celda,
+mantiene la garantia intacta.
+
+`_repararRangoTipoBcat` deriva el rango de `RANGES.PROYECTOS` (nunca hardcodeado): se probo por
+mutacion en `devtools/probar_bloque_categorias.js` (nuevo banco, el modulo no tenia uno propio)
+que mutar `RANGES.PROYECTOS.end` mueve el resultado en consecuencia. Tambien se verifico, linea
+por linea contra la formula real leida del gemelo digital (`docs/permanente/celdas.tsv`), que
+ninguna otra parte del LET cambia.
+
+### Lo que la reparacion deja a proposito sin tocar
+
+La formula tiene una **segunda** variable con el mismo bug de rango: `tipo_proy` (linea 7 del
+LET), que tambien busca en `P:P` con indice 2. La diferencia es que `tipo_proy` esta **muerta**:
+ningun otro tramo de la formula la lee, desde que `RiquezaYCategorias` le saco el filtro
+`(proyecto<>"") * (tipo_proy<>"Hogar") > 0` que la consumia (ya aplicado sobre esta celda). Sin
+lectores, su `#REF!` tapado no cambia ningun resultado visible: no es el bug que Franco midio, y
+tocarla es otro cambio (limpieza de una variable muerta), no este.
+
+### Que va a seguir en blanco, y por que ahora es un motivo entendible
+
+Reparado el rango, la columna Tipo del Tablero sigue en blanco para toda categoria cuya columna Q
+(Tipo) este vacia en el Plan de Cuentas -- y hoy esta vacia en las 22 categorias del catalogo.
+Antes de este cambio esa columna nunca iba a mostrar nada aunque Q estuviera llena (formula rota);
+despues del cambio, se comporta como cabria esperar: catalogo vacio, columna vacia. `estado()` y
+`aplicar()` de `DEVTOOL_BloqueCategorias.js` ahora reportan ese numero (via la nueva
+`_contarCategoriasSinTipoBcat`, solo lectura sobre el catalogo vivo) para que no quede como una
+sorpresa.
+
+Ademas, la columna Q **no tiene desplegable** hoy (medido: sin validacion de datos en esa
+columna), asi que se carga a mano. Queda **propuesto, no implementado**, agregarle uno apuntando a
+la lista de tipos (Ahorros/Inversiones/Financiacion/Hogar, la misma que ya usa `TIPOS_MEDIO` en
+`00_Config.js` para el dropdown de tipo de medio) -- es una decision de Franco, no una consecuencia
+automatica de este arreglo.
+
+### Verificacion
+
+`devtools/probar_bloque_categorias.js` (nuevo, 15 checks): corre `_repararRangoTipoBcat` contra
+la formula REAL de `Tablero!AA10` leida del gemelo, confirma el bug medido y la reparacion,
+verifica que ninguna otra linea del LET cambia (incluida la confirmacion explicita de que
+`tipo_proy` queda intacta), prueba por mutacion que el rango se deriva de `RANGES.PROYECTOS` y no
+esta hardcodeado, prueba idempotencia (sola y combinada con `_reapuntarBloqueCategorias` via
+`_diagnosticarBcat`), seguridad de entrada (`undefined`/vacio/formula ajena) y
+`_contarCategoriasSinTipoBcat` sobre una hoja simulada. `_diagnosticarBcat` contra la celda viva
+reproduce exactamente el estado esperado: la cascada de categoria ya aplicada
+(`grupoCambia=false`, consistente con que `aplicarBloqueCategorias` ya se corrio en produccion
+para el primer defecto) y el rango del Tipo pendiente (`tipoCambia=true`). Los nueve bancos en
+verde (los ocho existentes, sin tocar, mas este).
+
+### Despliegue
+
+Este cambio queda en el repo para que Franco lo corra el mismo via `sync_targets.command` (menu
+Tidetrack Dev > Bloque Categorias del Tablero > 1. Ver estado, despues 2. Aplicar). No se disparo
+ningun `clasp push` desde esta sesion.
+
+---
+
 ## 2026-08-24 - La cursiva del faltante se vuelve uniforme en los tres bloques (v0.42.1)
 
 ### Evento

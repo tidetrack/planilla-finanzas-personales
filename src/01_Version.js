@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 42,
- patch: 1,
+ minor: 43,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.42.1 - Cursiva del faltante uniforme en los tres bloques del Tablero',
+ releaseName: 'v0.43.0 - El rango del VLOOKUP del Tipo, reparado (bloque Categorias del Tablero)',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,15 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.43.0 (2026-08-24) - El rango del VLOOKUP del Tipo, reparado (bloque Categorias del Tablero)
+- Franco midio en vivo la linea "columna_tipo" del LET de Tablero!AA10: VLOOKUP(columna_aj; 'Plan de Cuentas'!P:P; 2; 0). Le pide la columna 2 a P:P, que tiene UNA sola columna -- #REF!, tapado por el IFERROR. La columna Tipo del bloque "Categorias" no podia mostrar nada, nunca, ni con la columna Q del Plan de Cuentas llena.
+* DUENIO: la coordenada la declara RIQ_BLOQUE_CATEGORIAS (DEVTOOL_RiquezaYCategorias.js), pero ese modulo dejo de tocar AA10 el 2026-08-21 (decision de duenio unico, ver su cabecera). El duenio unico de AA10 es DEVTOOL_BloqueCategorias.js: la reparacion entra ahi, como SEGUNDA cirugia de token (_repararRangoTipoBcat) independiente de _reapuntarBloqueCategorias -- esa toca la variable "proyecto" (el agrupamiento), esta toca "columna_tipo" (otra linea del mismo LET). Un solo escritor para toda la celda.
++ _repararRangoTipoBcat deriva el rango correcto de RANGES.PROYECTOS (P:Q, nombre en P / tipo en Q), nunca hardcodeado: probado por mutacion, mutando RANGES.PROYECTOS.end el resultado se mueve con el config.
+* estadoBloqueCategorias/aplicarBloqueCategorias ahora corren las DOS cirugias (_diagnosticarBcat) y reportan cual de las dos, si alguna, hace falta. Medido contra el gemelo: la cascada de categoria YA esta aplicada (grupoCambia=false) y solo el rango del Tipo hacia falta (tipoCambia=true). aplicar() relee la FORMA de lo escrito (no solo el texto ni el error de celda, que el IFERROR tapa) para verificar que la reparacion prendio.
++ Nueva _contarCategoriasSinTipoBcat (solo lectura): cuenta, sobre el catalogo vivo, cuantas categorias tienen nombre y no tienen Tipo. estado()/aplicar() lo muestran para avisar que la columna Tipo puede seguir en blanco despues del arreglo -- ya no por formula rota, por catalogo incompleto.
+! NO TOCADO A PROPOSITO: la formula tiene una SEGUNDA variable con el mismo bug de rango, "tipo_proy" (linea 7 del LET), pero esta MUERTA -- sin ningun lector, desde que RiquezaYCategorias le saco el filtro que la consumia. Sin lectores no cambia ningun resultado visible: no es el bug que Franco midio.
++ devtools/probar_bloque_categorias.js (nuevo, el modulo no tenia banco propio): corre la reparacion contra la formula REAL del gemelo, prueba que deriva de RANGES por mutacion, que no toca tipo_proy, idempotencia sola y combinada, y _contarCategoriasSinTipoBcat sobre una hoja simulada. Los nueve bancos en verde.
+
 v0.42.1 (2026-08-24) - Cursiva del faltante uniforme en los tres bloques del Tablero
 ! v0.42.0 SE DESPLEGO Y APLICO BIEN, pero Franco reporto que los tres bloques NO quedaron iguales: en Ingresos la fila separadora y las filas de faltante se ven en cursiva, en Gastos Fijos y Variables no. Medido antes de tocar nada (diagnostico de solo lectura, ya retirado): en Ingresos, SOLO R14:S18 tenian FontStyle ESTATICO 'italic' -- la fila 19 (tambien de faltante) NO estaba en cursiva, la prueba de que el formato quedo pegado a un rango de filas fijo, no al contenido.
 + _construirReglaGrisTfp ahora TAMBIEN llama setItalic(true): la MISMA regla que ya pintaba gris, igual en los tres bloques, asi que la cursiva pasa a seguir al contenido (COUNTIF posicional de siempre) en vez de a una fila fija.

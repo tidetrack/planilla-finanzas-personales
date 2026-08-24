@@ -33,15 +33,46 @@
  * tocar nada, en vez del `if (!actual) throw` generico que antes solo confirmaba "no hay formula"
  * sin decir si es porque la geometria se movio o porque la celda esta legitimamente vacia.
  *
- * @version 0.22.1
+ * ============================================================================
+ * EL RANGO DEL VLOOKUP DEL TIPO, CORREGIDO EL 2026-08-24 (segunda cirugia de token, mismo AA10)
+ * ============================================================================
+ * Franco midio en vivo otra linea del MISMO LET, la que llena la columna Tipo del bloque:
+ *   columna_tipo; ARRAYFORMULA(IFERROR(VLOOKUP(columna_aj; 'Plan de Cuentas'!P:P; 2; 0); ""))
+ * Le pide la COLUMNA 2 a P:P, que tiene una sola columna: es #REF!, tapado por el IFERROR que lo
+ * envuelve. La columna Tipo del bloque "Categorias" no puede mostrar nada, nunca -- ni con la
+ * columna Q del Plan de Cuentas llena. El rango correcto es P:Q (RANGES.PROYECTOS: nombre en P,
+ * tipo en Q), derivado del config, nunca hardcodeado.
+ *
+ * QUIEN LO REPARA Y POR QUE ACA: para ESTE bug la celda no tenia duenio. DEVTOOL_RiquezaYCategorias.js
+ * declara la coordenada (RIQ_BLOQUE_CATEGORIAS) pero desde la decision de duenio unico del
+ * 2026-08-21 (ver su cabecera, seccion "ESTADO AL 2026-08-21") YA NO TOCA AA10 -- su _planRiqueza
+ * lo dice explicito, y `_conTipoEnCategorias` (que ya sabia construir el VLOOKUP correcto) quedo
+ * retenida solo como prueba de regresion en devtools/probar_riqueza.js, sin ejecutar sobre esta
+ * celda. El duenio unico de AA10 decidido por Franco es ESTE modulo. La reparacion entra aca como
+ * una SEGUNDA cirugia de token, independiente de `_reapuntarBloqueCategorias` (esa toca la
+ * variable `proyecto`, el agrupamiento; esta toca `columna_tipo`, otra linea del mismo LET): un
+ * solo escritor para toda la celda, que es justamente lo que pide la regla de duenio unico.
+ *
+ * QUE NO TOCA: la formula tiene una SEGUNDA variable con el mismo bug de rango, `tipo_proy`
+ * (linea 7 del LET), pero quedo MUERTA -- sin ningun lector -- desde que RiquezaYCategorias le
+ * saco el filtro `(proyecto<>"") * (tipo_proy<>"Hogar") > 0` (su paso 3, ya aplicado sobre esta
+ * celda). Sin lectores, su #REF! tapado no cambia ningun resultado visible: no es el bug que
+ * Franco midio, y limpiar la variable muerta -- si se decide hacerlo -- es otro cambio, no este.
+ *
+ * @version 0.23.0
  * @since 2026-08-19
- * @lastModified 2026-08-21
+ * @lastModified 2026-08-24
  */
 
 const BCAT_CELDA = 'AA10';
 const BCAT_ROTULO_CELDA = 'AA9';
 const BCAT_ROTULO_ESPERADO = 'Nombre';
 const BCAT_PROP_RESPALDO = 'bloque_categorias_respaldo';
+// decision Franco 2026-08-24: nombre de la variable LET que trae el Tipo de la categoria (mismo
+// dato que RIQ_BLOQUE_CATEGORIAS.varNueva en DEVTOOL_RiquezaYCategorias.js -- ese modulo ya no
+// escribe AA10, asi que se declara aca de nuevo en vez de importar la constante de un modulo
+// retirado de la jurisdiccion).
+const BCAT_VAR_TIPO = 'columna_tipo';
 
 /**
  * Reemplaza la definicion de la variable que alimenta el agrupamiento.
@@ -82,6 +113,78 @@ function _colMotorTablero(clave) {
     return letra + FORM_FILA_DERRAME_TABLERO + ':' + letra;
 }
 
+/**
+ * Repara el rango del VLOOKUP de la variable `columna_tipo`: pedia la columna 2 a un rango de
+ * UNA sola columna (RANGES.PROYECTOS.start:start, hoy P:P -- por eso #REF!, tapado por el
+ * IFERROR que lo envuelve) y pasa a pedirla al rango real de dos columnas, RANGES.PROYECTOS
+ * completo (hoy P:Q), con el indice de columna derivado de `columns.tipo` -- nunca hardcodeado.
+ *
+ * Cirugia de token: toca SOLO la definicion de `columna_tipo`. Si la formula no tiene esa forma
+ * exacta (porque ya se reparo, o porque cambio de otra manera), el regex no matchea y se
+ * devuelve la entrada intacta -- mismo criterio que _aListaBlanca/_conTipoEnCategorias de
+ * DEVTOOL_RiquezaYCategorias.js: reemplazo por funcion, nunca por string (un '$' de una formula
+ * con referencias absolutas se interpretaria como backreference en un replace de string).
+ */
+function _repararRangoTipoBcat(formula) {
+    if (typeof formula !== 'string' || !formula) return formula;
+    const cfg = RANGES.PROYECTOS;
+    const rangoRoto = "'" + cfg.sheet + "'!" + cfg.start + ':' + cfg.start;      // 'Plan de Cuentas'!P:P
+    const rangoCorrecto = "'" + cfg.sheet + "'!" + cfg.start + ':' + cfg.end;    // 'Plan de Cuentas'!P:Q
+    const colTipo = columnLetterToIndex(cfg.columns.tipo) - columnLetterToIndex(cfg.start) + 1;  // 2
+
+    const escapar = function (s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
+    const re = new RegExp(
+        '(' + BCAT_VAR_TIPO + '\\s*;\\s*ARRAYFORMULA\\(\\s*IFERROR\\(\\s*VLOOKUP\\([^;()]+;\\s*)' +
+        escapar(rangoRoto) +
+        '(\\s*;\\s*)\\d+(\\s*;\\s*0\\s*\\)\\s*;\\s*""\\s*\\)\\s*\\))'
+    );
+    return formula.replace(re, function (m, pre, sep, post) {
+        return pre + rangoCorrecto + sep + colTipo + post;
+    });
+}
+
+/**
+ * Corre las dos cirugias de token sobre la formula viva y dice cual de las dos, si alguna,
+ * cambia algo. estado y aplicar comparten esta funcion para no poder informar una cosa y
+ * escribir otra.
+ */
+function _diagnosticarBcat(formulaActual) {
+    const conCascada = _reapuntarBloqueCategorias(formulaActual);
+    const conTipo = _repararRangoTipoBcat(conCascada);
+    return {
+        formulaNueva: conTipo,
+        grupoCambia: conCascada !== formulaActual,
+        tipoCambia: conTipo !== conCascada
+    };
+}
+
+/**
+ * Cuenta, sobre el catalogo VIVO (RANGES.PROYECTOS), cuantas categorias tienen nombre pero no
+ * tienen Tipo. Solo lectura. Sirve para avisar, con un numero medido y no inventado, que la
+ * columna Tipo del Tablero puede seguir en blanco despues de reparar el rango -- por catalogo
+ * vacio, no por formula rota.
+ */
+function _contarCategoriasSinTipoBcat(ss) {
+    const cfg = RANGES.PROYECTOS;
+    const hojaPC = ss.getSheetByName(cfg.sheet);
+    if (!hojaPC) return null;
+    const colIni = columnLetterToIndex(cfg.start);
+    const nCols = columnLetterToIndex(cfg.end) - colIni + 1;
+    const filaDatos = getDataRow(cfg);
+    const alto = hojaPC.getMaxRows() - filaDatos + 1;
+    if (alto <= 0) return { total: 0, sinTipo: 0 };
+    const valores = hojaPC.getRange(filaDatos, colIni, alto, nCols).getValues();
+    let total = 0, sinTipo = 0;
+    valores.forEach(function (f) {
+        const nombre = String(f[0] || '').trim();
+        const tipo = String(f[1] || '').trim();
+        if (!nombre) return;
+        total++;
+        if (!tipo) sinTipo++;
+    });
+    return { total: total, sinTipo: sinTipo };
+}
+
 // ============================================
 // PREFLIGHT
 // ============================================
@@ -114,17 +217,38 @@ function estadoBloqueCategorias() {
         _preflightRotuloBcat(hoja);
         const actual = hoja.getRange(BCAT_CELDA).getFormula();
         if (!actual) throw new Error(BCAT_CELDA + ' no tiene formula.');
-        const nueva = _reapuntarBloqueCategorias(actual);
+        const diag = _diagnosticarBcat(actual);
         const l = ['BLOQUE "CATEGORIAS" DEL TABLERO - ESTADO (no se escribio nada)', ''];
-        if (nueva === actual) {
-            l.push('NADA QUE HACER: ' + BCAT_CELDA + ' ya agrupa por la categoria de la cuenta.');
+
+        if (!diag.grupoCambia && !diag.tipoCambia) {
+            l.push('NADA QUE HACER: ' + BCAT_CELDA + ' ya agrupa por la categoria de la cuenta y');
+            l.push('el Tipo ya busca en el rango correcto (' + RANGES.PROYECTOS.sheet + '!' +
+                RANGES.PROYECTOS.start + ':' + RANGES.PROYECTOS.end + ').');
         } else {
-            l.push('HOY agrupa por el TIPO DEL MEDIO (Hogar / Ahorros / Inversiones / Financiacion):');
-            l.push('eso contesta DONDE estaba la plata, no PARA QUE se uso.');
-            l.push('');
-            l.push('PASA A AGRUPAR por la CATEGORIA DE LA CUENTA, buscada en los tres bloques del Plan.');
-            l.push('Vas a ver Vehiculo, Alimentacion y social, Deuda y financiacion, etc.');
-            l.push('');
+            if (diag.grupoCambia) {
+                l.push('HOY agrupa por el TIPO DEL MEDIO (Hogar / Ahorros / Inversiones / Financiacion):');
+                l.push('eso contesta DONDE estaba la plata, no PARA QUE se uso.');
+                l.push('');
+                l.push('PASA A AGRUPAR por la CATEGORIA DE LA CUENTA, buscada en los tres bloques del Plan.');
+                l.push('Vas a ver Vehiculo, Alimentacion y social, Deuda y financiacion, etc.');
+                l.push('');
+            }
+            if (diag.tipoCambia) {
+                l.push('LA COLUMNA TIPO ESTA ROTA: el VLOOKUP le pide la columna 2 a un rango de UNA');
+                l.push('sola columna (' + RANGES.PROYECTOS.sheet + '!' + RANGES.PROYECTOS.start + ':' +
+                    RANGES.PROYECTOS.start + '), asi que da #REF!, tapado por el IFERROR. La columna');
+                l.push('Tipo del bloque nunca pudo mostrar nada. Pasa a buscar en el rango correcto (' +
+                    RANGES.PROYECTOS.sheet + '!' + RANGES.PROYECTOS.start + ':' + RANGES.PROYECTOS.end + ').');
+                const cat = _contarCategoriasSinTipoBcat(ss);
+                if (cat && cat.sinTipo > 0) {
+                    l.push('');
+                    l.push('OJO: ' + cat.sinTipo + ' de ' + cat.total + ' categoria(s) del Plan de Cuentas');
+                    l.push('tienen la columna Tipo (' + RANGES.PROYECTOS.sheet + '!' + RANGES.PROYECTOS.columns.tipo +
+                        ') vacia hoy. Reparado el rango, esas van a seguir mostrando el Tipo en blanco --');
+                    l.push('ya no por una formula rota, sino porque el catalogo todavia no tiene el dato.');
+                }
+                l.push('');
+            }
             l.push('Es UNA sola celda: ' + NAV_CONFIG.SHEETS.TABLERO + '!' + BCAT_CELDA);
         }
         const t = l.join('\n');
@@ -149,9 +273,11 @@ function aplicarBloqueCategorias() {
         const rango = hoja.getRange(BCAT_CELDA);
         previa = rango.getFormula();
         if (!previa) throw new Error(BCAT_CELDA + ' no tiene formula.');
-        const nueva = _reapuntarBloqueCategorias(previa);
-        if (nueva === previa) {
-            const t = BCAT_CELDA + ' ya agrupa por la categoria de la cuenta. No se escribio nada.';
+        const diag = _diagnosticarBcat(previa);
+        const nueva = diag.formulaNueva;
+        if (!diag.grupoCambia && !diag.tipoCambia) {
+            const t = BCAT_CELDA + ' ya agrupa por la categoria de la cuenta y el Tipo ya busca ' +
+                'en el rango correcto. No se escribio nada.';
             _mostrarBcat('Bloque Categorias', t);
             return { ok: true, detalle: t };
         }
@@ -169,6 +295,12 @@ function aplicarBloqueCategorias() {
         if (!leida) fallas.push('quedo SIN formula');
         else if (_canonizarFormula(leida) !== _canonizarFormula(nueva)) fallas.push('no coincide con lo escrito');
         if (err) fallas.push('quedo en ' + err + (errorPrevio ? ' (ya estaba en ' + errorPrevio + ')' : ' (antes calculaba bien)'));
+        // El bug del rango del Tipo no tira error DE CELDA (el IFERROR lo tapa, tal cual el
+        // original): no alcanza con comparar texto, hay que releer la FORMA. Si _repararRangoTipoBcat
+        // todavia encuentra algo para reparar en lo que quedo escrito, la reparacion no prendio.
+        if (diag.tipoCambia && leida && _repararRangoTipoBcat(leida) !== leida) {
+            fallas.push('el Tipo todavia busca en un rango de una sola columna');
+        }
         if (fallas.length) {
             rango.setFormula(previa);
             SpreadsheetApp.flush();
@@ -177,12 +309,23 @@ function aplicarBloqueCategorias() {
         }
 
         PropertiesService.getDocumentProperties().setProperty(BCAT_PROP_RESPALDO, respaldo.nombre);
-        const detalle = 'BLOQUE "CATEGORIAS" REAPUNTADO\n\n' +
+        const partes = [];
+        if (diag.grupoCambia) partes.push('agrupa por la CATEGORIA DE LA CUENTA en vez del tipo del medio');
+        if (diag.tipoCambia) partes.push('el Tipo busca en ' + RANGES.PROYECTOS.sheet + '!' +
+            RANGES.PROYECTOS.start + ':' + RANGES.PROYECTOS.end + ' en vez de un rango de una sola columna');
+        let detalle = 'BLOQUE "CATEGORIAS" REPARADO\n\n' +
             '- Celda: ' + NAV_CONFIG.SHEETS.TABLERO + '!' + BCAT_CELDA + '\n' +
-            '- Respaldo: "' + respaldo.nombre + '"\n\n' +
-            'Ahora agrupa por la CATEGORIA DE LA CUENTA en vez del tipo del medio. Vas a ver\n' +
-            'Vehiculo, Alimentacion y social, Deuda y financiacion, y no las cuatro finalidades.';
-        logSuccess('aplicarBloqueCategorias: ' + BCAT_CELDA + ' reapuntado.');
+            '- Cambio: ' + partes.join('; ') + '\n' +
+            '- Respaldo: "' + respaldo.nombre + '"\n';
+        if (diag.tipoCambia) {
+            const cat = _contarCategoriasSinTipoBcat(ss);
+            if (cat && cat.sinTipo > 0) {
+                detalle += '\nOJO: ' + cat.sinTipo + ' de ' + cat.total + ' categoria(s) del Plan de Cuentas ' +
+                    'tienen la columna Tipo vacia hoy. La columna Tipo del Tablero va a seguir en blanco ' +
+                    'para esas hasta que se cargue el catalogo -- ya no por una formula rota.\n';
+            }
+        }
+        logSuccess('aplicarBloqueCategorias: ' + BCAT_CELDA + ' reparado (' + partes.join('; ') + ').');
         _mostrarBcat('Bloque Categorias - listo', detalle);
         return { ok: true, detalle: detalle };
 
