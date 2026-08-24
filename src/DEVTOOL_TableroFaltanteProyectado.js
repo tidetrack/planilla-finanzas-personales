@@ -306,8 +306,19 @@ const TFP_PROP_PREVIOS = 'tablero_faltante_previos';
 /** Tinta gris de las filas de faltante. Un solo tono: es texto, no una barra con riel. */
 const TFP_COLOR_GRIS = '#757575';
 
-/** Patron de respaldo si la celda de Monto todavia no tiene ningun formato de numero propio. */
+/**
+ * Patron de respaldo si la celda que se esta copiando (hoy: el total real, S7/V7/Y7) todavia no
+ * tiene ningun formato de numero propio -- ver decision #12 de la cabecera.
+ */
 const TFP_PATRON_MONTO_DEFECTO = '#,##0.00';
+
+/**
+ * El rotulo de la fila separadora (decision #8 de la cabecera): mismo texto que ya vive en
+ * R8/U8/X8 (el rotulo de seccion, escrito por Franco), reforzando el significado en vez de
+ * inventar uno nuevo. Es tambien el literal que busca el COUNTIF del gris (_formulaReglaGrisTfp):
+ * cambiar este texto cambia las dos cosas a la vez, nunca se desincronizan.
+ */
+const TFP_ROTULO_SEPARADOR = 'Faltante proyectado';
 
 // ============================================
 // GEOMETRIA DERIVADA
@@ -320,12 +331,19 @@ function _capacidadFilasTfp(b) {
 
 /**
  * El PEOR CASO garantizado sin truncar: si TODAS las cuentas necesitaran sus dos filas (real Y
- * faltante pendiente), este es el numero de cuentas que entran completas. En la practica suele
- * entrar mas, porque una cuenta ya cubierta (faltante = 0) libera una fila para otra (decision
- * #10 de la cabecera). Informativo: estado() lo reporta, no es un limite duro del preflight.
+ * faltante pendiente), este es el numero de cuentas que entran completas SIN contar la fila
+ * separadora. En la practica suele entrar mas, porque una cuenta ya cubierta (faltante = 0)
+ * libera una fila para otra (decision #10 de la cabecera). Informativo: estado() lo reporta, no
+ * es un limite duro del preflight.
+ *
+ * v0.41.0: baja de `floor(capacidad / 2)` a `floor((capacidad - 1) / 2)` -- en el peor caso
+ * (TODAS las cuentas con faltante pendiente) la fila separadora SIEMPRE aparece (decision #10),
+ * asi que una de las filas de datos deja de estar disponible para pares cuenta/faltante. Con
+ * capacidad=20: antes 10 pares (20 filas exactas), ahora 9 pares + 1 separador = 19 filas (1 de
+ * margen sobre las 20 disponibles); la decima cuenta en ese escenario ya no entra sin truncar.
  */
 function _capacidadPeorCasoTfp(b) {
-    return Math.floor(_capacidadFilasTfp(b) / 2);
+    return Math.floor((_capacidadFilasTfp(b) - 1) / 2);
 }
 
 /** La celda ancla del derrame: donde vive HOY la QUERY de Franco y donde va la formula nueva. */
@@ -446,14 +464,13 @@ function _bloqueComunTfp(b, formulaRealVerbatim) {
  * La celda ancla (R10, U10, X10): reusa la QUERY real de Franco como caja negra (seccion 1,
  * verbatim y en su propio orden), calcula lo proyectado por cuenta desde "Proyeccion" (bloque
  * comun), arma la seccion 2 (faltante > 0, ordenada de mayor a menor) y las apila UNA DEBAJO DE
- * LA OTRA -- nunca intercaladas, decision Franco 2026-08-21. `patronMonto` es el formato de
- * numero que la celda de Monto ya tenia en vivo (leido por el preflight): la seccion 2 lo usa
- * para convertir su importe a TEXT() con el MISMO aspecto que un numero real, la senal que
- * separa las dos secciones para el gris (decision #7).
+ * LA OTRA -- nunca intercaladas, decision Franco 2026-08-21 -- con una FILA SEPARADORA rotulada
+ * entre las dos (decision #8, v0.41.0). Los montos de las dos secciones son NUMEROS crudos (sin
+ * TEXT(): decision #7, v0.41.0) para que sumen al seleccionarlos; el separador solo aparece si
+ * hay algo que separar (`hay_separador`) y su celda de Monto queda vacia.
  */
-function _formulaCuentasTfp(b, formulaRealVerbatim, patronMonto) {
+function _formulaCuentasTfp(b, formulaRealVerbatim) {
     const capacidad = _capacidadFilasTfp(b);
-    const patronEscapado = String(patronMonto || TFP_PATRON_MONTO_DEFECTO).replace(/"/g, '""');
 
     return '=LET(\n' + _bloqueComunTfp(b, formulaRealVerbatim) +
         '  cant_real_bruto; ROWS(tabla_real);\n' +
@@ -464,19 +481,36 @@ function _formulaCuentasTfp(b, formulaRealVerbatim, patronMonto) {
         '  cant_total; IF(cant_total_bruto = 0; 1; cant_total_bruto);\n' +
         '  combinado; IF(cant_total_bruto = 0; HSTACK("Sin movimientos ni proyeccion"; 0);\n' +
         '    IF(cant_real = 0; tabla_faltante; VSTACK(tabla_real; tabla_faltante)));\n' +
-        '  cant_mostradas; MIN(cant_total; ' + capacidad + ');\n' +
+        // La fila separadora se cobra una de las filas de DATOS solo si va a hacer falta
+        // (decision #10): si no hay ninguna cuenta con faltante en TODO el universo, no hay
+        // seccion 2 que separar y la capacidad se queda entera.
+        '  capacidad_datos; IF(cant_faltante > 0; ' + (capacidad - 1) + '; ' + capacidad + ');\n' +
+        '  cant_mostradas; MIN(cant_total; capacidad_datos);\n' +
         '  cant_ocultas; cant_total - cant_mostradas;\n' +
         '  hay_ocultas; cant_ocultas > 0;\n' +
         '  tabla_topada; ARRAY_CONSTRAIN(combinado; cant_mostradas; 2);\n' +
         '  monto_oculto; SUM(INDEX(combinado; 0; 2)) - SUM(INDEX(tabla_topada; 0; 2));\n' +
         '  aviso_texto; "y " & cant_ocultas & " cuenta" & IF(cant_ocultas = 1; ""; "s") & " mas";\n' +
-        '  filas_total; cant_mostradas + IF(hay_ocultas; 1; 0);\n' +
-        '  idx_fila; SEQUENCE(filas_total);\n' +
         '  cant_real_mostradas; MIN(cant_real; cant_mostradas);\n' +
-        '  patron_monto; "' + patronEscapado + '";\n' +
-        '  nombre_out; MAP(idx_fila; LAMBDA(pos; IF(pos > cant_mostradas; aviso_texto; INDEX(tabla_topada; pos; 1))));\n' +
-        '  monto_out; MAP(idx_fila; LAMBDA(pos; IF(pos > cant_mostradas; monto_oculto;\n' +
-        '    IF(pos > cant_real_mostradas; TEXT(INDEX(tabla_topada; pos; 2); patron_monto); INDEX(tabla_topada; pos; 2)))));\n' +
+        // Acotado por cant_faltante (el universo real, no solo el resto de cant_mostradas): sin
+        // este MIN, el caso "Sin movimientos ni proyeccion" (cant_total forzado a 1 con cero
+        // faltante de verdad) calcularia cant_faltante_mostradas=1 y dispararia un separador
+        // fantasma antes del placeholder.
+        '  cant_faltante_mostradas; MIN(cant_faltante; cant_mostradas - cant_real_mostradas);\n' +
+        '  hay_separador; cant_faltante_mostradas > 0;\n' +
+        '  offset_separador; IF(hay_separador; 1; 0);\n' +
+        '  fila_separador; cant_real_mostradas + 1;\n' +
+        '  rotulo_separador; "' + TFP_ROTULO_SEPARADOR + '";\n' +
+        '  filas_total; cant_mostradas + offset_separador + IF(hay_ocultas; 1; 0);\n' +
+        '  idx_fila; SEQUENCE(filas_total);\n' +
+        '  nombre_out; MAP(idx_fila; LAMBDA(pos;\n' +
+        '    IF(pos > cant_mostradas + offset_separador; aviso_texto;\n' +
+        '    IF(AND(hay_separador; pos = fila_separador); rotulo_separador;\n' +
+        '    IF(pos <= cant_real_mostradas; INDEX(tabla_topada; pos; 1); INDEX(tabla_topada; pos - offset_separador; 1))))));\n' +
+        '  monto_out; MAP(idx_fila; LAMBDA(pos;\n' +
+        '    IF(pos > cant_mostradas + offset_separador; monto_oculto;\n' +
+        '    IF(AND(hay_separador; pos = fila_separador); "";\n' +
+        '    IF(pos <= cant_real_mostradas; INDEX(tabla_topada; pos; 2); INDEX(tabla_topada; pos - offset_separador; 2))))));\n' +
         '  HSTACK(nombre_out; monto_out)\n)';
 }
 
@@ -505,14 +539,21 @@ function _formulaTotalRealTfp(formulaRealVerbatim) {
 // ============================================
 
 /**
- * La formula de la regla propia de un bloque: "el Monto de esta fila es TEXTO" (decision #7 de
- * la cabecera). La seccion 1 escribe un NUMERO; la seccion 2 escribe el mismo importe pasado por
- * TEXT(), asi que ISTEXT() las separa sin ambiguedad, incluidas las cuentas que solo viven en la
- * seccion 2 (sin ningun movimiento real) -- algo que un COUNTIF de "aparece 2+ veces" no puede
- * hacer (evaluado y descartado, ver decision #7).
+ * La formula de la regla propia de un bloque (decision #8 de la cabecera, v0.41.0): un COUNTIF
+ * de rango EXPANSIVO, anclado UNA fila arriba de la primera fila de datos (filaDatos - 1), que
+ * pregunta si el rotulo de la fila separadora ya aparecio en algun renglon de arriba. Con
+ * referencia de fila relativa (col sin "$" en el segundo operando), Sheets reescribe el rango por
+ * cada celda del rango al que se aplica la regla: en la fila N, el rango va desde el ancla hasta
+ * N-1 -- ESTRICTAMENTE arriba de la fila evaluada. Eso deja afuera a la fila separadora misma (en
+ * su propia fila, el rango todavia no llego a incluirla) y marca TODA fila estrictamente debajo
+ * de ella, sin excepcion -- incluida la cuenta sin ningun movimiento real, que aparece una sola
+ * vez pero esa unica vez esta siempre debajo del separador (la senal es POSICIONAL, no depende de
+ * cuantas veces se repite el nombre).
  */
 function _formulaReglaGrisTfp(b) {
-    return '=ISTEXT($' + b.colMonto + b.filaDatos + ')';
+    const filaAncla = b.filaDatos - 1;
+    return '=COUNTIF($' + b.colCuenta + '$' + filaAncla + ':' + b.colCuenta + filaAncla +
+        '; "' + TFP_ROTULO_SEPARADOR + '")>0';
 }
 
 /** Las tres reglas "de falta" que este modulo escribe, en el orden de TFP_ORDEN. */
@@ -608,20 +649,31 @@ function _formaAnclaValidaTfp(formula, categoria) {
 }
 
 /**
- * true si la formula ancla YA ES la de este modulo (una corrida anterior ya la reescribio).
+ * true si la formula ancla ya fue ENVUELTA por ALGUNA VERSION de este modulo (v0.40.0 o
+ * v0.41.0), aplicada en una corrida anterior.
  *
  * IMPORTA DISTINGUIRLO: la formula que este modulo escribe EMPOTRA la QUERY original de Franco
  * como variable `tabla_real`, asi que sigue conteniendo 'QUERY(', 'SUM(Col2)' y 'GROUP BY Col1'
  * -- pasaria el chequeo de "_formaAnclaValidaTfp" igual que la original. Se identifica por tres
- * nombres de variable propios de esta formula (del layout de dos secciones) que no tienen motivo
- * para aparecer en ninguna otra: si no se detectara, un segundo "Aplicar" envolveria la formula
- * ya aplicada dentro de si misma, un anidamiento creciente que ademas corrompe
- * nombres_real/montos_real.
+ * nombres de variable que `_bloqueComunTfp` genera SIEMPRE, sin cambios entre versiones (v0.40.0
+ * y v0.41.0 llaman a la MISMA funcion JS para esa parte): si no se detectara, un segundo
+ * "Aplicar" envolveria la formula ya aplicada dentro de si misma, un anidamiento creciente que
+ * ademas corrompe nombres_real/montos_real.
+ *
+ * A PROPOSITO usa markers de `_bloqueComunTfp` (compartidos entre TODAS las versiones) y NO
+ * markers de `_formulaCuentasTfp` (que SI cambiaron en v0.41.0: `tabla_topada` y
+ * `cant_real_mostradas` siguen existiendo, pero ya no alcanzan para decidir si hace falta
+ * REESCRIBIR -- esa decision es aparte, ver `anclaVigente` en `_preflightTfp`). Con este marcador
+ * mas amplio, una ancla v0.40.0 YA DESPLEGADA en la planilla real (el caso concreto de Franco:
+ * "v0.40.0, que funciona en la planilla de Franco") se reconoce como "envuelta por este modulo"
+ * (asi `_extraerTablaRealTfp` sabe que tiene que desenvolverla en vez de tratarla como la QUERY
+ * cruda) SIN por eso saltarse la reescritura a la forma v0.41.0: eso lo decide la comparacion
+ * exacta de formulas en `_preflightTfp`, no esta funcion.
  */
 function _anclaYaEsNuestraTfp(formula) {
-    return formula.indexOf('tabla_topada') !== -1 &&
-        formula.indexOf('faltante_por_cuenta') !== -1 &&
-        formula.indexOf('cant_real_mostradas') !== -1;
+    return formula.indexOf('tabla_real;') !== -1 &&
+        formula.indexOf('real_por_cuenta;') !== -1 &&
+        formula.indexOf('faltante_por_cuenta;') !== -1;
 }
 
 /**
@@ -663,30 +715,45 @@ function _preflightTfp(ss) {
                 'nada "real" que reusar. No se toco nada.');
             return;
         }
-        const anclaYaAplicada = _anclaYaEsNuestraTfp(formulaAnclaVivaTexto);
-        if (!anclaYaAplicada && !_formaAnclaValidaTfp(formulaAnclaVivaTexto, b.categoria)) {
+        // Envuelta por ALGUNA version de este modulo (v0.40.0 o v0.41.0) -- solo decide si hay
+        // que EXTRAER la QUERY real de adentro del LET o usar la celda tal cual (Franco, sin
+        // tocar). Version-proof a proposito: ver _anclaYaEsNuestraTfp.
+        const estabaEnvueltaPorTfp = _anclaYaEsNuestraTfp(formulaAnclaVivaTexto);
+
+        // La QUERY real de Franco, lista para reusar como `tabla_real`: si el bloque ya estaba
+        // envuelto (cualquier version), hay que EXTRAERLA de dentro del LET vivo (ya no esta
+        // cruda en la celda); ver _extraerTablaRealTfp.
+        let formulaRealParaTotales;
+        try {
+            formulaRealParaTotales = estabaEnvueltaPorTfp
+                ? _extraerTablaRealTfp(formulaAnclaVivaTexto)
+                : formulaAnclaVivaTexto;
+        } catch (e) {
+            desvios.push(celdaAncla + ' (bloque "' + tituloVivo + '") ya fue escrita por este modulo pero ' +
+                'no se pudo leer su QUERY real embebida: ' + e.message + '. No se toco nada.');
+            return;
+        }
+
+        if (!_formaAnclaValidaTfp(formulaRealParaTotales, b.categoria)) {
             desvios.push(celdaAncla + ' no tiene la forma esperada (QUERY agrupando por cuenta, ' +
                 'WHERE Col3 = \'' + b.categoria + '\'): la formula real cambio y hay que volver a medirla.');
             return;
         }
 
-        // La QUERY real de Franco, lista para reusar como `tabla_real`: si el bloque ya esta
-        // aplicado, hay que EXTRAERLA de dentro del LET vivo (ya no esta cruda en la celda);
-        // ver _extraerTablaRealTfp.
-        let formulaRealParaTotales;
-        try {
-            formulaRealParaTotales = anclaYaAplicada
-                ? _extraerTablaRealTfp(formulaAnclaVivaTexto)
-                : formulaAnclaVivaTexto;
-        } catch (e) {
-            desvios.push(celdaAncla + ' (bloque "' + tituloVivo + '") ya esta aplicada pero no se pudo leer ' +
-                'su QUERY real embebida: ' + e.message + '. No se toco nada.');
-            return;
-        }
+        // La formula que este modulo ESCRIBIRIA hoy, a partir de la QUERY real (cruda o
+        // extraida). Si la celda viva ya coincide (canonizada), esta VIGENTE y no hace falta
+        // reescribirla -- ni siquiera si viene de una corrida anterior de esta misma version.
+        // Si NO coincide (formula cruda de Franco, o una version anterior como v0.40.0 con
+        // TEXT()/sin separador), se reescribe usando la QUERY ya recuperada arriba.
+        const formulaAnclaEsperada = _formulaCuentasTfp(b, formulaRealParaTotales);
+        // formulaAnclaVivaTexto viene SIN el '=' inicial (asi la devuelve _formulaSinIgualTfp);
+        // formulaAnclaEsperada lo trae (asi la arma _formulaCuentasTfp). Sin re-anteponerlo aca,
+        // _canonizarFormula jamas encontraria coincidencia y anclaVigente daria SIEMPRE false.
+        const anclaVigente = _canonizarFormula('=' + formulaAnclaVivaTexto) === _canonizarFormula(formulaAnclaEsperada);
 
-        // El formato de numero que la celda de Monto ya tenia en vivo: la seccion de faltante lo
-        // reusa via TEXT() para verse igual que un numero real (decision #7 de la cabecera).
-        const patronMonto = hoja.getRange(b.colMonto + b.filaDatos).getNumberFormat() || TFP_PATRON_MONTO_DEFECTO;
+        // El formato de numero del total real (S7/V7/Y7): decision #12, se copia tal cual al
+        // total de faltantes (S8/V8/Y8) -- nunca se inventa un patron nuevo.
+        const formatoTotalRealVivo = hoja.getRange(b.totalReal).getNumberFormat() || TFP_PATRON_MONTO_DEFECTO;
 
         const totalRealVivo = hoja.getRange(b.totalReal).getFormula();
         if (!totalRealVivo) {
@@ -707,6 +774,8 @@ function _preflightTfp(ss) {
                 faltanteValor + '"): podria ser un dato de Franco. No se toco nada.');
             return;
         }
+        const formatoTotalFaltanteVivo = totalFaltanteVivo.getNumberFormat();
+        const formatoTotalFaltanteYaEsNueva = formatoTotalFaltanteVivo === formatoTotalRealVivo;
 
         const rotuloFaltanteVivo = String(hoja.getRange(b.rotuloFaltante.celda).getValue() || '').trim();
         const rotuloYaEsta = _normalizarRotulo(rotuloFaltanteVivo) === _normalizarRotulo(b.rotuloFaltante.esperado);
@@ -720,9 +789,10 @@ function _preflightTfp(ss) {
         // afuera (ver _formulaCuentasTfp).
 
         bloques[clave] = {
-            b: b, anclaYaAplicada: anclaYaAplicada,
-            formulaReal: anclaYaAplicada ? null : formulaAnclaVivaTexto,
-            formulaRealParaTotales: formulaRealParaTotales, patronMonto: patronMonto,
+            b: b, anclaVigente: anclaVigente, formulaAnclaEsperada: formulaAnclaEsperada,
+            formulaRealParaTotales: formulaRealParaTotales,
+            formatoTotalRealVivo: formatoTotalRealVivo,
+            formatoTotalFaltanteYaEsNueva: formatoTotalFaltanteYaEsNueva,
             totalRealFormulaVieja: totalRealVivo,
             totalRealYaEsNueva: totalRealYaEsNueva, totalRealValorPrevio: totalRealValorPrevio,
             formulaTotalRealEsperada: formulaTotalRealEsperada,
@@ -769,12 +839,13 @@ function _planTfp(pre) {
         const info = pre.bloques[clave];
         const b = info.b;
 
-        if (!info.anclaYaAplicada) {
+        if (!info.anclaVigente) {
             cambios.push({
                 bloque: clave, celda: _celdaAnclaTfp(b), tipo: 'ancla',
-                formulaNueva: _formulaCuentasTfp(b, info.formulaReal, info.patronMonto),
+                formulaNueva: info.formulaAnclaEsperada,
                 nota: 'Cuentas + faltante: ' + b.titulo.esperado,
-                resumen: 'dos secciones (real arriba oscuro, faltante abajo gris repitiendo el nombre), ' +
+                resumen: 'dos secciones con fila separadora explicita ("' + TFP_ROTULO_SEPARADOR + '"): real ' +
+                    'arriba oscuro, faltante abajo en NUMEROS reales (suman en la barra de estado), ' +
                     'reusando la QUERY real existente'
             });
         }
@@ -787,13 +858,14 @@ function _planTfp(pre) {
                 resumen: 'suma directa de la columna 2 de la QUERY real (por construccion, no relee el derrame)'
             });
         }
-        if (!info.faltanteEsNuestra) {
+        if (!info.faltanteEsNuestra || !info.formatoTotalFaltanteYaEsNueva) {
             cambios.push({
                 bloque: clave, celda: b.totalFaltante, tipo: 'total_faltante',
                 formulaVieja: info.faltanteFormulaVieja, valorVieja: info.faltanteValorVieja,
-                formulaNueva: info.formulaTotalFaltanteEsperada,
+                formulaNueva: info.formulaTotalFaltanteEsperada, formatoNuevo: info.formatoTotalRealVivo,
                 nota: 'Total faltante: ' + b.titulo.esperado,
-                resumen: 'suma del faltante por cuenta sobre el universo completo (por construccion)'
+                resumen: 'suma del faltante por cuenta sobre el universo completo (por construccion); ' +
+                    'formato de numero copiado en vivo de ' + b.totalReal
             });
         }
         if (!info.rotuloYaEsta) {
@@ -837,6 +909,9 @@ function _leerYaCalculadoTfp(hoja, celda) {
  * Cuenta los nombres DISTINTOS no vacios en el rango vivo de Cuenta, con los mismos reintentos:
  * mientras la formula ancla no termino de calcular, la columna entera puede mostrar "Cargando...".
  * Distintos, no filas: con el layout de dos secciones un nombre puede repetirse (real + faltante).
+ * EXCLUYE el rotulo de la fila separadora (TFP_ROTULO_SEPARADOR, v0.41.0): no es una cuenta, y
+ * contarlo infla el piso de "nombres distintos" -- podria enmascarar una cuenta real perdida por
+ * exactamente uno.
  */
 function _contarNombresDistintosYaCalculadoTfp(hoja, rangoA1) {
     const esperas = [0, 600, 1500, 3000];
@@ -849,7 +924,8 @@ function _contarNombresDistintosYaCalculadoTfp(hoja, rangoA1) {
                 _normalizarRotulo(v).indexOf('cargando') !== -1;
         });
         if (!pendiente) {
-            const nombres = valores.map(function (f) { return String(f[0] || '').trim(); }).filter(function (v) { return v !== ''; });
+            const nombres = valores.map(function (f) { return String(f[0] || '').trim(); })
+                .filter(function (v) { return v !== '' && v !== TFP_ROTULO_SEPARADOR; });
             const distintos = nombres.filter(function (v, i) { return nombres.indexOf(v) === i; });
             return distintos.length;
         }
@@ -924,26 +1000,32 @@ function _verificarInvariantesTfp(pre) {
 
 function _escribirCambioTfp(hoja, c) {
     const rango = hoja.getRange(c.celda);
-    if (c.tipo === 'ancla') {
-        rango.setFormula(c.formulaNueva);
-    } else if (c.tipo === 'rotulo') {
+    if (c.tipo === 'rotulo') {
         rango.setValue(TFP_BLOQUES[c.bloque].rotuloFaltante.esperado);
-    } else {
-        rango.setFormula(c.formulaNueva);
+        return;
     }
+    rango.setFormula(c.formulaNueva);
+    // Decision #12: solo 'total_faltante' trae formatoNuevo (el patron copiado en vivo de su
+    // hermano real). 'ancla' y 'total_real' no tocan formato de numero.
+    if (c.formatoNuevo) rango.setNumberFormat(c.formatoNuevo);
 }
 
-/** Restaura cada celda escrita a su estado previo (formula, valor o vacio). */
+/** Restaura cada celda escrita a su estado previo (formula, valor, formato o vacio). */
 function _revertirEscriturasTfp(ss, escritas) {
     escritas.forEach(function (w) {
         try {
             const r = ss.getSheetByName(w.nombreHoja).getRange(w.celda);
-            if (w.previaFormula) { r.setFormula(w.previaFormula); return; }
-            if (w.previoValor !== undefined && w.previoValor !== null && String(w.previoValor) !== '') {
+            if (w.previaFormula) {
+                r.setFormula(w.previaFormula);
+            } else if (w.previoValor !== undefined && w.previoValor !== null && String(w.previoValor) !== '') {
                 r.setValue(w.previoValor);
-                return;
+            } else {
+                r.clearContent();
             }
-            r.clearContent();
+            // El formato de numero se restaura SIEMPRE que se haya capturado uno (decision #12),
+            // sin importar por que rama vino el contenido -- son dos propiedades independientes
+            // de la celda.
+            if (w.previoFormato) r.setNumberFormat(w.previoFormato);
         } catch (e) {
             logError('No se pudo restaurar ' + w.nombreHoja + '!' + w.celda + ': ' + e.message);
         }
@@ -990,9 +1072,9 @@ function estadoTableroFaltanteProyectado() {
         }
         l.push('Reglas ajenas de la hoja que se reponen intactas: ' + plan.reglas.ajenas.length);
         l.push('');
-        l.push('NOTA: la columna Monto de la seccion de faltante puede verse alineada a la izquierda ' +
-            '(es texto, no numero -- decision #7 del modulo). Si molesta: Formato > Alinear > Derecha ' +
-            'sobre la columna Monto de cada bloque.');
+        l.push('NOTA: los montos de las dos secciones son NUMEROS (no texto, decision #7 v0.41.0): ' +
+            'seleccionar celdas de la columna Monto suma en la barra de estado de Sheets, real y ' +
+            'faltante juntos si se seleccionan ambos.');
         const t = l.join('\n');
         _mostrarTfp('Tablero: faltante proyectado - estado', t);
         logInfo('estadoTableroFaltanteProyectado: ' + plan.cambios.length + ' celda(s) pendientes.');
@@ -1028,13 +1110,16 @@ function aplicarTableroFaltanteProyectado() {
             'Se van a escribir ' + plan.cambios.length + ' celda(s) en "' + pre.nombre + '"' +
             (tocarReglas ? ', y se rehacen las 6 reglas de color (3 gris de faltante + 3 cursiva de aviso)' : '') + '.\n\n' +
             'QUE CAMBIA en Ingresos, Gastos Fijos y Gastos Variables:\n' +
-            '  - El bloque pasa a tener DOS SECCIONES: arriba TODO lo real (una fila por cuenta con\n' +
+            '  - El bloque pasa a tener DOS SECCIONES separadas por una FILA ROTULADA explicita\n' +
+            '    ("' + TFP_ROTULO_SEPARADOR + '"): arriba TODO lo real (una fila por cuenta con\n' +
             '    movimiento, sin cambios de fondo), abajo TODO lo faltante (una fila por cuenta con\n' +
             '    faltante > 0 este mes, gris, REPITIENDO el nombre de la cuenta).\n' +
+            '  - Los montos de las dos secciones son NUMEROS reales (no texto): sumar en la barra\n' +
+            '    de estado al seleccionar celdas vuelve a funcionar en toda la columna Monto.\n' +
             '  - Los totales de la fila 7 (S7/V7/Y7) se recalculan por construccion desde la QUERY\n' +
             '    real de siempre: el total real NO se mueve, se verifica al releerlo.\n' +
             '  - Los totales nuevos (S8/V8/Y8) suman el faltante de TODAS las cuentas (aunque no\n' +
-            '    entren todas en pantalla).\n' +
+            '    entren todas en pantalla), con el MISMO formato de moneda que su hermano real.\n' +
             '  - El bloque sigue yendo hasta la fila 30 y NUNCA aborta por falta de lugar: si un dia\n' +
             '    hay mas filas que hacen falta que lugar, se muestran las cuentas mas importantes y\n' +
             '    la ULTIMA fila avisa, en cursiva, cuantas quedaron afuera y por cuanta plata.\n\n' +
@@ -1052,12 +1137,19 @@ function aplicarTableroFaltanteProyectado() {
             const rango = pre.hoja.getRange(c.celda);
             const previaFormula = rango.getFormula();
             const previoValor = previaFormula ? '' : rango.getValue();
-            previos.celdas.push({ celda: c.celda, tenia: previaFormula ? 'formula' : (String(previoValor) !== '' ? 'valor' : 'vacia'), valor: previoValor });
+            // Solo los cambios que traen formatoNuevo (decision #12: total_faltante) necesitan
+            // respaldar el formato de numero previo -- _respaldarFormulerio SOLO fotografia
+            // formulas, asi que esto viaja aparte, en el mismo objeto previos.
+            const previoFormato = c.formatoNuevo ? rango.getNumberFormat() : undefined;
+            previos.celdas.push({
+                celda: c.celda, tenia: previaFormula ? 'formula' : (String(previoValor) !== '' ? 'valor' : 'vacia'),
+                valor: previoValor, formatoPrevio: previoFormato
+            });
 
             _escribirCambioTfp(pre.hoja, c);
             escritas.push({
                 nombreHoja: pre.nombre, celda: c.celda,
-                previaFormula: previaFormula, previoValor: previoValor
+                previaFormula: previaFormula, previoValor: previoValor, previoFormato: previoFormato
             });
         });
 
@@ -1101,16 +1193,18 @@ function aplicarTableroFaltanteProyectado() {
             (tocarReglas ? 'rehechas (6 propias: 3 + 3)' : 'ya estaban correctas') + '\n' +
             '- Respaldo en la hoja oculta "' + respaldo.nombre + '"\n\n' +
             'QUE MIRAR:\n' +
-            '  1. Arriba de cada bloque, una fila por cuenta con movimiento real (oscuro). Abajo,\n' +
+            '  1. Arriba de cada bloque, una fila por cuenta con movimiento real (oscuro). Despues,\n' +
+            '     una fila que dice "' + TFP_ROTULO_SEPARADOR + '" (Monto vacio). Debajo de esa,\n' +
             '     una fila por cuenta con faltante > 0 (gris), repitiendo el nombre de la cuenta.\n' +
-            '  2. Los totales de la fila 7 no se movieron (se verifico); el total de faltantes de\n' +
-            '     la fila 8 es nuevo y suma TODAS las cuentas con faltante, entren o no en pantalla.\n' +
-            '  3. Una cuenta proyectada sin movimiento real todavia aparece, solo en la seccion de\n' +
+            '  2. Los montos son NUMEROS: seleccionar celdas de la columna Monto (real y/o\n' +
+            '     faltante) tiene que mostrar la SUMA en la barra de estado de Sheets.\n' +
+            '  3. Los totales de la fila 7 no se movieron (se verifico); el total de faltantes de\n' +
+            '     la fila 8 es nuevo, suma TODAS las cuentas con faltante (entren o no en pantalla)\n' +
+            '     y tiene el mismo formato de moneda que su hermano de la fila 7.\n' +
+            '  4. Una cuenta proyectada sin movimiento real todavia aparece, solo en la seccion de\n' +
             '     faltante, con el faltante completo.\n' +
-            '  4. Si algun bloque no tenia lugar para todas las filas, su ULTIMA fila (30) dice\n' +
-            '     en cursiva "y N cuentas mas" y cuanta plata representan.\n' +
-            '  5. La columna Monto de la seccion de faltante puede verse alineada a la izquierda\n' +
-            '     (es texto, no numero): Formato > Alinear > Derecha si molesta.\n\n' +
+            '  5. Si algun bloque no tenia lugar para todas las filas, su ULTIMA fila (30) dice\n' +
+            '     en cursiva "y N cuentas mas" y cuanta plata representan.\n\n' +
             'Si algo quedo peor: revertirTableroFaltanteProyectado (menu Tidetrack Dev).';
 
         logSuccess('aplicarTableroFaltanteProyectado: ' + escritas.length + ' celda(s).');
@@ -1149,18 +1243,22 @@ function revertirTableroFaltanteProyectado() {
         const faltantes = [];
         previos.celdas.forEach(function (p) {
             const rango = hoja.getRange(p.celda);
+            let hecho = false;
             if (p.tenia === 'formula') {
                 const fila = filasRespaldo.find(function (f) {
                     return f.nombreHoja === NAV_CONFIG.SHEETS.TABLERO && f.celda === p.celda;
                 });
-                if (!fila) { faltantes.push(p.celda); return; }
-                rango.setFormula(fila.formula);
-                repuestas++;
-                return;
+                if (!fila) { faltantes.push(p.celda); }
+                else { rango.setFormula(fila.formula); hecho = true; }
+            } else if (p.tenia === 'valor') {
+                rango.setValue(p.valor); hecho = true;
+            } else {
+                rango.clearContent(); hecho = true;
             }
-            if (p.tenia === 'valor') { rango.setValue(p.valor); repuestas++; return; }
-            rango.clearContent();
-            repuestas++;
+            // El formato de numero (decision #12) es una propiedad aparte de la formula/valor: se
+            // restaura siempre que se haya respaldado, sin importar por que rama vino el contenido.
+            if (p.formatoPrevio) rango.setNumberFormat(p.formatoPrevio);
+            if (hecho) repuestas++;
         });
 
         let reglasQuitadas = 0;
