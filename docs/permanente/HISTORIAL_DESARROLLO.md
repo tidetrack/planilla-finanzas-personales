@@ -6,6 +6,129 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-24 - El invariante del faltante se corrige (v0.41.0 se autoreviritio) + seccion real en negrita (v0.42.0)
+
+### Evento
+
+`aplicarTableroFaltanteProyectado()` (v0.41.0, la fila separadora + montos numericos de la
+entrada anterior de este historial) se corrio contra la planilla real y **la propia verificacion
+lo atrapo y revirtio sola**:
+
+> NO APLICADO. Se escribio pero NO VERIFICA:
+> "Ingresos": quedaron 6 nombre(s) distinto(s) y antes habia 9 cuenta(s) con movimiento real.
+> "Gastos Fijos": quedaron 14 y antes habia 16.
+> "Gastos Variables": quedaron 16 y antes habia 20.
+> Una cuenta real no puede perderse. Se restauro cada celda.
+
+El guard funciono exactamente como debe: atrapo una discrepancia, no escribio nada a medias, y la
+planilla quedo con la v0.40.0 sana (restaurada por el propio revert). El bug estaba en el
+INVARIANTE, no en la funcionalidad.
+
+### El diagnostico: dos magnitudes distintas que nunca podian coincidir
+
+Ingresos tiene 4 cuentas con movimiento real (umoh, Tidetrack, Ingresos Extra, Intereses bancos)
+-- confirmado a ojo contra la planilla y contra lo que reportaba `estado()`. El "9" del mensaje de
+error no eran 9 cuentas: eran las FILAS del bloque v0.40.0 que YA estaba aplicado (4 reales + 5 de
+faltante). El "6" del mensaje eran los nombres DISTINTOS de la union real+faltante del bloque
+v0.41.0 recien escrito.
+
+El preflight, hasta esta version, media "cuentas reales antes" (`cuentasVivas`) contando FILAS no
+vacias del rango de Cuenta:
+
+```js
+const valoresCuenta = hoja.getRange(_rangoColTfp(b, b.colCuenta)).getValues();
+const cuentasVivas = valoresCuenta.filter(f => String(f[0] || '').trim() !== '').length;
+```
+
+Esa cuenta de filas es correcta en la PRIMERA MIGRACION: la celda ancla todavia es la QUERY cruda
+de Franco (`GROUP BY Col1`), y esa QUERY ya agrupa por cuenta, asi que una fila es exactamente una
+cuenta. Pero es FALSA en un UPGRADE (el caso real de la planilla de Franco: v0.40.0 ya estaba
+aplicada, dos secciones sin separador): ahi el rango de Cuenta YA mezcla cuentas reales y de
+faltante, y contar filas suma las dos cosas. El "despues" (nombres distintos del render v0.41.0
+nuevo) comparaba contra un "antes" que no era lo que decia ser -- dos magnitudes distintas por
+construccion, no un error de conteo que se pudiera arreglar ajustando un umbral.
+
+### La correccion: el "antes" se deriva del render vivo, nunca de un conteo de filas
+
+`_nombresRealesVivosTfp` (nueva) calcula el CONJUNTO de nombres de cuenta con movimiento real,
+leyendo lo que esta vivo en la hoja AHORA MISMO -- sin escribir nada (el preflight sigue siendo
+estrictamente de lectura) y sin evaluar ninguna formula. Funciona en los tres estados posibles del
+bloque, distinguiendolos por la señal que cada uno YA deja en los VALORES:
+
+- **v0.41.0 ya aplicado**: hay una fila con el rotulo exacto "Faltante proyectado" en la columna
+  Cuenta. Todo lo de ARRIBA de esa fila es la seccion real.
+- **v0.40.0 ya aplicado (sin separador)**: la seccion de faltante pasaba el Monto por `TEXT()`
+  para pintarlo gris (decision de aquella version) -- una celda de Monto de tipo STRING marca una
+  fila de faltante, de tipo NUMBER marca una fila real. La señal vive en el TIPO DE DATO ya
+  escrito, no en la formula que lo escribio.
+- **Primera migracion**: ninguna de las dos señales esta presente, y el comportamiento es el de
+  siempre (una fila = una cuenta).
+
+Con el "antes" correcto, `_verificarInvariantesTfp` deja de comparar CARDINALIDADES (un numero
+contra otro numero) para comparar el CONJUNTO por NOMBRE: cada cuenta que aparecia en el "antes"
+tiene que seguir apareciendo en el "despues", en cualquier posicion. Esto es ademas MAS estricto
+que un piso numerico: un swap que perdiera una cuenta real de verdad y ganara otra distinta por
+otro motivo hubiera dado la MISMA cardinalidad -- exactamente la perdida que este invariante
+existe para atrapar. El caso de TRUNCADO esperado (mas cuentas reales que filas de datos
+disponibles) sigue usando el piso por cardinalidad de siempre, sin cambios: ahi el diseño trunca a
+proposito a las cuentas mas importantes, y no toda cuenta del "antes" tiene por que sobrevivir.
+
+### Probado por mutacion contra el camino exacto que fallo
+
+La seccion 8 del banco se reescribio para modelar el "antes" como un conjunto de nombres, no como
+una cardinalidad, y se agrego una seccion 8d dedicada al camino de upgrade con los MISMOS numeros
+del reporte real (4 cuentas reales, 5 de faltante, 9 filas, 6 nombres distintos en la union):
+`_nombresRealesVivosTfp` sobre ese fixture lee exactamente las 4 cuentas reales, nunca 9 ni 6;
+reaplicar sobre ese mismo estado (sin que ninguna cuenta real cambie) no dispara el invariante; y
+si de ese mismo estado desaparece una cuenta real de verdad, el invariante SI se dispara y la
+nombra en el mensaje de error.
+
+### El pedido de Franco en el mismo release: la seccion real en negrita
+
+Con una captura del bloque de Ingresos delante, textual:
+
+> "quiero que las filas de los faltantes proyectados queden como estan, pero que los ingresos de
+> verdad aparezcan en negrito."
+
+La seccion de faltante NO se toca (gris, exactamente como esta hoy); la seccion real pasa a
+negrita. Misma idea que Franco ya venia pidiendo (separar mas las dos secciones), resuelta del
+otro lado: en vez de apagar mas lo proyectado, resaltar lo real.
+
+La regla de negrita reusa el MISMO COUNTIF expansivo posicional del gris (decision #8 de
+v0.41.0) y le pide la condicion CONTRARIA (`=0` en vez de `>0`): es su complemento exacto, no un
+mecanismo nuevo que pudiera desincronizarse con el tiempo. Tres decisiones puntuales, resueltas
+explicitamente:
+
+1. **La fila separadora** tambien cae del lado "COUNTIF = 0" (en su propia fila, el rango
+   expansivo todavia no la incluye a ella misma), pero queda EXCLUIDA de la negrita con una guarda
+   explicita en la formula: no es un ingreso real, es un rotulo de seccion, y la cabecera del
+   modulo ya habia decidido desde v0.41.0 que la fila separadora se queda con tratamiento default,
+   sin que ninguna regla propia la persiga.
+2. **Las filas vacias** (mas alla de lo que el derrame llego a llenar) no se pintan: la guarda usa
+   COMPARACION DE VALOR (`$col$fila<>""`), nunca un SUMIF/COUNTIF con criterio a secas -- la misma
+   ambiguedad Sheets-especifica que causo el bug real de v0.40.0 (una celda de derrame que muestra
+   `""` cuenta como "con contenido" para un SUMIF/COUNTIF sin operando, pero SI es `""` para una
+   comparacion de valor directa).
+3. **Abarca las dos columnas** (Cuenta y Monto), no solo una -- a diferencia del gris y el aviso,
+   que solo pintan Monto. La regla vive en un rango de dos columnas con la columna del operando de
+   "fila actual" anclada en Cuenta: la misma fila decide el estilo de sus dos celdas.
+
+La regla solo llama `setBold(true)`, nunca `setFontColor` ni `setBold(false)`: si el Monto de la
+seccion real ya tenia negrita ESTATICA (posible segun la captura de Franco, que muestra los
+montos en negrito y los nombres no), no cambia nada visualmente; si en cambio fuera otra regla
+condicional ajena, la clasificacion propia/ajena ya existente la preserva intacta. Esta sesion no
+tuvo forma de confirmar en vivo cual de las dos es -- queda para la corrida final de Franco.
+
+### Banco de pruebas
+
+`devtools/probar_tablero_faltante.js`: seccion 8 reescrita (el "antes" se modela como conjunto de
+nombres) mas la nueva seccion 8d (el camino de upgrade real, con los numeros exactos del reporte);
+nueva seccion 5b (negrita: complemento del gris probado por mutacion -- la seccion real se marca,
+la fila separadora y la de faltante no). Los ocho bancos del repo (`node devtools/probar_*.js`)
+corren en verde.
+
+---
+
 ## 2026-08-24 - Faltante proyectado: fila separadora explicita + montos numericos (v0.41.0)
 
 ### Evento

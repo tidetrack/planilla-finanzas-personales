@@ -9,6 +9,52 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.42.0 - Invariante del faltante corregido (v0.41.0 se autoreviritio) + seccion real en negrita (2026-08-24)
+
+`aplicarTableroFaltanteProyectado()` (v0.41.0) se corrio contra la planilla real y **la propia
+verificacion lo atrapo y revirtio sola**: "quedaron 6 nombre(s) distinto(s) y antes habia 9
+cuenta(s) con movimiento real" en Ingresos, mismo patron en Gastos Fijos y Variables. El guard
+funciono exactamente como debe -- el bug estaba en el invariante, no en la escritura.
+
+### La causa
+
+El preflight media "cuentas reales antes" contando FILAS no vacias del rango de Cuenta. Eso vale
+en la primera migracion (la celda ancla es la QUERY cruda de Franco, una fila = una cuenta), pero
+es falso en un upgrade: la planilla ya tenia v0.40.0 aplicada (dos secciones, sin separador), asi
+que el rango de Cuenta ya mezclaba cuentas reales y de faltante -- Ingresos tiene 4 cuentas reales
+pero el preflight leia 9 (4 reales + 5 de faltante). Comparaba esa cardinalidad contra los 6
+nombres distintos del render nuevo: dos magnitudes distintas por diseno, nunca podian coincidir.
+
+### La correccion
+
+`_nombresRealesVivosTfp` (nueva) deriva el "antes" correcto -- el CONJUNTO de cuentas con
+movimiento real -- leyendo la señal que cada estado ya deja en el render vivo, sin escribir nada
+(el preflight nunca escribe) y sin evaluar ninguna formula: la fila separadora rotulada si el
+bloque ya viene de v0.41.0 (todo arriba de ella es real), o el tipo de dato del Monto si viene de
+v0.40.0 (numero = real, texto = faltante via su `TEXT()`). `_verificarInvariantesTfp` deja de
+comparar cardinalidades para comparar el conjunto por NOMBRE: cada cuenta del "antes" tiene que
+seguir apareciendo en el "despues" -- mas estricto que un piso numerico, porque un swap que
+perdiera una cuenta real y ganara otra por otro motivo daria la misma cardinalidad. Probado por
+mutacion contra el camino de upgrade exacto que hizo fallar la planilla real: reaplicar sobre un
+bloque v0.40.0 ya aplicado no dispara el invariante; perder una cuenta real de ese mismo estado
+si lo dispara.
+
+### Que mas cambia
+
+- **La seccion real pasa a NEGRITA** (pedido de Franco en el mismo release, sobre la captura del
+  bloque de Ingresos): "quiero que las filas de los faltantes proyectados queden como estan, pero
+  que los ingresos de verdad aparezcan en negrito." La seccion de faltante no se toca.
+- La regla de negrita reusa el mismo COUNTIF posicional del gris con la condicion contraria (su
+  complemento exacto), excluye la fila separadora a proposito (no es un ingreso real) y las filas
+  vacias por comparacion de valor (nunca un SUMIF/COUNTIF a secas), y cubre las dos columnas
+  (Cuenta y Monto) con una sola regla por bloque.
+- No pisa formato existente: solo llama `setBold(true)`, nunca `setFontColor` ni `setBold(false)`.
+
+Detalle completo, incluidas las mutaciones probadas, en `docs/permanente/HISTORIAL_DESARROLLO.md`
+y `src/ZZ_Changelog.js`.
+
+---
+
 ## v0.41.0 - Faltante proyectado: fila separadora explicita + montos numericos (2026-08-24)
 
 Sobre la v0.40.0 ya desplegada, Franco pidio dos cosas: mas separacion visual entre lo real y lo
