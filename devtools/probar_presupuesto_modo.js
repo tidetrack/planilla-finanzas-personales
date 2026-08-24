@@ -72,7 +72,7 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_PresupuestoModo.js'), 'utf8') +
     '\n;Object.assign(globalThis,{RANGES,SHEETS,MONEDAS_DISPONIBLES,CUENTAS_NEUTRAS,esCuentaNeutra,' +
     'columnLetterToIndex,columnIndexToLetter,IP_MESES,_exclusionNeutrasIp,_colLedger,_canonizarFormula,' +
-    '_rotulosCompatibles,_normalizarRotulo,_errorDeCelda,' +
+    '_rotulosCompatibles,_normalizarRotulo,_errorDeCelda,_verificarEscrituraSyf,_revertirEscriturasPm,_entradaEscritaPm,' +
     'PM_ALPHA,PM_ALPHA_FRACCION,PM_MESES_HISTORICO,PM_MODO,PM_TITULO_PALABRA,PM_TITULO,PM_SELECTORES,' +
     'PM_BLOQUES,PM_CLAVES_BLOQUE,PM_FILA_INI,PM_FILA_FIN,PM_FILA_TOTAL,PM_UMBRAL_IDENTIDAD,' +
     '_formulaMontoPm,_formulaTituloMontoPm,_condModoHistoricoPm,_esModoHistoricoPm,_sumaMesPm,' +
@@ -386,6 +386,101 @@ console.log('\n=== 4. EL PREFLIGHT (con mock de hoja y mutaciones dirigidas) ===
         const plan = ctx._planPm(pre);
         ok(plan.faltaValidacion === false, 'y el plan no la vuelve a pedir (idempotencia de la validacion)');
     }
+}
+
+console.log('\n=== 5. EL INCIDENTE DE v0.45.0, reproducido y matado ===');
+// Franco desplego v0.45.0 y "2. Aplicar" NO VERIFICO: "Presupuesto!J7 no quedo con el valor
+// escrito" (idem N7/R7), y las 90 celdas de monto NO fallaron. La causa real: `escritas` traia
+// `esValor: teniaValor` (teniaValor = "esta celda TENIA valor antes"), y _verificarEscrituraSyf
+// lee ese MISMO campo como "esto se ESCRIBIO con setValue()". Como TODA celda de este modulo se
+// escribe con setFormula(), esValor tenia que ser SIEMPRE false para la verificacion -- estaba
+// en true justo para J7/N7/R7 (las unicas que tenian un valor estatico antes), y por eso
+// _verificarEscrituraSyf comparaba el VALOR CALCULADO contra el TEXTO DE LA FORMULA: nunca
+// podian coincidir. Este banco reproduce el escenario exacto (una celda con valor previo +
+// formula nueva escrita con exito) contra la funcion REAL _verificarEscrituraSyf, no un mock de
+// ella -- para que una regresion futura en el mismo campo la vuelva a atrapar.
+{
+    // Mock minimo de ss/hoja para _verificarEscrituraSyf: getFormula() devuelve la formula que
+    // "quedo" despues de escribir (simula una escritura EXITOSA), getValue()/getDisplayValue()
+    // devuelven el resultado CALCULADO -- un texto totalmente distinto del texto de la formula,
+    // como pasa en la realidad.
+    function ssConEscrituraExitosa() {
+        const formulaJ7 = ctx._formulaTituloMontoPm();
+        const celdas = { J7: { formula: formulaJ7, valor: 'Monto \nHistórico' } };
+        const hoja = {
+            getRange(a1) {
+                const c = celdas[a1];
+                return {
+                    getFormula() { return c ? c.formula : ''; },
+                    getValue() { return c ? c.valor : ''; },
+                    getDisplayValue() { return c ? c.valor : ''; }
+                };
+            }
+        };
+        return { getSheetByName: () => hoja };
+    }
+
+    const ssMock = ssConEscrituraExitosa();
+    const formulaJ7 = ctx._formulaTituloMontoPm();
+
+    // SOBRE LA FUNCION REAL, no una copia de su forma: _entradaEscritaPm es la que
+    // aplicarPresupuestoModo() llama de verdad para construir cada entrada de `escritas`. Si
+    // algun dia vuelve a agregarsele un esValor, esta asercion lo agarra sin que haga falta
+    // simular todo aplicarPresupuestoModo (que necesita UI/PropertiesService/UI.alert).
+    const entradaReal = ctx._entradaEscritaPm('Presupuesto',
+        { celda: 'J7', formulaActual: '', valorActual: 'Monto \nHistórico', formulaNueva: formulaJ7 }, '');
+    ok(!('esValor' in entradaReal),
+       '_entradaEscritaPm (la funcion REAL que arma cada escritura) nunca incluye esValor -- tiene esta clave: ' +
+       JSON.stringify(Object.keys(entradaReal)));
+    ok(entradaReal.previoValor === 'Monto \nHistórico',
+       'pero SI conserva previoValor, para que _revertirEscriturasPm pueda devolver el texto original');
+    const fallasEntradaReal = ctx._verificarEscrituraSyf(ssMock, [entradaReal]);
+    ok(fallasEntradaReal.length === 0,
+       'y la entrada que arma la funcion real VERIFICA contra _verificarEscrituraSyf (0 fallas). Dio ' +
+       JSON.stringify(fallasEntradaReal));
+
+    // LA FORMA CORRECTA A MANO (documenta la propiedad que hace falta, en caso de que
+    // _entradaEscritaPm alguna vez deje de existir como funcion separada): sin esValor.
+    const escritasCorrectas = [{
+        nombreHoja: 'Presupuesto', celda: 'J7',
+        previa: '', previoValor: 'Monto \nHistórico', nueva: formulaJ7
+    }];
+    const fallasCorrectas = ctx._verificarEscrituraSyf(ssMock, escritasCorrectas);
+    ok(fallasCorrectas.length === 0,
+       'CON EL FIX: una celda que tenia valor antes y ahora tiene la formula correcta VERIFICA (0 fallas). Dio ' +
+       JSON.stringify(fallasCorrectas));
+
+    // MUTACION -- reproduce el bug tal cual estaba: esValor:true (la escritura fue por
+    // setFormula(), pero el campo dice lo contrario). Esta es la reversion EXACTA de este fix;
+    // si esta asercion alguna vez no encuentra la falla, el incidente puede repetirse.
+    const escritasConElBug = [{
+        nombreHoja: 'Presupuesto', celda: 'J7',
+        esValor: true, previoValor: 'Monto \nHistórico',
+        previa: '', nueva: formulaJ7
+    }];
+    const fallasConElBug = ctx._verificarEscrituraSyf(ssMock, escritasConElBug);
+    ok(fallasConElBug.length === 1 && /no qued(o|ó) con el valor escrito/.test(fallasConElBug[0]),
+       'MUTACION (el bug real de v0.45.0): con esValor:true reaparece EXACTAMENTE el error que reporto Franco -- "' +
+       (fallasConElBug[0] || '(ninguna falla, el banco NO lo detecta)') + '"');
+
+    // Y que la reversion propia (_revertirEscriturasPm) SI sepa devolver el valor previo cuando
+    // no hay formula previa -- la otra mitad del incidente potencial (revertir de vuelta a
+    // blanco en vez del texto original).
+    const celdasRevertidas = { J7: 'valor viejo puesto por setFormula' };
+    const ssParaRevertir = {
+        getSheetByName: () => ({
+            getRange: (a1) => ({
+                setFormula(f) { celdasRevertidas[a1] = { tipo: 'formula', valor: f }; },
+                setValue(v) { celdasRevertidas[a1] = { tipo: 'valor', valor: v }; },
+                clearContent() { celdasRevertidas[a1] = { tipo: 'vacia' }; }
+            })
+        })
+    };
+    ctx._revertirEscriturasPm(ssParaRevertir, [
+        { nombreHoja: 'Presupuesto', celda: 'J7', previa: '', previoValor: 'Monto \nHistórico' }
+    ]);
+    ok(celdasRevertidas.J7.tipo === 'valor' && celdasRevertidas.J7.valor === 'Monto \nHistórico',
+       '_revertirEscriturasPm devuelve el VALOR original (no una formula vacia) cuando la celda no tenia formula antes');
 }
 
 console.log('\n' + '='.repeat(60));

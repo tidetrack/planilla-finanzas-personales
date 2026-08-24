@@ -3,7 +3,7 @@
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
  *
- * @version 0.11.2
+ * @version 0.11.3
  * @since 0.1.0
  * @lastModified 2026-08-24
  */
@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 45,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.45.0 - Presupuesto: el selector de Modo, cableado',
+ releaseName: 'v0.45.1 - Presupuesto: el bug real detras del incidente de v0.45.0',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,16 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.45.1 (2026-08-24) - Presupuesto: el bug real detras del incidente de v0.45.0
+! v0.45.0 SE DESPLEGO Y SE APLICO EN LA PLANILLA REAL: "2. Aplicar" NO VERIFICO y se revirtio solo -- "Presupuesto!J7/N7/R7 no quedo con el valor escrito". Fallaron SOLO los tres titulos; las 90 celdas de monto verificaron bien.
+- LA HIPOTESIS INICIAL (razonable, cicatriz conocida del repo) era una celda COMBINADA. NO LO ERA: el preflight ya tenia un guard para exactamente eso y no aborto (si J7 fuera la mitad muda, habria frenado ANTES de escribir, y "1. Ver estado" no habria dicho "93 celdas a escribir"). El texto EXACTO del error es el de la rama esValor de _verificarEscrituraSyf (compara VALOR contra el TEXTO de la formula), no el de "quedo SIN formula" (lo que se veria en un no-op de escritura).
+- LA CAUSA REAL: aplicarPresupuestoModo armaba cada entrada de escritas con esValor: teniaValor, donde teniaValor significaba "esta celda TENIA un valor estatico ANTES" (dato para poder revertir). Pero _verificarEscrituraSyf lee ese MISMO campo como "esto se ESCRIBIO con setValue()". Como toda celda de este modulo se escribe con setFormula(), el campo tenia que ser SIEMPRE false para la verificacion -- daba true justo en J7/N7/R7 (las unicas con valor estatico previo), y la verificacion comparaba el resultado CALCULADO de la formula contra el TEXTO de la formula: nunca podian coincidir.
++ _entradaEscritaPm (nueva, extraida de aplicarPresupuestoModo para que el banco la pueda probar directo): construye cada entrada de escritas SIN esValor, y _revertirEscriturasPm (nueva, propia del modulo, no reusa _revertirEscriturasSyf) decide value-vs-formula por previa/previoValor, nunca por un flag prestado de otro significado -- mismo patron que _revertirEscriturasIp en DEVTOOL_InicioPresupuesto.js.
++ devtools/probar_presupuesto_modo.js, seccion 5 (nueva): reproduce el incidente EXACTO contra la funcion real _verificarEscrituraSyf (mismo mensaje de error que reporto Franco) y prueba por mutacion sobre el codigo real (_entradaEscritaPm) que reintroducir esValor:teniaValor lo rompe de nuevo.
++ DEVTOOL_DIAG_PresupuestoTitulos.js (nuevo, TEMPORAL): diagnostico de solo lectura que mide en vivo si J7/N7/R7 (y K/O/S) de "Presupuesto" son celdas combinadas, para cerrar la duda de la hipotesis descartada con evidencia y no solo con analisis de codigo. Cableado en MENU_CONFIG junto al otro diagnostico temporal pendiente. Borrar archivo + entrada de menu cuando Franco confirme.
+- probar_tablero_faltante.js: CONVIVENCIA_OK suma 'DEVTOOL_DIAG_PresupuestoTitulos.js': ['S7'] -- falso positivo del barrido anti-colision (texto plano, sin nocion de hoja): el S7 del diagnostico es Presupuesto!S7, no el Tablero!S7 que ese modulo posee.
+! Los once bancos en verde.
+
 v0.45.0 (2026-08-24) - Presupuesto: el selector de Modo, cableado
 + El selector de Modo (Presupuesto!E7) tenia el rotulo pero NINGUNA formula lo leia; J/N/R (filas 9-38, 30 cuentas x 3 bloques) estaban vacias, asi que J8/N8/R8 daban $0,00. Ahora las 90 celdas mas los 3 titulos dinamicos (J7/N7/R7: "Monto Historico" / "Monto Proyectado") responden en vivo a E7.
 + Proyeccion: el total de la cuenta en el mes CALENDARIO anterior al de J2/J3. Historico: promedio ponderado EXPONENCIAL de los ultimos 6 meses (misma ventana que los deltas de Inicio). Alpha=0.65: el mes mas reciente pesa 8,62 veces el mas viejo de la ventana.

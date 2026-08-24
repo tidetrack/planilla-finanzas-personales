@@ -1458,7 +1458,14 @@ console.log('\n=== 9. Ninguna otra celda del repo escribe donde este modulo escr
     // Esta lista es un permiso EXPLICITO, no un silenciador: cualquier modulo que no este aca sigue
     // saliendo como choque, y agregar uno obliga a escribir por que es compatible.
     const CONVIVENCIA_OK = {
-        'DEVTOOL_StockYFlujo.js': ['R10', 'U10', 'X10']
+        'DEVTOOL_StockYFlujo.js': ['R10', 'U10', 'X10'],
+        // FALSO POSITIVO, no un choque real: DEVTOOL_DIAG_PresupuestoTitulos.js es un
+        // diagnostico TEMPORAL de solo lectura (incidente de v0.45.0, ver su cabecera) que
+        // menciona 'S7' para leer Presupuesto!S7 ("Monto a Proyectar" de Gastos Variables) --
+        // una hoja y un concepto totalmente distintos del S7 que este modulo posee en Tablero.
+        // El barrido es texto plano, sin nocion de hoja, asi que colisiona por casualidad de
+        // token. Retirar esta entrada junto con el resto del diagnostico cuando se borre.
+        'DEVTOOL_DIAG_PresupuestoTitulos.js': ['S7']
     };
     const dir = path.join(RAIZ, 'src');
     const choques = [];

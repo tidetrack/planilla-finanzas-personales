@@ -3,6 +3,56 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.45.1 - Presupuesto: el bug real detras del incidente de v0.45.0.
+ * ! v0.45.0 SE DESPLEGO Y SE APLICO EN LA PLANILLA REAL: "2. Aplicar" NO VERIFICO y se revirtio
+ *   solo -- "Presupuesto!J7/N7/R7 no quedo con el valor escrito". Fallaron SOLO los tres
+ *   titulos; las 90 celdas de monto verificaron bien y no aparecieron en el error.
+ * - LA HIPOTESIS INICIAL (razonable: cicatriz conocida de este repo) era una celda COMBINADA --
+ *   escribir en la mitad muda de una combinada no da error y no hace nada. NO LO ERA. Dos
+ *   hechos lo descartan: (1) el preflight YA tenia un guard para exactamente eso (paso 8) y no
+ *   aborto -- si J7 fuera la mitad muda, habria frenado ANTES de escribir una sola celda, y
+ *   "1. Ver estado" nunca habria dicho "93 celdas a escribir"; (2) el texto EXACTO del error
+ *   ("no quedo con el valor escrito") es el mensaje de la rama esValor de
+ *   _verificarEscrituraSyf (DEVTOOL_StockYFlujo.js), que compara el VALOR de la celda contra el
+ *   TEXTO de la formula -- no el mensaje "quedo SIN formula" que se veria en un no-op real.
+ * - LA CAUSA REAL: aplicarPresupuestoModo armaba cada entrada de "escritas" con
+ *   esValor: teniaValor, donde teniaValor queria decir "esta celda TENIA un valor estatico
+ *   ANTES de esta corrida" (dato para la reversion: J7/N7/R7 tenian el texto
+ *   "Monto...Historico" sin formula). Pero _verificarEscrituraSyf lee ese MISMO campo con otro
+ *   significado: "esto se escribio con setValue(), verificalo comparando el VALOR". Las dos
+ *   preguntas -- que tenia ANTES vs. como se escribio AHORA -- son independientes, y este
+ *   modulo las contestaba con el mismo booleano. Como TODA celda se escribe con setFormula(),
+ *   el campo tenia que ser SIEMPRE false para la verificacion; daba true justo en J7/N7/R7 (las
+ *   unicas con valor previo), asi que la verificacion comparaba el resultado CALCULADO de la
+ *   formula nueva contra el TEXTO de esa formula. Nunca podian coincidir. Las 90 celdas de
+ *   monto no tenian valor previo, asi que verificaban bien por casualidad de geometria, no
+ *   porque el codigo estuviera correcto -- el mismo bug las habria roto con contenido previo.
+ * + _entradaEscritaPm (nueva, extraida de aplicarPresupuestoModo() a proposito para que el
+ *   banco la pueda probar DIRECTO, sobre la funcion real): construye cada entrada de "escritas"
+ *   SIN esValor -- _verificarEscrituraSyf toma siempre la rama de FORMULA, correcta para las 93
+ *   celdas por igual. previoValor sigue viajando, pero solo lo lee la reversion.
+ * + _revertirEscriturasPm (nueva, propia del modulo): NO reusa _revertirEscriturasSyf para
+ *   revertir dentro de la misma corrida -- esa funcion tambien depende de esValor con el
+ *   significado equivocado, y hubiera dejado J7/N7/R7 en BLANCO (setFormula('')) en vez de
+ *   devolverles su texto original. Decide formula-vs-valor por previa/previoValor, sin flags
+ *   prestados de otro significado -- mismo patron que _revertirEscriturasIp de
+ *   DEVTOOL_InicioPresupuesto.js.
+ * + devtools/probar_presupuesto_modo.js, seccion 5 (nueva, "EL INCIDENTE DE v0.45.0"):
+ *   reproduce el escenario exacto contra la funcion REAL _verificarEscrituraSyf (mismo mensaje
+ *   de error que reporto Franco) y prueba por MUTACION REAL sobre _entradaEscritaPm que
+ *   reintroducir esValor: teniaValor rompe el banco de nuevo, con el mismo mensaje.
+ * + DEVTOOL_DIAG_PresupuestoTitulos.js (nuevo, TEMPORAL, solo lectura): mide en vivo si J7/N7/
+ *   R7 (y K/O/S) de "Presupuesto" son celdas combinadas, para cerrar la hipotesis descartada
+ *   con evidencia medida y no solo con analisis de codigo -- pedido explicito de Franco.
+ *   Cableado en MENU_CONFIG junto al otro diagnostico temporal ya pendiente. Retirar archivo +
+ *   entrada de menu cuando Franco confirme y cierre el incidente.
+ * - devtools/probar_tablero_faltante.js: CONVIVENCIA_OK suma la entrada
+ *   'DEVTOOL_DIAG_PresupuestoTitulos.js': ['S7'] -- el barrido anti-colision de ese banco es
+ *   texto plano sin nocion de hoja, y el "S7" del diagnostico (Presupuesto!S7) colisionaba por
+ *   token con el Tablero!S7 que ese modulo posee de verdad. Falso positivo documentado, no un
+ *   choque real. Retirar junto con el resto del diagnostico.
+ * ! Los once bancos en verde.
+ *
  * [2026-08-24] v0.45.0 - Presupuesto: el selector de Modo, cableado (DEVTOOL_PresupuestoModo.js, nuevo).
  * - El selector de Modo (Presupuesto!E7) tenia el rotulo pero NINGUNA formula lo leia; J/N/R
  *   (filas 9-38, 30 cuentas x 3 bloques) estaban vacias, asi que J8/N8/R8 daban $0,00. Ahora las

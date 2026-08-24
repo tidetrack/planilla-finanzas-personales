@@ -111,18 +111,67 @@
  *                                 quita la validacion de datos si este modulo la agrego.
  *
  * Reusa helpers probados: IP_MESES, _exclusionNeutrasIp (DEVTOOL_InicioPresupuesto.js);
- * _refHoja, _colLedger, _canonizarFormula, _verificarEscrituraSyf, _revertirEscriturasSyf
- * (DEVTOOL_StockYFlujo.js); _leerRespaldoFormulerio, _errorDeCelda, _normalizarRotulo,
- * _rotulosCompatibles, _nombreHojaLibreFormulerio, FORM_TOPE_CELDAS_RESPALDO,
- * FORM_MIN_FILAS_RESPALDO (DEVTOOL_FormulerioV0111.js); esCuentaNeutra, columnLetterToIndex,
- * columnIndexToLetter (00_Config.js / 03_SheetManager.js). NO reusa _respaldarFormulerio: esa
- * funcion respalda EXCLUSIVAMENTE "Inicio" y "Tablero" (ocho modulos ya la comparten con ese
- * alcance fijo); "Presupuesto" es una tercera hoja, asi que este modulo trae su propio
- * _respaldarPm con la misma tecnica (formulas congeladas como texto, releidas y verificadas
- * antes de mutar nada).
+ * _refHoja, _colLedger, _canonizarFormula, _verificarEscrituraSyf (DEVTOOL_StockYFlujo.js);
+ * _leerRespaldoFormulerio, _errorDeCelda, _normalizarRotulo, _rotulosCompatibles,
+ * _nombreHojaLibreFormulerio, FORM_TOPE_CELDAS_RESPALDO, FORM_MIN_FILAS_RESPALDO
+ * (DEVTOOL_FormulerioV0111.js); esCuentaNeutra, columnLetterToIndex, columnIndexToLetter
+ * (00_Config.js / 03_SheetManager.js). NO reusa _respaldarFormulerio: esa funcion respalda
+ * EXCLUSIVAMENTE "Inicio" y "Tablero" (ocho modulos ya la comparten con ese alcance fijo);
+ * "Presupuesto" es una tercera hoja, asi que este modulo trae su propio _respaldarPm con la
+ * misma tecnica (formulas congeladas como texto, releidas y verificadas antes de mutar nada).
+ * TAMPOCO reusa _revertirEscriturasSyf: ver "EL INCIDENTE DE v0.45.0" mas abajo.
+ *
+ * EL INCIDENTE DE v0.45.0 -- SE DESPLEGO, "1. Ver estado" salio impecable (93 celdas a escribir,
+ * la validacion de E7 ya estaba puesta), pero "2. Aplicar" NO VERIFICO y se revirtio SOLO:
+ *
+ *   Presupuesto!J7 no quedo con el valor escrito;
+ *   Presupuesto!N7 no quedo con el valor escrito;
+ *   Presupuesto!R7 no quedo con el valor escrito.
+ *
+ * Fallaron EXACTAMENTE los tres titulos, ninguna de las 90 celdas de monto -- la pista que
+ * resuelve el caso. La hipotesis obvia (y razonable: es una cicatriz real de este repo, ver
+ * DEVTOOL_InicioPresupuesto.js) era una celda COMBINADA: escribir en la mitad muda de una
+ * combinada no da error y no hace nada. No fue esa. Dos hechos la descartan: (1) el preflight YA
+ * tenia un guard para exactamente esto (paso 8, "no puede ser la mitad muda de una combinada") y
+ * NO abortó -- si J7 fuera la mitad muda, el preflight lo habria frenado ANTES de escribir una
+ * sola celda, y "1. Ver estado" nunca habria dicho "93 celdas a escribir"; (2) el texto EXACTO
+ * del error -- "no quedo con el valor escrito" -- es el mensaje de la rama `esValor` de
+ * _verificarEscrituraSyf (DEVTOOL_StockYFlujo.js), que compara rango.getValue() contra el
+ * string que se escribio. Esa rama SOLO se toma si `w.esValor` es verdadero.
+ *
+ * LA CAUSA REAL: `aplicarPresupuestoModo` armaba `escritas` con `esValor: teniaValor`, donde
+ * `teniaValor` queria decir "esta celda TENIA un valor estatico ANTES de esta corrida" (dato
+ * para la REVERSION: J7/N7/R7 tenian el texto "Monto...Historico" sin formula, y hay que poder
+ * devolverselo). Pero `_verificarEscrituraSyf` lee ese MISMO campo con un significado distinto:
+ * "esta celda se ESCRIBIO con setValue(), verificala comparando el VALOR". Las dos preguntas --
+ * "que tenia ANTES" y "como se escribio AHORA" -- son independientes, y este modulo las
+ * respondia con el mismo booleano. Como TODA celda de este modulo se escribe con setFormula()
+ * (nunca setValue()), `esValor` tenia que ser SIEMPRE false para la verificacion -- y para J7/N7/
+ * R7 daba true, asi que _verificarEscrituraSyf comparaba rango.getValue() (el resultado
+ * CALCULADO de la formula nueva, ej. "Monto
+Histórico") contra w.nueva (el TEXTO DE LA FORMULA,
+ * "=IF(REGEXMATCH(...)"). Nunca podian coincidir. Las 90 celdas de monto no tenian valor previo
+ * (`teniaValor=false` para ellas), asi que verificaban bien por casualidad de geometria, no
+ * porque el codigo estuviera bien -- el mismo bug las habria roto si alguna vez hubieran tenido
+ * contenido estatico antes.
+ *
+ * EL FIX: `escritas` deja de llevar `esValor` (nunca se escribe con setValue(), asi que
+ * _verificarEscrituraSyf siempre toma la rama de FORMULA, correcta para las 93 celdas). Lo que
+ * SI hace falta para poder revertir (que la celda TENIA un valor antes) se guarda en
+ * `previoValor` sin mas, y se resuelve con una funcion de reversion PROPIA
+ * (_revertirEscriturasPm, mismo patron que _revertirEscriturasIp de DEVTOOL_InicioPresupuesto.js)
+ * que mira `previa`/`previoValor` -- nunca un flag prestado de otro significado.
+ *
+ * LA LECCION (la misma de siempre, en un lugar nuevo): un helper compartido que usa un campo
+ * como interruptor de comportamiento (`esValor`) obliga a que TODO el que arma su input use ese
+ * campo con el MISMO significado. Reusar el NOMBRE del campo para otra cosa -- por parecido, no
+ * por acuerdo -- es indistinguible de un bug hasta que se prueba con datos que activan la rama
+ * equivocada. Ver la seccion 5 del banco: reproduce el incidente exacto (una celda con valor
+ * previo + una formula nueva) y prueba, por mutacion, que volver a poner `esValor: teniaValor`
+ * lo rompe de nuevo.
  *
  * @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
- * @version 0.45.0
+ * @version 0.45.1
  * @since 2026-08-24
  * @lastModified 2026-08-24
  */
@@ -771,6 +820,56 @@ function _verificarInvariantesPm(ss, hoja) {
 }
 
 // ============================================
+// REVERSION (dentro de la misma corrida)
+// ============================================
+
+/**
+ * Devuelve cada celda escrita en ESTA corrida a su estado previo: formula, VALOR estatico (el
+ * caso de J7/N7/R7, que antes de este modulo eran texto sin formula) o vacio. Mismo patron que
+ * _revertirEscriturasIp en DEVTOOL_InicioPresupuesto.js.
+ *
+ * NO se reusa _revertirEscriturasSyf (DEVTOOL_StockYFlujo.js) para esto: esa funcion decide
+ * value-vs-formula mirando `w.esValor`, y en `escritas` esa bandera NUNCA se pone (ver EL
+ * INCIDENTE en la cabecera del archivo) porque _verificarEscrituraSyf necesita leer la MISMA
+ * `escritas` como "esto se escribio con setFormula()" para las 93 celdas por igual. Reusar la
+ * funcion de reversion tambien habria dejado J7/N7/R7 en BLANCO (setFormula('')) en vez de
+ * devolverles su texto original: se decide por `previa`/`previoValor`, no por un flag de otro
+ * significado.
+ */
+/**
+ * Construye la entrada de `escritas` para UNA celda del plan -- extraida a proposito (v0.45.1,
+ * ver "EL INCIDENTE DE v0.45.0" en la cabecera) para que el banco pueda probar DIRECTO, sobre la
+ * funcion real y no sobre una copia de su forma, la garantia que fallo aquella vez: esta entrada
+ * NUNCA lleva `esValor` (esta corrida siempre escribe con setFormula(), nunca con setValue()).
+ * `previoValor` viaja igual, pero SOLO lo lee _revertirEscriturasPm; _verificarEscrituraSyf no lo
+ * mira si `esValor` no esta.
+ */
+function _entradaEscritaPm(nombreHoja, c, errorPrevio) {
+    return {
+        nombreHoja: nombreHoja, celda: c.celda,
+        previa: c.formulaActual, previoValor: c.valorActual,
+        nueva: c.formulaNueva, errorPrevio: errorPrevio
+    };
+}
+
+function _revertirEscriturasPm(ss, escritas) {
+    escritas.forEach(function (w) {
+        try {
+            const r = ss.getSheetByName(w.nombreHoja).getRange(w.celda);
+            if (w.previa) { r.setFormula(w.previa); return; }
+            if (w.previoValor !== undefined && w.previoValor !== null && String(w.previoValor) !== '') {
+                r.setValue(w.previoValor);
+                return;
+            }
+            r.clearContent();
+        } catch (e) {
+            logError('No se pudo restaurar ' + w.nombreHoja + '!' + w.celda + ': ' + e.message);
+        }
+    });
+    SpreadsheetApp.flush();
+}
+
+// ============================================
 // PUBLICAS
 // ============================================
 
@@ -865,12 +964,7 @@ function aplicarPresupuestoModo() {
             const rango = pre.hoja.getRange(c.celda);
             const errorPrevio = _errorDeCelda(rango);
             rango.setFormula(c.formulaNueva);
-            const teniaValor = !c.formulaActual && String(c.valorActual) !== '';
-            escritas.push({
-                nombreHoja: pre.nombre, celda: c.celda,
-                esValor: teniaValor, previoValor: teniaValor ? c.valorActual : undefined,
-                previa: c.formulaActual, nueva: c.formulaNueva, errorPrevio: errorPrevio
-            });
+            escritas.push(_entradaEscritaPm(pre.nombre, c, errorPrevio));
         });
 
         if (plan.faltaValidacion) {
@@ -884,7 +978,7 @@ function aplicarPresupuestoModo() {
         const fallas = fallasEscritura.concat(inv.fallas);
 
         if (fallas.length) {
-            _revertirEscriturasSyf(ss, escritas);
+            _revertirEscriturasPm(ss, escritas);
             if (validacionAgregada) pre.hoja.getRange(PM_MODO.celda).setDataValidation(null);
             yaRevertido = true;
             throw new Error('Se escribio pero NO VERIFICA: ' + fallas.join('; ') +
@@ -918,7 +1012,7 @@ function aplicarPresupuestoModo() {
         let restaurado = '';
         if (ss && escritas.length && !yaRevertido) {
             try {
-                _revertirEscriturasSyf(ss, escritas);
+                _revertirEscriturasPm(ss, escritas);
                 if (validacionAgregada) ss.getSheetByName(SHEETS.PRESUPUESTO).getRange(PM_MODO.celda).setDataValidation(null);
                 restaurado = ' Se restauraron las celdas ya escritas.';
             } catch (e2) { restaurado = ' ADEMAS fallo la restauracion (' + e2.message + ').'; }

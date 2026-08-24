@@ -736,7 +736,15 @@ const MENU_CONFIG = {
         // la hoja "DIAG_Desplegables_TEMP" que genera, y despues BORRAR esta entrada junto con
         // src/DEVTOOL_DIAG_Desplegables.js entero. @see DEVTOOL_DIAG_Desplegables.js
         { separator: true },
-        { name: 'DIAG TEMPORAL: medir desplegables (Plan de Cuentas + Cargas)', function: '_DIAG_medirDesplegables' }
+        { name: 'DIAG TEMPORAL: medir desplegables (Plan de Cuentas + Cargas)', function: '_DIAG_medirDesplegables' },
+        // ENTRADA TEMPORAL -- decision Franco 2026-08-24: confirmar en vivo si J7/N7/R7 de
+        // "Presupuesto" (o su vecina K/O/S) son celdas COMBINADAS, para cerrar con evidencia la
+        // duda del incidente de v0.45.0 (la causa real ya esta identificada y arreglada en
+        // DEVTOOL_PresupuestoModo.js -- ver "EL INCIDENTE DE v0.45.0" en su cabecera -- pero
+        // Franco pidio la medicion en vivo de todas formas). Solo lectura. Correrla, confirmar,
+        // y BORRAR esta entrada junto con src/DEVTOOL_DIAG_PresupuestoTitulos.js entero.
+        // @see DEVTOOL_DIAG_PresupuestoTitulos.js
+        { name: 'DIAG TEMPORAL: medir titulos combinados (Presupuesto, incidente v0.45.0)', function: '_DIAG_medirTitulosPresupuesto' }
     ]
 };
 

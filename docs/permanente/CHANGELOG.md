@@ -9,6 +9,46 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.45.1 - Presupuesto: el bug real detras del incidente de v0.45.0 (2026-08-24)
+
+`v0.45.0` se desplego y se aplico en la planilla real de Franco. `"1. Ver estado"` salio
+impecable (93 celdas a escribir, la validacion de `E7` ya estaba puesta), pero `"2. Aplicar"` NO
+VERIFICO y se revirtio solo: `"Presupuesto!J7/N7/R7 no quedo con el valor escrito"`. Fallaron
+SOLO los tres titulos; las 90 celdas de monto verificaron bien.
+
+La hipotesis inicial -- razonable, es una cicatriz conocida de este repo -- era una celda
+COMBINADA: escribir en la mitad muda de una combinada no da error y no hace nada. No lo era. Dos
+hechos lo descartan: el preflight ya tenia un guard exacto para eso y no aborto (si `J7` fuera la
+mitad muda, habria frenado ANTES de escribir, y "Ver estado" no habria dicho "93 celdas a
+escribir"); y el texto EXACTO del error es el mensaje de la rama `esValor` de
+`_verificarEscrituraSyf` (compara el VALOR de la celda contra el TEXTO de la formula), no el
+mensaje que se veria en un no-op de escritura real ("quedo SIN formula").
+
+La causa real: `aplicarPresupuestoModo` armaba cada entrada de escritura con
+`esValor: teniaValor`, donde `teniaValor` significaba "esta celda TENIA un valor estatico ANTES"
+(dato pensado para poder revertir -- `J7`/`N7`/`R7` tenian el texto "Monto...Historico" sin
+formula). Pero `_verificarEscrituraSyf` lee ese MISMO campo con otro significado: "esto se
+escribio con `setValue()`, verificalo comparando el valor". Dos preguntas independientes --
+"que tenia antes" y "como se escribio ahora" -- respondidas con el mismo booleano. Como toda
+celda de este modulo se escribe con `setFormula()`, el campo tenia que ser SIEMPRE `false` para
+la verificacion; daba `true` justo en los tres titulos, y la comparacion resultante (el valor
+CALCULADO contra el TEXTO de la formula) nunca podia coincidir.
+
+El arreglo: `_entradaEscritaPm` (nueva, extraida a proposito para que el banco la pruebe DIRECTO
+sobre la funcion real) construye cada entrada sin `esValor`. `_revertirEscriturasPm` (nueva,
+propia del modulo) decide formula-vs-valor por `previa`/`previoValor`, nunca por un flag
+prestado -- mismo patron que `_revertirEscriturasIp` de `DEVTOOL_InicioPresupuesto.js`.
+
+`devtools/probar_presupuesto_modo.js` suma una seccion 5 que reproduce el incidente EXACTO
+contra la funcion real `_verificarEscrituraSyf` (mismo mensaje de error que reporto Franco) y
+prueba por mutacion REAL sobre el codigo fuente que reintroducir `esValor: teniaValor` lo rompe
+de nuevo. Nuevo `DEVTOOL_DIAG_PresupuestoTitulos.js` (temporal, solo lectura): mide en vivo si
+los titulos son celdas combinadas, para cerrar la hipotesis descartada con evidencia medida y no
+solo con analisis de codigo -- pedido explicito de Franco; se retira junto con su entrada de
+menu cuando el incidente quede confirmado y cerrado. Los once bancos en verde.
+
+---
+
 ## v0.45.0 - Presupuesto: el selector de Modo, cableado (2026-08-24)
 
 El selector de Modo de la hoja "Presupuesto" (`E7`) tenia el rotulo pero ninguna formula lo leia:
