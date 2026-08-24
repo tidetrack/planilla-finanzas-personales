@@ -20,17 +20,29 @@
 
  /* Texts */
  --text-main: #34475d;
+ /* El color del CUERPO DE DATOS de la hoja: 4.136 celdas, el mas usado por lejos, y NO es
+  * negro puro (el default de Sheets es #000000, asi que si esta serializado es porque Franco
+  * lo puso a mano). Los numeros y el texto de tabla del shell van con este, no con --text-main,
+  * que es la tinta de la CHROME (titulos de bloque y headers). */
+ --text-data: #39444d;
  --text-secondary: #6e7f8d;
  --text-accent: #6e7f8d;
  --text-inverse: #FFFFFF;
 
- /* Semantic Colors */
- --success: #10B981;
- --success-bg: #D1FAE5;
- --danger: #EF4444; /* Red 500 */
- --danger-bg: #FEE2E2;
- --warning: #F59E0B; /* Amber 500 */
- --warning-bg: #FEF3C7;
+ /* Semantic Colors
+  * decision Franco 2026-08-24: los tres colores de estado pasan a ser los MEDIDOS de la
+  * planilla, no los de Tailwind. Antes eran #10B981 / #EF4444 / #F59E0B, que no aparecen en
+  * ninguna celda de la hoja: un popup con esos verdes y rojos se lee como otro producto.
+  * Los de abajo son los que el codigo declaro canonicos el 2026-08-21 y los que viven
+  * LITERALES dentro de las formulas SPARKLINE de Inicio!F19:F22, con su riel al lado.
+  * @see DEVTOOL_InicioPresupuesto.js (IP_COLOR_VERDE / NARANJA / ROJO y sus fondos)
+  */
+ --success: #356854;
+ --success-bg: #e6f4ea;
+ --danger: #c93232;
+ --danger-bg: #fce8e6;
+ --warning: #ffb300;
+ --warning-bg: #fef7e0;
  --info: #3B82F6;
  --info-bg: #DBEAFE;
 

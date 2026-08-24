@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<?!= include('UI_SharedStyles'); ?>
+<style>
+/* Estilos PROPIOS del shell. La base (paleta, botones, inputs, tarjetas) viene de
+   UI_SharedStyles: contrato de fragmentos de la Fase 5, un solo design system y no dos. */
+
+body { padding: 0; background: var(--bg-secondary); }
+
+/* --- La banda navy de titulo: la hoja abre TODAS sus pestanias con una, y el shell tiene
+       que leerse como una continuacion de la planilla, no como una app aparte. --- */
+.shell-band {
+    background: var(--primary-color);
+    color: var(--text-inverse);
+    padding: 14px 22px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+.shell-band h1 { font-size: 19px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+.shell-band .sub { color: var(--bg-main); font-size: 12.5px; }
+.shell-band .spacer { flex: 1; }
+.shell-band .periodo { color: var(--bg-main); font-size: 11.5px; font-family: var(--font-mono); }
+.shell-band .volver {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--bg-main);
+    background: rgba(255,255,255,0.12); border: 0;
+    padding: 5px 10px; border-radius: var(--border-radius-sm); cursor: pointer;
+}
+.shell-band .volver:hover { background: rgba(255,255,255,0.22); }
+.shell-band .volver:focus-visible { outline: 2px solid var(--bg-main); outline-offset: 2px; }
+
+.shell-body { padding: 22px; }
+
+/* --- Rotulo de seccion con la linea que se estira. --- */
+.shell-sec {
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 10px; margin-bottom: 11px;
+}
+.shell-sec::after { content: ""; flex: 1; height: 1px; background: var(--border-color); }
+
+/* --- Tarjetas del Home. Dos columnas, como el Home de pymes. --- */
+.shell-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; }
+.shell-card {
+    display: flex; gap: 13px; align-items: flex-start; text-align: left; width: 100%;
+    background: var(--bg-main); border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md); padding: 15px;
+    font: inherit; color: inherit; cursor: pointer;
+    transition: border-color var(--transition-fast), transform var(--transition-fast),
+                box-shadow var(--transition-fast);
+}
+.shell-card:hover {
+    border-color: var(--primary-color); transform: translateY(-1px); box-shadow: var(--shadow-md);
+}
+.shell-card:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.shell-card .ico {
+    flex: 0 0 34px; height: 34px; border-radius: var(--border-radius-sm);
+    background: var(--bg-secondary); border: 1px solid var(--border-color);
+    display: grid; place-items: center; color: var(--primary-color);
+}
+.shell-card:hover .ico {
+    background: var(--primary-color); color: var(--text-inverse); border-color: var(--primary-color);
+}
+.shell-card .t { font-weight: 600; color: var(--primary-color); font-size: 14px; display: block; }
+.shell-card .d {
+    color: var(--text-secondary); font-size: 12.5px; line-height: 1.4;
+    margin-top: 2px; display: block;
+}
+.shell-card .pendiente {
+    display: inline-block; margin-top: 6px;
+    font-family: var(--font-mono); font-size: 9.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    background: var(--warning-bg); color: #6d4d00;
+    padding: 2px 6px; border-radius: 4px;
+}
+
+/* --- Vista en construccion: dice QUE va a hacer, no "proximamente". --- */
+.shell-pendiente { max-width: 560px; }
+.shell-pendiente h2 { font-size: 16px; color: var(--primary-color); margin: 0 0 10px; }
+.shell-pendiente p { font-size: 13.5px; color: var(--text-data); line-height: 1.55; margin: 0 0 10px; }
+.shell-pendiente ul { margin: 0 0 14px; padding-left: 1.15em; font-size: 13.5px; color: var(--text-data); }
+.shell-pendiente li { margin: 4px 0; }
+
+/* --- Pie: contexto de la planilla, como el footer del shell de pymes. --- */
+.shell-foot {
+    background: var(--bg-main); border-top: 1px solid var(--border-color);
+    padding: 8px 22px; font-family: var(--font-mono); font-size: 10.5px;
+    letter-spacing: 0.04em; color: var(--text-secondary);
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+}
+.shell-foot .spacer { flex: 1; }
+
+/* --- Overlays. El loader SIEMPRE tiene que poder apagarse: el bug de la v0.45.2 fue
+       exactamente un loader sin nadie que lo apagara. --- */
+.shell-overlay {
+    position: fixed; inset: 0; background: rgba(255,255,255,0.9);
+    display: grid; place-items: center; z-index: 2000;
+}
+.shell-spinner {
+    width: 30px; height: 30px; border: 3px solid var(--bg-tertiary);
+    border-top-color: var(--primary-color); border-radius: 50%;
+    animation: shell-spin 1s linear infinite;
+}
+@keyframes shell-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .shell-spinner { animation: none; } }
+
+.shell-error {
+    background: var(--danger-bg); border-left: 3px solid var(--danger);
+    padding: 12px 15px; border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+    font-size: 13px; color: var(--danger); margin-bottom: 16px;
+}
+.shell-ok {
+    background: var(--success-bg); border-left: 3px solid var(--success);
+    padding: 12px 15px; border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+    font-size: 13px; color: var(--success); margin-bottom: 16px;
+}
+</style>
+</head>
+<body>
+
+<div class="shell-band">
+    <h1 id="shellTitulo">Tidetrack</h1>
+    <span class="sub" id="shellSubtitulo">Que queres hacer</span>
+    <span class="spacer"></span>
+    <button class="volver hidden" id="shellVolver" onclick="salirDeVista()">Volver</button>
+</div>
+
+<div class="shell-body">
+    <div id="shellAviso"></div>
+
+    <!-- ================= HOME ================= -->
+    <div id="vista-home">
+        <div class="shell-sec">Registrar</div>
+        <div class="shell-cards" style="margin-bottom:18px">
+            <button class="shell-card" onclick="irAVista('movimiento')">
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+                <span><span class="t">Movimiento nuevo</span><span class="d">Un gasto o un ingreso. El caso de todos los dias.</span></span>
+            </button>
+            <button class="shell-card" onclick="irAVista('traspaso')">
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg></span>
+                <span><span class="t">Traspaso nuevo</span><span class="d">Plata de una caja a otra. Escribe las dos patas juntas.</span></span>
+            </button>
+            <button class="shell-card" onclick="irAVista('proyeccion')">
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-7M14 7h6v6"/></svg></span>
+                <span><span class="t">Proyeccion nueva</span><span class="d">Lo que pensas gastar el mes que viene.</span></span>
+            </button>
+            <button class="shell-card" onclick="irAVista('conciliacion')">
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                <span><span class="t">Conciliacion</span><span class="d">Emparejar cada caja con lo que dice el banco.</span></span>
+            </button>
+        </div>
+
+        <div class="shell-sec">Estructura</div>
+        <div class="shell-cards">
+            <button class="shell-card" onclick="abrirAbm()">
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h11"/></svg></span>
+                <span><span class="t">Gestionar cuentas</span><span class="d">Alta, baja y cambio de nombre del Plan de Cuentas.</span></span>
+            </button>
+            <button class="shell-card" onclick="irAVista('recurrentes')">
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></span>
+                <span><span class="t">Gastos recurrentes</span><span class="d">Lo que se repite todos los meses, contado en la proyeccion.</span></span>
+            </button>
+            <button class="shell-card" onclick="procesarLote()">
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span>
+                <span><span class="t">Procesar la hoja de Cargas</span><span class="d">Manda al ledger lo que tipeaste a mano en la grilla.</span></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ============ VISTAS EN CONSTRUCCION ============
+         Cada una dice QUE va a hacer y contra que hoja escribe. Una pantalla que solo dijera
+         "proximamente" no le sirve a nadie; esta le dice a Franco que esperar. -->
+    <div id="vista-movimiento" class="hidden">
+        <div class="shell-pendiente">
+            <h2>Todavia no esta construida</h2>
+            <p>Va a cargar un gasto o un ingreso sin pasar por la grilla: monto, cuenta, medio y listo. El resto se completa solo con lo del ultimo movimiento.</p>
+            <ul>
+                <li>Escribe una fila en la grilla de Cargas y deja que el motor de siempre la procese, para no saltearse el congelado de las cuatro cotizaciones.</li>
+                <li>Muestra el saldo del medio y lo que ya llevas gastado en esa cuenta este mes.</li>
+            </ul>
+            <p>Mientras tanto se carga como siempre: tipeando en la hoja <b>Cargas</b> y despues <b>Procesar la hoja de Cargas</b>.</p>
+        </div>
+    </div>
+
+    <div id="vista-traspaso" class="hidden">
+        <div class="shell-pendiente">
+            <h2>Todavia no esta construida</h2>
+            <p>Va a escribir las <b>dos patas</b> de un traspaso juntas, con la cuenta <b>Traspaso</b> y la misma nota, para que no quede nunca una sola mitad cargada.</p>
+            <ul>
+                <li>La moneda de cada caja sale del catalogo, no la elegis vos.</li>
+                <li>Si el traspaso cruza monedas pide los dos montos y deja el tipo de cambio de la operacion escrito en la nota.</li>
+                <li>Avisa cuando el traspaso capitaliza, o sea cuando la plata pasa a una caja de ahorro.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="vista-proyeccion" class="hidden">
+        <div class="shell-pendiente">
+            <h2>Todavia no esta construida</h2>
+            <p>Va a guardar lo que pensas gastar en la base <b>Proyeccion</b>, que ya existe, para que el Tablero pueda medir cuanto te falta.</p>
+            <ul>
+                <li>Es el paso que hoy le falta a la hoja Presupuesto: bajar lo que escribis a mano a la base.</li>
+                <li>Lo proyectado en dolares no lleva cotizacion congelada a proposito: un movimiento que no ocurrio no tiene tipo de cambio.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="vista-recurrentes" class="hidden">
+        <div class="shell-pendiente">
+            <h2>Todavia no esta construida</h2>
+            <p>Va a guardar las suscripciones y los gastos que se repiten todos los meses, para que la proyeccion los tenga en cuenta sola.</p>
+            <ul>
+                <li>Cada regla dice cuenta, medio, monto, dia del mes y desde cuando hasta cuando.</li>
+                <li>Al regenerar no toca los meses ya cerrados, y avisa antes de pisar una fila que hayas editado a mano.</li>
+                <li>Te avisa cuando lo que pagas de verdad viene por encima de la regla.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="vista-conciliacion" class="hidden">
+        <div class="shell-pendiente">
+            <h2>Todavia no esta construida</h2>
+            <p>Va a poner lado a lado, por cada caja, lo que dice la planilla y lo que hay de verdad, y cargar la diferencia como un movimiento con la cuenta <b>Ajuste</b>, que es la que ya usas.</p>
+            <ul>
+                <li>El saldo lo calcula con la regla que ya cierra al centavo: el ultimo <b>Inicio Mes</b> de cada caja mas todo lo posterior.</li>
+                <li>Una caja que no declares conserva su saldo. Nunca se asume cero.</li>
+                <li>El ajuste queda con la fecha del ultimo dia del periodo, no la de hoy.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="shell-foot">
+    <span id="shellPlanilla"></span>
+    <span class="spacer"></span>
+    <span id="shellVersion"></span>
+</div>
+
+<div class="shell-overlay" id="shellLoader"><div class="shell-spinner"></div></div>
+
+<script>
+// La lista de vistas y las dimensiones vienen INYECTADAS del backend. No hay una segunda
+// lista en el cliente que pueda desincronizarse: es la misma SHELL_VISTAS de 16_ShellService.
+var VISTAS = <?= vistasJson ?>;
+var VISTA_INICIAL = '<?= vistaInicial ?>';
+
+var catalogo = null;
+
+// ============================================
+// ROUTER
+// ============================================
+
+/**
+ * Muestra una vista y actualiza la banda de titulo.
+ * Un modal de Sheets pierde el estado en cada salto de pagina, asi que la navegacion es
+ * puramente del cliente: se ocultan todas las vistas y se muestra la pedida.
+ */
+function irAVista(id) {
+    var existe = VISTAS.some(function (v) { return v.id === id; });
+    if (!existe) { id = 'home'; }
+
+    VISTAS.forEach(function (v) {
+        var el = document.getElementById('vista-' + v.id);
+        if (el) { el.classList.toggle('hidden', v.id !== id); }
+    });
+
+    var vista = VISTAS.filter(function (v) { return v.id === id; })[0];
+    document.getElementById('shellTitulo').textContent = vista.titulo;
+    document.getElementById('shellSubtitulo').textContent = vista.subtitulo;
+    document.getElementById('shellVolver').classList.toggle('hidden', id === 'home');
+    limpiarAviso();
+}
+
+/**
+ * Volver. NUNCA google.script.host.close(): el contrato de fragmentos de la Fase 5 exige que
+ * la vista no sepa si vive en el shell o en un popup suelto, y sea el contenedor el que
+ * decida que significa "salir".
+ */
+function salirDeVista() { irAVista('home'); }
+
+// ============================================
+// AVISOS
+// ============================================
+
+function mostrarError(texto) {
+    document.getElementById('shellAviso').innerHTML =
+        '<div class="shell-error">' + escapar(texto) + '</div>';
+}
+function mostrarOk(texto) {
+    document.getElementById('shellAviso').innerHTML =
+        '<div class="shell-ok">' + escapar(texto) + '</div>';
+}
+function limpiarAviso() { document.getElementById('shellAviso').innerHTML = ''; }
+function escapar(t) {
+    var d = document.createElement('div');
+    d.textContent = String(t == null ? '' : t);
+    return d.innerHTML;
+}
+function loader(encendido) {
+    document.getElementById('shellLoader').classList.toggle('hidden', !encendido);
+}
+
+// ============================================
+// ACCIONES
+// ============================================
+
+function abrirAbm() {
+    loader(true);
+    google.script.run
+        .withSuccessHandler(function () { /* el modal se reemplaza solo */ })
+        .withFailureHandler(function (err) {
+            loader(false);
+            mostrarError('No se pudo abrir el Plan de Cuentas: ' + err.message);
+        })
+        .abrirAbmDesdeShell();
+}
+
+function procesarLote() {
+    loader(true);
+    google.script.run
+        .withSuccessHandler(function (r) {
+            loader(false);
+            if (r && r.ok) { mostrarOk('Listo. Se proceso lo que habia en la hoja de Cargas.'); }
+            else { mostrarError('No se pudo procesar: ' + ((r && r.error) || 'error desconocido')); }
+        })
+        .withFailureHandler(function (err) {
+            loader(false);
+            mostrarError('No se pudo procesar: ' + err.message);
+        })
+        .procesarCargasDesdeShell();
+}
+
+// ============================================
+// ARRANQUE
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function () {
+    irAVista(VISTA_INICIAL);
+
+    google.script.run
+        .withSuccessHandler(function (data) {
+            loader(false);
+            if (!data || !data.ok) {
+                mostrarError('No se pudo leer el Plan de Cuentas: ' +
+                    ((data && data.error) || 'error desconocido'));
+                return;
+            }
+            catalogo = data;
+            document.getElementById('shellPlanilla').textContent = data.planilla || '';
+            document.getElementById('shellVersion').textContent = data.version ? 'v' + data.version : '';
+        })
+        .withFailureHandler(function (err) {
+            // Sin esta rama el loader queda puesto para siempre tapando el shell entero: es
+            // exactamente el bug que costo cuatro dias en la v0.45.2.
+            loader(false);
+            mostrarError('No se pudo leer el Plan de Cuentas: ' + err.message);
+        })
+        .obtenerCatalogoShell();
+});
+</script>
+</body>
+</html>

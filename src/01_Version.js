@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 46,
- patch: 1,
+ minor: 47,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.46.1 - Tres botones cargados salen del menu Dev',
+ releaseName: 'v0.47.0 - Centro de Operaciones: el shell y su Home',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.47.0 (2026-08-24) - Centro de Operaciones: el shell y su Home
++ Fase 5 del arnes. 16_ShellService.js + UI_Shell.html: modal de 900x700 con Home de seis tarjetas, router de vistas y el catalogo entero del Plan de Cuentas en UN solo round-trip. Entra al menu como PRIMER item, "Abrir Tidetrack".
++ MODAL Y NO SIDEBAR: showSidebar tiene 300 px fijos (la API ignora setWidth) y Conciliacion necesita cuatro columnas de numeros por cada uno de los quince medios. El argumento de "ver la hoja al lado" tampoco se sostiene: el saldo por medio no esta en ninguna celda, lo calcula el backend. 900 y no los 1000 de pymes porque el contenido mas ancho entra con holgura; 700 y no 760 porque el ABM ya esta en 750 y es el techo practico -- un modal que se corta abajo esconde el boton de confirmar.
++ UNA SOLA WHITELIST DE VISTAS. En pymes la lista vive en TRES lugares que hay que mantener a la par a mano, y ya fallo (dos items abrian el Home en silencio). Aca SHELL_VISTAS es unica: el backend valida contra ella y se la INYECTA al HTML, asi que el router del cliente no puede desincronizarse. Lo mismo con las dimensiones: SHELL_GEOMETRIA viaja al HTML y ningun CSS puede contradecirla.
++ DOS TARJETAS YA OPERAN: "Gestionar cuentas" abre el ABM (que volvio a abrir en la v0.45.2) y "Procesar la hoja de Cargas" dispara procesarCargas sin duplicar una linea de su logica. Las otras cuatro muestran QUE van a hacer y contra que hoja escriben, no un "proximamente": una tarjeta que promete algo que no hace es peor que una que dice a que atenerse.
+* UI_SharedStyles.html: los tres colores de estado pasan a ser los MEDIDOS de la planilla. Eran #10B981 / #EF4444 / #F59E0B, que no aparecen en una sola celda de la hoja; ahora son #356854 / #c93232 / #ffb300 con sus rieles, que son los que viven literales en las formulas SPARKLINE de Inicio. Se agrega --text-data (#39444d), el color del cuerpo de datos de la hoja, que es el mas usado y NO es negro puro. Un solo design system, no dos (regla del arnes).
++ devtools/probar_shell.js (nuevo, banco 13): cruza SHELL_VISTAS contra los divs del HTML en las dos direcciones, prueba que cada puerta de menu abre SU vista, que una vista desconocida cae al Home, que obtenerCatalogoShell NUNCA lanza (ni con getTableData explotando ni sin planilla), y que TODA cadena google.script.run tiene withFailureHandler. Los trece bancos en verde y verificar_modales.py en verde.
 v0.46.1 (2026-08-24) - Tres botones cargados salen del menu Dev
 - 'Conciliar saldos', 'Limpiar Plan de Cuentas' y 'Tipo de medios' YA CORRIERON sobre la planilla y sus constantes describen el estado de ANTES de que corrieran. No son modulos rotos: son modulos que cumplieron y quedaron apuntando a un estado que ya no existe.
 ! EL MAS GRAVE, medido: CONC_OBJETIVOS tiene SIETE saldos escritos a mano del 2026-08-19 y CONC_RESTO_EN_CERO = true significa "todo medio del Plan que no este en esa lista tiene saldo cero". El catalogo tiene QUINCE medios. "2. Cargar los ajustes" hoy forzaria siete medios a saldos de hace cinco dias y PONDRIA LOS OTROS OCHO EN CERO, con asientos reales en el ledger.

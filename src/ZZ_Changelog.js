@@ -3,6 +3,55 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.47.0 - Centro de Operaciones: el shell y su Home.
+ * - FASE 5 DEL ARNES, portada de planilla-pymes. 16_ShellService.js (NUEVO) + UI_Shell.html
+ *   (NUEVO): modal de 900x700 con Home de seis tarjetas, router de vistas del lado del cliente
+ *   y el catalogo entero del Plan de Cuentas en UN solo round-trip. Entra al menu "Tidetrack"
+ *   como PRIMER item: "Abrir Tidetrack".
+ * - MODAL Y NO SIDEBAR, y el argumento en contra del sidebar era el fuerte: es la unica
+ *   superficie que deja ver la hoja y el formulario a la vez. Se cae por dos razones duras.
+ *   Primera: showSidebar tiene 300 px FIJOS -- la API ignora setWidth() -- y la pantalla de
+ *   Conciliacion necesita cuatro columnas de numeros por cada uno de los quince medios del
+ *   catalogo; en 280 px eso es una columna con scroll, justo la superficie donde NO se ve el
+ *   conjunto, que es lo unico que conciliar necesita. Segunda: lo que hay que mirar no esta en
+ *   la hoja. El saldo por medio lo produce la regla del ultimo corte, no una celda; el promedio
+ *   de referencia lo produce PresupuestoBase. El sidebar resuelve "ver la hoja"; el problema
+ *   real es "ver los numeros", y esos entran ADENTRO de la herramienta.
+ * - 900 Y NO LOS 1000 DE PYMES porque el contenido mas ancho de este repo entra con holgura en
+ *   860 px de contenido. 700 y no 760 porque el ABM ya esta en 750 y ese es el techo practico
+ *   en una pantalla de 900 px con el chrome de Chrome mas el de Sheets: 700 entra siempre, 760
+ *   entra a veces, y un modal que se corta abajo esconde el boton de confirmar -- la peor falla
+ *   posible en una herramienta de habito.
+ * - UNA SOLA WHITELIST DE VISTAS, y esta es la correccion a pymes. Alla la lista vive en TRES
+ *   lugares que el propio comentario del codigo pide "mantener SIEMPRE a la par", y ya fallo:
+ *   'apertura' y 'transferencia' faltaban en la whitelist del backend y sus items de menu
+ *   abrian el Home en silencio. Aca SHELL_VISTAS es la unica: el backend valida contra ella y
+ *   se la INYECTA al HTML por template, asi que el router del cliente se arma DESDE ella y no
+ *   existe una segunda lista que pueda diferir. Mismo criterio con las dimensiones:
+ *   SHELL_GEOMETRIA viaja al HTML y ningun max-width del CSS puede contradecirla (en pymes el
+ *   comentario dice 1120, el codigo 1000 y el fragmento 1080).
+ * - DOS TARJETAS YA OPERAN HOY: "Gestionar cuentas" abre el ABM -- que volvio a abrir en la
+ *   v0.45.2 -- y "Procesar la hoja de Cargas" dispara procesarCargas sin duplicar una linea de
+ *   su logica (es el unico lugar que congela las cuatro cotizaciones y deduce el tipo de
+ *   cuenta). Las otras cuatro vistas muestran QUE van a hacer y contra que hoja escriben, en
+ *   vez de un "proximamente": una tarjeta que promete algo que no hace es peor que una que
+ *   dice a que atenerse.
+ * - UI_SharedStyles.html: los tres colores de ESTADO pasan a ser los MEDIDOS de la planilla.
+ *   Eran #10B981 / #EF4444 / #F59E0B -- los de Tailwind -- que no aparecen en una sola celda de
+ *   la hoja; un popup con esos verdes y rojos se lee como otro producto. Ahora son
+ *   #356854 / #c93232 / #ffb300 con sus rieles #e6f4ea / #fce8e6 / #fef7e0, que son los que el
+ *   codigo declaro canonicos el 2026-08-21 y los que viven LITERALES dentro de las formulas
+ *   SPARKLINE de Inicio!F19:F22. Se agrega --text-data (#39444d), el color del cuerpo de datos
+ *   de la hoja: 4.136 celdas, el mas usado por lejos, y NO es negro puro. Un solo design
+ *   system y no dos, que es la regla que el arnes fijo para esta fase.
+ * - devtools/probar_shell.js (NUEVO, banco 13): cruza SHELL_VISTAS contra los divs del HTML EN
+ *   LAS DOS DIRECCIONES (ninguna vista sin div, ningun div huerfano), prueba que cada una de
+ *   las seis puertas de menu abre SU vista, que una vista desconocida cae al Home en vez de dar
+ *   error, que obtenerCatalogoShell NUNCA lanza -- ni con getTableData explotando ni sin
+ *   planilla activa, porque una excepcion del servidor deja al cliente con el loader puesto --
+ *   y que TODA cadena google.script.run del HTML tiene withFailureHandler. Los trece bancos en
+ *   verde y devtools/verificar_modales.py en verde sobre los tres modales.
+ *
  * [2026-08-24] v0.46.1 - Tres botones cargados salen del menu Dev.
  * - SALIO DE REVISAR CON QUE CONVIVE EL MENU NUEVO, no de un bug reportado. Tres entradas del
  *   menu "Tidetrack Dev" apuntan a modulos que YA CORRIERON y cuyas constantes describen el

@@ -9,6 +9,57 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.47.0 - Centro de Operaciones: el shell y su Home (2026-08-24)
+
+Fase 5 del arnes, portada de `planilla-pymes`. `src/16_ShellService.js` y `src/UI_Shell.html`:
+modal de **900x700** con Home de seis tarjetas, router de vistas del lado del cliente y el
+catalogo entero del Plan de Cuentas en **un solo round-trip**. Entra al menu `Tidetrack` como
+primer item: **Abrir Tidetrack**.
+
+**Modal y no sidebar**, aunque el argumento a favor del sidebar era el fuerte —es la unica
+superficie que deja ver la hoja y el formulario a la vez—. Se cae por dos razones duras.
+`showSidebar` tiene **300 px fijos** (la API ignora `setWidth()`) y la pantalla de Conciliacion
+necesita cuatro columnas de numeros por cada uno de los quince medios: en 280 px eso es una
+columna con scroll, justo la superficie donde *no* se ve el conjunto. Y lo que hay que mirar no
+esta en la hoja: el saldo por medio lo produce la regla del ultimo corte, no una celda. El
+sidebar resuelve "ver la hoja"; el problema real es "ver los numeros", y esos entran adentro de
+la herramienta.
+
+**900 y no los 1000 de pymes** porque el contenido mas ancho entra con holgura en 860 px.
+**700 y no 760** porque el ABM ya esta en 750 y ese es el techo practico en una pantalla de
+900 px con el chrome de Chrome mas el de Sheets: 700 entra siempre, 760 entra a veces, y un
+modal que se corta abajo esconde el boton de confirmar.
+
+**Una sola whitelist de vistas**, y esta es la correccion a pymes. Alla la lista vive en tres
+lugares que el propio comentario del codigo pide "mantener siempre a la par", y ya fallo: dos
+items de menu abrian el Home en silencio porque sus vistas faltaban en la whitelist del backend.
+Aca `SHELL_VISTAS` es la unica: el backend valida contra ella y **se la inyecta al HTML**, asi que
+el router del cliente se arma desde ella y no existe una segunda lista que pueda diferir. Mismo
+criterio con las dimensiones: `SHELL_GEOMETRIA` viaja al HTML y ningun `max-width` del CSS puede
+contradecirla —en pymes el comentario dice 1120, el codigo 1000 y el fragmento 1080—.
+
+**Dos tarjetas ya operan hoy.** "Gestionar cuentas" abre el ABM (que volvio a abrir en la v0.45.2)
+y "Procesar la hoja de Cargas" dispara `procesarCargas` sin duplicar una linea de su logica. Las
+otras cuatro muestran **que** van a hacer y contra que hoja escriben, en vez de un
+"proximamente": una tarjeta que promete algo que no hace es peor que una que dice a que atenerse.
+
+**El design system se alinea con la hoja.** Los tres colores de estado de `UI_SharedStyles.html`
+eran `#10B981` / `#EF4444` / `#F59E0B` —los de Tailwind—, que no aparecen en una sola celda de la
+planilla. Ahora son `#356854` / `#c93232` / `#ffb300` con sus rieles, que son los que el codigo
+declaro canonicos el 21/08 y los que viven literales dentro de las formulas SPARKLINE de
+`Inicio!F19:F22`. Se agrega `--text-data` (`#39444d`), el color del cuerpo de datos de la hoja:
+4.136 celdas, el mas usado por lejos, y no es negro puro. Un solo design system y no dos, que es
+la regla que el arnes fijo para esta fase.
+
+**Banco 13.** `devtools/probar_shell.js` cruza `SHELL_VISTAS` contra los divs del HTML en las dos
+direcciones, prueba que cada puerta abre su vista, que una vista desconocida cae al Home, que
+`obtenerCatalogoShell` **nunca lanza** —ni con `getTableData` explotando ni sin planilla activa,
+porque una excepcion del servidor deja al cliente con el loader puesto— y que toda cadena
+`google.script.run` tiene `withFailureHandler`. Los trece bancos en verde y
+`verificar_modales.py` en verde sobre los tres modales.
+
+---
+
 ## v0.46.1 - Tres botones cargados salen del menu Dev (2026-08-24)
 
 Salio de revisar con que convive el menu nuevo, no de un bug reportado. Tres entradas del menu

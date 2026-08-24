@@ -474,6 +474,14 @@ const MENU_CONFIG = {
 
     // --- Menu de uso diario ---
     ITEMS: [
+        // decision Franco 2026-08-24: el Centro de Operaciones entra como PRIMER item y como
+        // puerta principal. Los tres items que ya estaban NO se retiran: "Procesar Cargas" es
+        // el habito vivo (Franco tipea en la grilla y despues procesa) y el ABM sigue siendo la
+        // unica pantalla de estructura que funciona hoy. El shell los absorbe cuando cada vista
+        // este construida, no antes: un menu que promete lo que todavia no hace es peor que uno
+        // corto. @see 16_ShellService.js
+        { name: 'Abrir Tidetrack', function: 'abrirTidetrack' },
+        { separator: true },
         { seccion: 'REGISTRAR' },
         { name: 'Procesar Cargas', function: 'procesarCargas' },
         { separator: true },
