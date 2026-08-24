@@ -9,6 +9,37 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.41.0 - Faltante proyectado: fila separadora explicita + montos numericos (2026-08-24)
+
+Sobre la v0.40.0 ya desplegada, Franco pidio dos cosas: mas separacion visual entre lo real y lo
+proyectado ("parece que no se registra bien"), y que la columna Monto vuelva a sumar al
+seleccionar celdas. La v0.40.0 pasaba los importes de faltante por `TEXT()` para pintarlos gris
+con `ISTEXT()` -- un texto no suma en la barra de estado, asi que las dos cosas eran, en el fondo,
+el mismo problema.
+
+### Que cambia
+
+- **Fila separadora explicita**: entre las dos secciones aparece una fila con el rotulo "Faltante
+  proyectado" en la columna Cuenta (Monto vacio), insertada por el mismo mecanismo que ya
+  insertaba la fila de aviso de truncado.
+- **Los montos vuelven a ser NUMEROS**: ni la seccion real ni la de faltante pasan por `TEXT()`.
+  Seleccionar celdas de la columna Monto (real y/o faltante) suma en la barra de estado.
+- **El gris pasa a ser posicional**: `=COUNTIF($R$9:R9; "Faltante proyectado")>0`, con referencia
+  de fila relativa -- en cada fila, el rango va desde el header hasta la fila anterior. Marca todo
+  lo que esta estrictamente debajo del separador, nunca al separador mismo.
+- **Upgrade version-proof**: el modulo reconoce tanto una ancla v0.40.0 (la que hoy corre en la
+  planilla real) como una v0.41.0, y decide reescribir comparando la formula viva contra la que
+  generaria hoy -- sin esto, desplegar sobre v0.40.0 ya aplicada nunca la hubiera actualizado.
+- **Peor caso baja de 10 a 9 cuentas**: la fila separadora consume una de las veinte filas de
+  datos disponibles cuando hay al menos una cuenta con faltante.
+- **S8/V8/Y8 heredan el formato de moneda de S7/V7/Y7**, copiado en vivo con `getNumberFormat()`
+  (corrige el bug reportado: salian sin formato de moneda).
+
+Detalle completo, incluidas las mutaciones probadas, en `docs/permanente/HISTORIAL_DESARROLLO.md`
+y `src/ZZ_Changelog.js`.
+
+---
+
 ## v0.40.0 - Faltante proyectado: dos secciones, no fila intercalada; totales por construccion (2026-08-21)
 
 `aplicarTableroFaltanteProyectado()` (v0.39.0) se corrio contra la planilla real y **la propia

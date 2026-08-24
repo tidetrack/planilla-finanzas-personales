@@ -5,14 +5,14 @@
  *
  * @version 0.11.1
  * @since 0.1.0
- * @lastModified 2026-08-18
+ * @lastModified 2026-08-24
  */
 
 // [AGILE-VALOR] Control de versiones esencial para el mantenimiento del entorno.
 
 const VERSION = {
  major: 0,
- minor: 40,
+ minor: 41,
  patch: 0,
 
  /**
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-08-21',
- releaseName: 'v0.40.0 - Faltante proyectado: dos secciones, no una fila intercalada; totales por construccion',
+ releaseDate: '2026-08-24',
+ releaseName: 'v0.41.0 - Faltante proyectado: fila separadora explicita + montos numericos',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,16 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.41.0 (2026-08-24) - Faltante proyectado: fila separadora explicita + montos numericos
+! Franco, sobre la v0.40.0 ya desplegada: "se separe mas lo proyectado de lo ingresado realmente... busca la manera de diferenciarlos mas" y "la columna de monto debe dejarme que, al seleccionar celdas, te de la suma total". La v0.40.0 pasaba los importes de faltante por TEXT() para pintarlos gris con ISTEXT() -- un texto no suma al seleccionarlo, asi que las dos cosas eran el mismo problema.
++ FILA SEPARADORA EXPLICITA entre las dos secciones: rotulo "Faltante proyectado" en la columna Cuenta, Monto vacio, insertada por el mismo mecanismo que ya insertaba la fila de aviso de truncado (una posicion calculada dentro del mismo MAP).
++ LOS MONTOS VUELVEN A SER NUMEROS en las dos secciones (ningun TEXT()): seleccionar celdas de la columna Monto suma en la barra de estado de Sheets.
+* EL GRIS PASA A SER POSICIONAL: =COUNTIF($R$9:R9; "Faltante proyectado")>0, con referencia de fila relativa -- en cada fila, el rango va desde el header hasta la fila anterior (estrictamente arriba). Marca todo lo que esta debajo del separador, nunca al separador mismo, incluida la cuenta sin ningun movimiento real (aparece una sola vez, siempre debajo del separador).
+* UPGRADE VERSION-PROOF: _anclaYaEsNuestraTfp se generaliza para reconocer CUALQUIER version ya aplicada (v0.40.0 o v0.41.0), y una comparacion nueva (anclaVigente) decide si hace falta reescribir comparando la formula viva contra la que este modulo generaria hoy. Sin esto, desplegar sobre la planilla real (que hoy tiene v0.40.0 aplicada) nunca la hubiera actualizado.
+* PEOR CASO BAJA DE 10 A 9 CUENTAS: la fila separadora consume una de las veinte filas de datos cuando hay al menos una cuenta con faltante (capacidad_datos; IF(cant_faltante > 0; 19; 20)).
+- S8/V8/Y8 HEREDAN EL FORMATO DE MONEDA de su hermano real S7/V7/Y7, copiado en vivo con getNumberFormat() (nunca inventado): corrige el bug reportado de totales de faltante sin formato de moneda.
+* El conteo de "nombres distintos" de _verificarInvariantesTfp EXCLUYE el rotulo de la fila separadora (no es una cuenta; sin la exclusion podia enmascarar una cuenta real perdida por exactamente uno).
+! devtools/probar_tablero_faltante.js: banco reescrito. Nueva seccion 2c (upgrade version-proof contra un fixture v0.40.0 reconstruido a mano), seccion 5 reescrita (simulador con separador + simulador de la regla COUNTIF, prueba por mutacion que el separador nunca se marca a si mismo y que la cuenta sin movimiento real si se marca, montos siempre numericos), nueva seccion 10 (copia de formato de numero). Los ocho bancos del repo en verde.
 v0.40.0 (2026-08-21) - Faltante proyectado: dos secciones, no una fila intercalada; totales por construccion
 ! aplicarTableroFaltanteProyectado() se corrio en la planilla real (v0.39.0, layout intercalado) y la propia verificacion lo atrapo y revirtio solo: "el total real paso de 1.138.583 a 3.218.368,47" en Ingresos (exactamente real + faltante), mismo patron en Gastos Fijos y Variables. Causa medida: los totales usaban SUMIF(rango;"<>"/"=";monto) para separar filas con/sin nombre de cuenta, y en Sheets ese criterio a secas NO compara el VALOR contra "" -- pregunta si la celda "tiene contenido" (formula o dato). Una celda de DERRAME que muestra "" (el resultado de una formula, no un vacio real) cuenta como "con contenido": TODAS las filas caian del lado "<>", el total real sumaba las dos columnas y el de faltantes daba cero siempre. El banco daba VERDE con esto roto: su mock en JS solo puede representar "" como string, sin la distincion Sheets-especifica entre celda vacia de verdad y celda con formula que devolvio ''.
 ! ADEMAS, Franco cambio el diseno de destino a mitad de la correccion: NO es una fila real y una fila de faltante intercaladas por cuenta. Son DOS SECCIONES dentro del bloque -- arriba TODO lo real, abajo TODO lo faltante, REPITIENDO el nombre de la cuenta (no lo deja vacio). Eso mata la ambiguedad vacio/cadena-vacia de raiz (ninguna fila de Cuenta esta vacia nunca), pero tambien mata el unico dato que los totales viejos usaban para separarse.

@@ -3,6 +3,66 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.41.0 - Faltante proyectado: fila separadora explicita + montos numericos (reemplaza el gris por TEXT()).
+ * - EL PEDIDO DE FRANCO, sobre la v0.40.0 ya desplegada y funcionando: (1) "Necesito que,
+ *   visualmente, se separe mas lo proyectado de lo ingresado realmente porque parece que no se
+ *   registra bien. Busca la manera de diferenciarlos mas." (2) "Ademas, la columna de monto debe
+ *   dejarme que, al seleccionar celdas, te de la suma total. Para asi hacer proyecciones." Y
+ *   despues: "Dale resolvelo".
+ * - LA RESTRICCION QUE INVALIDABA EL DISENO ANTERIOR: en v0.40.0 los importes de la seccion de
+ *   faltante eran TEXTO (pasaban por TEXT() para que ISTEXT() los pudiera pintar gris). Un texto
+ *   no suma al seleccionarlo: la barra de estado de Sheets no muestra nada. Se estaba rompiendo
+ *   una afordancia basica de planilla a cambio de un color.
+ * - LA SOLUCION, una FILA SEPARADORA explicita (rotulo "Faltante proyectado" en la columna
+ *   Cuenta, Monto vacio) entre las dos secciones, resuelve las dos cosas a la vez: (a) le da a
+ *   Franco la separacion visual que pedia -- ya no ve la misma cuenta dos veces sin nada que
+ *   explique por que --, y (b) libera a los montos de necesitar TEXT() como senal de color: son
+ *   NUMEROS crudos en las dos secciones, la seleccion vuelve a sumar. La fila se inserta con el
+ *   mismo mecanismo que ya insertaba la fila de aviso de truncado (una posicion calculada dentro
+ *   del mismo MAP), asi que la razon que en v0.40.0 descartaba una fila separadora ("el limite
+ *   entre secciones es dinamico") deja de ser un obstaculo: no hace falta "saltear" nada.
+ * - EL GRIS PASA A SER POSICIONAL: `=COUNTIF($R$9:R9; "Faltante proyectado")>0` (R9 es el header,
+ *   una fila arriba de la primera fila de datos), aplicada con referencia de fila relativa sobre
+ *   R10:R29. En la fila N, Sheets reescribe el rango a R9:R(N-1) -- ESTRICTAMENTE arriba de la
+ *   fila evaluada. Eso deja afuera a la fila separadora misma (en su propia fila el rango todavia
+ *   no la incluye) y marca TODA fila estrictamente debajo, sin excepcion, incluida la cuenta sin
+ *   ningun movimiento real (el contraejemplo que en v0.40.0 ya habia descartado un COUNTIF de
+ *   "aparece 2+ veces": esa cuenta aparece una sola vez, pero esa unica vez esta siempre debajo
+ *   del separador -- la senal no depende de cuantas veces se repite el nombre, solo de la
+ *   posicion). Verificado con un simulador fiel del algoritmo mas un simulador de la propia regla
+ *   COUNTIF (secciones 5 del banco).
+ * - UPGRADE VERSION-PROOF: la planilla real de Franco tenia v0.40.0 ya desplegada (TEXT()/ISTEXT,
+ *   sin separador). `_anclaYaEsNuestraTfp` se generalizo para reconocer CUALQUIER version de este
+ *   modulo (markers de `_bloqueComunTfp`, compartidos entre versiones, en vez de markers propios
+ *   de la formula de armado que SI cambiaron), y una comparacion nueva (`anclaVigente`) decide si
+ *   la formula VIVA coincide con la que este modulo escribiria HOY -- si no coincide (formula
+ *   cruda de Franco, o una version anterior como v0.40.0), se reescribe. Sin este chequeo,
+ *   desplegar v0.41.0 sobre v0.40.0 ya aplicada nunca la hubiera actualizado (la habria confundido
+ *   con "ya aplicada, nada que hacer"). Probado en la seccion 2c del banco con un fixture que
+ *   reconstruye a mano la forma exacta que escribia v0.40.0.
+ * - CAPACIDAD RECALCULADA: la fila separadora consume una de las veinte filas de datos cuando hay
+ *   al menos una cuenta con faltante (`capacidad_datos; IF(cant_faltante > 0; 19; 20)` dentro de
+ *   la formula). El PEOR CASO garantizado sin truncar (si TODAS las cuentas tuvieran faltante
+ *   pendiente) baja de 10 a 9 cuentas -- `_capacidadPeorCasoTfp` pasa de `floor(capacidad/2)` a
+ *   `floor((capacidad-1)/2)`.
+ * - TOTALES DE FALTANTE SIN FORMATO DE MONEDA (bug reportado aparte, corregido en el mismo
+ *   cambio): S8/V8/Y8 nunca tuvieron un `setNumberFormat` propio y salian con el formato general
+ *   (`1242057,19` al lado de `$1.138.583,00`). Se leen ahora, en vivo, con `getNumberFormat()`, el
+ *   patron del hermano real S7/V7/Y7 -- y se COPIA tal cual a S8/V8/Y8, nunca se inventa un
+ *   patron nuevo. El formato previo se respalda celda por celda (fuera de `_respaldarFormulerio`,
+ *   que solo fotografia formulas) para que el revert lo devuelva exacto.
+ * - INVARIANTE AJUSTADO: el conteo de "nombres distintos" que usa `_verificarInvariantesTfp` para
+ *   chequear que ninguna cuenta real se perdio ahora EXCLUYE el rotulo de la fila separadora --
+ *   sin la exclusion, ese rotulo sumaba +1 al piso y podia enmascarar una cuenta real perdida por
+ *   exactamente uno.
+ * - devtools/probar_tablero_faltante.js: banco reescrito para el separador y los montos
+ *   numericos. Nueva seccion 2c (upgrade version-proof contra un fixture v0.40.0 reconstruido a
+ *   mano), seccion 5 reescrita (simularSeccionesConSeparadorTfp + marcarGrisPorReglaTfp, prueba
+ *   por mutacion que la fila separadora nunca se marca a si misma y que la cuenta sin movimiento
+ *   real si se marca, con montos siempre numericos), y nueva seccion 10 (copia de formato de
+ *   numero de S7/V7/Y7 a S8/V8/Y8, con mutaciones de formula-ok-pero-formato-viejo). Los ocho
+ *   bancos del repo (`node devtools/probar_*.js`) corren en verde.
+ *
  * [2026-08-21] v0.40.0 - Faltante proyectado: dos secciones (no fila intercalada), totales por construccion.
  * - EL BUG REAL, medido en la planilla: Franco corrio aplicarTableroFaltanteProyectado() (v0.39.0,
  *   layout intercalado: cada cuenta con una fila real y una fila de faltante SIN nombre debajo) y
