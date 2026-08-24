@@ -9,6 +9,41 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.45.2 - El ABM abre: el id del selector de entidad (2026-08-24)
+
+El unico item funcional del menu diario, `Plan de Cuentas`, **no abria desde la v0.24.0**.
+Mostraba un loader `position:fixed; inset:0; z-index:2000` que nunca se apagaba y tapaba el
+formulario entero. Lo desplegado era `v0.45.1`: cuatro dias con la unica pantalla del producto
+muerta.
+
+**Causa.** `src/UI_AbmPlanCuentas.html:250` llamaba a `getElementById('entitySelect')`. Ese id no
+existe: el `<select>` se llama `entityType` (`:152`), y las otras **ocho** referencias del archivo
+lo escriben bien. Es un typo, no un renombre a medias. El `TypeError` ocurria dentro del
+`withSuccessHandler` de `getAbmFormData`, asi que la linea 251 -- la unica que apaga el loader --
+nunca corria.
+
+**Por que no lo atrapo nada.** `withFailureHandler` cubre fallas del *servidor*, no excepciones
+del *cliente* dentro del handler de exito. Esta clase de falla no deja rastro: no hay error en
+pantalla, ni log, ni fila mal escrita. Solo un modal que no abre.
+
+**De donde vino.** Entro en `a7129d2 [v0.24.0]`, un commit titulado *"tres fixes de la revision
+adversarial pre-merge"*, en el mismo diff que agrego la funcion `llenarDominioRelacionado()`. El
+llamado nacio con un id inventado. No estaba en `main`: era una regresion viva solo en lo
+desplegado.
+
+**Ademas.** Se agrega `withFailureHandler` en los otros dos puntos con el mismo modo de falla:
+`getCategoryAccounts` (`:343`), que dejaba el input deshabilitado con el placeholder
+`'Buscando...'` de forma permanente, y `deleteAbmRecord` (`:408`) -- la unica operacion
+irreversible del ABM -- que dejaba el loader puesto sin decir si el borrado habia ocurrido.
+
+**Lo que este bug deja anotado.** El repo tiene verificacion adversarial para todo lo que
+*escribe* en la planilla y cero para lo que *muestra*. `planilla-pymes` resuelve exactamente esto
+con `legacy/devtools/verificar_modales.py`, que resuelve los `include()`, concatena los scripts,
+corre `node --check` y cruza cada `getElementById` del JS contra los ids del DOM. Portarlo es
+parte de la Fase 5 del arnes y habria encontrado esto en la primera corrida.
+
+---
+
 ## v0.45.1 - Presupuesto: el bug real detras del incidente de v0.45.0 (2026-08-24)
 
 `v0.45.0` se desplego y se aplico en la planilla real de Franco. `"1. Ver estado"` salio

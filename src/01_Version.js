@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 45,
- patch: 1,
+ patch: 2,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.45.1 - Presupuesto: el bug real detras del incidente de v0.45.0',
+ releaseName: 'v0.45.2 - El ABM abre: el id del selector de entidad',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.45.2 (2026-08-24) - El ABM abre: el id del selector de entidad
+- EL UNICO MODAL DEL MENU DIARIO NO ABRIA DESDE LA v0.24.0, y lo desplegado era v0.45.1: "Plan de Cuentas" mostraba un spinner que nunca se apagaba y tapaba el formulario entero. Cuatro dias en produccion.
+- CAUSA: UI_AbmPlanCuentas.html:250 llamaba a getElementById('entitySelect'). Ese id NO EXISTE -- el <select> se llama 'entityType' (:152) y las otras OCHO referencias del archivo lo escriben bien. El TypeError ocurria DENTRO del withSuccessHandler de getAbmFormData, asi que la linea 251 -- la unica que apaga el loader -- nunca corria.
+- POR QUE NO LO ATRAPO EL withFailureHandler: esa rama cubre fallas del SERVIDOR (google.script.run), no excepciones del cliente dentro del handler de exito. Un loader position:fixed inset:0 z-index:2000 sin nadie que lo apague es una pantalla muerta, no un error visible.
+- DE DONDE VINO: entro en a7129d2 [v0.24.0], "tres fixes de la revision adversarial pre-merge", junto con la funcion nueva llenarDominioRelacionado(). El llamado se escribio con un id que nunca existio. No esta en main: era una regresion viva solo en lo desplegado.
++ withFailureHandler en getCategoryAccounts (:343) y en deleteAbmRecord (:408), que tenian EL MISMO MODO DE FALLA y ningun sintoma distinto: el primero dejaba el input deshabilitado diciendo 'Buscando...' para siempre; el segundo -- la unica operacion IRREVERSIBLE del ABM -- dejaba el loader tapando todo sin decir si habia borrado o no.
+! LECCION, y es la razon de que este fix vaya solo en su commit: una excepcion de cliente dentro de un withSuccessHandler no deja rastro en ningun lado. El repo tiene verificacion adversarial para lo que ESCRIBE en la planilla y cero para lo que MUESTRA. El verificador de modales de pymes (legacy/devtools/verificar_modales.py, cruza los IDs del JS contra el DOM) habria encontrado esto en la primera corrida: portarlo es parte de la Fase 5.
 v0.45.1 (2026-08-24) - Presupuesto: el bug real detras del incidente de v0.45.0
 ! v0.45.0 SE DESPLEGO Y SE APLICO EN LA PLANILLA REAL: "2. Aplicar" NO VERIFICO y se revirtio solo -- "Presupuesto!J7/N7/R7 no quedo con el valor escrito". Fallaron SOLO los tres titulos; las 90 celdas de monto verificaron bien.
 - LA HIPOTESIS INICIAL (razonable, cicatriz conocida del repo) era una celda COMBINADA. NO LO ERA: el preflight ya tenia un guard para exactamente eso y no aborto (si J7 fuera la mitad muda, habria frenado ANTES de escribir, y "1. Ver estado" no habria dicho "93 celdas a escribir"). El texto EXACTO del error es el de la rama esValor de _verificarEscrituraSyf (compara VALOR contra el TEXTO de la formula), no el de "quedo SIN formula" (lo que se veria en un no-op de escritura).

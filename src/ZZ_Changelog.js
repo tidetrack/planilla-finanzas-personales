@@ -3,6 +3,30 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.45.2 - El ABM abre: el id del selector de entidad.
+ * - SINTOMA: "Plan de Cuentas", el unico item funcional del menu diario, abria a un spinner
+ *   infinito que tapaba el formulario. Desde la v0.24.0, y lo desplegado era v0.45.1: cuatro
+ *   dias con la unica pantalla del producto muerta.
+ * - CAUSA: UI_AbmPlanCuentas.html:250 pedia getElementById('entitySelect'). Ese id no existe.
+ *   El select se llama 'entityType' (:152) y las otras OCHO referencias del archivo lo escriben
+ *   bien -- es un typo, no un renombre a medias. El TypeError ocurria dentro del
+ *   withSuccessHandler de getAbmFormData, asi que la linea 251, la unica que apaga el loader,
+ *   nunca llegaba a correr.
+ * - POR QUE NADIE LO VIO: withFailureHandler cubre fallas del servidor, no excepciones del
+ *   cliente dentro del handler de exito. La falla no deja rastro: ni error en pantalla, ni log,
+ *   ni fila mal escrita. Solo un modal que no abre.
+ * - ORIGEN: a7129d2 [v0.24.0], "tres fixes de la revision adversarial pre-merge", en el mismo
+ *   diff que agrego llenarDominioRelacionado(). El llamado nacio con un id inventado.
+ * - SE AGREGA withFailureHandler en los otros dos puntos con EL MISMO MODO DE FALLA, que hasta
+ *   hoy no lo tenian: getCategoryAccounts (:343) dejaba el input deshabilitado con el
+ *   placeholder 'Buscando...' de forma permanente, y deleteAbmRecord (:408) -- la unica
+ *   operacion irreversible del ABM -- dejaba el loader puesto sin decir si el borrado ocurrio.
+ * - QUE FALTA, anotado y no hecho aca: este repo tiene verificacion adversarial para todo lo que
+ *   ESCRIBE en la planilla y CERO para lo que MUESTRA. planilla-pymes resuelve exactamente esto
+ *   con legacy/devtools/verificar_modales.py, que resuelve los include(), concatena los scripts,
+ *   corre node --check y cruza cada getElementById del JS contra los ids del DOM. Portarlo es
+ *   parte de la Fase 5 del arnes y habria encontrado este bug en la primera corrida.
+ *
  * [2026-08-24] v0.45.1 - Presupuesto: el bug real detras del incidente de v0.45.0.
  * ! v0.45.0 SE DESPLEGO Y SE APLICO EN LA PLANILLA REAL: "2. Aplicar" NO VERIFICO y se revirtio
  *   solo -- "Presupuesto!J7/N7/R7 no quedo con el valor escrito". Fallaron SOLO los tres
