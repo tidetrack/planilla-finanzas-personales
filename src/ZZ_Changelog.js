@@ -3,6 +3,33 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.46.1 - Tres botones cargados salen del menu Dev.
+ * - SALIO DE REVISAR CON QUE CONVIVE EL MENU NUEVO, no de un bug reportado. Tres entradas del
+ *   menu "Tidetrack Dev" apuntan a modulos que YA CORRIERON y cuyas constantes describen el
+ *   estado de la planilla ANTES de que corrieran. No son modulos rotos: son modulos que
+ *   cumplieron su trabajo y se quedaron en el menu apuntando a un estado que ya no existe.
+ * - 'Conciliar saldos', EL MAS GRAVE y medido: CONC_OBJETIVOS (DEVTOOL_ConciliarSaldos.js:50)
+ *   tiene SIETE saldos escritos a mano del 2026-08-19, y CONC_RESTO_EN_CERO = true (:61)
+ *   significa "todo medio del Plan que no este en esa lista tiene saldo cero". El catalogo
+ *   tiene QUINCE medios. Es decir que "2. Cargar los ajustes", hoy, forzaria siete medios a
+ *   sus saldos de hace cinco dias y PONDRIA LOS OTROS OCHO EN CERO, con asientos reales en el
+ *   ledger. Un boton al que solo se le puede acertar el dia que se escribio.
+ * - 'Limpiar Plan de Cuentas': su lista de restos de migracion es anterior al alta de la
+ *   categoria 'Seguros' (Plan!P29). Un segundo clic se la lleva puesta.
+ * - 'Tipo de medios': reescribe el Tipo de CADA medio desde su catalogo interno, revirtiendo
+ *   en silencio los que Franco edito a mano en la hoja despues de que el modulo corriera.
+ * - LA LECCION, que vale mas que las tres entradas: el patron estado/aplicar/revertir de este
+ *   repo protege contra escribir MAL. No protege contra escribir DOS VECES con un catalogo
+ *   congelado en el momento en que se escribio el modulo. Un modulo de una sola vez tiene que
+ *   salir del menu cuando termina su trabajo, no quedarse "por si acaso".
+ * - LOS TRES ARCHIVOS SE CONSERVAN ENTEROS: lo que se saca es la PUERTA, no el codigo. El
+ *   calculo del saldo teorico de ConciliarSaldos -- ultimo 'Inicio Mes' de cada medio + todo
+ *   lo posterior, validado 5 de 7 al centavo contra los saldos reales -- es exactamente la
+ *   base de la pantalla de Conciliacion del centro de operaciones, que SI va a pedir los
+ *   saldos en vez de tenerlos escritos en una constante.
+ * - Para reponer cualquiera de los tres hay que actualizar antes sus constantes contra la
+ *   planilla viva. Reponerlos tal cual es reponer el mismo problema.
+ *
  * [2026-08-24] v0.46.0 - Cuentas comodin: el bloque oculto del Plan de Cuentas.
  * - PEDIDO DE FRANCO, textual: "En realidad es una cuenta comodin, no es ingreso fijo o
  *   variable. Agregala oculta por algun lado".

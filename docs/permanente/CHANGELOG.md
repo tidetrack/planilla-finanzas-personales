@@ -9,6 +9,32 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.46.1 - Tres botones cargados salen del menu Dev (2026-08-24)
+
+Salio de revisar con que convive el menu nuevo, no de un bug reportado. Tres entradas del menu
+`Tidetrack Dev` apuntan a modulos que **ya corrieron** y cuyas constantes describen el estado de
+la planilla *antes* de que corrieran. No son modulos rotos: son modulos que cumplieron su trabajo
+y se quedaron en el menu apuntando a un estado que ya no existe.
+
+| Entrada | Que hace hoy si se la clickea |
+|---|---|
+| **Conciliar saldos** | `CONC_OBJETIVOS` tiene **siete** saldos escritos a mano del 19/08 y `CONC_RESTO_EN_CERO = true`. El catalogo tiene **quince** medios. "2. Cargar los ajustes" forzaria los siete a saldos de hace cinco dias y **pondria los otros ocho en cero**, con asientos reales en el ledger |
+| **Limpiar Plan de Cuentas** | Su lista de restos de migracion es anterior al alta de la categoria `Seguros` (`Plan!P29`). Un segundo clic se la lleva puesta |
+| **Tipo de medios** | Reescribe el Tipo de cada medio desde su catalogo interno, revirtiendo en silencio los que Franco edito a mano despues |
+
+**La leccion, que vale mas que las tres entradas.** El patron estado/aplicar/revertir de este repo
+protege contra escribir *mal*. No protege contra escribir *dos veces* con un catalogo congelado en
+el momento en que se escribio el modulo. Un modulo de una sola vez tiene que salir del menu cuando
+termina su trabajo, no quedarse "por si acaso".
+
+**Los tres archivos se conservan enteros**: lo que se saca es la puerta, no el codigo. El calculo
+del saldo teorico de `ConciliarSaldos` —ultimo `Inicio Mes` de cada medio mas todo lo posterior,
+validado 5 de 7 al centavo contra los saldos reales— es exactamente la base de la pantalla de
+Conciliacion del centro de operaciones, que **si** va a pedir los saldos en vez de tenerlos
+escritos en una constante.
+
+---
+
 ## v0.46.0 - Cuentas comodin: el bloque oculto del Plan de Cuentas (2026-08-24)
 
 Franco, textual: *"En realidad es una cuenta comodin, no es ingreso fijo o variable. Agregala

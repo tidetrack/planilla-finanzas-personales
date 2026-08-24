@@ -628,18 +628,18 @@ const MENU_CONFIG = {
                 { name: '2. Aplicar', function: 'aplicarBloqueCategorias' }
             ]
         },
-        {
-            submenu: 'Limpiar Plan de Cuentas', items: [
-                { name: '1. Ver estado (no escribe nada)', function: 'estadoLimpiarPlan' },
-                { name: '2. Aplicar', function: 'aplicarLimpiarPlan' }
-            ]
-        },
-        {
-            submenu: 'Tipo de medios', items: [
-                { name: '1. Ver estado (no escribe nada)', function: 'estadoTipoDeMedios' },
-                { name: '2. Aplicar', function: 'aplicarTipoDeMedios' }
-            ]
-        },
+        // decision Franco 2026-08-24: SALEN DEL MENU 'Limpiar Plan de Cuentas' y 'Tipo de
+        // medios'. Los dos YA CORRIERON sobre la planilla y sus constantes describen el Plan
+        // de ANTES de que corrieran, no el de hoy. El patron estado/aplicar de este repo
+        // protege contra escribir MAL; no protege contra escribir DOS VECES con un catalogo
+        // congelado en el momento en que se escribio el modulo. Concretamente:
+        //   - 'Limpiar Plan de Cuentas' borra lo que su lista declara como resto de migracion.
+        //     Esa lista es de antes del alta de la categoria 'Seguros' (Plan!P29): un segundo
+        //     clic se la lleva puesta.
+        //   - 'Tipo de medios' reescribe el Tipo de CADA medio desde su catalogo interno, y
+        //     revierte en silencio los que Franco edito a mano en la hoja despues.
+        // Los archivos se conservan enteros: lo que se saca es la PUERTA, no el codigo. Para
+        // reponerlos hay que actualizar antes sus constantes contra la planilla viva.
         {
             // decision Franco 2026-08-21: el modulo existia desde el 2026-08-20 pero nunca se
             // habia cableado, asi que no habia forma de correrlo desde la planilla.
@@ -687,15 +687,18 @@ const MENU_CONFIG = {
                 { name: '3. Revertir', function: 'revertirCuentasComodin' }
             ]
         },
-        {
-            // Concilia el saldo de cada medio contra los saldos reales que declaro Franco,
-            // cargando un movimiento de cuenta 'Ajuste' por la diferencia -- su propio mecanismo,
-            // el mismo de las 70 filas historicas. @see DEVTOOL_ConciliarSaldos.js
-            submenu: 'Conciliar saldos', items: [
-                { name: '1. Ver estado (no escribe nada)', function: 'estadoConciliarSaldos' },
-                { name: '2. Cargar los ajustes', function: 'aplicarConciliarSaldos' }
-            ]
-        },
+        // decision Franco 2026-08-24: SALE DEL MENU 'Conciliar saldos', y es la mas urgente de
+        // las tres. No es un modulo roto: es un modulo que YA CUMPLIO y quedo apuntando a un
+        // estado que ya no existe. CONC_OBJETIVOS (DEVTOOL_ConciliarSaldos.js:50) tiene SIETE
+        // saldos escritos a mano del 2026-08-19, y CONC_RESTO_EN_CERO = true (:61) significa
+        // "todo medio del Plan que no este en esa lista tiene saldo cero". El catalogo tiene
+        // QUINCE medios. O sea que "2. Cargar los ajustes", hoy, forzaria siete medios a sus
+        // saldos de hace cinco dias y PONDRIA LOS OTROS OCHO EN CERO, con asientos reales en
+        // el ledger. Un boton al que solo se le puede acertar el dia que se escribio.
+        // El archivo se conserva entero -- su calculo del saldo teorico (ultimo 'Inicio Mes'
+        // de cada medio + todo lo posterior, validado 5/7 al centavo) es la base de la
+        // pantalla de Conciliacion del centro de operaciones, que SI va a pedir los saldos en
+        // vez de tenerlos escritos. @see DEVTOOL_ConciliarSaldos.js
         {
             submenu: 'Stock y flujo', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoStockYFlujo' },

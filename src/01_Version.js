@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 46,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.46.0 - Cuentas comodin: el bloque oculto del Plan de Cuentas',
+ releaseName: 'v0.46.1 - Tres botones cargados salen del menu Dev',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.46.1 (2026-08-24) - Tres botones cargados salen del menu Dev
+- 'Conciliar saldos', 'Limpiar Plan de Cuentas' y 'Tipo de medios' YA CORRIERON sobre la planilla y sus constantes describen el estado de ANTES de que corrieran. No son modulos rotos: son modulos que cumplieron y quedaron apuntando a un estado que ya no existe.
+! EL MAS GRAVE, medido: CONC_OBJETIVOS tiene SIETE saldos escritos a mano del 2026-08-19 y CONC_RESTO_EN_CERO = true significa "todo medio del Plan que no este en esa lista tiene saldo cero". El catalogo tiene QUINCE medios. "2. Cargar los ajustes" hoy forzaria siete medios a saldos de hace cinco dias y PONDRIA LOS OTROS OCHO EN CERO, con asientos reales en el ledger.
+- 'Limpiar Plan de Cuentas': su lista de restos de migracion es anterior al alta de la categoria 'Seguros' (Plan!P29). Un segundo clic se la lleva puesta.
+- 'Tipo de medios': reescribe el Tipo de cada medio desde su catalogo interno y revierte en silencio los que Franco edito a mano despues.
+! LA LECCION: el patron estado/aplicar de este repo protege contra escribir MAL. No protege contra escribir DOS VECES con un catalogo congelado en el momento en que se escribio el modulo. Un modulo de una sola vez tiene que salir del menu cuando termina su trabajo, no quedarse por si acaso.
++ Los tres archivos se conservan ENTEROS: lo que se saca es la PUERTA, no el codigo. El calculo del saldo teorico de ConciliarSaldos (ultimo 'Inicio Mes' de cada medio + todo lo posterior, validado 5/7 al centavo) es la base de la pantalla de Conciliacion del centro de operaciones, que SI va a pedir los saldos en vez de tenerlos escritos.
 v0.46.0 (2026-08-24) - Cuentas comodin: el bloque oculto del Plan de Cuentas
 + Franco: "En realidad es una cuenta comodin, no es ingreso fijo o variable. Agregala oculta por algun lado". "Traspaso" e "Inicio Mes" no eran ingreso, ni gasto fijo, ni gasto variable, asi que no tenian donde vivir en la hoja y se tipeaban a mano en la grilla de Cargas. De ahi salen las variantes "traspaso " e "Inicio  Mes" que el propio 00_Config.js documenta como la falla mas cara posible (una sola fila colada infla el agregado). Con la cuenta en el desplegable, la variante no se puede escribir.
 + DEVTOOL_CuentasComodin.js (nuevo): bloque en "Plan de Cuentas"!T:U con titulo, headers y una nota que explica que es cada comodin, formato copiado del bloque de Ingresos (cero hex hardcodeado) y COLUMNAS OCULTAS. Tres publicas: estado / aplicar / revertir.
