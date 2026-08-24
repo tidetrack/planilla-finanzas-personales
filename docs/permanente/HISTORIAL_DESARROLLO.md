@@ -6,6 +6,122 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-24 - Presupuesto: el selector de Modo, cableado (v0.45.0)
+
+### El pedido
+
+El trabajo mas grande pendiente del repo: construir el corazon de la hoja "Presupuesto". El
+alcance de esta sesion (acordado con Franco, `docs/permanente/DISENO_HOJA_PRESUPUESTO.md`, escrito
+ANTES de construir): el selector de Modo (`E7`) funcionando, y las tres columnas que dependen de
+el (`J`, `N`, `R`, filas 9-38). La columna `V`, las dos tablas resumen y "Guardar Proyeccion"
+quedan para un encargo posterior.
+
+Medido el 2026-08-24: la hoja era un cascaron. El espejo del Plan de Cuentas en `I`/`M`/`Q`/`U`
+funcionaba (mirror 1:1 por formula), pero el selector de Modo no lo leia ninguna formula, y
+`J`/`K`/`N`/`O`/`R`/`S` (filas 9-38) estaban vacias -- los totales de la fila 8 daban $0,00 porque
+sumaban un rango vacio.
+
+### Donde viven los titulos de columna (medido, no asumido)
+
+El brief pedia medir antes de asumir: la fila 8 tiene `I8="Cuenta"` estatico y `J8`/`K8` con
+`SUM`, asi que no estaba claro donde vivia el rotulo de la columna de Monto. Medido contra
+`docs/permanente/celdas.tsv` (snapshot del 2026-08-18, corroborado por las mediciones en vivo del
+2026-08-24 que documenta `DISENO_HOJA_PRESUPUESTO.md`): los titulos viven en la FILA 7, no en la
+8. `J7`/`N7`/`R7` ya decian "Monto " + salto de linea + "Historico" (texto ESTATICO, el mismo en
+los tres, sin importar el modo); `K7`/`O7`/`S7` decian "Monto a Proyectar" (tambien estatico, y
+fuera de este encargo: es la columna que Franco llena a mano). El titulo SI existia; lo que no
+existia era que cambiara con el modo.
+
+### Como se calcula cada modo
+
+**Proyeccion**: el total de la cuenta en el mes CALENDARIO anterior al del selector `J2`/`J3` --
+no el corte de "Inicio Mes", que en esta planilla no siempre coincide con el mes calendario.
+**Historico**: un promedio ponderado EXPONENCIAL de los ultimos 6 meses (la misma ventana que ya
+usan los tres deltas de la hoja Inicio, `IP_MESES_TENDENCIA`, "para que todo el sistema hable del
+mismo horizonte"). Franco fue explicito en el porque de lo exponencial: "para entender la
+evolucion desde la realidad financiera y no como un simple promedio pedorro".
+
+El alpha (el parametro del ponderado) era una eleccion de este modulo, pedida explicitamente con
+la justificacion en numeros concretos. Se opto por 0.65: el mes mas reciente de la ventana pesa
+1/0,65^5 = **8,62 veces** lo que pesa el mas viejo de los seis, con una vida media del peso de
+ln(0,5)/ln(0,65) = **1,61 meses**. Se descartaron dos alternativas: 0,5 (vida media de un mes, el
+mas reciente pesa 32 veces el mas viejo -- deja practicamente sin voto a la mitad vieja de la
+ventana, mas cerca de "solo mira el ultimo mes" que de un promedio) y 2/7 (la formula estandar de
+una media movil exponencial de 6 periodos, apenas 598x -- demasiado suave, casi un promedio
+simple). 0,65 es el punto intermedio deliberado.
+
+Ambos modos reusan el patron de conversion de `_formulaRealidadIp`/`_formulaAuxFlujoIp`
+(`DEVTOOL_InicioPresupuesto.js`): filtro por mes, TC congelados de cada fila del ledger,
+exclusion de cuentas neutras. La diferencia deliberada con ese patron (que siempre convierte a
+ARS): la moneda de salida la manda `J4`, y puede ser cualquiera de las cuatro. Como cada fila de
+"Registros" congela el vector COMPLETO de cotizaciones del dia (no solo la de su propia moneda,
+ADR-004), convertir de origen a destino no necesita ninguna cotizacion EN VIVO: alcanza con leer,
+de la MISMA fila, la tasa de origen y la de destino y dividir una por la otra. Ninguna formula de
+este modulo llama a `TIDETRACK_*()`: no hay "Loading..." que esperar.
+
+### La trampa de locale, atrapada antes de desplegar
+
+El alpha exponencial (0,65) no puede viajar como el literal `0.65` dentro de una formula con
+separador `;`. Ya esta documentado en este mismo repo (`IP_BLOQUE`, `00_Config.js`): "un literal
+decimal con coma es ambiguo dentro de una formula con separador ';' y uno con punto depende del
+locale; una fraccion no depende de nada". El alpha viaja como fraccion entera, `(13/20)` -- y el
+banco de pruebas lo verifica dos veces: que `13/20` sea exactamente `0.65` sin error de redondeo,
+y que una regresion a `'0.65'` haga fallar la seccion 1 del banco (se probo en vivo, mutando el
+archivo real y confirmando la falla antes de revertir).
+
+### El invariante
+
+El pedido explicito era "si dos partes del sistema miden lo mismo, tienen que dar lo mismo".
+Despues de escribir, el modulo recalcula en JS PURO -- sin ninguna formula de hoja, leyendo
+"Registros" directo con `getValues()` -- el total agregado de cada bloque (todas las cuentas de
+esa categoria, no una sola) para el mismo mes y modo, y lo compara contra `J8`/`N8`/`R8` (las
+celdas `SUM` que YA EXISTIAN en la hoja). Dos implementaciones independientes de la misma
+pregunta: si no coinciden, hay una cuenta fuera del espejo del Plan de Cuentas, un filtro de
+fecha corrido, un signo invertido o una moneda de destino mal aplicada.
+
+Se considero comparar contra una celda del Tablero (la sugerencia original), pero el Tablero
+tiene sus PROPIOS selectores de mes/anio, independientes de los de Presupuesto: "el mismo mes de
+referencia" ahi seria un blanco movil, y escribirle a los selectores de otra hoja solo para
+verificar agrega acoplamiento cross-sheet sin necesidad. El recalculo en JS da la misma garantia
+sin ese riesgo.
+
+### El banco, verificado por mutacion real
+
+`devtools/probar_presupuesto_modo.js` (el banco once) tiene cuatro mitades: estructura de
+formulas (incluida la trampa del decimal), el cableado exacto (93 celdas: 3 titulos + 30 filas x
+3 bloques, nunca `K`/`O`/`S`/`V`/`W` ni las tablas resumen), la matematica del ponderado
+espejada en JS (con mutaciones inline: pesos invertidos, signo no invertido, match exacto de
+modo en vez de por substring), y el preflight contra un mock de hoja con ocho mutaciones
+dirigidas (rotulo corrido, modo desconocido, `E7` combinada, validacion ajena, un mirror sin
+formula, un valor a mano en la zona destino, un titulo combinado, un total sin formula).
+
+Ademas, cuatro mutaciones REALES sobre el archivo fuente (no solo comparaciones en JS), corridas
+y revertidas antes de este commit: volver el alpha a `'0.65'` (el banco lo mato: 3 fallas
+estructurales), mover la columna de Ingresos de `J` a `K` -- colisionaria con "Monto a
+Proyectar" -- (el banco lo mato: el cableado exacto y la lista de prohibidas), invertir la
+conversion de moneda en el espejo JS del invariante (el banco lo mato: los totales sinteticos ya
+no cerraban), y exigir el acento exacto en la deteccion de modo (el banco lo mato: "Historico"
+sin tilde dejaba de reconocerse). Los once bancos del repo en verde.
+
+### Que no se toco (a proposito)
+
+`K`/`O`/`S` ("Monto a Proyectar"): lo que Franco escribe a mano. La columna `V` (agrupado por
+categoria, incluidos los ingresos, con signo segun naturaleza), las dos tablas resumen (`C9:F14`,
+`C16:F21`) y "Guardar Proyeccion": encargos posteriores segun el contrato de diseno. El ledger,
+el Plan de Cuentas, la BD de Proyeccion, Inicio y el Tablero: sin tocar.
+
+### Pendiente
+
+Confirmar en vivo (Franco corre "Presupuesto: selector de Modo > 1. Ver estado" antes de
+"2. Aplicar"): si `E7` ya tenia una validacion de datos distinta de las dos opciones esperadas
+(el gemelo digital no trae validaciones, hay que medirlo en la planilla), y que la geometria de
+`celdas.tsv` (snapshot del 2026-08-18) siga vigente fila por fila -- el preflight aborta solo si
+no coincide, asi que una discrepancia se reporta, nunca se pisa en silencio.
+
+Version: v0.45.0.
+
+---
+
 ## 2026-08-24 - Purga de las hojas de respaldo acumuladas (v0.44.0)
 
 ### El pedido

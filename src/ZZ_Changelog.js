@@ -3,6 +3,47 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.45.0 - Presupuesto: el selector de Modo, cableado (DEVTOOL_PresupuestoModo.js, nuevo).
+ * - El selector de Modo (Presupuesto!E7) tenia el rotulo pero NINGUNA formula lo leia; J/N/R
+ *   (filas 9-38, 30 cuentas x 3 bloques) estaban vacias, asi que J8/N8/R8 daban $0,00. Ahora las
+ *   90 celdas mas los 3 titulos dinamicos (J7/N7/R7: "Monto Historico" / "Monto Proyectado")
+ *   responden en vivo a E7.
+ * - Proyeccion: el total de la cuenta en el mes CALENDARIO anterior al de J2/J3 (no el corte de
+ *   "Inicio Mes"). Historico: promedio ponderado EXPONENCIAL de los ultimos 6 meses (misma
+ *   ventana que los deltas de Inicio, IP_MESES_TENDENCIA -- "para que todo el sistema hable del
+ *   mismo horizonte"). Alpha=0.65 (decision propia de este modulo, justificada con numeros en su
+ *   cabecera): el mes mas reciente pesa 8,62 veces el mas viejo de la ventana; vida media del
+ *   peso 1,61 meses. Se descartaron r=0.5 (32x, deja sin voto a la mitad vieja de la ventana) y
+ *   r=2/7 (EMA estandar de span=6, apenas 598x -- demasiado suave para el pedido de Franco).
+ * - Reusa el patron de _formulaRealidadIp/_formulaAuxFlujoIp (DEVTOOL_InicioPresupuesto.js):
+ *   filtro por mes, TC congelados de la fila, exclusion de cuentas neutras. Diferencia
+ *   deliberada: convierte a la moneda de J4 (no siempre ARS) usando la MISMA fila del ledger
+ *   para origen y destino -- cero llamadas a TIDETRACK_*() en vivo, cero "Loading...".
+ * - TRAMPA DE LOCALE ATRAPADA ANTES DE DESPLEGAR: el alpha exponencial no puede viajar como
+ *   "0.65" dentro de una formula con separador ";" (ya documentado en IP_BLOQUE, 00_Config.js:
+ *   un decimal con punto depende del locale). Viaja como fraccion entera, "(13/20)".
+ * - E7 recibe una validacion de datos (dos opciones exactas) si no la tenia; si ya tenia una
+ *   validacion distinta, el preflight ABORTA en vez de pisarla -- puede ser una eleccion
+ *   deliberada de Franco.
+ * - EL INVARIANTE: despues de escribir, se recalcula en JS PURO (sin ninguna formula, leyendo
+ *   "Registros" con getValues()) el total de cada bloque para el mismo mes/modo y se compara
+ *   contra J8/N8/R8 (el SUM ya existente). Dos implementaciones independientes de la misma
+ *   pregunta: si no coinciden, hay una cuenta fuera del espejo, un filtro de fecha corrido, un
+ *   signo invertido o una moneda mal aplicada.
+ * - Cableado en MENU_CONFIG: "Presupuesto: selector de Modo" (estado/aplicar/revertir).
+ * - devtools/probar_presupuesto_modo.js (nuevo, banco 11): estructura de formulas (incluida la
+ *   trampa del decimal), cableado exacto (93 celdas, nunca K/O/S/V/W ni las tablas resumen), la
+ *   matematica del ponderado espejada en JS, y el preflight probado con mutaciones dirigidas
+ *   (rotulo corrido, modo desconocido, celda combinada, validacion ajena, mirror sin formula,
+ *   valor a mano, titulo combinado, total sin formula) -- ademas de 4 mutaciones REALES sobre el
+ *   modulo (decimal con punto, colision de columna, conversion invertida, match exacto de modo)
+ *   corridas y revertidas antes de este commit. Los once bancos en verde.
+ * ! NO TOCADO A PROPOSITO (encargos posteriores, DISENO_HOJA_PRESUPUESTO.md): la columna V
+ *   (agrupado por categoria), las dos tablas resumen (C9:F14, C16:F21) y "Guardar Proyeccion".
+ * ! Geometria medida contra celdas.tsv (snapshot 2026-08-18) y DISENO_HOJA_PRESUPUESTO.md
+ *   (medido en vivo el 2026-08-24); el preflight vuelve a medir todo contra la planilla viva
+ *   antes de escribir. SIN DEPLOY: corre primero "1. Ver estado" antes de "2. Aplicar".
+ *
  * [2026-08-24] v0.44.0 - Purga de hojas de respaldo acumuladas (DEVTOOL_PurgaRespaldos.js, nuevo).
  * - Franco: "Las 50 hojas de respaldo acumuladas eliminalas. Generan ruido". La planilla tiene
  *   69 hojas, de las cuales ~50 son respaldos que los devtools de este repo dejan en cada

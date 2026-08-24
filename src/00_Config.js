@@ -543,6 +543,21 @@ const MENU_CONFIG = {
             ]
         },
         {
+            // Cablea el selector de Modo (E7) de la hoja "Presupuesto" -- hasta ahora texto sin
+            // ninguna formula que lo leyera -- y llena J/N/R (filas 9-38, 30 cuentas x 3
+            // bloques) con el monto que corresponde a cada modo (mes de referencia en
+            // Proyeccion, promedio ponderado exponencial de 6 meses en Historico), mas sus
+            // titulos dinamicos. La columna V, las dos tablas resumen y "Guardar Proyeccion"
+            // quedan para un encargo posterior. @see DEVTOOL_PresupuestoModo.js
+            // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
+            submenu: 'Presupuesto: selector de Modo', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoPresupuestoModo' },
+                { name: '2. Aplicar', function: 'aplicarPresupuestoModo' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirPresupuestoModo' }
+            ]
+        },
+        {
             submenu: 'Capitalizacion y disponibilidad', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoCapitalizacion' },
                 { name: '2. Aplicar', function: 'aplicarCapitalizacion' },

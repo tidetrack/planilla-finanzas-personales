@@ -3,7 +3,7 @@
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
  *
- * @version 0.11.1
+ * @version 0.11.2
  * @since 0.1.0
  * @lastModified 2026-08-24
  */
@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 44,
+ minor: 45,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.44.0 - Purga de hojas de respaldo acumuladas',
+ releaseName: 'v0.45.0 - Presupuesto: el selector de Modo, cableado',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,16 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.45.0 (2026-08-24) - Presupuesto: el selector de Modo, cableado
++ El selector de Modo (Presupuesto!E7) tenia el rotulo pero NINGUNA formula lo leia; J/N/R (filas 9-38, 30 cuentas x 3 bloques) estaban vacias, asi que J8/N8/R8 daban $0,00. Ahora las 90 celdas mas los 3 titulos dinamicos (J7/N7/R7: "Monto Historico" / "Monto Proyectado") responden en vivo a E7.
++ Proyeccion: el total de la cuenta en el mes CALENDARIO anterior al de J2/J3. Historico: promedio ponderado EXPONENCIAL de los ultimos 6 meses (misma ventana que los deltas de Inicio). Alpha=0.65: el mes mas reciente pesa 8,62 veces el mas viejo de la ventana.
++ Reusa el patron de _formulaRealidadIp/_formulaAuxFlujoIp (DEVTOOL_InicioPresupuesto.js), convirtiendo a la moneda de J4 con los TC congelados de la MISMA fila del ledger -- cero cotizaciones en vivo, cero "Loading...".
+- El alpha viaja como fraccion "(13/20)" y no como "0.65": un decimal con punto depende del locale dentro de una formula con separador ";" (trampa ya documentada en IP_BLOQUE).
++ E7 recibe su validacion de datos si no la tenia; si ya tenia una distinta, el preflight aborta en vez de pisarla.
++ Invariante: recalculo en JS puro (getValues() sobre "Registros") de cada bloque, comparado contra J8/N8/R8 -- dos implementaciones independientes de la misma pregunta.
++ Cableado en MENU_CONFIG: "Presupuesto: selector de Modo". devtools/probar_presupuesto_modo.js (nuevo, banco 11). Los once bancos en verde.
+! NO TOCADO A PROPOSITO: la columna V, las tablas resumen (C9:F14, C16:F21) y "Guardar Proyeccion" son encargos posteriores.
+
 v0.44.0 (2026-08-24) - Purga de hojas de respaldo acumuladas
 + DEVTOOL_PurgaRespaldos.js (nuevo): "Las 50 hojas de respaldo acumuladas eliminalas. Generan ruido" (Franco). Dos publicas SOLAMENTE -- estadoPurgaRespaldos (solo lectura) y aplicarPurgaRespaldos (borra) -- SIN revertirPurgaRespaldos: es lo unico irreversible de este repo, y la cabecera explica por que no hay un "deshacer" de mentira.
 + Tres patrones de respaldo conocidos, derivados de las constantes REALES de los modulos que los crean (nunca retipeados): FORM_PREFIJO_RESPALDO ('Respaldo formulerio ', compartido por 9 modulos via _respaldarFormulerio), ALTA_PREFIJO_RESPALDO ('Respaldo Plan de Cuentas ', nueva -- antes literal inline en DEVTOOL_AltaCuentas.js) y V031_PREFIJO_RESPALDO ('RESP_REGISTROS_v031_'). Barrido todo src/: aparecieron OCHO prefijos en total; los otros cinco pertenecen a modulos fuera del menu y se dejan afuera a proposito (documentado en la cabecera). 'Cuarentena Plan (<fecha>)' no matchea ningun patron: no es un respaldo, no se toca.

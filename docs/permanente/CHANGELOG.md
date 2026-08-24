@@ -9,6 +9,53 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.45.0 - Presupuesto: el selector de Modo, cableado (2026-08-24)
+
+El selector de Modo de la hoja "Presupuesto" (`E7`) tenia el rotulo pero ninguna formula lo leia:
+J/N/R (filas 9-38, 30 cuentas x 3 bloques) estaban vacias y los totales de la fila 8 daban
+$0,00. Nuevo `DEVTOOL_PresupuestoModo.js` llena esas 90 celdas mas los 3 titulos dinamicos
+(`J7`/`N7`/`R7`: "Monto Historico" / "Monto Proyectado") segun el modo vivo.
+
+**Proyeccion** muestra el total de la cuenta en el mes CALENDARIO anterior al del selector
+`J2`/`J3` (no el corte de "Inicio Mes"). **Historico** muestra un promedio ponderado
+EXPONENCIAL de los ultimos 6 meses -- la misma ventana que ya usan los tres deltas de la hoja
+Inicio, para que todo el sistema hable del mismo horizonte. El alpha (0.65, decision propia del
+modulo) hace que el mes mas reciente de la ventana pese 8,62 veces el mas viejo, con una vida
+media de 1,61 meses: bastante mas agresivo que un promedio simple pero sin que los tres meses
+mas viejos queden en cero (siguen sumando 21,6% del total).
+
+El modulo reusa el patron de conversion de `_formulaRealidadIp`/`_formulaAuxFlujoIp`
+(`DEVTOOL_InicioPresupuesto.js`: filtro por mes, TC congelados de cada fila, exclusion de
+cuentas neutras), con una diferencia deliberada: convierte a la moneda que pida `J4` (no siempre
+ARS) usando la MISMA fila del ledger para origen y destino, sin ninguna llamada a
+`TIDETRACK_*()` en vivo -- cero "Loading...".
+
+Trampa de locale atrapada antes de desplegar: el alpha no puede viajar como el literal `0.65`
+dentro de una formula con separador `;` (ya documentado en `IP_BLOQUE`, `00_Config.js`: un
+decimal con punto depende del locale). Viaja como fraccion entera, `(13/20)`.
+
+El invariante: despues de escribir, se recalcula en JS puro (`getValues()` sobre "Registros",
+sin ninguna formula de hoja) el total de cada bloque para el mismo mes y modo, y se compara
+contra `J8`/`N8`/`R8` (el `SUM` que ya existia). Dos implementaciones independientes de la misma
+pregunta -- si no coinciden, hay una cuenta fuera del espejo del Plan de Cuentas, un filtro de
+fecha corrido, un signo invertido o una moneda mal aplicada.
+
+Nuevo banco `devtools/probar_presupuesto_modo.js` (el once): estructura de formulas (incluida la
+trampa del decimal), cableado exacto de las 93 celdas (nunca `K`/`O`/`S`, la columna `V`/`W` ni
+las tablas resumen), la matematica del ponderado espejada en JS, y el preflight probado con
+mutaciones dirigidas -- mas 4 mutaciones reales sobre el modulo (decimal con punto, colision de
+columna, conversion de moneda invertida, match exacto de modo) corridas y revertidas antes de
+este commit. Los once bancos en verde. Cableado en `MENU_CONFIG`: "Presupuesto: selector de
+Modo".
+
+**No tocado a proposito** (encargos posteriores, `docs/permanente/DISENO_HOJA_PRESUPUESTO.md`):
+la columna `V` (agrupado por categoria), las dos tablas resumen (`C9:F14`, `C16:F21`) y "Guardar
+Proyeccion". Geometria medida contra `celdas.tsv` (snapshot del 2026-08-18) y el contrato de
+diseno (medido en vivo el 2026-08-24); el preflight vuelve a medir todo contra la planilla viva
+antes de escribir una sola celda. Sin deploy: corre primero "1. Ver estado".
+
+---
+
 ## v0.44.0 - Purga de hojas de respaldo acumuladas (2026-08-24)
 
 Franco: "Las 50 hojas de respaldo acumuladas eliminalas. Generan ruido". Nuevo
