@@ -1,8 +1,8 @@
 /**
  * DEVTOOL_TableroFaltanteProyectado.js
  * Agrega el "Faltante proyectado" a los tres bloques de cuentas del Tablero (Ingresos, Gastos
- * Fijos, Gastos Variables): dos SECCIONES dentro del mismo bloque, no una fila intercalada por
- * cuenta.
+ * Fijos, Gastos Variables): dos SECCIONES dentro del mismo bloque, separadas por una FILA
+ * ROTULADA explicita, no por color solo.
  *
  * [CONCEPTO DE NEGOCIO]
  * Los tres bloques de cuentas del Tablero (Ingresos, Gastos Fijos, Gastos Variables) mostraban
@@ -12,22 +12,42 @@
  * TODAVIA no tuvo ningun movimiento real no aparecia en absoluto, asi que lo que falta cobrar o
  * pagar de esa cuenta era invisible.
  *
- * decision Franco 2026-08-21 (layout definitivo, segunda vuelta de diseno): NO es una fila real
- * seguida de una fila faltante por cuenta. Son DOS SECCIONES separadas dentro del mismo bloque:
- * arriba, TODO lo real (una fila por cuenta con movimiento, oscuro); abajo, TODO lo faltante
- * (una fila por cuenta con faltante > 0, gris, REPITIENDO el nombre de la cuenta -- no lo deja
- * vacio). Franco, textual: "en el orden. Todo lo faltante y proyectado, va al final de todo lo
- * real. No una cuenta con dos sumas arriba y abajo (...) abajo de intereses bancos, aparecen los
- * faltantes pero como una duplicacion de cuenta. Por ejemplo, vuelve a aparecer umoh y sale la
- * diferencia entre el monto cobrado y proyectado".
+ * decision Franco 2026-08-21 (layout de dos secciones, primera vuelta de diseno definitivo): NO
+ * es una fila real seguida de una fila faltante por cuenta. Son DOS SECCIONES separadas dentro
+ * del mismo bloque: arriba, TODO lo real (una fila por cuenta con movimiento, oscuro); abajo,
+ * TODO lo faltante (una fila por cuenta con faltante > 0, gris, REPITIENDO el nombre de la
+ * cuenta -- no lo deja vacio). Version 0.40.0, desplegada y verificada en la planilla real:
+ * umoh no baja (ya supero lo proyectado) y Plata Prestada / Ingreso Viejo aparecen SOLO abajo
+ * (proyectadas sin movimiento real, con el faltante completo).
  *
- *     Cuenta              Monto
- *     umoh              $837.728,28   <- SECCION 1 (real): oscuro
- *     Tidetrack         $260.000,00
- *     Ingresos Extra     $40.069,53
- *     Intereses banc        $785,19
- *     umoh              $162.271,72   <- SECCION 2 (faltante): gris, MISMO nombre repetido
- *     Tidetrack          $40.000,00
+ * decision Franco 2026-08-24 (fila separadora + montos numericos, segunda vuelta): con las dos
+ * secciones ya en la planilla, Franco reporto DOS problemas nuevos, textuales:
+ *   1. "Necesito que, visualmente, se separe mas lo proyectado de lo ingresado realmente porque
+ *      parece que no se registra bien. Busca la manera de diferenciarlos mas." El gris solo
+ *      (decision #7 de la v0.40.0, mas abajo en el historial) no alcanzaba: Franco ve la misma
+ *      cuenta dos veces sin nada que EXPLIQUE por que, y un tono de gris sutil no basta como
+ *      esa explicacion.
+ *   2. "Ademas, la columna de monto debe dejarme que, al seleccionar celdas, te de la suma
+ *      total. Para asi hacer proyecciones." La v0.40.0 pasaba los montos de la seccion 2 por
+ *      TEXT() para poder pintarlos gris con ISTEXT() (ver decision #7 de la v0.40.0): un TEXTO
+ *      no suma en la barra de estado de Sheets. Esa afordancia basica de planilla se estaba
+ *      rompiendo a cambio de un color.
+ *
+ * La resolucion (ver decisiones #7 y #8 de esta version, reescritas): una FILA SEPARADORA
+ * explicita, con rotulo en la columna Cuenta, entre las dos secciones. Dos pajaros de un tiro:
+ * dice con TEXTO por que la cuenta se repite (resuelve el problema 1), y libera a los montos de
+ * necesitar TEXT() como senal de color -- pueden volver a ser NUMEROS de verdad (resuelve el
+ * problema 2). La senal del gris pasa a ser posicional (COUNTIF expansivo: "aparecio el rotulo
+ * del separador en algun renglon de arriba de este"), no de tipo de dato.
+ *
+ *     Cuenta                    Monto
+ *     umoh                    $837.728,28   <- SECCION 1 (real): oscuro
+ *     Tidetrack               $260.000,00
+ *     Ingresos Extra           $40.069,53
+ *     Intereses banc              $785,19
+ *     Faltante proyectado                   <- FILA SEPARADORA: rotulo, Monto vacio, NO es gris
+ *     umoh                    $162.271,72   <- SECCION 2 (faltante): gris, NUMERO real, suma
+ *     Tidetrack                $40.000,00
  *
  * Una primera vuelta de diseno (v0.39.0/intento fallido, ver mas abajo "EL BUG QUE ESTO
  * REEMPLAZA") intercalaba las dos filas por cuenta con la de faltante SIN nombre. Franco la
@@ -36,7 +56,8 @@
  * que atrapo la verificacion sigue siendo valida y esta seccion la hereda), no como diseno vivo.
  *
  * El total de faltantes de cada bloque va debajo del titulo (R8/U8/X8, rotulo ya escrito por
- * Franco; S8/V8/Y8 son las celdas de valor que este modulo cablea).
+ * Franco; S8/V8/Y8 son las celdas de valor que este modulo cablea, con el MISMO formato de
+ * numero que su hermano S7/V7/Y7, copiado en vivo -- ver decision #12).
  *
  * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
  * Arnes Tidetrack seccion 6: preflight por ROTULO que aborta ante la minima discrepancia,
@@ -107,37 +128,55 @@
  *    orden (mayor faltante primero) es el mismo criterio de prioridad que ya usaba la seccion 1:
  *    si hay que truncar, se pierde lo mas chico primero.
  *
- * 7. EL GRIS DE LA SECCION 2 NO PUEDE COLGAR DE "EL NOMBRE ESTA VACIO" (esa senal desaparecio
- *    con el layout viejo) NI DE "ES LA SEGUNDA VEZ QUE APARECE ESTE NOMBRE" (evaluado y
- *    descartado: una cuenta proyectada SIN ningun movimiento real aparece UNA SOLA VEZ, siempre
- *    en la seccion 2 -- un COUNTIF de "aparece 2+ veces" nunca la marca, asi que esa cuenta
- *    quedaria con el tratamiento visual de "real" a pesar de ser 100% faltante. La senal elegida
- *    es el TIPO DE DATO de la celda de Monto: la seccion 1 escribe un NUMERO; la seccion 2
- *    escribe el mismo importe pasado por TEXT() (mismo patron de formato que la celda ya tenia
- *    en vivo, leido una sola vez en el preflight y embebido como literal -- no se inventa un
- *    formato nuevo). La regla de formato condicional pasa a ser `=ISTEXT($S10)`: no depende de
- *    ninguna otra columna, no tiene la ambiguedad vacio/cadena-vacia del SUMIF (ISTEXT pregunta
- *    el TIPO del valor ya calculado, no si la celda "tiene contenido" como hacia el criterio de
- *    SUMIF/COUNTIF), y separa las DOS secciones sin excepcion, incluidas las cuentas que solo
- *    viven en la seccion 2. Limitacion CONOCIDA y aceptada (no resuelta en este modulo): un
- *    numero convertido a texto se alinea a la izquierda por defecto en Sheets, mientras que un
- *    numero real se alinea a la derecha -- las filas de faltante pueden verse desalineadas
- *    contra las de real hasta que alguien fuerce la alineacion de la columna a la derecha a mano
- *    (Formato > Alinear > Derecha sobre S10:S29 o el rango del bloque que corresponda). Se
- *    decidio NO automatizar esa alineacion: hacerlo bien exige leer, mutar y poder revertir una
- *    propiedad de formato mas (con su propio respaldo), y el modulo ya tiene bastante superficie
- *    nueva con los totales por construccion y el TEXT() del gris. Es un ajuste cosmetico de
- *    treinta segundos para Franco versus una pieza mas de maquinaria para mantener.
+ * 7. [REESCRITA v0.41.0 -- ver decision #7 de v0.40.0 en el historial de ZZ_Changelog.js para el
+ *    diseno que esta reemplaza] LOS MONTOS DE LA SECCION 2 VUELVEN A SER NUMEROS. La v0.40.0
+ *    pasaba el importe por TEXT() para que ISTEXT() pudiera pintarlo gris -- pero un TEXTO no
+ *    suma al seleccionarlo (Franco, textual: "la columna de monto debe dejarme que, al
+ *    seleccionar celdas, te de la suma total. Para asi hacer proyecciones"). Esa afordancia de
+ *    Sheets (SUM en la barra de estado) no se negocia: los dos numeros, seccion 1 y seccion 2,
+ *    quedan como `INDEX(tabla_topada; pos; 2)` crudo, sin TEXT() de por medio. Como consecuencia
+ *    directa, el gris YA NO PUEDE colgar del tipo de dato (esa senal se fue con el TEXT()): ver
+ *    decision #8 para la senal que la reemplaza. La cuenta SIN ningun movimiento real (el
+ *    contraejemplo que en v0.40.0 descarto un COUNTIF de "aparece 2+ veces": aparece una sola
+ *    vez, solo en la seccion 2) sigue siendo el caso de prueba obligado de cualquier senal nueva
+ *    -- ver decision #8, que la resuelve sin ese punto ciego.
  *
- * 8. NO HAY FILA SEPARADORA entre las dos secciones (ni una fila en blanco, ni un rotulo
- *    repetido tipo "Faltante proyectado" en medio de los datos). Dos razones: (a) el color YA es
- *    el separador -- oscuro vs. gris marca el corte con la misma claridad que una fila en blanco,
- *    sin gastar una fila de las veintiuna disponibles; (b) el limite entre secciones es
- *    DINAMICO (depende de cuantas cuentas reales hay hoy), asi que una fila separadora tendria
- *    que insertarse en una posicion que cambia con los datos -- el derrame de una sola formula no
- *    puede "saltear" una fila fija en un punto variable sin gastar logica extra solo para eso.
- *    Franco ya tiene el rotulo "Faltante proyectado" en R8/U8/X8, arriba de la tabla: cumple el
- *    rol de avisar que el bloque incluye faltante sin necesidad de repetirlo adentro.
+ * 8. LA SEPARACION VISUAL ES UNA FILA ROTULADA EXPLICITA, Y ES TAMBIEN LA NUEVA SENAL DEL GRIS.
+ *    Franco, textual: "Necesito que, visualmente, se separe mas lo proyectado de lo ingresado
+ *    realmente porque parece que no se registra bien. Busca la manera de diferenciarlos mas." El
+ *    gris solo (decision #7 de v0.40.0) no alcanzaba: la MISMA cuenta aparece dos veces sin que
+ *    nada diga POR QUE. La v0.40.0 descartaba una fila separadora por dos razones (ver el
+ *    historial): (a) el color ya separaba, (b) el limite entre secciones es DINAMICO (depende de
+ *    cuantas cuentas reales hay hoy), asi que la fila tendria que insertarse en una posicion que
+ *    cambia con los datos. La razon (a) se cae con el pedido de Franco (el color solo no alcanza
+ *    HOY); la razon (b) sigue siendo cierta pero deja de ser un obstaculo: el derrame de UNA sola
+ *    formula (`MAP` sobre `idx_fila`, decision #1) puede perfectamente insertar una fila mas en
+ *    una posicion calculada (`fila_separador; cant_real_mostradas + 1`) exactamente como ya
+ *    inserta la fila de aviso en una posicion calculada (decision #11). No hace falta "saltear"
+ *    nada: es una fila de datos mas del mismo MAP, con su propia rama del IF.
+ *
+ *    El rotulo (`TFP_ROTULO_SEPARADOR`, "Faltante proyectado" -- el MISMO texto que ya vive en
+ *    R8/U8/X8, arriba del bloque, reforzando el significado en vez de inventar un texto nuevo) va
+ *    en la columna Cuenta; la columna Monto de esa fila queda vacia ("", ni numero ni TEXT()): no
+ *    hay nada que sumar en la fila que solo separa. Solo aparece si HAY algo que separar
+ *    (`hay_separador; cant_faltante_mostradas > 0`): si un bloque no tiene NINGUNA cuenta con
+ *    faltante este mes, no hay seccion 2 y tampoco fila separadora que la anuncie -- el bloque
+ *    queda igual que antes de este modulo.
+ *
+ *    LA SENAL DEL GRIS pasa a ser POSICIONAL en vez de por tipo de dato: `=COUNTIF($R$9:R9;
+ *    "Faltante proyectado")>0` (R9 es un ejemplo del bloque Ingresos: la fila INMEDIATAMENTE
+ *    ARRIBA de la primera fila de datos, ver `_formulaReglaGrisTfp`) aplicada sobre R10:R29 con
+ *    referencia de fila relativa: Sheets la reescribe por cada celda de ese rango, asi que en la
+ *    fila N pregunta "¿aparecio el rotulo del separador en algun renglon entre el header (fila 9)
+ *    y la fila N-1?" -- un rango EXPANSIVO anclado arriba (la idea original de Franco: "un
+ *    COUNTIF de rango expansivo anclado arriba... marca todo lo posterior"), con el ancla UNA
+ *    FILA POR ENCIMA de filaDatos a proposito: asi la propia fila separadora NUNCA se cuenta a si
+ *    misma (en su fila, el rango expansivo termina en la fila anterior, todavia sin el rotulo) y
+ *    queda con tratamiento normal (oscuro), mientras que TODA fila estrictamente debajo de ella
+ *    si lo encuentra y se pinta gris -- incluida la cuenta sin ningun movimiento real (aparece
+ *    una sola vez, pero esa unica vez esta SIEMPRE debajo del separador: la senal no depende de
+ *    cuantas veces aparece el nombre, solo de la POSICION). Verificado con el mismo simulador
+ *    fiel del algoritmo que uso v0.40.0 para descartar el COUNTIF de duplicados -- ver el banco.
  *
  * 9. UNA CUENTA PROYECTADA SIN NINGUN MOVIMIENTO REAL SIGUE APARECIENDO (sin cambios respecto de
  *    la version anterior, confirmado explicitamente para este layout): no tiene fila en la
@@ -146,31 +185,56 @@
  *    Es la razon de ser del modulo -- sacarla reintroduciria la invisibilidad original que el
  *    "Faltante proyectado" vino a resolver.
  *
- * 10. LA CAPACIDAD SE RELAJA SOLA: ya no son "10 pares cuenta/faltante" fijos. Las 21 filas del
- *    bloque (10 a 30) siguen siendo UN SOLO NUMERO (TFP_FILA_FIN), pero ahora se reparten como
- *    veinte filas de DATOS (10 a 29, `_capacidadFilasTfp`) mas la fila 30 reservada al aviso de
- *    truncado -- y esas veinte filas ya NO se gastan de a pares fijos: una cuenta que ya cubrio
- *    lo proyectado (faltante = 0) ocupa UNA sola fila (solo en la seccion 1), no dos. El PEOR
- *    CASO (el numero que hay que poder garantizar sin truncar) sigue siendo el de antes -- diez
- *    cuentas, cada una con faltante pendiente, ocupando sus dos filas -- por eso
- *    `_capacidadPeorCasoTfp` sigue dando 10 y es el numero que estado() reporta como piso
- *    garantizado. En la practica entran mas: cualquier cuenta ya cubierta libera una fila para
- *    otra.
+ * 10. LA CAPACIDAD SE RELAJA SOLA, PERO LA FILA SEPARADORA SE COBRA UNA (v0.41.0, cuenta
+ *    rehecha). Las 21 filas del bloque (10 a 30) siguen siendo UN SOLO NUMERO (TFP_FILA_FIN),
+ *    repartidas como veinte filas de DATOS (10 a 29, `_capacidadFilasTfp`, SIN CAMBIOS: sigue
+ *    siendo un numero estructural, 20) mas la fila 30 reservada al aviso de truncado. Dentro de
+ *    esas veinte, una cuenta ya cubierta (faltante = 0) sigue ocupando UNA sola fila -- eso no
+ *    cambia --, pero AHORA, si hay al menos una cuenta con faltante > 0 (osea, si va a existir
+ *    una seccion 2), una de las veinte filas la consume la fila separadora misma
+ *    (`capacidad_datos; IF(cant_faltante > 0; 19; 20)` dentro de la formula, ver
+ *    `_formulaCuentasTfp`). El PEOR CASO (el numero que hay que poder garantizar sin truncar) SI
+ *    cambia: si TODAS las cuentas necesitaran sus dos filas (real y faltante pendiente) mas la
+ *    fila separadora que ese escenario necesariamente dispara, el numero que entra completo baja
+ *    de diez a **nueve** -- `_capacidadPeorCasoTfp` pasa a ser `floor((capacidadFilas - 1) / 2)`
+ *    (19 filas utiles para pares, no 20) en vez de `floor(capacidadFilas / 2)`. Nueve cuentas x 2
+ *    filas = 18, mas 1 separador = 19, con una fila de margen sobre las 20 disponibles; una
+ *    decima cuenta en ese escenario ya no entra sin truncar. En la practica sigue entrando mas
+ *    que el peor caso: cualquier cuenta ya cubierta libera una fila para otra, igual que antes.
  *
  * 11. TRUNCADO A LA VISTA, NUNCA SE ABORTA (sin cambios de principio respecto de la version
  *    anterior, adaptado al nuevo conteo por filas en vez de por pares): si el total de filas que
- *    hacen falta (cuentas reales + cuentas con faltante > 0) supera las veinte disponibles, se
- *    muestran las `capacidadFilas` mas importantes (seccion 1 completa primero, siempre que
- *    quepa; el resto para la seccion 2, ordenada de mayor a menor faltante) y la fila 30 avisa
- *    "y N cuenta(s) mas" con la plata que representan, calculada como el total completo menos lo
- *    ya mostrado -- igual que en la version anterior, sin refiltrar.
+ *    hacen falta (cuentas reales + cuentas con faltante > 0 + la fila separadora si corresponde)
+ *    supera las veinte disponibles, se muestran las mas importantes (seccion 1 completa primero,
+ *    siempre que quepa; el resto para la seccion 2, ordenada de mayor a menor faltante) y la fila
+ *    30 avisa "y N cuenta(s) mas" con la plata que representan, calculada como el total completo
+ *    menos lo ya mostrado -- igual que en la version anterior, sin refiltrar. El conteo de
+ *    "nombres distintos" que usa `_verificarInvariantesTfp` para chequear que ninguna cuenta real
+ *    se perdio EXCLUYE el rotulo de la fila separadora (no es una cuenta, no debe contar como
+ *    una): ver `_contarNombresDistintosYaCalculadoTfp`.
+ *
+ * 12. LOS TOTALES DE FALTANTE (S8/V8/Y8) HEREDAN EL FORMATO DE NUMERO DE SU HERMANO REAL
+ *    (S7/V7/Y7), COPIADO EN VIVO. Bug reportado por Franco: S8/V8/Y8 salian sin formato de
+ *    moneda (`1242057,19` al lado de `$1.138.583,00`) porque nunca se les seteo un
+ *    `setNumberFormat` -- quedaban con el formato general por default de una celda nueva. La
+ *    correccion NO inventa un patron (esa es justo la trampa ya medida en este repo: los
+ *    patrones van con punto decimal canonico si se ESCRIBEN a mano, pero un patron ESCRITO a
+ *    mano es exactamente lo que hay que evitar aca): se LEE `hoja.getRange(b.totalReal
+ *    ).getNumberFormat()` en el preflight y se copia tal cual, sin transformarlo, a
+ *    `hoja.getRange(b.totalFaltante).setNumberFormat(...)` en la escritura -- el hermano real ya
+ *    tiene el patron correcto porque Franco lo formateo el mismo, mucho antes de que este modulo
+ *    existiera. El formato previo de S8/V8/Y8 se respalda celda por celda (no lo cubre
+ *    `_respaldarFormulerio`, que solo fotografia formulas) para que
+ *    `revertirTableroFaltanteProyectado` lo pueda devolver exacto.
  *
  * QUE NO HACE
  * 1. NO cambia el titulo de los bloques (R7/U7/X7) ni la geometria del Plan de Cuentas.
  * 2. NO toca "Categorias" ni ningun otro bloque del Tablero.
  * 3. NO agranda el bloque mas alla de R10:S30 / U10:V30 / X10:Y30: si no entra todo, TRUNCA a
  *    las cuentas de mayor monto y lo dice en la ultima fila del bloque.
- * 4. NO fuerza la alineacion de la columna Monto (decision #7): queda como ajuste manual.
+ * 4. NO le da a la fila separadora ningun formato condicional propio (ni gris, ni cursiva): su
+ *    tratamiento visual es el default (oscuro, igual que la seccion 1) -- es la senal del gris de
+ *    LAS DEMAS filas (decision #8) la que la deja afuera, no una regla que la persiga a ella.
  *
  * Contrato de las tres publicas: { ok: boolean, detalle?: string, error?: string }.
  *   estadoTableroFaltanteProyectado()    -> solo lectura. Se corre PRIMERO.
@@ -183,9 +247,9 @@
  * (DEVTOOL_Proyeccion).
  *
  * @see docs/permanente/FORMULAS_TABLERO.md
- * @version 0.40.0
+ * @version 0.41.0
  * @since 2026-08-21
- * @lastModified 2026-08-21
+ * @lastModified 2026-08-24
  */
 
 // ============================================
