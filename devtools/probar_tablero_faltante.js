@@ -77,8 +77,23 @@
  *    con una extension del simulador de la seccion 5: la seccion real se marca, la fila
  *    separadora y la seccion de faltante no.
  *
+ * 12. LA CURSIVA UNIFORME EN LOS TRES BLOQUES (decision #15, v0.42.1). v0.42.0 se desplego bien,
+ *    pero Ingresos quedo con la fila separadora y las filas de faltante en cursiva y Fijos/
+ *    Variables no -- medido (no supuesto) con un diagnostico de solo lectura: formato ESTATICO
+ *    pegado a R14:S18 de Ingresos, no una regla de formato condicional. Dos partes, dos coberturas:
+ *    (a) _construirReglaGrisTfp ahora TAMBIEN pide setItalic(true) -- probado por mutacion como ya
+ *        se prueba el aviso (seccion 6) y la negrita (seccion 5b): pide italic y la MISMA tinta.
+ *        Y la mutacion que de verdad importa: _reglasHacenFaltaTfp ahora compara TAMBIEN estilo
+ *        (bold/italic/color), no solo formula+rango -- sin esto, una regla viva de v0.42.0 (misma
+ *        formula, mismo rango, SIN italic) pasaba como "ya esta correcta" y aplicar() nunca la
+ *        iba a reescribir en un segundo "Aplicar" sobre la planilla real de Franco.
+ *    (b) El FontStyle ESTATICO se detecta (_hayCursivaEstaticaTfp) y se limpia (_limpiarCursivaEstaticaTfp)
+ *        de forma GENERICA sobre los tres bloques -- no hardcodeado a "Ingresos R14:S18": se prueba
+ *        que la deteccion escala a mas de un bloque a la vez (mutacion pedida explicitamente:
+ *        aplicarlo a uno solo, en vez de a los tres, tiene que fallar la prueba).
+ *
  * USO:  node devtools/probar_tablero_faltante.js
- * @version 0.42.0
+ * @version 0.42.1
  * @since 2026-08-21
  */
 const fs = require('fs'), vm = require('vm'), path = require('path');
@@ -707,6 +722,94 @@ console.log('\n=== 5b. La negrita de la seccion real (decision #14, v0.42.0): co
     ok(pidioItalicNegrita === 'sin-llamar', 'MUTACION -- la regla de negrita NO toca setItalic (no pisa una cursiva ajena)');
 }
 
+console.log('\n=== 5c. La cursiva de la regla gris (decision #15, v0.42.1): misma regla, ahora tambien italic ===');
+{
+    // _construirReglaGrisTfp: mismo patron de mutacion que ya prueban la seccion 6 (aviso) y la
+    // seccion 5b (negrita) -- mockear el builder y verificar que metodo se llamo con que valor.
+    let pidioColorGris = 'sin-llamar', pidioItalicGris = 'sin-llamar';
+    const hojaFalsaGris = { getRange: () => ({}) };
+    ctx.SpreadsheetApp.newConditionalFormatRule = () => {
+        const b2 = {
+            whenFormulaSatisfied: () => b2,
+            setFontColor: c => { pidioColorGris = c; return b2; },
+            setItalic: v => { pidioItalicGris = v; return b2; },
+            setRanges: () => b2, build: () => ({})
+        };
+        return b2;
+    };
+    ctx._construirReglaGrisTfp(hojaFalsaGris, { formula: '=TRUE', celda: 'A1:A1' });
+    ok(pidioItalicGris === true, 'MUTACION -- desde v0.42.1 la regla gris TAMBIEN pide setItalic(true)');
+    ok(pidioColorGris === ctx.TFP_COLOR_GRIS, 'la regla gris sigue pidiendo la misma tinta de siempre');
+
+    // _reglasGrisTfp()/_reglasAvisoTfp()/_reglasNegritaTfp() declaran el estilo que sus builders
+    // van a aplicar -- _reglasHacenFaltaTfp lo usa para decidir si una regla viva ya esta al dia.
+    ctx.TFP_ORDEN.forEach(clave => {
+        const gris = ctx._reglasGrisTfp().find(r => r.clave === clave);
+        ok(gris.bold === false && gris.italic === true && gris.color === ctx.TFP_COLOR_GRIS,
+           clave + ': el item de gris declara bold=false, italic=true, color=' + ctx.TFP_COLOR_GRIS);
+        const aviso = ctx._reglasAvisoTfp().find(r => r.clave === clave);
+        ok(aviso.bold === false && aviso.italic === true && aviso.color === ctx.TFP_COLOR_GRIS,
+           clave + ': el item de aviso declara el mismo estilo que el gris (sin cambios)');
+        const negrita = ctx._reglasNegritaTfp().find(r => r.clave === clave);
+        ok(negrita.bold === true && negrita.italic === false && !negrita.color,
+           clave + ': el item de negrita declara bold=true, italic=false, sin color (sin cambios)');
+    });
+
+    // _hexDeColorTfp: mismo contrato que _hexDeColorIp -- null sin color, hex normalizado con
+    // color, y null (no una excepcion) si asRgbColor() lanza (color de TEMA).
+    ok(ctx._hexDeColorTfp(null) === null, '_hexDeColorTfp(null) -> null (nunca se seteo color)');
+    ok(ctx._hexDeColorTfp({ asRgbColor: () => ({ asHexString: () => '#757575' }) }) === '#757575',
+       '_hexDeColorTfp con un color RGB devuelve el hex tal cual');
+    ok(ctx._hexDeColorTfp({ asRgbColor: () => ({ asHexString: () => '#FF757575' }) }) === '#757575',
+       '_hexDeColorTfp normaliza a minusculas y descarta el canal alfa (9 caracteres -> 7)');
+    ok(ctx._hexDeColorTfp({ asRgbColor: () => { throw new Error('color de tema'); } }) === null,
+       'MUTACION -- un color que no se puede convertir a RGB (tema) da null, no revienta');
+
+    // LA MUTACION QUE IMPORTA: una regla viva con la formula+rango EXACTOS de v0.42.1 pero el
+    // ESTILO VIEJO de v0.42.0 (gris SIN italic) es exactamente el estado real de la planilla de
+    // Franco hoy. Sin la correccion de _reglasHacenFaltaTfp, esto daria "ya esta correcta".
+    function reglaConEstilo(item, estiloReal) {
+        return {
+            getBooleanCondition: () => ({
+                getCriteriaType: () => 'CUSTOM_FORMULA',
+                getCriteriaValues: () => [item.formula],
+                getBold: () => !!estiloReal.bold,
+                getItalic: () => !!estiloReal.italic,
+                getFontColorObject: () => estiloReal.color ? { asRgbColor: () => ({ asHexString: () => estiloReal.color }) } : null
+            }),
+            getRanges: () => [{ getA1Notation: () => item.celda }]
+        };
+    }
+    const nueve = ctx._reglasGrisTfp().concat(ctx._reglasAvisoTfp()).concat(ctx._reglasNegritaTfp());
+
+    // Nueve reglas vivas con formula+rango correctos, pero el gris SIN italic (el estilo v0.42.0).
+    const vivasEstiloViejo = nueve.map(item => {
+        if (item.tipo === 'gris') return reglaConEstilo(item, { bold: false, italic: false, color: ctx.TFP_COLOR_GRIS });
+        return reglaConEstilo(item, { bold: item.bold, italic: item.italic, color: item.color });
+    });
+    const clasesEstiloViejo = ctx._clasificarReglasTfp(vivasEstiloViejo);
+    ok(clasesEstiloViejo.propias.length === 9,
+       'las nueve siguen siendo PROPIAS por identidad (formula+rango): _esReglaPropiaTfp no mira estilo');
+    ok(ctx._reglasHacenFaltaTfp(clasesEstiloViejo) === true,
+       'MUTACION (el bug que esto corrige) -- CON formula+rango correctos pero la gris SIN italic, ' +
+       '_reglasHacenFaltaTfp dice que SI hace falta reescribir: antes de v0.42.1 esto daba false y ' +
+       'aplicar() nunca iba a corregir la cursiva en la planilla real');
+
+    // Sanidad inversa: las nueve con el estilo NUEVO completo -> nada que reescribir.
+    const clasesEstiloNuevo = ctx._clasificarReglasTfp(nueve.map(item => reglaConEstilo(item, item)));
+    ok(ctx._reglasHacenFaltaTfp(clasesEstiloNuevo) === false,
+       'con las nueve en su estilo v0.42.1 completo, _reglasHacenFaltaTfp dice que ya esta todo correcto');
+
+    // Y el color tambien dispara la reescritura si difiere (no solo bold/italic): un gris con el
+    // color equivocado (ej. quedo de una version que uso otra tinta) tiene que detectarse igual.
+    const vivasColorEquivocado = nueve.map(item => {
+        if (item.tipo === 'gris') return reglaConEstilo(item, { bold: false, italic: true, color: '#000000' });
+        return reglaConEstilo(item, item);
+    });
+    ok(ctx._reglasHacenFaltaTfp(ctx._clasificarReglasTfp(vivasColorEquivocado)) === true,
+       'MUTACION -- formula+rango+italic correctos pero el COLOR equivocado tambien dispara la reescritura');
+}
+
 console.log('\n=== 6. El aviso de truncado: formula absoluta, rango de UNA fila, cursiva ===');
 {
     ctx.TFP_ORDEN.forEach(clave => {
@@ -787,18 +890,25 @@ console.log('\n=== 6b. Clasificacion propia/ajena: gris + aviso, y las mutacione
 // ============================================================================
 // 7. PREFLIGHT / PLAN sobre una hoja simulada
 // ============================================================================
-function celda(valor, formula, numberFormat) {
+/** Letra(s) de columna -> indice 1-based, y de vuelta. Solo hace falta para R:S/U:V/X:Y. */
+function _colIdxMock(letra) { let n = 0; for (const c of letra) n = n * 26 + (c.charCodeAt(0) - 64); return n; }
+function _colLetraMock(n) { let s = ''; while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); } return s; }
+
+function celda(valor, formula, numberFormat, fontStyle) {
     return {
         _valor: valor === undefined ? '' : valor,
         _formula: formula || '',
         _numberFormat: numberFormat || '#,##0.00',
+        _fontStyle: fontStyle || 'normal',
         getValue() { return this._valor; },
         getFormula() { return this._formula; },
         getDisplayValue() { return String(this._valor); },
         getNumberFormat() { return this._numberFormat; },
         setNumberFormat(p) { this._numberFormat = p; this._formatoEscrito = p; return this; },
         setFormula(f) { this._formula = f; return this; },
-        setValue(v) { this._valor = v; return this; }
+        setValue(v) { this._valor = v; return this; },
+        getFontStyle() { return this._fontStyle; },
+        setFontStyle(v) { this._fontStyle = v; return this; }
     };
 }
 
@@ -859,20 +969,82 @@ function hojaTableroSimulada(opts) {
     celdas['N3'] = celda(2026);
     celdas['N4'] = celda('ARS');
 
+    // FontStyle ESTATICO pegado a mano a celdas puntuales (decision #15, v0.42.1): la seccion 7g
+    // lo usa para reproducir el caso medido de Franco (Ingresos R14:S18 en cursiva estatica).
+    (opts.cursivaEstaticaCeldas || []).forEach(ref => {
+        if (!celdas[ref]) celdas[ref] = celda('');
+        celdas[ref]._fontStyle = 'italic';
+    });
+
     const reglasVivas = opts.reglasVivas || [];
     return {
         getRange(a1) {
             const rango = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(a1);
-            if (rango && rango[1] === rango[3]) {
-                const col = rango[1], desde = Number(rango[2]), hasta = Number(rango[4]);
+            if (rango) {
+                const colDesde = _colIdxMock(rango[1]), colHasta = _colIdxMock(rango[3]);
+                const filaDesde = Number(rango[2]), filaHasta = Number(rango[4]);
+                if (colDesde === colHasta) {
+                    // Camino existente: rango de UNA sola columna, multiples filas -- sin cambios,
+                    // los tests ya escritos esperan exactamente esta forma (getValues()).
+                    const col = rango[1];
+                    return {
+                        getValues() {
+                            const filas = [];
+                            for (let f = filaDesde; f <= filaHasta; f++) {
+                                if (!celdas[col + f]) celdas[col + f] = celda('');
+                                filas.push([celdas[col + f].getValue()]);
+                            }
+                            return filas;
+                        },
+                        getFontStyles() {
+                            const filas = [];
+                            for (let f = filaDesde; f <= filaHasta; f++) {
+                                if (!celdas[col + f]) celdas[col + f] = celda('');
+                                filas.push([celdas[col + f]._fontStyle]);
+                            }
+                            return filas;
+                        }
+                    };
+                }
+                // Rango RECTANGULAR de DOS (o mas) columnas -- lo que usa _rangoDatosTfp, tanto
+                // para la negrita (ya existia, nunca leia FontStyle) como ahora para la cursiva
+                // estatica (decision #15): getFontStyles() para medir, setFontStyle/setFontStyles
+                // para limpiar y para revertir.
                 return {
-                    getValues() {
+                    getFontStyles() {
                         const filas = [];
-                        for (let f = desde; f <= hasta; f++) {
-                            if (!celdas[col + f]) celdas[col + f] = celda('');
-                            filas.push([celdas[col + f].getValue()]);
+                        for (let f = filaDesde; f <= filaHasta; f++) {
+                            const cols = [];
+                            for (let c = colDesde; c <= colHasta; c++) {
+                                const ref = _colLetraMock(c) + f;
+                                if (!celdas[ref]) celdas[ref] = celda('');
+                                cols.push(celdas[ref]._fontStyle);
+                            }
+                            filas.push(cols);
                         }
                         return filas;
+                    },
+                    setFontStyle(v) {
+                        for (let f = filaDesde; f <= filaHasta; f++) {
+                            for (let c = colDesde; c <= colHasta; c++) {
+                                const ref = _colLetraMock(c) + f;
+                                if (!celdas[ref]) celdas[ref] = celda('');
+                                celdas[ref]._fontStyle = v;
+                            }
+                        }
+                        return this;
+                    },
+                    setFontStyles(matriz) {
+                        let i = 0;
+                        for (let f = filaDesde; f <= filaHasta; f++, i++) {
+                            let j = 0;
+                            for (let c = colDesde; c <= colHasta; c++, j++) {
+                                const ref = _colLetraMock(c) + f;
+                                if (!celdas[ref]) celdas[ref] = celda('');
+                                celdas[ref]._fontStyle = matriz[i][j];
+                            }
+                        }
+                        return this;
                     }
                 };
             }
@@ -945,11 +1117,19 @@ console.log('\n=== 7c. En el borde de la capacidad de filas: preflight NO aborta
 
 console.log('\n=== 7d. Ya aplicado en los tres bloques (v0.42.0): nada que hacer (con las NUEVE reglas propias) ===');
 {
+    // El mock del color imita _hexDeColorTfp: asRgbColor().asHexString() si item.color viene
+    // seteado, o null (nunca se llamo setFontColor -- el caso de la negrita).
+    function colorFalso(hex) {
+        return hex ? { asRgbColor: () => ({ asHexString: () => hex }) } : null;
+    }
     function reglaViva(item) {
         return {
             getBooleanCondition: () => ({
                 getCriteriaType: () => 'CUSTOM_FORMULA',
-                getCriteriaValues: () => [item.formula]
+                getCriteriaValues: () => [item.formula],
+                getBold: () => !!item.bold,
+                getItalic: () => !!item.italic,
+                getFontColorObject: () => colorFalso(item.color)
             }),
             getRanges: () => [{ getA1Notation: () => item.celda }]
         };
@@ -1001,6 +1181,75 @@ console.log('\n=== 7f. Sin la hoja Proyeccion: aborta con mensaje accionable ===
     catch (e) { lanzo = true; msg = e.message; }
     ok(lanzo, 'sin "Proyeccion" el preflight aborta');
     ok(msg.indexOf('BD de Proyeccion') !== -1, 'dice que hay que correr BD de Proyeccion primero');
+}
+
+console.log('\n=== 7g. FontStyle estatico pegado a una fila fija (decision #15): deteccion y limpieza ===');
+{
+    // Baseline: ningun bloque tiene FontStyle 'italic' en su rango de datos -> nada que limpiar.
+    const hojaSana = hojaTableroSimulada({});
+    const preSana = ctx._preflightTfp(ssSimulada(hojaSana));
+    ctx.TFP_ORDEN.forEach(clave => {
+        ok(preSana.bloques[clave].hayCursivaEstatica === false, clave + ': sin cursiva estatica, preflight lo mide en false');
+        ok(preSana.bloques[clave].rangoDatos === ctx._rangoDatosTfp(ctx.TFP_BLOQUES[clave]),
+           clave + ': rangoDatos del bloque coincide con _rangoDatosTfp');
+    });
+    ok(ctx._planTfp(preSana).cursivaEstatica.length === 0, 'plan.cursivaEstatica vacio cuando nadie lo tiene');
+
+    // EL CASO MEDIDO DE FRANCO: Ingresos con R14:S18 en cursiva estatica (fila separadora + 4
+    // filas de faltante), Fijos y Variables limpios.
+    const celdasItalicasIngresos = ['R14', 'S14', 'R15', 'S15', 'R16', 'S16', 'R17', 'S17', 'R18', 'S18'];
+    const hojaMedida = hojaTableroSimulada({ cursivaEstaticaCeldas: celdasItalicasIngresos });
+    const preMedida = ctx._preflightTfp(ssSimulada(hojaMedida));
+    ok(preMedida.bloques.ingresos.hayCursivaEstatica === true, 'Ingresos: SI tiene cursiva estatica (R14:S18)');
+    ok(preMedida.bloques.fijos.hayCursivaEstatica === false, 'Fijos: NO tiene (reproduce lo medido: cero celdas)');
+    ok(preMedida.bloques.variables.hayCursivaEstatica === false, 'Variables: NO tiene (reproduce lo medido: cero celdas)');
+
+    const planMedida = ctx._planTfp(preMedida);
+    ok(planMedida.cursivaEstatica.length === 1, 'MUTACION -- el plan agrega UN SOLO item (solo Ingresos lo necesita). Dio ' + planMedida.cursivaEstatica.length);
+    ok(planMedida.cursivaEstatica[0].bloque === 'ingresos' && planMedida.cursivaEstatica[0].rango === 'R10:S29',
+       'el item trae el bloque y el rango de datos completo (no solo R14:S18): se limpia el rango entero, generico');
+
+    // MUTACION QUE IMPORTA (pedida explicitamente): la deteccion/limpieza NO esta hardcodeada a
+    // Ingresos -- si DOS bloques tuvieran cursiva estatica, el plan tiene que agregar DOS items,
+    // uno por cada uno, con el MISMO mecanismo (no una rama especial "si es Ingresos").
+    const hojaDosBloques = hojaTableroSimulada({
+        cursivaEstaticaCeldas: celdasItalicasIngresos.concat(['U20', 'V20'])
+    });
+    const preDosBloques = ctx._preflightTfp(ssSimulada(hojaDosBloques));
+    const planDosBloques = ctx._planTfp(preDosBloques);
+    ok(preDosBloques.bloques.fijos.hayCursivaEstatica === true, 'con italic en U20 (dentro de U10:V29), Fijos TAMBIEN lo detecta');
+    ok(planDosBloques.cursivaEstatica.length === 2,
+       'MUTACION -- CON DOS bloques afectados, el plan trae DOS items (no se queda pegado al primero). Dio ' +
+       planDosBloques.cursivaEstatica.length);
+    const bloquesEnPlan = planDosBloques.cursivaEstatica.map(c => c.bloque).sort();
+    ok(JSON.stringify(bloquesEnPlan) === JSON.stringify(['fijos', 'ingresos']), 'y son EXACTAMENTE ingresos + fijos. Dio: ' + bloquesEnPlan.join(','));
+    ok(preDosBloques.bloques.variables.hayCursivaEstatica === false, 'Variables sigue limpio: no se contamina por los otros dos');
+
+    // _limpiarCursivaEstaticaTfp: limpia TODO el rango de datos de un bloque de una sola vez, y
+    // solo el FontStyle -- valor y numberFormat de esas mismas celdas quedan intactos.
+    const valorPrevioR15 = hojaMedida._celdas['R15'].getValue();
+    const formatoPrevioS15 = hojaMedida._celdas['S15'].getNumberFormat();
+    ctx._limpiarCursivaEstaticaTfp(hojaMedida, planMedida.cursivaEstatica[0].rango);
+    ok(ctx._hayCursivaEstaticaTfp(hojaMedida, ctx.TFP_BLOQUES.ingresos) === false,
+       'MUTACION -- despues de _limpiarCursivaEstaticaTfp, Ingresos ya NO tiene ninguna celda en cursiva');
+    ok(hojaMedida._celdas['R15'].getValue() === valorPrevioR15 && hojaMedida._celdas['S15'].getNumberFormat() === formatoPrevioS15,
+       'la limpieza NO toco valor ni numberFormat de las celdas -- solo el FontStyle (Franco: no pisar nada mas)');
+
+    // Idempotencia: preflight/plan sobre la MISMA hoja, ya limpia, no vuelve a proponer nada.
+    const preLimpia = ctx._preflightTfp(ssSimulada(hojaMedida));
+    ok(preLimpia.bloques.ingresos.hayCursivaEstatica === false, 'reflight sobre la hoja ya limpia: hayCursivaEstatica en false');
+    ok(ctx._planTfp(preLimpia).cursivaEstatica.length === 0, 'y el plan ya no propone limpiar nada (idempotente)');
+
+    // El respaldo/reversion de aplicar() se apoya en getFontStyles()/setFontStyles() sobre el
+    // MISMO rango rectangular -- round-trip exacto: capturar, limpiar, reponer.
+    const hojaRoundTrip = hojaTableroSimulada({ cursivaEstaticaCeldas: celdasItalicasIngresos });
+    const rangoIngresos = ctx._rangoDatosTfp(ctx.TFP_BLOQUES.ingresos);
+    const matrizPrevia = hojaRoundTrip.getRange(rangoIngresos).getFontStyles();
+    ctx._limpiarCursivaEstaticaTfp(hojaRoundTrip, rangoIngresos);
+    ok(ctx._hayCursivaEstaticaTfp(hojaRoundTrip, ctx.TFP_BLOQUES.ingresos) === false, 'round-trip: limpio antes de reponer');
+    hojaRoundTrip.getRange(rangoIngresos).setFontStyles(matrizPrevia);
+    ok(ctx._hayCursivaEstaticaTfp(hojaRoundTrip, ctx.TFP_BLOQUES.ingresos) === true,
+       'MUTACION -- setFontStyles(matrizPrevia) repone la cursiva estatica EXACTA que habia (revertir queda fiel)');
 }
 
 // ============================================================================

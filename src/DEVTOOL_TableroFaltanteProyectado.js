@@ -296,6 +296,65 @@
  *    la seccion real se marca en negrita, la fila separadora NO, la seccion de faltante NO, y
  *    quitarle la negrita a una fila real hace fallar la prueba.
  *
+ * 15. [NUEVA v0.42.1] LA CURSIVA DE LA SECCION DE FALTANTE PASA A SER DE ESTE MODULO, IGUAL EN
+ *    LOS TRES BLOQUES -- YA NO FORMATO PEGADO A LA FILA. v0.42.0 se desplego bien (la negrita de
+ *    la seccion real quedo aplicada), pero Franco reporto que los tres bloques NO quedaron
+ *    iguales: en Ingresos, la fila separadora y las filas de faltante se ven en CURSIVA; en
+ *    Gastos Fijos y Variables, no. Como los tres bloques los escribe el MISMO codigo en la MISMA
+ *    corrida, la diferencia no podia venir de ninguna regla de este modulo -- se midio con un
+ *    diagnostico de solo lectura (DEVTOOL_DIAG_CursivaFaltante.js, ya retirado) antes de tocar
+ *    nada, en vez de asumir.
+ *    LO MEDIDO (hoja "DIAG_CursivaFaltante_TEMP", columna FontStyle estatico): en Ingresos,
+ *    SOLO R14:S18 tenian FontStyle="italic" -- la fila separadora mas cuatro filas de faltante.
+ *    LA FILA 19 (tambien de faltante, "Intereses bancos") NO estaba en cursiva: la prueba de que
+ *    el formato estaba pegado a un RANGO DE FILAS FIJO (R14:S18), no al CONTENIDO de la fila --
+ *    exactamente la misma trampa que este modulo ya documenta para el gris (ver decision #8: "una
+ *    pintura estatica quedaria pegada a la FILA"), pero materializada del lado de Franco en vez
+ *    del lado del modulo. En Gastos Fijos y Variables, CERO celdas en cursiva: nunca se pinto ahi.
+ *    Ninguna regla de formato condicional huerfana aparecio en la medicion (se habia revisado
+ *    antes, por las dudas, el historial de git de las seis versiones de este modulo: ninguna
+ *    version de `_construirReglaGrisTfp` llamo jamas `.setItalic(...)`, solo la de aviso), asi
+ *    que no hay nada que barrer del lado de reglas -- el origen es 100% formato estatico de Franco.
+ *    LA RESOLUCION, en dos partes:
+ *    (a) `_construirReglaGrisTfp` ahora tambien llama `.setItalic(true)` -- la MISMA regla que ya
+ *        pintaba gris, aplicada igual en los tres bloques via `_reglasGrisTfp()` (TFP_ORDEN.map),
+ *        asi que la cursiva pasa a seguir al CONTENIDO (la seccion de faltante, via el mismo
+ *        COUNTIF posicional de la decision #8) y no a una fila fija.
+ *    (b) EL FONTSTYLE ESTATICO SE LIMPIA COMO PARTE DE `aplicar`, GENERICO EN LOS TRES BLOQUES,
+ *        NO HARDCODEADO A "Ingresos R14:S18". El preflight lee (solo lectura, sin evaluar ninguna
+ *        formula) el FontStyle estatico de `_rangoDatosTfp(b)` -- la MISMA geometria de dos
+ *        columnas que ya usa la negrita, filaDatos a filaFin-1 -- de LOS TRES bloques por igual;
+ *        si algun bloque tiene aunque sea una celda en 'italic', el plan agrega un item aparte
+ *        (`plan.cursivaEstatica`, fuera de `plan.cambios`: no es contenido, es una propiedad de
+ *        formato en un rango de multiples celdas, no encaja en el respaldo celda-a-celda que ya
+ *        usan formula/valor). `aplicar` respalda el FontStyle vivo completo (`getFontStyles()`)
+ *        de cada bloque afectado ANTES de limpiarlo (`setFontStyle('normal')`), y `revertir` lo
+ *        repone exacto (`setFontStyles(matriz)`). SOLO se toca el FontStyle: el color de fuente y
+ *        la negrita estatica que hubiera (Franco: no pisar nada mas) quedan intactos -- el mismo
+ *        principio de "no pisar formato existente" que ya rige la negrita (decision #14). Es
+ *        GENERICO a proposito (no "limpiar Ingresos"): si algun dia OTRO bloque quedara con
+ *        cursiva estatica pegada a una fila, la misma corrida de `aplicar` la detecta y la limpia
+ *        sin que haga falta tocar este modulo de nuevo -- Franco: "que los tres bloques reciban
+ *        el mismo tratamiento".
+ *    UN AJUSTE MAS, IMPRESCINDIBLE PARA QUE (a) FUNCIONE EN UN SEGUNDO "Aplicar": `_reglasHacenFaltaTfp`
+ *    comparaba SOLO formula+rango para decidir si las nueve reglas ya estaban correctas. La regla
+ *    gris de v0.42.0, ya vigente en la planilla de Franco, tiene la MISMA formula y el MISMO
+ *    rango que la de v0.42.1 (solo cambia el estilo) -- `_esReglaPropiaTfp` la reconoce como
+ *    propia igual (correcto: formula+rango es su unico criterio de identidad, y debe seguir
+ *    siendolo para no duplicar reglas), pero comparar solo por identidad hacia que "ya esta
+ *    correcta" diera VERDADERO con un estilo VIEJO -- `aplicar` nunca la iba a reescribir. Ahora
+ *    `_reglasHacenFaltaTfp` compara tambien bold/italic/color (via `_hexDeColorTfp`, mismo patron
+ *    que `_hexDeColorIp` de DEVTOOL_InicioPresupuesto.js: `asRgbColor()` con try/catch, sin
+ *    depender de `SpreadsheetApp.ColorType`); mismo diagnostico y misma solucion que ya paso en
+ *    ese modulo ("una regla propia con la formula correcta pero el color viejo tiene que
+ *    reescribirse", `_reglasHacenFaltaIp`). Sin este ajuste, la cursiva de v0.42.1 quedaria
+ *    escrita en el codigo pero nunca aplicada en la planilla real de Franco.
+ *    Probado por mutacion en la seccion 5 del banco (extension del simulador de la regla gris) y
+ *    en la nueva seccion 12: quitar la cursiva de la regla gris hace fallar el mutante; aplicarla
+ *    a un solo bloque en vez de los tres tambien; una regla viva con formula+rango correctos pero
+ *    SIN italic dispara `_reglasHacenFaltaTfp`; el FontStyle estatico se detecta y limpia por
+ *    bloque, generico, y el backup/revert repone exacto.
+ *
  * QUE NO HACE
  * 1. NO cambia el titulo de los bloques (R7/U7/X7) ni la geometria del Plan de Cuentas.
  * 2. NO toca "Categorias" ni ningun otro bloque del Tablero.
@@ -304,7 +363,11 @@
  * 4. NO le da a la fila separadora ningun formato condicional propio (ni gris, ni cursiva, ni
  *    negrita desde v0.42.0): su tratamiento visual es el default (oscuro, sin negrita) -- tanto
  *    la senal del gris de LAS DEMAS filas (decision #8) como la guarda explicita de la regla de
- *    negrita (decision #14) la dejan afuera a proposito, no una regla que la persiga a ella.
+ *    negrita (decision #14) la dejan afuera a proposito, no una regla que la persiga a ella. La
+ *    limpieza de FontStyle estatico (decision #15) tambien la alcanza -- no tiene un tratamiento
+ *    especial, cae dentro del mismo rango de datos que se limpia entero -- asi que de paso corrige
+ *    la cursiva estatica que tenia pegada en Ingresos, consistente con que su tratamiento sea
+ *    siempre el default.
  *
  * Contrato de las tres publicas: { ok: boolean, detalle?: string, error?: string }.
  *   estadoTableroFaltanteProyectado()    -> solo lectura. Se corre PRIMERO.
@@ -317,7 +380,7 @@
  * (DEVTOOL_Proyeccion).
  *
  * @see docs/permanente/FORMULAS_TABLERO.md
- * @version 0.42.0
+ * @version 0.42.1
  * @since 2026-08-21
  * @lastModified 2026-08-24
  */
@@ -458,6 +521,30 @@ function _rangoAvisoTfp(b) {
  */
 function _rangoDatosTfp(b) {
     return b.colCuenta + b.filaDatos + ':' + b.colMonto + _filaFinDatosTfp(b);
+}
+
+/**
+ * true si ALGUNA celda del rango de datos de un bloque (_rangoDatosTfp: Cuenta:Monto, filaDatos a
+ * filaFin-1) tiene FontStyle ESTATICO 'italic' -- formato de celda, no lo que una regla de formato
+ * condicional pinta encima (decision #15, v0.42.1). Solo lectura, no evalua ninguna formula: se usa
+ * en el preflight para decidir si hace falta limpiarlo. Generico a proposito: se corre igual en los
+ * TRES bloques, no solo en Ingresos (el unico que hoy lo tiene medido) -- si algun dia OTRO bloque
+ * quedara con cursiva estatica pegada a una fila, esto lo detecta sin tocar el modulo de nuevo.
+ */
+function _hayCursivaEstaticaTfp(hoja, b) {
+    const estilos = hoja.getRange(_rangoDatosTfp(b)).getFontStyles();
+    return estilos.some(function (fila) { return fila.some(function (v) { return v === 'italic'; }); });
+}
+
+/**
+ * Limpia el FontStyle a 'normal' en TODO el rango de datos de un bloque -- de una sola vez, con
+ * `setFontStyle` (no celda por celda): las celdas que ya estaban en 'normal' quedan igual, las que
+ * tenian 'italic' estatico (formato pegado a una fila fija, ya no a la seccion que corresponde)
+ * pierden SOLO esa propiedad. NO toca color de fuente ni negrita estatica -- esas quedan intactas
+ * (decision #15: "no pisar formato existente" es el mismo principio que ya rige la negrita, #14).
+ */
+function _limpiarCursivaEstaticaTfp(hoja, rangoA1) {
+    hoja.getRange(rangoA1).setFontStyle('normal');
 }
 
 /** El catalogo de cuentas del Plan que corresponde a cada bloque (fuente del desplegable de Cargas). */
@@ -646,11 +733,19 @@ function _formulaReglaGrisTfp(b) {
         '; "' + TFP_ROTULO_SEPARADOR + '")>0';
 }
 
-/** Las tres reglas "de falta" que este modulo escribe, en el orden de TFP_ORDEN. */
+/**
+ * Las tres reglas "de falta" que este modulo escribe, en el orden de TFP_ORDEN. `bold`/`italic`/
+ * `color` describen el estilo que `_construirReglaGrisTfp` aplica -- los usa `_reglasHacenFaltaTfp`
+ * para saber si una regla viva, aunque tenga la MISMA formula+rango, quedo con un estilo VIEJO
+ * (decision #15, v0.42.1: la cursiva se agrego sin cambiar la formula ni el rango).
+ */
 function _reglasGrisTfp() {
     return TFP_ORDEN.map(function (k) {
         const b = TFP_BLOQUES[k];
-        return { clave: k, tipo: 'gris', celda: _rangoColTfp(b, b.colMonto), formula: _formulaReglaGrisTfp(b) };
+        return {
+            clave: k, tipo: 'gris', celda: _rangoColTfp(b, b.colMonto), formula: _formulaReglaGrisTfp(b),
+            bold: false, italic: true, color: TFP_COLOR_GRIS
+        };
     });
 }
 
@@ -669,7 +764,10 @@ function _formulaReglaAvisoTfp(b) {
 function _reglasAvisoTfp() {
     return TFP_ORDEN.map(function (k) {
         const b = TFP_BLOQUES[k];
-        return { clave: k, tipo: 'aviso', celda: _rangoAvisoTfp(b), formula: _formulaReglaAvisoTfp(b) };
+        return {
+            clave: k, tipo: 'aviso', celda: _rangoAvisoTfp(b), formula: _formulaReglaAvisoTfp(b),
+            bold: false, italic: true, color: TFP_COLOR_GRIS
+        };
     });
 }
 
@@ -717,7 +815,10 @@ function _formulaReglaNegritaTfp(b) {
 function _reglasNegritaTfp() {
     return TFP_ORDEN.map(function (k) {
         const b = TFP_BLOQUES[k];
-        return { clave: k, tipo: 'negrita', celda: _rangoDatosTfp(b), formula: _formulaReglaNegritaTfp(b) };
+        return {
+            clave: k, tipo: 'negrita', celda: _rangoDatosTfp(b), formula: _formulaReglaNegritaTfp(b),
+            bold: true, italic: false, color: null
+        };
     });
 }
 
@@ -744,22 +845,68 @@ function _clasificarReglasTfp(reglas) {
     return { propias: propias, ajenas: ajenas };
 }
 
-/** true si faltan, sobran o difieren las reglas propias respecto de las nueve esperadas. */
+/**
+ * El hex de un color de regla condicional, o null si nunca se seteo o es de TEMA (asRgbColor
+ * lanza; adivinarle un hex seria inventar un color que nadie eligio). Mismo patron que
+ * _hexDeColorIp de DEVTOOL_InicioPresupuesto.js -- deliberadamente NO usa
+ * `SpreadsheetApp.ColorType`: prueba `asRgbColor()` directo y atrapa el error, asi que no
+ * depende de ningun enum externo.
+ */
+function _hexDeColorTfp(color) {
+    if (!color) return null;
+    try {
+        const rgb = color.asRgbColor();
+        let h = String(rgb.asHexString() || '').toLowerCase();
+        if (h.length === 9) h = '#' + h.slice(3);
+        return h || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * true si faltan, sobran o difieren (formula, rango, O EL ESTILO que este modulo controla --
+ * bold/italic/color) las reglas propias respecto de las nueve esperadas.
+ *
+ * [CORRECCION v0.42.1, decision #15] Hasta v0.42.0 esto comparaba SOLO formula+rango. Eso alcanzaba
+ * mientras el estilo de cada regla nunca cambiaba entre versiones -- pero v0.42.1 le agrega
+ * setItalic(true) a la regla gris SIN tocar su formula ni su rango: una regla viva de v0.42.0 (gris,
+ * sin cursiva) calza formula+rango exacto con la nueva y _esReglaPropiaTfp la reconoce como propia
+ * (correcto: formula+rango es y debe seguir siendo su unico criterio de identidad, para no duplicar
+ * reglas), pero comparar solo por identidad hacia que esta funcion dijera "ya esta correcta" con un
+ * estilo VIEJO -- aplicar() nunca la iba a reescribir. Mismo diagnostico, mismo arreglo que ya paso
+ * en _reglasHacenFaltaIp de DEVTOOL_InicioPresupuesto.js ("una regla propia con la formula correcta
+ * pero el color viejo tiene que reescribirse").
+ */
 function _reglasHacenFaltaTfp(clases) {
     const quiero = _reglasPropiasTfp();
     if (clases.propias.length !== quiero.length) return true;
+    const firma = function (formula, celdaTxt, bold, italic, color) {
+        return formula + '|' + celdaTxt + '|' + !!bold + '|' + !!italic + '|' + (color || '');
+    };
     const vivas = clases.propias.map(function (r) {
         const cond = r.getBooleanCondition();
-        return String((cond.getCriteriaValues() || [])[0]) + '|' + r.getRanges()[0].getA1Notation();
+        const f = String((cond.getCriteriaValues() || [])[0]);
+        const rango = r.getRanges()[0].getA1Notation();
+        return firma(f, rango, cond.getBold(), cond.getItalic(), _hexDeColorTfp(cond.getFontColorObject()));
     });
-    return quiero.some(function (q) { return vivas.indexOf(q.formula + '|' + q.celda) === -1; });
+    return quiero.some(function (q) {
+        return vivas.indexOf(firma(q.formula, q.celda, q.bold, q.italic, q.color)) === -1;
+    });
 }
 
-/** La regla "de falta": misma tinta que siempre, sin cursiva -- el lenguaje ya establecido. */
+/**
+ * La regla "de falta": misma tinta que siempre, y desde v0.42.1 TAMBIEN cursiva (decision #15) --
+ * Franco, sobre el bloque de Ingresos: "que las filas de los faltantes proyectados queden como
+ * estan" (gris + cursiva). Hasta v0.42.0 la cursiva de Ingresos era formato ESTATICO pegado a un
+ * rango de filas fijo (medido, no supuesto: R14:S18 en cursiva, R19 -- tambien de faltante -- NO);
+ * ahora la pone esta regla, igual en los tres bloques, siguiendo al CONTENIDO en vez de a la fila.
+ */
 function _construirReglaGrisTfp(hoja, item) {
     return SpreadsheetApp.newConditionalFormatRule()
         .whenFormulaSatisfied(item.formula)
         .setFontColor(TFP_COLOR_GRIS)
+        .setItalic(true)
         .setRanges([hoja.getRange(item.celda)])
         .build();
 }
@@ -1000,6 +1147,12 @@ function _preflightTfp(ss) {
         // trunca sola a las cuentas mas importantes y avisa en la propia hoja cuantas quedaron
         // afuera (ver _formulaCuentasTfp).
 
+        // NUEVO v0.42.1 (decision #15): FontStyle ESTATICO del rango de datos -- solo lectura, no
+        // evalua ninguna formula. Generico en los tres bloques (no solo Ingresos, el unico medido
+        // hoy): si algun cuenta queda pegada en cursiva a una fila fija, el plan la limpia.
+        const rangoDatosBloque = _rangoDatosTfp(b);
+        const hayCursivaEstatica = _hayCursivaEstaticaTfp(hoja, b);
+
         bloques[clave] = {
             b: b, anclaVigente: anclaVigente, formulaAnclaEsperada: formulaAnclaEsperada,
             formulaRealParaTotales: formulaRealParaTotales,
@@ -1012,7 +1165,8 @@ function _preflightTfp(ss) {
             faltanteEsNuestra: faltanteEsNuestra, faltanteFormulaVieja: faltanteFormula,
             faltanteValorVieja: faltanteValor, rotuloYaEsta: rotuloYaEsta, cuentasVivas: cuentasVivas,
             nombresRealVivos: nombresRealVivos,
-            capacidadFilas: capacidadFilas, capacidadPeorCaso: capacidadPeorCaso
+            capacidadFilas: capacidadFilas, capacidadPeorCaso: capacidadPeorCaso,
+            rangoDatos: rangoDatosBloque, hayCursivaEstatica: hayCursivaEstatica
         };
     });
 
@@ -1090,8 +1244,21 @@ function _planTfp(pre) {
         }
     });
 
+    // NUEVO v0.42.1 (decision #15): FUERA de `cambios` a proposito -- no es contenido (formula o
+    // valor) de UNA celda, es una propiedad de formato sobre un rango de multiples celdas, y el
+    // respaldo/escritura/reversion de `cambios` esta pensado para lo primero (ver _escribirCambioTfp
+    // y el loop que arma `previos.celdas` en aplicarTableroFaltanteProyectado). Un item por bloque,
+    // SOLO si ese bloque tiene FontStyle 'italic' pegado a alguna celda de su rango de datos.
+    const cursivaEstatica = [];
+    TFP_ORDEN.forEach(function (clave) {
+        const info = pre.bloques[clave];
+        if (info.hayCursivaEstatica) {
+            cursivaEstatica.push({ bloque: clave, rango: info.rangoDatos });
+        }
+    });
+
     const clasesReglas = _clasificarReglasTfp(pre.hoja.getConditionalFormatRules());
-    return { cambios: cambios, reglas: clasesReglas };
+    return { cambios: cambios, reglas: clasesReglas, cursivaEstatica: cursivaEstatica };
 }
 
 // ============================================
@@ -1295,7 +1462,8 @@ function estadoTableroFaltanteProyectado() {
                     : ''));
         });
         l.push('');
-        if (!plan.cambios.length && !_reglasHacenFaltaTfp(plan.reglas)) {
+        const hayCursivaEstatica = plan.cursivaEstatica.length > 0;
+        if (!plan.cambios.length && !_reglasHacenFaltaTfp(plan.reglas) && !hayCursivaEstatica) {
             l.push('NADA QUE HACER: los tres bloques ya tienen el faltante proyectado aplicado.');
         } else {
             l.push('CELDAS A ESCRIBIR: ' + plan.cambios.length);
@@ -1306,13 +1474,25 @@ function estadoTableroFaltanteProyectado() {
             l.push('');
             l.push('Reglas de formato condicional (gris de faltante + cursiva de aviso + negrita de real): ' +
                 (_reglasHacenFaltaTfp(plan.reglas) ? 'se escriben/rehacen las 9 propias (3 + 3 + 3)' : 'ya estan correctas'));
+            l.push('');
+            if (hayCursivaEstatica) {
+                l.push('FONTSTYLE ESTATICO A LIMPIAR (decision #15, v0.42.1): ' + plan.cursivaEstatica.length +
+                    ' bloque(s) con cursiva pegada a una fila fija en vez de a la seccion de faltante -- ' +
+                    'se limpia (queda "normal"), color de fuente y negrita estatica no se tocan:');
+                plan.cursivaEstatica.forEach(function (c) {
+                    l.push('  ' + TFP_BLOQUES[c.bloque].titulo.esperado + ' (' + c.rango + ')');
+                });
+            } else {
+                l.push('FONTSTYLE ESTATICO: ningun bloque tiene cursiva pegada a una fila fija. Nada que limpiar.');
+            }
         }
         l.push('Reglas ajenas de la hoja que se reponen intactas: ' + plan.reglas.ajenas.length);
         l.push('');
         l.push('NOTA: los montos de las dos secciones son NUMEROS (no texto, decision #7 v0.41.0): ' +
             'seleccionar celdas de la columna Monto suma en la barra de estado de Sheets, real y ' +
             'faltante juntos si se seleccionan ambos. La seccion real (arriba del separador) va en ' +
-            'negrita; la de faltante queda gris, sin cambios (decision #14 v0.42.0).');
+            'negrita; la de faltante queda gris Y EN CURSIVA (decision #15 v0.42.1), igual en los tres ' +
+            'bloques, por regla propia -- no por formato pegado a una fila.');
         const t = l.join('\n');
         _mostrarTfp('Tablero: faltante proyectado - estado', t);
         logInfo('estadoTableroFaltanteProyectado: ' + plan.cambios.length + ' celda(s) pendientes.');
@@ -1337,8 +1517,9 @@ function aplicarTableroFaltanteProyectado() {
         const pre = _preflightTfp(ss);
         const plan = _planTfp(pre);
         const tocarReglas = _reglasHacenFaltaTfp(plan.reglas);
+        const hayCursivaEstatica = plan.cursivaEstatica.length > 0;
 
-        if (!plan.cambios.length && !tocarReglas) {
+        if (!plan.cambios.length && !tocarReglas && !hayCursivaEstatica) {
             const t = 'Los tres bloques ya tienen el faltante proyectado aplicado. No se escribio nada.';
             _mostrarTfp('Tablero: faltante proyectado', t);
             return { ok: true, detalle: t };
@@ -1347,12 +1528,19 @@ function aplicarTableroFaltanteProyectado() {
         const conf = ui.alert('Tablero: faltante proyectado',
             'Se van a escribir ' + plan.cambios.length + ' celda(s) en "' + pre.nombre + '"' +
             (tocarReglas ? ', y se rehacen las 9 reglas de color (3 gris de faltante + 3 cursiva de ' +
-                'aviso + 3 negrita de real)' : '') + '.\n\n' +
+                'aviso + 3 negrita de real)' : '') +
+            (hayCursivaEstatica ? ', y se limpia el FontStyle estatico de ' + plan.cursivaEstatica.length +
+                ' bloque(s) (' + plan.cursivaEstatica.map(function (c) { return TFP_BLOQUES[c.bloque].titulo.esperado; }).join(', ') +
+                ')' : '') + '.\n\n' +
             'QUE CAMBIA en Ingresos, Gastos Fijos y Gastos Variables:\n' +
             '  - El bloque pasa a tener DOS SECCIONES separadas por una FILA ROTULADA explicita\n' +
             '    ("' + TFP_ROTULO_SEPARADOR + '"): arriba TODO lo real (una fila por cuenta con\n' +
             '    movimiento, en NEGRITA), abajo TODO lo faltante (una fila por cuenta con faltante\n' +
-            '    > 0 este mes, gris, REPITIENDO el nombre de la cuenta -- sin cambios).\n' +
+            '    > 0 este mes, gris Y EN CURSIVA, REPITIENDO el nombre de la cuenta).\n' +
+            '  - La cursiva de la seccion de faltante pasa a ser de la MISMA regla que la pinta gris,\n' +
+            '    igual en los tres bloques (decision #15): si algun bloque tenia cursiva ESTATICA\n' +
+            '    pegada a una fila fija (medido: Ingresos la tenia), se limpia -- color de fuente y\n' +
+            '    negrita estatica no se tocan.\n' +
             '  - Los montos de las dos secciones son NUMEROS reales (no texto): sumar en la barra\n' +
             '    de estado al seleccionar celdas vuelve a funcionar en toda la columna Monto.\n' +
             '  - Los totales de la fila 7 (S7/V7/Y7) se recalculan por construccion desde la QUERY\n' +
@@ -1402,6 +1590,16 @@ function aplicarTableroFaltanteProyectado() {
                 .concat(_reglasNegritaTfp().map(function (item) { return _construirReglaNegritaTfp(pre.hoja, item); }));
             pre.hoja.setConditionalFormatRules(plan.reglas.ajenas.concat(nuevasReglas));
         }
+
+        // NUEVO v0.42.1 (decision #15): FontStyle estatico. Se respalda el rango COMPLETO
+        // (getFontStyles) de cada bloque afectado ANTES de limpiarlo -- asi revertir lo repone
+        // exacto sin tener que reconstruir celda por celda cuales eran 'italic' y cuales no.
+        previos.cursivaEstatica = [];
+        plan.cursivaEstatica.forEach(function (item) {
+            const rangoObj = pre.hoja.getRange(item.rango);
+            previos.cursivaEstatica.push({ rango: item.rango, matriz: rangoObj.getFontStyles() });
+            _limpiarCursivaEstaticaTfp(pre.hoja, item.rango);
+        });
         SpreadsheetApp.flush();
 
         const inv = _verificarInvariantesTfp(pre);
@@ -1413,6 +1611,14 @@ function aplicarTableroFaltanteProyectado() {
                     pre.hoja.setConditionalFormatRules(clasesAhora.ajenas);
                     SpreadsheetApp.flush();
                 } catch (e2) { logError('No se pudieron quitar las reglas nuevas al revertir: ' + e2.message); }
+            }
+            if (previos.cursivaEstatica.length) {
+                try {
+                    previos.cursivaEstatica.forEach(function (item) {
+                        pre.hoja.getRange(item.rango).setFontStyles(item.matriz);
+                    });
+                    SpreadsheetApp.flush();
+                } catch (e3) { logError('No se pudo restaurar el FontStyle estatico al revertir: ' + e3.message); }
             }
             yaRevertido = true;
             throw new Error('Se escribio pero NO VERIFICA: ' + inv.fallas.join('; ') +
@@ -1431,12 +1637,16 @@ function aplicarTableroFaltanteProyectado() {
             '- Celdas escritas y verificadas: ' + escritas.length + '\n' +
             '- Reglas de color (gris de faltante + cursiva de aviso + negrita de real): ' +
             (tocarReglas ? 'rehechas (9 propias: 3 + 3 + 3)' : 'ya estaban correctas') + '\n' +
+            '- FontStyle estatico limpiado (decision #15): ' +
+            (hayCursivaEstatica
+                ? plan.cursivaEstatica.map(function (c) { return TFP_BLOQUES[c.bloque].titulo.esperado; }).join(', ')
+                : 'ningun bloque lo tenia') + '\n' +
             '- Respaldo en la hoja oculta "' + respaldo.nombre + '"\n\n' +
             'QUE MIRAR:\n' +
             '  1. Arriba de cada bloque, una fila por cuenta con movimiento real, en NEGRITA.\n' +
             '     Despues, una fila que dice "' + TFP_ROTULO_SEPARADOR + '" (Monto vacio, sin\n' +
-            '     negrita). Debajo de esa, una fila por cuenta con faltante > 0 (gris), repitiendo\n' +
-            '     el nombre de la cuenta -- esta seccion no cambio.\n' +
+            '     negrita, sin cursiva). Debajo de esa, una fila por cuenta con faltante > 0, gris Y\n' +
+            '     EN CURSIVA, repitiendo el nombre de la cuenta -- IGUAL en los tres bloques.\n' +
             '  2. Los montos son NUMEROS: seleccionar celdas de la columna Monto (real y/o\n' +
             '     faltante) tiene que mostrar la SUMA en la barra de estado de Sheets.\n' +
             '  3. Los totales de la fila 7 no se movieron (se verifico); el total de faltantes de\n' +
@@ -1508,11 +1718,28 @@ function revertirTableroFaltanteProyectado() {
             reglasQuitadas = clases.propias.length;
             if (reglasQuitadas) hoja.setConditionalFormatRules(clases.ajenas);
         }
+
+        // NUEVO v0.42.1 (decision #15): repone el FontStyle estatico exacto que se respaldo antes
+        // de limpiar (matriz completa, un solo setFontStyles por bloque -- no hace falta reconstruir
+        // celda por celda cuales eran 'italic').
+        let cursivaEstaticaRepuesta = 0;
+        if (previos.cursivaEstatica && previos.cursivaEstatica.length) {
+            previos.cursivaEstatica.forEach(function (item) {
+                try {
+                    hoja.getRange(item.rango).setFontStyles(item.matriz);
+                    cursivaEstaticaRepuesta++;
+                } catch (e) {
+                    logError('No se pudo restaurar el FontStyle estatico de ' + item.rango + ': ' + e.message);
+                }
+            });
+        }
+
         SpreadsheetApp.flush();
         props.deleteProperty(TFP_PROP_PREVIOS);
 
         const t = 'TABLERO: FALTANTE PROYECTADO REVERTIDO\n\n- Celdas repuestas: ' + repuestas + '\n' +
             '- Reglas de color quitadas: ' + reglasQuitadas + '\n' +
+            '- FontStyle estatico repuesto: ' + cursivaEstaticaRepuesta + ' bloque(s)\n' +
             (faltantes.length ? '- SIN respaldo (quedaron como estan): ' + faltantes.join(', ') + '\n' : '') +
             '- Respaldo usado: "' + previos.respaldo + '"' + (resp ? '' : ' (la hoja ya no existe)');
         logSuccess('revertirTableroFaltanteProyectado: ' + repuestas + ' celda(s).');

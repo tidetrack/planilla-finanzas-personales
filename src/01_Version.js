@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 42,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.42.0 - Invariante del faltante corregido (bug de v0.41.0) + seccion real en negrita',
+ releaseName: 'v0.42.1 - Cursiva del faltante uniforme en los tres bloques del Tablero',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.42.1 (2026-08-24) - Cursiva del faltante uniforme en los tres bloques del Tablero
+! v0.42.0 SE DESPLEGO Y APLICO BIEN, pero Franco reporto que los tres bloques NO quedaron iguales: en Ingresos la fila separadora y las filas de faltante se ven en cursiva, en Gastos Fijos y Variables no. Medido antes de tocar nada (diagnostico de solo lectura, ya retirado): en Ingresos, SOLO R14:S18 tenian FontStyle ESTATICO 'italic' -- la fila 19 (tambien de faltante) NO estaba en cursiva, la prueba de que el formato quedo pegado a un rango de filas fijo, no al contenido.
++ _construirReglaGrisTfp ahora TAMBIEN llama setItalic(true): la MISMA regla que ya pintaba gris, igual en los tres bloques, asi que la cursiva pasa a seguir al contenido (COUNTIF posicional de siempre) en vez de a una fila fija.
++ FontStyle estatico limpiado GENERICO en los tres bloques (no hardcodeado a Ingresos): el preflight lo detecta por bloque (_hayCursivaEstaticaTfp), aplicar() respalda el rango completo antes de limpiarlo y revertir lo repone exacto (getFontStyles/setFontStyles). Solo toca FontStyle -- color de fuente y negrita estatica quedan intactos.
+* _reglasHacenFaltaTfp ahora compara TAMBIEN bold/italic/color (via _hexDeColorTfp), no solo formula+rango: sin esto, la regla gris de v0.42.0 (misma formula, mismo rango, sin italic) pasaba como "ya esta correcta" y un segundo Aplicar nunca la iba a reescribir en la planilla real.
+! devtools/probar_tablero_faltante.js: nueva seccion 5c (setItalic en la regla gris + la mutacion del freshness-check) y nueva seccion 7g (deteccion/limpieza de FontStyle estatico, probada con dos bloques a la vez). Los ocho bancos en verde.
+
 v0.42.0 (2026-08-24) - Invariante del faltante corregido (bug de v0.41.0) + seccion real en negrita
 ! v0.41.0 SE DESPLEGO Y SE AUTOREVIRTIO: la propia verificacion (_verificarInvariantesTfp) atrapo una discrepancia y revirtio todo el lote solo. El guard funciono perfecto; el bug estaba en el invariante, no en la escritura.
 - CAUSA: el preflight contaba FILAS del rango de Cuenta como "cuentas reales antes" -- valido en la primera migracion (QUERY cruda, una fila = una cuenta), falso en un UPGRADE (la planilla ya tenia v0.40.0 aplicada, dos secciones sin separador): Ingresos tiene 4 cuentas reales pero el preflight leia 9 (4 reales + 5 de faltante). Comparaba esa cardinalidad contra los 6 nombres distintos del render nuevo -- dos magnitudes distintas por diseno.

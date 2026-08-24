@@ -3,6 +3,44 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.42.1 - Cursiva del faltante uniforme en los tres bloques (era formato estatico pegado a filas fijas en Ingresos).
+ * - v0.42.0 SE DESPLEGO Y APLICO BIEN (la negrita de la seccion real quedo correcta), pero Franco reporto
+ *   que los tres bloques del Tablero NO quedaron iguales: en Ingresos la fila separadora y las filas de
+ *   faltante se ven en CURSIVA; en Gastos Fijos y Variables no. Los tres bloques los escribe el MISMO
+ *   codigo en la MISMA corrida, asi que la diferencia no podia venir de ninguna regla de este modulo.
+ * - SE MIDIO ANTES DE TOCAR NADA (diagnostico de solo lectura, DEVTOOL_DIAG_CursivaFaltante.js, ya
+ *   retirado): en Ingresos, SOLO R14:S18 tenian FontStyle ESTATICO 'italic' (la fila separadora + cuatro
+ *   filas de faltante). LA FILA 19 (tambien de faltante) NO estaba en cursiva: la prueba de que el
+ *   formato estaba pegado a un RANGO DE FILAS FIJO, no al CONTENIDO de la fila -- la misma trampa que
+ *   este modulo ya documenta para el gris (decision #8), esta vez del lado de Franco. En Gastos Fijos y
+ *   Variables, CERO celdas en cursiva. Se habia revisado antes, por las dudas, el historial de git de
+ *   las seis versiones del modulo: ninguna version de _construirReglaGrisTfp llamo jamas setItalic() --
+ *   no hay ninguna regla huerfana que barrer, el origen es 100% formato estatico.
+ * - LA RESOLUCION, en dos partes: (a) _construirReglaGrisTfp ahora TAMBIEN llama setItalic(true) -- la
+ *   MISMA regla que ya pintaba gris, igual en los tres bloques, asi que la cursiva pasa a seguir al
+ *   CONTENIDO (via el mismo COUNTIF posicional de la decision #8) en vez de a una fila fija. (b) El
+ *   FontStyle estatico se limpia como parte de aplicar(), GENERICO en los tres bloques (no hardcodeado
+ *   a "Ingresos R14:S18"): el preflight lee (solo lectura) el FontStyle de _rangoDatosTfp(b) de CADA
+ *   bloque: si alguno tiene 'italic', el plan agrega un item aparte (plan.cursivaEstatica); aplicar()
+ *   respalda el rango completo (getFontStyles) antes de limpiarlo (setFontStyle('normal')) y revertir lo
+ *   repone exacto (setFontStyles). Solo se toca el FontStyle -- color de fuente y negrita estatica que
+ *   hubiera quedan intactos.
+ * - AJUSTE IMPRESCINDIBLE para que (a) funcione en un segundo "Aplicar": _reglasHacenFaltaTfp comparaba
+ *   SOLO formula+rango. La regla gris de v0.42.0 ya vigente en la planilla de Franco calza formula+rango
+ *   EXACTO con la de v0.42.1 (solo cambia el estilo) -- _esReglaPropiaTfp la reconoce como propia igual
+ *   (correcto, formula+rango es y debe seguir siendo su unico criterio de identidad), pero comparar solo
+ *   por identidad hacia que "ya esta correcta" diera VERDADERO con un estilo VIEJO: aplicar() nunca la
+ *   iba a reescribir. Ahora tambien compara bold/italic/color (via _hexDeColorTfp, mismo patron que
+ *   _hexDeColorIp de DEVTOOL_InicioPresupuesto.js: asRgbColor() con try/catch, sin depender de
+ *   SpreadsheetApp.ColorType) -- mismo diagnostico y misma solucion que ya paso en ese modulo.
+ * - devtools/probar_tablero_faltante.js: nueva seccion 5c (setItalic en la regla gris, los nueve items
+ *   declaran bold/italic/color, _hexDeColorTfp, y la mutacion que importa: formula+rango correctos con
+ *   estilo viejo SI dispara la reescritura) y nueva seccion 7g (deteccion/limpieza del FontStyle
+ *   estatico, probado con DOS bloques a la vez para confirmar que no quedo hardcodeado a Ingresos, y
+ *   round-trip getFontStyles/setFontStyles fiel para el respaldo/reversion). Los ocho bancos en verde;
+ *   las tres mutaciones centrales (quitar el setItalic de la regla gris, revertir el freshness-check a
+ *   formula+rango, y limitar la limpieza a un solo bloque) confirmadas a mano contra el banco real.
+ *
  * [2026-08-24] v0.42.0 - v0.41.0 se autoreviritio (bug del invariante, corregido) + la seccion real en negrita.
  * - EL DESPLIEGUE DE v0.41.0 SE REVIRTIO SOLO: aplicarTableroFaltanteProyectado() se corrio contra la
  *   planilla real y su propia verificacion (_verificarInvariantesTfp) lo atrapo y revirtio: "quedaron 6
