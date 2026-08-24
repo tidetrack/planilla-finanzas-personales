@@ -3,6 +3,58 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.46.0 - Cuentas comodin: el bloque oculto del Plan de Cuentas.
+ * - PEDIDO DE FRANCO, textual: "En realidad es una cuenta comodin, no es ingreso fijo o
+ *   variable. Agregala oculta por algun lado".
+ * - EL PROBLEMA QUE CIERRA: "Traspaso" e "Inicio Mes" no son ingreso, ni gasto fijo, ni gasto
+ *   variable, asi que no tenian donde vivir en "Plan de Cuentas" y se tipeaban a mano en la
+ *   grilla de Cargas. De ese "a mano" salen las variantes que el propio 00_Config.js documenta
+ *   -- en el ledger conviven "Traspaso", "traspaso " e "Inicio  Mes" -- y que llama la falla
+ *   mas cara posible, porque una sola fila colada infla el agregado. Con la cuenta en el
+ *   desplegable, la variante ya no se puede escribir.
+ * - DEVTOOL_CuentasComodin.js (NUEVO): crea el bloque en "Plan de Cuentas"!T:U con titulo,
+ *   headers, una nota que explica que es cada comodin, formato COPIADO del bloque de Ingresos
+ *   (ni un hex hardcodeado: si Franco cambia el azul de la hoja, el bloque lo sigue solo) y las
+ *   columnas OCULTAS. Tres publicas: estadoCuentasComodin / aplicarCuentasComodin /
+ *   revertirCuentasComodin.
+ * - POR QUE T:U, medido y no elegido: E, H, K, O y Q son el AIRE entre bloques -- la hoja
+ *   separa por columna vacia y no por borde, esa es su regla visual --, R es la consolidada de
+ *   servicio y S es el aire que le corresponde. T es la primera columna libre de verdad. Sobre
+ *   el gemelo, la hoja usa C, D, F, G, I, J, L, M, N, P y R, y nada mas.
+ * - LA CONSOLIDADA SE EXTIENDE, NO SE REESCRIBE: se detecta el ultimo rango que la formula ya
+ *   aplana y se le agrega T8:T1000 al lado, CON EL SEPARADOR QUE LA PROPIA FORMULA USA. El
+ *   separador de argumentos depende del locale de la planilla (aca ";") y adivinarlo es
+ *   exactamente la trampa que documenta la cabecera de 07_MiradaInteranual.js. Una formula
+ *   rearmada a mano es la forma barata de dejar sin lista al desplegable de Cuenta, que es lo
+ *   unico que consume esa columna.
+ * - NO CAMBIA UNA SOLA FILA DEL LEDGER, y es deliberado: deducirTipoCuenta lee SOLO los
+ *   catalogos de ingresos, fijos y variables (06_RegistrosService.js:255-259), asi que una
+ *   cuenta en un bloque nuevo sigue devolviendo '' -- que es lo correcto para un comodin -- y
+ *   no obliga a migrar ninguna de las 3.469 filas historicas. Las 533 patas de traspaso con
+ *   'Ingreso' y las 96 con vacio quedan como estan; las sigue corrigiendo en la LECTURA la
+ *   exclusion por CUENTAS_NEUTRAS, que ya funciona.
+ * - NO MUEVE LA CUENTA 'Ajuste'. Conceptualmente tambien es un comodin, pero hoy vive en el
+ *   bloque de Ingresos con su destino declarado a proposito (DEVTOOL_AltaCuentas.js:62,
+ *   ALTA_SIN_TIPO = { 'Ajuste': 'Ingreso' }). Moverla cambiaria el tipo de cuenta de todo
+ *   Ajuste futuro: es una decision de Franco, no de este modulo.
+ * - EL CATALOGO NO SE RETIPEA: el bloque es la PROYECCION de CUENTAS_NEUTRAS, que sigue siendo
+ *   la fuente unica. Si manana entra una tercera comodin se agrega ahi y se vuelve a correr
+ *   "2. Aplicar"; el preflight verifica que hoja y constante sigan coincidiendo.
+ * - 00_Config.js suma DOS entradas a RANGES. CUENTAS_COMODIN (T:U) es la del bloque nuevo.
+ *   PLAN_CONSOLIDADA (R) entra porque YA SE MOVIO UNA VEZ SIN QUE NADIE SE ENTERARA: nacio en
+ *   S (MIGRACION_v0.11_SwapHojasFix.js) y quedo en R cuando DEVTOOL_LimpiarPlanCuentas borro
+ *   fisicamente la columna Q. Hasta hoy su coordenada existia SOLO como constante local de ese
+ *   devtool ya consumido, y CLAUDE.md seccion 4 sigue diciendo S -- un modulo que la busque
+ *   ahi opera sobre una columna vacia y reporta exito.
+ * - devtools/probar_cuentas_comodin.js (NUEVO, banco 12): la hoja falsa EVALUA el
+ *   QUERY(FLATTEN(...)) de verdad, asi que "Traspaso aparece en el desplegable" se prueba y no
+ *   se promete. Cuatro mutaciones, cada una por un modo de falla real de este repo: (A) celda
+ *   que se traga la escritura como la mitad muda de una combinada -> la verificacion falla, se
+ *   revierte todo y las columnas NO quedan ocultas, para que el problema quede a la vista;
+ *   (B) formula escrita que no derrama -> revierte y repone la formula previa; (C) bloque
+ *   modelo sin titulo -> el preflight aborta antes de escribir nada; (D) columna destino
+ *   ocupada -> aborta sin pisar. Los doce bancos en verde.
+ *
  * [2026-08-24] v0.45.2 - El ABM abre: el id del selector de entidad.
  * - SINTOMA: "Plan de Cuentas", el unico item funcional del menu diario, abria a un spinner
  *   infinito que tapaba el formulario. Desde la v0.24.0, y lo desplegado era v0.45.1: cuatro

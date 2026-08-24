@@ -9,6 +9,62 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.46.0 - Cuentas comodin: el bloque oculto del Plan de Cuentas (2026-08-24)
+
+Franco, textual: *"En realidad es una cuenta comodin, no es ingreso fijo o variable. Agregala
+oculta por algun lado"*.
+
+**El problema que cierra.** `Traspaso` e `Inicio Mes` no son ingreso, ni gasto fijo, ni gasto
+variable, asi que no tenian donde vivir en la hoja `Plan de Cuentas` y se tipeaban a mano en la
+grilla de Cargas. De ese "a mano" salen las variantes que el propio `00_Config.js` documenta —en
+el ledger conviven `"Traspaso"`, `"traspaso "` e `"Inicio  Mes"`— y que llama la falla mas cara
+posible, porque una sola fila colada infla el agregado. Con la cuenta en el desplegable, la
+variante ya no se puede escribir.
+
+**Que se construyo.** `src/DEVTOOL_CuentasComodin.js` crea el bloque en `Plan de Cuentas!T:U` con
+titulo, headers, una nota que explica que es cada comodin, formato **copiado** del bloque de
+Ingresos (ni un hex hardcodeado: si Franco cambia el azul de la hoja, el bloque lo sigue solo) y
+las **columnas ocultas**. Tres publicas: estado, aplicar y revertir.
+
+**Por que T:U, medido y no elegido.** `E`, `H`, `K`, `O` y `Q` son el aire entre bloques —la hoja
+separa por columna vacia y no por borde, esa es su regla visual—, `R` es la consolidada de
+servicio y `S` es el aire que le corresponde. `T` es la primera columna libre de verdad. Sobre el
+gemelo, la hoja usa `C`, `D`, `F`, `G`, `I`, `J`, `L`, `M`, `N`, `P` y `R`, y nada mas.
+
+**La consolidada se extiende, no se reescribe.** Se detecta el ultimo rango que la formula ya
+aplana y se le agrega `T8:T1000` al lado, con **el separador que la propia formula usa**. El
+separador de argumentos depende del locale de la planilla (aca `;`) y adivinarlo es exactamente la
+trampa que documenta la cabecera de `07_MiradaInteranual.js`. Una formula rearmada a mano es la
+forma barata de dejar sin lista al desplegable de Cuenta, que es lo unico que consume esa columna.
+
+**Dos cosas que NO hace, y son deliberadas.**
+
+1. **No cambia una sola fila del ledger.** `deducirTipoCuenta` lee solo los catalogos de ingresos,
+   fijos y variables, asi que una cuenta en un bloque nuevo sigue devolviendo `''` —que es lo
+   correcto para un comodin— y no obliga a migrar ninguna de las 3.469 filas historicas. Las 533
+   patas de traspaso con `Ingreso` y las 96 con vacio quedan como estan; las sigue corrigiendo en
+   la lectura la exclusion por `CUENTAS_NEUTRAS`.
+2. **No mueve la cuenta `Ajuste`.** Conceptualmente tambien es un comodin, pero hoy vive en el
+   bloque de Ingresos con su destino declarado a proposito (`ALTA_SIN_TIPO`). Moverla cambiaria el
+   tipo de cuenta de todo `Ajuste` futuro: es una decision de Franco.
+
+**El catalogo no se retipea.** El bloque es la *proyeccion* de `CUENTAS_NEUTRAS`, que sigue siendo
+la fuente unica. Una comodin nueva se agrega ahi y se vuelve a correr "2. Aplicar".
+
+**Dos entradas nuevas en `RANGES`.** `CUENTAS_COMODIN` (T:U) es la del bloque. `PLAN_CONSOLIDADA`
+(R) entra porque **ya se movio una vez sin que nadie se enterara**: nacio en `S` y quedo en `R`
+cuando la limpieza borro fisicamente la columna `Q`. Hasta hoy su coordenada existia solo como
+constante local de un devtool ya consumido, y `CLAUDE.md` seccion 4 sigue diciendo `S`.
+
+**Banco 12.** `devtools/probar_cuentas_comodin.js`: la hoja falsa **evalua** el
+`QUERY(FLATTEN(...))` de verdad, asi que "Traspaso aparece en el desplegable" se prueba y no se
+promete. Cuatro mutaciones, cada una por un modo de falla real de este repo: celda que se traga la
+escritura como la mitad muda de una combinada (revierte y **no** oculta las columnas, para que el
+problema quede a la vista); formula escrita que no derrama; bloque modelo sin titulo; columna
+destino ocupada. Los doce bancos en verde.
+
+---
+
 ## v0.45.2 - El ABM abre: el id del selector de entidad (2026-08-24)
 
 El unico item funcional del menu diario, `Plan de Cuentas`, **no abria desde la v0.24.0**.

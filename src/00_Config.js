@@ -200,6 +200,47 @@ const RANGES = {
         end: 'P',
         columns: { nombre: 'P' }
     },
+    // decision Franco 2026-08-24: las CUENTAS COMODIN entran al Plan de Cuentas, ocultas.
+    // No son ingreso, ni gasto fijo, ni gasto variable: son mecanismos del sistema
+    // ("Traspaso" mueve plata entre dos cajas propias, "Inicio Mes" declara con cuanto
+    // arranca una caja). Hasta hoy no tenian donde vivir en la hoja y se tipeaban a mano en
+    // la grilla de Cargas, que es de donde salen las variantes "traspaso " e "Inicio  Mes"
+    // que documenta CUENTAS_NEUTRAS mas abajo. Con la cuenta en el desplegable, la variante
+    // no se puede escribir.
+    //
+    // POR QUE T:U y no antes: E, H, K, O y Q son el AIRE entre bloques -- la hoja separa por
+    // columna vacia y no por borde --, R es la consolidada de servicio y S es su aire. T es
+    // la primera columna libre de verdad. Medido sobre el gemelo el 2026-08-24: la hoja usa
+    // C, D, F, G, I, J, L, M, N, P y R, y nada mas.
+    //
+    // EL CATALOGO NO VIVE ACA: el bloque es la PROYECCION de CUENTAS_NEUTRAS. Una cuenta
+    // comodin nueva se agrega a esa constante y se vuelve a correr el devtool.
+    // @see DEVTOOL_CuentasComodin.js
+    CUENTAS_COMODIN: {
+        sheet: SHEETS.PLAN_CUENTAS,
+        start: 'T',
+        end: 'U',
+        columns: { nombre: 'T', nota: 'U' }
+    },
+
+    // La columna de servicio que consolida las cuentas de los cuatro bloques con un
+    // QUERY(FLATTEN(...)) y alimenta el desplegable de Cuenta de la hoja de Cargas.
+    //
+    // ENTRA AL SSOT PORQUE YA SE MOVIO UNA VEZ SIN QUE NADIE SE ENTERARA: nacio en S
+    // (MIGRACION_v0.11_SwapHojasFix.js) y quedo en R cuando la limpieza borro fisicamente la
+    // columna Q. Hasta hoy su coordenada existia SOLO como constante local de un devtool ya
+    // consumido (DEVTOOL_LimpiarPlanCuentas.js, LPC_COL_CONSOLIDADA) y CLAUDE.md seguia
+    // diciendo S. Un modulo que la busque en S opera sobre una columna vacia y reporta exito.
+    //
+    // NO SE ESCRIBE A MANO. La escribe la migracion del swap y la extiende el devtool de
+    // cuentas comodin; el resto del sistema solo la LEE.
+    PLAN_CONSOLIDADA: {
+        sheet: SHEETS.PLAN_CUENTAS,
+        start: 'R',
+        end: 'R',
+        columns: { nombre: 'R' }
+    },
+
     // --- Cargas: layout Fix (titulo B2, header fila 6, datos filas 7-21, numeracion B7:B21) ---
     // decision Franco 2026-08-13: la geometria de la grilla de carga entra a Config como SSOT.
     // Antes vivia como literal 'I5:O19' en 06_RegistrosService y como numeros magicos (9, 12,
@@ -630,6 +671,20 @@ const MENU_CONFIG = {
             submenu: 'Alta de cuentas faltantes', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoAltaCuentas' },
                 { name: '2. Aplicar', function: 'aplicarAltaCuentas' }
+            ]
+        },
+        {
+            // Crea el bloque OCULTO de cuentas comodin en el Plan de Cuentas (T:U) y lo suma a
+            // la consolidada, para que el desplegable de Cuenta de la hoja de Cargas ofrezca
+            // "Traspaso" e "Inicio Mes" en vez de que se tipeen a mano -- que es de donde
+            // salen las variantes "traspaso " e "Inicio  Mes" que documenta CUENTAS_NEUTRAS.
+            // No toca una sola fila del ledger ni mueve la cuenta 'Ajuste'.
+            // @see DEVTOOL_CuentasComodin.js
+            submenu: 'Cuentas comodin (bloque oculto)', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoCuentasComodin' },
+                { name: '2. Aplicar', function: 'aplicarCuentasComodin' },
+                { separator: true },
+                { name: '3. Revertir', function: 'revertirCuentasComodin' }
             ]
         },
         {

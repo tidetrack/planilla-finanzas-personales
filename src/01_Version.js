@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 45,
- patch: 2,
+ minor: 46,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.45.2 - El ABM abre: el id del selector de entidad',
+ releaseName: 'v0.46.0 - Cuentas comodin: el bloque oculto del Plan de Cuentas',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,16 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.46.0 (2026-08-24) - Cuentas comodin: el bloque oculto del Plan de Cuentas
++ Franco: "En realidad es una cuenta comodin, no es ingreso fijo o variable. Agregala oculta por algun lado". "Traspaso" e "Inicio Mes" no eran ingreso, ni gasto fijo, ni gasto variable, asi que no tenian donde vivir en la hoja y se tipeaban a mano en la grilla de Cargas. De ahi salen las variantes "traspaso " e "Inicio  Mes" que el propio 00_Config.js documenta como la falla mas cara posible (una sola fila colada infla el agregado). Con la cuenta en el desplegable, la variante no se puede escribir.
++ DEVTOOL_CuentasComodin.js (nuevo): bloque en "Plan de Cuentas"!T:U con titulo, headers y una nota que explica que es cada comodin, formato copiado del bloque de Ingresos (cero hex hardcodeado) y COLUMNAS OCULTAS. Tres publicas: estado / aplicar / revertir.
++ POR QUE T:U: E, H, K, O y Q son el AIRE entre bloques -- la hoja separa por columna vacia y no por borde --, R es la consolidada de servicio y S es su aire. T es la primera columna libre de verdad. Medido sobre el gemelo: la hoja usa C, D, F, G, I, J, L, M, N, P y R, nada mas.
++ La consolidada (R) se EXTIENDE, no se reescribe: se detecta el ultimo rango que ya aplana y se le agrega T8:T1000 al lado, CON EL SEPARADOR QUE LA PROPIA FORMULA USA. El separador de argumentos depende del locale (aca ";") y una formula rearmada a mano es la forma barata de romper el desplegable de Cargas, que es lo unico que la consume.
+! NO CAMBIA UNA SOLA FILA DEL LEDGER. deducirTipoCuenta lee SOLO ingresos, fijos y variables (06_RegistrosService.js:255-259): una cuenta en un bloque nuevo sigue devolviendo '' -- que es lo correcto para un comodin -- y no obliga a migrar ninguna de las 3.469 filas historicas. Las 533 patas de traspaso con 'Ingreso' y las 96 con vacio quedan como estan; las sigue corrigiendo la exclusion por CUENTAS_NEUTRAS, que ya funciona.
+! NO MUEVE 'Ajuste'. Conceptualmente tambien es comodin, pero vive en Ingresos con su destino declarado a proposito (ALTA_SIN_TIPO). Moverla cambiaria el tipo de cuenta de todo Ajuste futuro: es decision de Franco.
++ EL CATALOGO NO SE RETIPEA: el bloque es la PROYECCION de CUENTAS_NEUTRAS (00_Config.js), que sigue siendo la fuente unica. Una comodin nueva se agrega ahi y se vuelve a correr "2. Aplicar".
++ 00_Config.js: RANGES.CUENTAS_COMODIN (T:U) y RANGES.PLAN_CONSOLIDADA (R). La segunda entra al SSOT porque YA SE MOVIO UNA VEZ SIN QUE NADIE SE ENTERARA -- nacio en S y quedo en R cuando la limpieza borro la columna Q --, su coordenada vivia solo como constante local de un devtool ya consumido, y CLAUDE.md sigue diciendo S.
++ devtools/probar_cuentas_comodin.js (nuevo, banco 12): la hoja falsa EVALUA el QUERY(FLATTEN(...)) de verdad, asi que "Traspaso aparece en el desplegable" se prueba y no se promete. Cuatro mutaciones: celda que se traga la escritura (combinada) -> revierte y NO oculta las columnas; formula escrita que no derrama -> revierte; bloque modelo sin titulo -> aborta antes de escribir; columna destino ocupada -> aborta sin pisar. Los doce bancos en verde.
 v0.45.2 (2026-08-24) - El ABM abre: el id del selector de entidad
 - EL UNICO MODAL DEL MENU DIARIO NO ABRIA DESDE LA v0.24.0, y lo desplegado era v0.45.1: "Plan de Cuentas" mostraba un spinner que nunca se apagaba y tapaba el formulario entero. Cuatro dias en produccion.
 - CAUSA: UI_AbmPlanCuentas.html:250 llamaba a getElementById('entitySelect'). Ese id NO EXISTE -- el <select> se llama 'entityType' (:152) y las otras OCHO referencias del archivo lo escriben bien. El TypeError ocurria DENTRO del withSuccessHandler de getAbmFormData, asi que la linea 251 -- la unica que apaga el loader -- nunca corria.
