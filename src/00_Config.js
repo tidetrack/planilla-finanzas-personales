@@ -709,14 +709,7 @@ const MENU_CONFIG = {
         // la hoja "DIAG_Desplegables_TEMP" que genera, y despues BORRAR esta entrada junto con
         // src/DEVTOOL_DIAG_Desplegables.js entero. @see DEVTOOL_DIAG_Desplegables.js
         { separator: true },
-        { name: 'DIAG TEMPORAL: medir desplegables (Plan de Cuentas + Cargas)', function: '_DIAG_medirDesplegables' },
-        // ENTRADA TEMPORAL -- decision Franco 2026-08-24: v0.42.0 desplego la negrita de la
-        // seccion real del Tablero (Faltante proyectado) y los tres bloques no quedaron iguales:
-        // Ingresos muestra la fila separadora y las filas de faltante en CURSIVA, Gastos Fijos y
-        // Variables no. Correrla UNA vez, copiar la hoja "DIAG_CursivaFaltante_TEMP" que genera,
-        // y despues BORRAR esta entrada junto con src/DEVTOOL_DIAG_CursivaFaltante.js entero.
-        // @see DEVTOOL_DIAG_CursivaFaltante.js
-        { name: 'DIAG TEMPORAL: medir cursiva del faltante (Tablero)', function: '_DIAG_medirCursivaFaltante' }
+        { name: 'DIAG TEMPORAL: medir desplegables (Plan de Cuentas + Cargas)', function: '_DIAG_medirDesplegables' }
     ]
 };
 
