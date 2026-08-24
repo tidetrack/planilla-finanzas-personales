@@ -1459,13 +1459,14 @@ console.log('\n=== 9. Ninguna otra celda del repo escribe donde este modulo escr
     // saliendo como choque, y agregar uno obliga a escribir por que es compatible.
     const CONVIVENCIA_OK = {
         'DEVTOOL_StockYFlujo.js': ['R10', 'U10', 'X10'],
-        // FALSO POSITIVO, no un choque real: DEVTOOL_DIAG_PresupuestoTitulos.js es un
-        // diagnostico TEMPORAL de solo lectura (incidente de v0.45.0, ver su cabecera) que
-        // menciona 'S7' para leer Presupuesto!S7 ("Monto a Proyectar" de Gastos Variables) --
-        // una hoja y un concepto totalmente distintos del S7 que este modulo posee en Tablero.
-        // El barrido es texto plano, sin nocion de hoja, asi que colisiona por casualidad de
-        // token. Retirar esta entrada junto con el resto del diagnostico cuando se borre.
-        'DEVTOOL_DIAG_PresupuestoTitulos.js': ['S7']
+        // FALSO POSITIVO, no un choque real: DEVTOOL_PresupuestoResumen.js declara
+        // PC_ROTULO_NOMBRE = { celda: 'U8', esperado: 'Nombre' } para leer Presupuesto!U8 (el
+        // header del espejo de categorias de esa hoja) -- una hoja y un concepto totalmente
+        // distintos del U8 que este modulo posee en Tablero (rotuloFaltante del bloque Gastos
+        // Fijos, TFP_BLOQUES.fijos). El barrido es texto plano, sin nocion de hoja, asi que
+        // colisiona por casualidad de token. Mismo tipo de falso positivo que ya tuvo
+        // DEVTOOL_DIAG_PresupuestoTitulos.js con 'S7' (retirado junto con ese diagnostico).
+        'DEVTOOL_PresupuestoResumen.js': ['U8']
     };
     const dir = path.join(RAIZ, 'src');
     const choques = [];

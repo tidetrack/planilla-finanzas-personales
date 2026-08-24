@@ -558,6 +558,21 @@ const MENU_CONFIG = {
             ]
         },
         {
+            // Segunda etapa de "Presupuesto": agrupa J/N/R y K/O/S por categoria del Plan de
+            // Cuentas en las columnas V y W (Ingresos positivo, Gastos Fijos y Variables
+            // negativo -- convencion confirmada contra la formula viva del bloque "Categorias."
+            // del Tablero), agrega el mes de referencia al titulo de la Tabla 1 (C9) y corrige
+            // el bug de copiar-pegar de la Tabla 2 (F19:F21 dividian por el Ingresos de la
+            // Tabla 1 en vez del propio). @see DEVTOOL_PresupuestoResumen.js
+            // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
+            submenu: 'Presupuesto: categorias y resumen', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoPresupuestoResumen' },
+                { name: '2. Aplicar', function: 'aplicarPresupuestoResumen' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirPresupuestoResumen' }
+            ]
+        },
+        {
             submenu: 'Capitalizacion y disponibilidad', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoCapitalizacion' },
                 { name: '2. Aplicar', function: 'aplicarCapitalizacion' },
@@ -730,21 +745,7 @@ const MENU_CONFIG = {
                 { name: '1. Ver estado (no borra nada)', function: 'estadoPurgaRespaldos' },
                 { name: '2. Aplicar (borra, no se puede deshacer)', function: 'aplicarPurgaRespaldos' }
             ]
-        },
-        // ENTRADA TEMPORAL -- decision Franco 2026-08-21: auditoria de desplegables de Plan de
-        // Cuentas y Cargas (columna R en rojo + desplegables cerrados). Correrla UNA vez, copiar
-        // la hoja "DIAG_Desplegables_TEMP" que genera, y despues BORRAR esta entrada junto con
-        // src/DEVTOOL_DIAG_Desplegables.js entero. @see DEVTOOL_DIAG_Desplegables.js
-        { separator: true },
-        { name: 'DIAG TEMPORAL: medir desplegables (Plan de Cuentas + Cargas)', function: '_DIAG_medirDesplegables' },
-        // ENTRADA TEMPORAL -- decision Franco 2026-08-24: confirmar en vivo si J7/N7/R7 de
-        // "Presupuesto" (o su vecina K/O/S) son celdas COMBINADAS, para cerrar con evidencia la
-        // duda del incidente de v0.45.0 (la causa real ya esta identificada y arreglada en
-        // DEVTOOL_PresupuestoModo.js -- ver "EL INCIDENTE DE v0.45.0" en su cabecera -- pero
-        // Franco pidio la medicion en vivo de todas formas). Solo lectura. Correrla, confirmar,
-        // y BORRAR esta entrada junto con src/DEVTOOL_DIAG_PresupuestoTitulos.js entero.
-        // @see DEVTOOL_DIAG_PresupuestoTitulos.js
-        { name: 'DIAG TEMPORAL: medir titulos combinados (Presupuesto, incidente v0.45.0)', function: '_DIAG_medirTitulosPresupuesto' }
+        }
     ]
 };
 
