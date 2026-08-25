@@ -6,6 +6,81 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-25 - Presupuesto: ABM de Proyecciones Elaboradas, ver/corregir/borrar lo guardado (v0.54.0)
+
+### Que se pidio
+
+Encargo textual de Franco: "en el menu deberiamos poder hacer el ABM de proyecciones
+elaboradas". La hoja "Presupuesto" ya permite decidir cuanto se va a gastar o ingresar el mes
+que viene, y `DEVTOOL_PresupuestoGuardar.js` (v0.50.0, ya desplegado) guarda esa decision en la
+hoja-BD "Proyeccion" con las cuatro cotizaciones del dia congeladas. Hasta este release no habia
+forma de **ver, corregir ni borrar** lo que quedaba guardado ahi sin abrir la hoja a mano y leer
+filas crudas.
+
+### La capa de datos: dos poblaciones que hoy conviven en "Proyeccion"
+
+`DEVTOOL_ProyeccionAbm.js` (nuevo, 679 lineas) expone seis funciones publicas:
+`listarPeriodosProyeccion()`, `detalleFilasPeriodoProyeccion(clave, origen)`,
+`eliminarPeriodoProyeccion(clave, origen)`, `revertirBajaProyeccionAbm()`,
+`actualizarMontoFilaProyeccion(fila, nuevoMonto)` y `revertirEdicionMontoProyeccion()`. El modulo
+distingue las dos poblaciones que hoy conviven en la hoja "Proyeccion": el guardado deliberado
+(marca `PG_MARCA`, escrito por `DEVTOOL_PresupuestoGuardar.js`) y el presupuesto base automatico
+(marca `PB_MARCA`, escrito por `DEVTOOL_PresupuestoBase.js` como promedio movil historico).
+
+Medido en produccion **antes** de construir: todas las filas de "Proyeccion" son hoy de origen
+base, cero son guardado manual. Ese es exactamente el caso limite que prueba el banco nuevo,
+`devtools/probar_proyeccion_abm.js` (487 lineas, 12 mutaciones dirigidas, cero fallas), con la
+aserción `vacioGuardado===true`.
+
+El modulo respeta la regla de orden alfabetico de carga de Apps Script -- documentada como
+decision inline en su propia cabecera --: todo simbolo de otro archivo se lee dentro de cuerpos
+de funcion, nunca en un `const` de nivel superior. Es la misma clase de bug que rompio la carga
+completa de la planilla ese mismo dia con `DEVTOOL_PresupuestoGuardar.js` (v0.50.1, "el proyecto
+entero no cargaba"): esta vez la leccion se aplico de entrada, no despues de un incidente.
+
+### El modal y el cableado
+
+`UI_AbmProyeccionElaborada.html` (nuevo) sigue el patron de `UI_AbmPlanCuentas.html` y el Design
+System de `UI_SharedStyles.html`: dos secciones acordeon ("Guardado a mano" / "Presupuesto
+base"), una tarjeta expandible por periodo con totales por bloque **y por moneda** -- nunca se
+suman monedas distintas en un mismo numero --, edicion de monto inline fila por fila y
+confirmacion de baja con respaldo y reversion.
+
+El cableado final agrega `showAbmProyeccionElaborada()` a `11_UIService.js` (mismo patron que
+`showAbmPlanCuentas()`) y una entrada nueva en `MENU_CONFIG.ITEMS`: "Proyecciones Elaboradas",
+menu Tidetrack > ADMINISTRAR, al lado de "Plan de Cuentas". Decision documentada inline: las seis
+funciones de datos se llaman directo desde el HTML por `google.script.run`, sin wrappers
+pass-through en `11_UIService.js` -- en Apps Script cualquier funcion global ya es invocable
+exista o no el wrapper, asi que un wrapper no reduce la superficie expuesta, solo da la sensacion
+de reducirla. Se deja un comentario en el archivo para la descubribilidad (que quien audite sepa
+donde mirar), que es lo unico que si aporta la convencion.
+
+Durante la revision, Franco pidio que el dialogo de confirmacion de Baja mostrara el total en
+pesos ademas de la cantidad de filas: "23 filas de Septiembre" no dice lo mismo que "23 filas por
+$2.847.000". El dialogo ahora suma el total por moneda antes de confirmar.
+
+### Alcance del ABM, deliberado
+
+- **Alta: no existe en este ABM.** Ya existe -- se elabora en la hoja "Presupuesto" y se guarda
+  con "Guardar Proyeccion" (menu Tidetrack Dev). El modal tiene un banner que redirige ahi.
+  Reconstruir esa logica en un modal hubiera sido duplicar superficie peligrosa sobre una BD de
+  produccion.
+- **Modificacion: solo el monto, solo en filas "guardado a mano".** Las filas de presupuesto
+  base son un promedio automatico; editarlas a mano las dejaria con una Nota que miente sobre su
+  origen. El gate real esta en el servidor (`actualizarMontoFilaProyeccion` rechaza toda fila que
+  no empiece con `PG_MARCA`); el modal es la segunda barrera, no la unica.
+- **Baja: por periodo completo** (clave + origen), con respaldo automatico en hoja oculta y
+  reversion inmediata -- una sola accion pendiente de deshacer a la vez, se pierde con el
+  siguiente cambio, avisado en el propio dialogo.
+
+### Verificacion
+
+Las 72 entradas de `MENU_CONFIG` (ITEMS + DEV_ITEMS) resuelven a una funcion global real (antes
+eran 71). Los 18 bancos (`node devtools/probar_*.js`, incluido el nuevo) en verde,
+`probar_carga_apps_script.js` en verde (43 archivos, sin `ReferenceError` de orden ni fragilidad
+nueva), `verificar_modales.py` en verde (4 modales, incluido el nuevo) y `node --check` en verde
+sobre todo `src/*.js`. Sin deploy: la corrida final la hace Franco por `sync_targets.command`.
+
 ## 2026-08-25 - Merge de recuperacion: --verificado piso v0.52.1, las dos ramas se reconcilian (v0.53.0)
 
 ### Que paso

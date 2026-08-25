@@ -2,7 +2,7 @@
 
 > Propósito: Fuente de verdad sobre la organización del repositorio. Toda nueva carpeta o archivo debe registrarse aquí antes de crearse. Los agentes de IA usan este documento como referencia canónica.
 
-Versión: v0.50.0 (segunda reconciliación de `src/` contra `ls src/` real: 45 archivos, sin faltantes ni duplicados — entraron 3 con el merge de `fix/abm-desplegable-entidad` en `94aaea4`) | Última actualización: 2026-08-25
+Versión: v0.54.0 (tercera reconciliación de `src/` contra `ls src/` real: 48 archivos, sin faltantes ni duplicados — entraron `DEVTOOL_PresupuestoSembrar.js` (v0.51.2, quedó afuera de la reconciliación anterior por descuido) y el ABM de Proyecciones Elaboradas completo: `DEVTOOL_ProyeccionAbm.js` + `UI_AbmProyeccionElaborada.html` (v0.54.0)) | Última actualización: 2026-08-25
 
 ---
 
@@ -11,7 +11,7 @@ Versión: v0.50.0 (segunda reconciliación de `src/` contra `ls src/` real: 45 a
 ```
 planilla-finanzas-personales/
 │
-├── src/ # Código fuente (Apps Script) - 45 archivos, verificado contra `ls src/` el 2026-08-25
+├── src/ # Código fuente (Apps Script) - 48 archivos, verificado contra `ls src/` el 2026-08-25
 │ ├── 00_Config.js # Constantes, rangos, enums, monedas, menús (SSOT con resolver de alias de nombres de hoja)
 │ ├── 01_Version.js # Control de versión semántica
 │ ├── 02_Utils.js # Utilidades generales y logging (logError/logInfo/logSuccess)
@@ -42,7 +42,9 @@ planilla-finanzas-personales/
 │ ├── DEVTOOL_PresupuestoGuardar.js # Guarda en Proyección el Monto a Proyectar con TCs congelados (etapa 3 de Presupuesto)
 │ ├── DEVTOOL_PresupuestoModo.js # Cablea el selector de Modo y llena J/N/R con el monto de referencia (etapa 1 de Presupuesto)
 │ ├── DEVTOOL_PresupuestoResumen.js # Agrupado por categoría (V/W) y rótulos dinámicos de las tablas resumen (etapa 2)
+│ ├── DEVTOOL_PresupuestoSembrar.js # Siembra K/O/S ("Monto a Proyectar") con lo que J/N/R muestran ahora; pisa con confirmación explícita
 │ ├── DEVTOOL_Proyeccion.js # Crea la BD Proyección (espejo de Registros) y cablea Presupuesto Asignado del Tablero
+│ ├── DEVTOOL_ProyeccionAbm.js # ABM (ver/corregir/borrar) de la BD "Proyección": distingue guardado a mano (PG_MARCA) de presupuesto base (PB_MARCA)
 │ ├── DEVTOOL_PurgaRespaldos.js # Borra las hojas de respaldo que los devtools dejan acumuladas en cada corrida
 │ ├── DEVTOOL_RiquezaYCategorias.js # Riqueza por lista blanca (Ahorros+Inversiones) + columna Tipo en categorías
 │ ├── DEVTOOL_RobustezVistas.js # Blindaje IFERROR y anti-derrame de los QUERY de staging - anclas PRE-Fix, fuera del menú
@@ -53,6 +55,7 @@ planilla-finanzas-personales/
 │ ├── MIGRACION_v0.9.5_LayoutNuevo.js # Migración al layout de junio - OBSOLETA, con guard que aborta si la geometría no coincide
 │ ├── MIGRACION_v031_Historico.js # Recupera el histórico de la planilla vieja v03.1 por cruce de ausencia, re-ejecutable
 │ ├── UI_AbmPlanCuentas.html # ABM multi-entidad del Plan de Cuentas (popup HtmlService)
+│ ├── UI_AbmProyeccionElaborada.html # Modal del ABM de Proyecciones Elaboradas: acordeón Guardado a mano / Presupuesto base, edición de monto, baja con respaldo
 │ ├── UI_SharedStyles.html # Design System CSS compartido (paleta de variables, tipografía Google Sans)
 │ ├── UI_Shell.html # HTML del Centro de Operaciones: carga real de Google Sans (fonts.googleapis.com) y escala tipográfica de cinco pasos, una sola familia
 │ ├── ZZ_Changelog.js # Historial de versiones in-code, orden descendente
@@ -225,7 +228,9 @@ El pipeline estándar para cerrar cualquier feature:
 | `DEVTOOL_PresupuestoGuardar.js` | Activo - guarda Monto a Proyectar con TCs congelados (etapa 3) | v0.46.1 |
 | `DEVTOOL_PresupuestoModo.js` | Activo - selector de Modo + columnas J/N/R (etapa 1) | v0.45.0 |
 | `DEVTOOL_PresupuestoResumen.js` | Activo - agrupado por categoría V/W (etapa 2) | v0.45.1 |
+| `DEVTOOL_PresupuestoSembrar.js` | Activo - siembra Monto a Proyectar desde J/N/R, pisa con confirmación | v0.51.2 |
 | `DEVTOOL_Proyeccion.js` | Activo - BD de Proyección + Presupuesto Asignado | v0.18.0 |
+| `DEVTOOL_ProyeccionAbm.js` | Activo - ABM de Proyecciones Elaboradas: listar/detalle/editar/baja/revertir | v0.54.0 |
 | `DEVTOOL_PurgaRespaldos.js` | Activo - borra hojas de respaldo acumuladas | v0.44.0 |
 | `DEVTOOL_RiquezaYCategorias.js` | Activo - riqueza por lista blanca + columna Tipo | v0.13.0 |
 | `DEVTOOL_RobustezVistas.js` | **Fuera del menú** - sus anclas son PRE-Fix, re-verificar | v0.9.x |
@@ -236,6 +241,7 @@ El pipeline estándar para cerrar cualquier feature:
 | `MIGRACION_v0.9.5_LayoutNuevo.js` | **Obsoleta** - guard derivado de RANGES en toda función que escribe | v0.9.5 |
 | `MIGRACION_v031_Historico.js` | Activo - cruce por ausencia, re-ejecutable | v0.11.0 |
 | `UI_AbmPlanCuentas.html` | Activo - ABM multi-entidad Plan de Cuentas | v0.4.1 |
+| `UI_AbmProyeccionElaborada.html` | Activo - ABM de Proyecciones Elaboradas, cableado al menú Tidetrack | v0.54.0 |
 | `UI_SharedStyles.html` | Activo - Design System institucional (neumorphic) | v0.4.3 |
 | `UI_Shell.html` | Activo - HTML del Centro de Operaciones, carga real de Google Sans | v0.47.0 |
 | `ZZ_Changelog.js` | Activo | v0.4.0 |
@@ -243,4 +249,4 @@ El pipeline estándar para cerrar cualquier feature:
 
 ---
 
-*Tidetrack - ESTRUCTURA.md - v0.50.0 - 2026-08-25*
+*Tidetrack - ESTRUCTURA.md - v0.54.0 - 2026-08-25*
