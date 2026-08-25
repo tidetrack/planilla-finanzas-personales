@@ -3,6 +3,23 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.54.1 - Merge de recuperacion: el fix de moneda del shell vuelve a la planilla.
+ * ! SEGUNDA VUELTA DE LA MISMA CICATRIZ, y por eso queda escrita. A las 16:44 un deploy con
+ *   --verificado desde esta rama piso v0.52.1 de fix/abm-desplegable-entidad: ese modo exigia
+ *   que el remoto fuera un commit CONOCIDO del repo, y lo era -- pero de la OTRA rama, mas
+ *   nueva. Se recupero con el merge 72c2e42 (v0.53.0).
+ * ! ESTA VEZ SE VERIFICO ANTES DE PUSHEAR. El chequeo previo al deploy mostro que
+ *   fix/abm-desplegable-entidad tenia TRES commits nuevos posteriores a lo ya mergeado, y que
+ *   uno de ellos tocaba src/: eebe3d3 "el movimiento nuevo ya no arranca en dolares" [v0.52.2],
+ *   un fix real sobre UI_Shell.html. Desplegar sin mergearlo lo habria borrado de la planilla
+ *   por tercera vez en el dia. Se mergea 16c035c primero y recien despues se deploya.
+ * + LA REGLA, ahora explicita: antes de cada deploy no alcanza con que el remoto sea un commit
+ *   conocido. Tiene que ser ANCESTRO de lo que se pushea (devtools/verificar_remoto.py, c1f5931)
+ *   Y hay que confirmar que la rama paralela no sumo trabajo en src/ desde el ultimo merge.
+ *   El primero lo hace la herramienta; el segundo es "git diff --name-only <ultimo-merge>
+ *   origin/fix/abm-desplegable-entidad -- src/", y tiene que dar vacio.
+ * + Sin cambios de comportamiento propios: este release solo trae v0.52.2 de la otra rama.
+ *
  * [2026-08-25] v0.54.0 - Presupuesto: ABM de Proyecciones Elaboradas (ver, corregir, dar de baja).
  * + Encargo textual de Franco: "en el menu deberiamos poder hacer el ABM de proyecciones
  *   elaboradas". La hoja "Presupuesto" ya permite decidir cuanto se va a gastar/ingresar el mes
@@ -83,6 +100,28 @@
  *   fix/abm-desplegable-entidad todavia tenia por haber mergeado esta rama en un punto anterior a
  *   cfbb173. Git lo resolvio automaticamente, sin conflicto: el otro lado no habia tocado el
  *   archivo desde el ancestro comun.
+ * [2026-08-25] v0.52.2 - El movimiento nuevo ya no arranca en dolares.
+ * - ENCONTRADO PROBANDO EL SHELL EN UN NAVEGADOR DE VERDAD, no leyendo codigo. El primer
+ *   bloque de "Movimiento nuevo" nacia con el medio "Dolar Cash" y el prefijo del monto decia
+ *   USD. No era una eleccion de nadie: era el PRIMERO DEL CATALOGO, que esta ordenado
+ *   alfabeticamente, y el codigo arrancaba con heredaMedio = '' para el primer bloque.
+ * - POR QUE IMPORTA: diez de los quince medios son ARS y todos los cotidianos tambien. Un
+ *   default que casi siempre esta mal es PEOR que no tener default: obliga a corregirlo todas
+ *   las veces, y el dia que no se corrige entra un gasto en la moneda equivocada -- en un
+ *   ledger donde la moneda decide con que cotizacion se congela la fila.
+ * - medioPorDefecto(): el primer medio en la MONEDA BASE, que es la primera de
+ *   MONEDAS_DISPONIBLES (ADR-003: ARS es la base, siempre 1.0). No se retipea "ARS" en el
+ *   cliente: si manana cambia la base, cambia sola.
+ * - El banco lo cubre por las tres puntas: que exista el default pensado, que la moneda base
+ *   salga de la constante, y que el primer bloque NO arranque sin medio.
+ * - devtools/servidor_shell/ (NUEVO), y es lo que permitio encontrar el bug: el shell corriendo
+ *   fuera de Google Sheets, con el catalogo REAL de la planilla y la latencia MEDIDA (537 ms el
+ *   catalogo, 900 ms una escritura). servidor.py NO usa `python3 -m http.server`: ese modulo,
+ *   en Python 3.9, llama a os.getcwd() al importarse como __main__ para el default de
+ *   --directory, y esa llamada ocurre se pase o no el flag; en un sandbox donde el cwd no es
+ *   legible muere con PermissionError antes de escuchar. El index.html servido es una COPIA
+ *   que regenera devtools/regenerar_servidor_shell.py leyendo el shell real y SHELL_VISTAS del
+ *   backend: una copia editada a mano deja de representar lo desplegado.
  *
  * [2026-08-25] v0.52.1 - El bloque que entra desacelera, no rebota.
  * - La animacion de entrada de un bloque de carga multiple usaba

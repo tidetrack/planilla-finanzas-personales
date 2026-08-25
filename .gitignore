@@ -18,3 +18,9 @@ _backup/
 .env
 .env.local
 .env.*.local
+
+# Configuracion LOCAL del arrancador de preview. Lleva una ruta absoluta de la maquina porque
+# el proceso arranca en un directorio que el sandbox no deja leer, asi que una ruta relativa no
+# resuelve. Es config de herramienta, no del producto: se regenera con
+# devtools/regenerar_servidor_shell.py --launch
+.claude/launch.json

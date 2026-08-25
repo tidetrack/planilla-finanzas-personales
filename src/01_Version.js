@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 54,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.54.0 - Presupuesto: ABM de Proyecciones Elaboradas (ver, corregir, dar de baja)',
+ releaseName: 'v0.54.1 - Merge de recuperacion: el fix de moneda del shell vuelve a la planilla',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -116,6 +116,12 @@ NOTA DE CONCURRENCIA (segunda vez que las ramas se pisan mutuamente): a las 16:4
   cfbb173. Git lo resolvio automaticamente, sin conflicto: el otro lado no habia tocado el
   archivo desde el ancestro comun.
 
+v0.52.2 (2026-08-25) - El movimiento nuevo ya no arranca en dolares
+- ENCONTRADO PROBANDO EL SHELL EN UN NAVEGADOR, no leyendo codigo: el primer bloque de Movimiento nuevo nacia con el medio "Dolar Cash" y el prefijo del monto decia USD. No era una eleccion: era el PRIMERO DEL CATALOGO, que esta ordenado alfabeticamente.
+! Diez de los quince medios son ARS, y todos los cotidianos tambien. Un default que casi siempre esta mal es peor que no tener default: obliga a corregirlo todas las veces, y el dia que no se corrige entra un gasto en la moneda equivocada.
++ medioPorDefecto(): el primer medio en la MONEDA BASE, que es la primera de MONEDAS_DISPONIBLES (ADR-003: ARS es la base, siempre 1.0). No se retipea "ARS" en el cliente.
++ Banco del shell: exige que exista el default pensado, que la moneda base salga de la constante, y que el primer bloque NO arranque sin medio -- que era lo que dejaba entrar al primero alfabetico.
++ devtools/servidor_shell/ (nuevo): el shell corriendo fuera de Sheets, con el catalogo real y la latencia medida. servidor.py no usa "python3 -m http.server" porque ese modulo llama a os.getcwd() al importarse y muere en un sandbox donde el cwd no es legible. index.html es una copia que regenera devtools/regenerar_servidor_shell.py leyendo el shell real y SHELL_VISTAS del backend.
 v0.52.1 (2026-08-25) - El bloque que entra desacelera, no rebota
 - La animacion de entrada de un bloque de carga multiple usaba cubic-bezier(.34, 1.56, .64, 1). El 1.56 pasa de largo el valor final y vuelve: el bloque se pasa de posicion y de escala antes de asentarse.
 - POR QUE IMPORTA ACA Y NO EN CUALQUIER LADO: en esa pantalla se agregan hasta QUINCE bloques, asi que el rebote se ve quince veces seguidas en una sola carga. Y es una herramienta de cargar plata, cuya voz de marca "traduce, no impresiona". Un objeto real desacelera; no rebota.
