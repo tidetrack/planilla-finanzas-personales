@@ -22,7 +22,6 @@ body { padding: 0; background: var(--bg-secondary); }
 .shell-band h1 { font-size: 19px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
 .shell-band .sub { color: var(--bg-main); font-size: 12.5px; }
 .shell-band .spacer { flex: 1; }
-.shell-band .periodo { color: var(--bg-main); font-size: 11.5px; font-family: var(--font-mono); }
 .shell-band .volver {
     font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em;
     text-transform: uppercase; color: var(--bg-main);
@@ -69,13 +68,6 @@ body { padding: 0; background: var(--bg-secondary); }
     color: var(--text-secondary); font-size: 12.5px; line-height: 1.4;
     margin-top: 2px; display: block;
 }
-.shell-card .pendiente {
-    display: inline-block; margin-top: 6px;
-    font-family: var(--font-mono); font-size: 9.5px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.06em;
-    background: var(--warning-bg); color: #6d4d00;
-    padding: 2px 6px; border-radius: 4px;
-}
 
 /* --- Vista en construccion: dice QUE va a hacer, no "proximamente". --- */
 .shell-pendiente { max-width: 560px; }
@@ -107,16 +99,9 @@ body { padding: 0; background: var(--bg-secondary); }
 @keyframes shell-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .shell-spinner { animation: none; } }
 
-.shell-error {
-    background: var(--danger-bg); border-left: 3px solid var(--danger);
-    padding: 12px 15px; border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
-    font-size: 13px; color: var(--danger); margin-bottom: 16px;
-}
-.shell-ok {
-    background: var(--success-bg); border-left: 3px solid var(--success);
-    padding: 12px 15px; border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
-    font-size: 13px; color: var(--success); margin-bottom: 16px;
-}
+/* Las alertas NO viven aca: son .alert / .alert-error / .alert-ok de UI_SharedStyles.
+   El contrato de fragmentos de la Fase 5 dice que una vista no declara estilos base propios,
+   y una alerta es de base -- las seis pantallas van a necesitarla. */
 </style>
 </head>
 <body>
@@ -287,11 +272,11 @@ function salirDeVista() { irAVista('home'); }
 
 function mostrarError(texto) {
     document.getElementById('shellAviso').innerHTML =
-        '<div class="shell-error">' + escapar(texto) + '</div>';
+        '<div class="alert alert-error">' + escapar(texto) + '</div>';
 }
 function mostrarOk(texto) {
     document.getElementById('shellAviso').innerHTML =
-        '<div class="shell-ok">' + escapar(texto) + '</div>';
+        '<div class="alert alert-ok">' + escapar(texto) + '</div>';
 }
 function limpiarAviso() { document.getElementById('shellAviso').innerHTML = ''; }
 function escapar(t) {

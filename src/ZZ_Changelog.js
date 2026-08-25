@@ -44,6 +44,15 @@
  *   SPARKLINE de Inicio!F19:F22. Se agrega --text-data (#39444d), el color del cuerpo de datos
  *   de la hoja: 4.136 celdas, el mas usado por lejos, y NO es negro puro. Un solo design
  *   system y no dos, que es la regla que el arnes fijo para esta fase.
+ * - LAS ALERTAS SUBEN AL DESIGN SYSTEM. Nacieron como .shell-error/.shell-ok locales con una
+ *   franja de acento lateral de 3px, y las dos cosas estaban mal. La franja porque LA PLANILLA
+ *   NO USA BORDES: no hay un solo setBorder en todo src/ y los bloques se separan con una
+ *   columna vacia, asi que una barra de color al costado se lee como de otro producto (el
+ *   patron de la casa, en pymes, es borde completo de 1px). Y locales porque una alerta es
+ *   componente de BASE -- las seis pantallas la van a necesitar -- y el contrato de fragmentos
+ *   de la Fase 5 prohibe declarar estilos base fuera del archivo compartido. Ahora son
+ *   .alert / .alert-error / .alert-ok / .alert-warning / .alert-info en UI_SharedStyles.html,
+ *   resueltas con fondo tenido y tinta: el color del fondo ya dice lo que la franja diria.
  * - devtools/probar_shell.js (NUEVO, banco 13): cruza SHELL_VISTAS contra los divs del HTML EN
  *   LAS DOS DIRECCIONES (ninguna vista sin div, ningun div huerfano), prueba que cada una de
  *   las seis puertas de menu abre SU vista, que una vista desconocida cae al Home en vez de dar

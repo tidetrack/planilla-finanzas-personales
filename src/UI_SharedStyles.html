@@ -247,6 +247,28 @@ hr.divider {
 }
 
 /* ============================================
+ * ALERTAS
+ * ============================================
+ * decision Franco 2026-08-24: fondo tenido y tinta, SIN franja de acento lateral.
+ * La planilla no usa bordes en ningun lado -- no hay un solo setBorder en todo src/ y los
+ * bloques se separan con una columna vacia, no con lineas -- asi que una barra de color de
+ * 3px al costado se lee como de otro producto. El color del fondo ya dice todo lo que la
+ * franja diria. Los pares fondo/tinta son los del semaforo medido de la hoja.
+ */
+
+.alert {
+ padding: 12px 15px;
+ border-radius: var(--border-radius-sm);
+ font-size: 13px;
+ margin-bottom: 16px;
+}
+
+.alert-error { background-color: var(--danger-bg); color: var(--danger); }
+.alert-ok { background-color: var(--success-bg); color: var(--success); }
+.alert-warning { background-color: var(--warning-bg); color: #6d4d00; }
+.alert-info { background-color: var(--bg-main); color: var(--text-main); }
+
+/* ============================================
  * CUSTOM SCROLLBAR
  * ============================================
  */

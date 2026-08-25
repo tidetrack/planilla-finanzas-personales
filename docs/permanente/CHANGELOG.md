@@ -51,6 +51,15 @@ declaro canonicos el 21/08 y los que viven literales dentro de las formulas SPAR
 4.136 celdas, el mas usado por lejos, y no es negro puro. Un solo design system y no dos, que es
 la regla que el arnes fijo para esta fase.
 
+**Las alertas suben al design system.** Nacieron como `.shell-error` / `.shell-ok` locales con
+una franja de acento lateral de 3px, y las dos cosas estaban mal. La franja porque **la planilla
+no usa bordes**: no hay un solo `setBorder` en todo `src/` y los bloques se separan con una
+columna vacia, asi que una barra de color al costado se lee como de otro producto —el patron de
+la casa, en pymes, es borde completo de 1px—. Y locales porque una alerta es componente de
+**base**, y el contrato de fragmentos prohibe declarar estilos base fuera del archivo compartido.
+Ahora son `.alert` y sus variantes en `UI_SharedStyles.html`, resueltas con fondo tenido y tinta:
+el color del fondo ya dice lo que la franja diria.
+
 **Banco 13.** `devtools/probar_shell.js` cruza `SHELL_VISTAS` contra los divs del HTML en las dos
 direcciones, prueba que cada puerta abre su vista, que una vista desconocida cae al Home, que
 `obtenerCatalogoShell` **nunca lanza** —ni con `getTableData` explotando ni sin planilla activa,
