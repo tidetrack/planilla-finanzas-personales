@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 47,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.47.0 - Centro de Operaciones: el shell y su Home',
+ releaseName: 'v0.47.1 - El shell abre instantaneo: cero viajes al servidor',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,15 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.47.1 (2026-08-24) - El shell abre instantaneo: cero viajes al servidor
+! SINTOMA REPORTADO POR FRANCO: el Centro de Operaciones abria, mostraba el Home en gris detras de un overlay con el spinner girando, y a los 30 segundos seguia igual. Inusable.
+- CAUSA, y es un error de diseno mio, no un bug de Apps Script: el DOMContentLoaded pedia obtenerCatalogoShell() -- las cinco lecturas del Plan de Cuentas -- detras de un overlay a pantalla completa, y recien al volver apagaba el loader. O sea que el costo de ABRIR era el costo del formulario mas caro que todavia no se habia abierto.
+! Y EL HOME NO NECESITA UN SOLO DATO DE ESE CATALOGO: son seis tarjetas de texto fijo. Se estaba esperando para llenar desplegables que ninguna pantalla abierta estaba mostrando.
++ AHORA EL SHELL HACE CERO LLAMADAS AL SERVIDOR AL ABRIR. El loader arranca apagado y el Home se ve completo apenas abre. Lo unico que si venia del servidor -- nombre de planilla y version, para el pie -- se inyecta por la plantilla, que el backend ya esta renderizando: no cuesta ningun viaje.
++ El catalogo pasa a ser PEREZOSO: asegurarCatalogo(cuando) lo pide la primera pantalla que necesite un desplegable y de ahi queda en memoria. Un solo viaje, pero cuando hace falta.
++ TOPE DE ESPERA de 15 s en el cliente: pase lo que pase del otro lado, el overlay se apaga y avisa. Un loader que depende de que el servidor conteste para poder apagarse es un loader que puede quedarse puesto para siempre, y esta planilla ya pago ese precio dos veces (v0.45.2 y esta).
++ diagnosticarShell() (nuevo, menu Dev > Shell): cronometra POR SEPARADO cada lectura del catalogo mas el costo de abrir la planilla. Cinco lecturas encadenadas detras de un overlay dan un unico numero inutil; esto dice cual de las cinco tarda. Si el shell vuelve a ponerse lento, el primer paso es correr esto y mirar, no adivinar.
++ Banco 13, seccion 9 nueva: exige que el listener de arranque NO llame al servidor, que el overlay nazca apagado, que el pie venga de la plantilla y que exista el tope de espera. La regresion queda cerrada por prueba, no por promesa.
 v0.47.0 (2026-08-24) - Centro de Operaciones: el shell y su Home
 + Fase 5 del arnes. 16_ShellService.js + UI_Shell.html: modal de 900x700 con Home de seis tarjetas, router de vistas y el catalogo entero del Plan de Cuentas en UN solo round-trip. Entra al menu como PRIMER item, "Abrir Tidetrack".
 + MODAL Y NO SIDEBAR: showSidebar tiene 300 px fijos (la API ignora setWidth) y Conciliacion necesita cuatro columnas de numeros por cada uno de los quince medios. El argumento de "ver la hoja al lado" tampoco se sostiene: el saldo por medio no esta en ninguna celda, lo calcula el backend. 900 y no los 1000 de pymes porque el contenido mas ancho entra con holgura; 700 y no 760 porque el ABM ya esta en 750 y es el techo practico -- un modal que se corta abajo esconde el boton de confirmar.

@@ -15,9 +15,14 @@
  *      parado en una vista distinta. addItem() de Apps Script no acepta argumentos, asi que
  *      cada puerta es una funcion nombrada de una linea que delega en _abrirShell(vista).
  *
- *   2. UN SOLO ROUND-TRIP AL ABRIR. obtenerCatalogoShell() trae el Plan de Cuentas entero de
- *      una vez y con eso se pueblan todos los desplegables. El ABM viejo hacia un viaje por
- *      categoria; con seis pantallas en el mismo shell eso se vuelve caro.
+ *   2. UN SOLO ROUND-TRIP PARA EL CATALOGO, pero PEREZOSO -- y aca se corrige a pymes por
+ *      segunda vez. obtenerCatalogoShell() trae el Plan de Cuentas entero de una vez, en lugar
+ *      de un viaje por categoria como hacia el ABM viejo. Pero NO se pide al abrir: el shell
+ *      hace CERO llamadas al servidor en el arranque. La primera version lo pedia en el
+ *      DOMContentLoaded detras de un overlay y en la planilla real tardo mas de 30 segundos,
+ *      con el Home tapado todo ese tiempo -- cuando el Home no necesita un solo dato de ese
+ *      catalogo: son seis tarjetas de texto fijo. El costo de abrir tiene que ser el costo de
+ *      lo que se ve, no el del formulario mas caro que todavia no se abrio.
  *
  *   3. LA WHITELIST DE VISTAS ES UNA SOLA. En pymes la lista vive en TRES lugares que hay que
  *      mantener a la par a mano, y ya fallo: dos items abrian el Home en silencio porque sus
@@ -113,6 +118,17 @@ function _abrirShell(vista) {
     tpl.ancho = SHELL_GEOMETRIA.ancho;
     tpl.alto = SHELL_GEOMETRIA.alto;
     tpl.vistasJson = JSON.stringify(SHELL_VISTAS);
+    // El pie viaja EN LA PLANTILLA, no por google.script.run.
+    //
+    // decision Franco 2026-08-24: el shell hace CERO llamadas al servidor al abrir. La primera
+    // version pedia el catalogo entero del Plan de Cuentas en el DOMContentLoaded y tapaba todo
+    // con un overlay hasta que volviera; en la planilla real eso tardo mas de 30 segundos y el
+    // Home quedo inusable. Y el Home no necesita un solo dato de ese catalogo: son seis
+    // tarjetas de texto fijo. Lo unico que si necesitaba -- el nombre de la planilla y la
+    // version, para el pie -- ya lo tiene el servidor en el momento de renderizar, asi que se
+    // inyecta y no cuesta ningun viaje.
+    tpl.planilla = _nombrePlanillaShell();
+    tpl.version = (typeof VERSION === 'object' && VERSION.toString) ? VERSION.toString() : '';
 
     const html = tpl.evaluate()
         .setWidth(SHELL_GEOMETRIA.ancho)
@@ -129,8 +145,9 @@ function _abrirShell(vista) {
 /**
  * TODO el catalogo que el shell necesita, en un solo viaje.
  *
- * Se llama una vez en el DOMContentLoaded y alimenta todos los desplegables de todas las
- * vistas. Cada pantalla despues hace su init perezoso con lo que ya esta en memoria.
+ * PEREZOSO: NO se llama al abrir. Lo pide la primera vista que necesita un desplegable, y a
+ * partir de ahi queda en memoria del cliente para todas las demas. Un solo viaje, pero cuando
+ * hace falta -- no antes de dejar ver el Home.
  *
  * @returns {Object} catalogo completo, o {error} si algo falla -- nunca lanza: una excepcion
  *   del servidor deja al cliente sin withFailureHandler mostrando un loader eterno, que es
@@ -215,6 +232,58 @@ function procesarCargasDesdeShell() {
         return { ok: true };
     } catch (e) {
         logError('procesarCargasDesdeShell', e);
+        return { ok: false, error: String(e && e.message ? e.message : e) };
+    }
+}
+
+/**
+ * Mide cuanto tarda cada lectura del catalogo. Solo lectura, no escribe nada.
+ *
+ * Existe porque la primera version del shell tardaba mas de 30 segundos en abrir y no habia
+ * forma de saber POR QUE: cinco lecturas encadenadas detras de un overlay dan un unico numero
+ * inutil. Esto las separa y las cronometra una por una, mas el costo de abrir la planilla.
+ * Si manana el shell vuelve a ponerse lento, el primer paso es correr esto y mirar el numero,
+ * no adivinar.
+ *
+ * @returns {{ok:boolean, detalle?:string, error?:string}}
+ */
+function diagnosticarShell() {
+    try {
+        const l = [];
+        const t0 = new Date().getTime();
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const hojas = ss.getSheets().length;
+        l.push('Abrir la planilla y contar hojas: ' + (new Date().getTime() - t0) + ' ms  (' +
+            hojas + ' hojas)');
+
+        ['INGRESOS', 'GASTOS_FIJOS', 'GASTOS_VARIABLES', 'CATEGORIAS_CUENTA', 'MEDIOS_PAGO']
+            .forEach(function (clave) {
+                const t = new Date().getTime();
+                let filas = 0, err = '';
+                try { filas = getTableData(clave).length; }
+                catch (e) { err = ' ERROR: ' + (e && e.message ? e.message : e); }
+                l.push('getTableData(' + clave + '): ' + (new Date().getTime() - t) + ' ms  (' +
+                    filas + ' filas)' + err);
+            });
+
+        const t1 = new Date().getTime();
+        const cat = obtenerCatalogoShell();
+        l.push('obtenerCatalogoShell() completo: ' + (new Date().getTime() - t1) + ' ms  (ok=' +
+            (cat && cat.ok) + ')');
+        l.push('');
+        l.push('TOTAL: ' + (new Date().getTime() - t0) + ' ms');
+        l.push('');
+        l.push('Referencia: el shell abre SIN hacer ninguna de estas llamadas. Este catalogo lo');
+        l.push('pide recien la primera pantalla que necesita un desplegable.');
+
+        const detalle = l.join('\n');
+        try {
+            SpreadsheetApp.getUi().alert('Shell - diagnostico de tiempos', detalle,
+                SpreadsheetApp.getUi().ButtonSet.OK);
+        } catch (e) { Logger.log(detalle); }
+        return { ok: true, detalle: detalle };
+    } catch (e) {
+        logError('diagnosticarShell', e);
         return { ok: false, error: String(e && e.message ? e.message : e) };
     }
 }

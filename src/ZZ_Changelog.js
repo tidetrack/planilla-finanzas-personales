@@ -3,6 +3,38 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.47.1 - El shell abre instantaneo: cero viajes al servidor.
+ * - SINTOMA, reportado por Franco con captura: el Centro de Operaciones abria, mostraba el Home
+ *   en gris detras de un overlay con el spinner girando, y a los 30 segundos seguia igual.
+ * - CAUSA, y es un error de diseno mio y no un bug de Apps Script: el DOMContentLoaded pedia
+ *   obtenerCatalogoShell() -- cinco lecturas del Plan de Cuentas -- detras de un overlay a
+ *   pantalla completa, y recien al volver apagaba el loader. El costo de ABRIR pasaba a ser el
+ *   costo del formulario mas caro que todavia no se habia abierto.
+ * - LO QUE LO HACE EVITABLE: el Home no necesita UN SOLO DATO de ese catalogo. Son seis
+ *   tarjetas de texto fijo. Se estaba esperando para llenar desplegables que ninguna pantalla
+ *   abierta estaba mostrando. El diagnostico correcto no era "que lectura tarda" sino "por que
+ *   estamos leyendo antes de dejar ver".
+ * - AHORA EL SHELL HACE CERO LLAMADAS AL SERVIDOR AL ABRIR. El loader nace apagado
+ *   (class="shell-overlay hidden") y el Home se ve completo apenas abre. Lo unico que si venia
+ *   del servidor -- el nombre de la planilla y la version, para el pie -- se inyecta por la
+ *   PLANTILLA, que el backend ya esta renderizando de todos modos: no cuesta ningun viaje.
+ * - EL CATALOGO PASA A SER PEREZOSO. asegurarCatalogo(cuando) lo pide la primera pantalla que
+ *   necesite un desplegable, y de ahi en mas queda en memoria del cliente para todas las demas.
+ *   Se conserva la ventaja del round-trip unico de pymes, sin pagarlo al abrir.
+ * - TOPE DE ESPERA de 15 s en el cliente, con su clearTimeout y su guarda de doble respuesta:
+ *   pase lo que pase del otro lado, el overlay se apaga y le dice a Franco que hacer. Un loader
+ *   que depende de que el servidor conteste para poder apagarse es un loader que puede quedarse
+ *   puesto para siempre -- esta planilla ya pago ese precio dos veces, en la v0.45.2 y en esta.
+ * - diagnosticarShell() (NUEVO, cableado en menu Dev > Shell): cronometra POR SEPARADO el costo
+ *   de abrir la planilla y cada una de las cinco lecturas del catalogo, mas el total. Existe
+ *   porque cinco lecturas encadenadas detras de un overlay dan un unico numero que no dice
+ *   nada. Si el shell vuelve a ponerse lento, el primer paso es correr esto y leer cual de las
+ *   cinco tarda, no adivinar. Solo lectura.
+ * - Banco 13, seccion 9 NUEVA: exige que el listener de arranque no llame al servidor, que el
+ *   overlay nazca apagado, que el pie venga de la plantilla, que el catalogo no se pida dos
+ *   veces y que exista el tope de espera. La regresion queda cerrada por prueba y no por
+ *   promesa. Los trece bancos y verificar_modales en verde.
+ *
  * [2026-08-24] v0.47.0 - Centro de Operaciones: el shell y su Home.
  * - FASE 5 DEL ARNES, portada de planilla-pymes. 16_ShellService.js (NUEVO) + UI_Shell.html
  *   (NUEVO): modal de 900x700 con Home de seis tarjetas, router de vistas del lado del cliente

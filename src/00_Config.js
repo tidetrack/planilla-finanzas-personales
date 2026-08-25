@@ -682,6 +682,15 @@ const MENU_CONFIG = {
             ]
         },
         {
+            // Cronometra por separado cada lectura del catalogo del Plan de Cuentas. Existe
+            // porque la primera version del shell tardaba mas de 30 segundos en abrir y cinco
+            // lecturas encadenadas detras de un overlay dan un unico numero inutil: este las
+            // separa y las mide una por una. Solo lectura. @see 16_ShellService.js
+            submenu: 'Shell', items: [
+                { name: 'Diagnosticar tiempos (no escribe nada)', function: 'diagnosticarShell' }
+            ]
+        },
+        {
             // Crea el bloque OCULTO de cuentas comodin en el Plan de Cuentas (T:U) y lo suma a
             // la consolidada, para que el desplegable de Cuenta de la hoja de Cargas ofrezca
             // "Traspaso" e "Inicio Mes" en vez de que se tipeen a mano -- que es de donde

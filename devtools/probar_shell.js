@@ -84,7 +84,7 @@ vm.runInContext(
     '\n;Object.assign(globalThis,{SHELL_VISTAS,SHELL_GEOMETRIA,SHELL_VISTA_DEFECTO,_abrirShell,' +
     'abrirTidetrack,abrirMovimientoNuevo,abrirTraspasoNuevo,abrirProyeccionNueva,' +
     'abrirRecurrentes,abrirConciliacionNueva,obtenerCatalogoShell,abrirAbmDesdeShell,' +
-    'procesarCargasDesdeShell,MENU_CONFIG,CUENTAS_NEUTRAS,MONEDAS_DISPONIBLES});',
+    'procesarCargasDesdeShell,diagnosticarShell,MENU_CONFIG,CUENTAS_NEUTRAS,MONEDAS_DISPONIBLES});',
     ctx
 );
 
@@ -202,7 +202,32 @@ ctx._abmAbierto = false;
 ctx.abrirAbmDesdeShell();
 ok(ctx._abmAbierto === true, 'abrirAbmDesdeShell llama al ABM que ya existe, sin duplicarlo');
 
-seccion('9. El cliente no puede quedarse con el loader puesto');
+seccion('9. ABRIR NO CUESTA NINGUN VIAJE AL SERVIDOR');
+// La regresion que motiva esta seccion: la primera v0.47.0 pedia el catalogo en el
+// DOMContentLoaded detras de un overlay a pantalla completa, y en la planilla real tardo mas de
+// 30 segundos con el Home tapado todo ese rato -- para llenar desplegables que ninguna pantalla
+// abierta estaba mostrando.
+// Se ancla al LISTENER, no a la palabra: "DOMContentLoaded" tambien aparece en el docstring
+// de asegurarCatalogo (que si llama al servidor, y debe), y un regex flojo lo agarraba a el.
+const domReady = (HTML.match(/addEventListener\('DOMContentLoaded'[\s\S]*?\n\}\);/) || [''])[0];
+ok(domReady.length > 0, 'se encontro el listener de arranque para inspeccionarlo');
+ok(domReady.indexOf('google.script.run') === -1,
+    'el arranque NO llama al servidor: el Home se ve apenas abre');
+ok(/class="shell-overlay hidden"/.test(HTML),
+    'el loader arranca APAGADO, no tapando el shell');
+ok(HTML.indexOf('<?= planilla ?>') !== -1 && HTML.indexOf('<?= version ?>') !== -1,
+    'el pie viene inyectado por la plantilla, no por un round-trip');
+ok(!!ultimoModal.planilla && !!ultimoModal.version,
+    'el backend le pasa planilla y version a la plantilla al renderizar');
+ok(/function asegurarCatalogo/.test(HTML), 'el catalogo se pide con asegurarCatalogo(), perezoso');
+ok(/if \(catalogo\)/.test(HTML), 'una vez traido, no se vuelve a pedir');
+ok(/setTimeout/.test(HTML) && /clearTimeout/.test(HTML),
+    'hay tope de espera: el overlay se apaga aunque el servidor no conteste nunca');
+ok(typeof ctx.diagnosticarShell === 'function', 'existe diagnosticarShell() para medir');
+ok(funcionesDeMenu(ctx.MENU_CONFIG.DEV_ITEMS, []).indexOf('diagnosticarShell') !== -1,
+    'el diagnostico esta cableado al menu Dev');
+
+seccion('10. El cliente no puede quedarse con el loader puesto');
 const cadenas = HTML.split('google.script.run').slice(1);
 ok(cadenas.length >= 3, 'hay al menos tres llamadas al backend');
 cadenas.forEach(function (c, i) {
@@ -221,5 +246,5 @@ ok(jsShell.indexOf('host.close') === -1,
 ok(/function salirDeVista\s*\(\s*\)\s*\{\s*irAVista\('home'\)/.test(jsShell),
     'salirDeVista vuelve al Home, que es lo que el contenedor decide que significa "salir"');
 
-console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (9 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (10 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
 process.exit(fallas === 0 ? 0 : 1);

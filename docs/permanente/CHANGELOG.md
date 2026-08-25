@@ -9,6 +9,43 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.47.1 - El shell abre instantaneo: cero viajes al servidor (2026-08-24)
+
+**Sintoma**, reportado por Franco con captura: el Centro de Operaciones abria, mostraba el Home en
+gris detras de un overlay con el spinner girando, y a los 30 segundos seguia igual.
+
+**Causa**, y es un error de diseno propio, no un bug de Apps Script: el `DOMContentLoaded` pedia
+`obtenerCatalogoShell()` —cinco lecturas del Plan de Cuentas— detras de un overlay a pantalla
+completa, y recien al volver apagaba el loader. El costo de **abrir** pasaba a ser el costo del
+formulario mas caro que todavia no se habia abierto.
+
+**Lo que lo hace evitable:** el Home no necesita **un solo dato** de ese catalogo. Son seis
+tarjetas de texto fijo. Se estaba esperando para llenar desplegables que ninguna pantalla abierta
+estaba mostrando. El diagnostico correcto no era "que lectura tarda" sino "por que estamos leyendo
+antes de dejar ver".
+
+**Ahora el shell hace cero llamadas al servidor al abrir.** El loader nace apagado y el Home se ve
+completo apenas abre. Lo unico que si venia del servidor —nombre de planilla y version, para el
+pie— se inyecta por la **plantilla**, que el backend ya esta renderizando: no cuesta ningun viaje.
+
+**El catalogo pasa a ser perezoso.** `asegurarCatalogo(cuando)` lo pide la primera pantalla que
+necesite un desplegable, y de ahi en mas queda en memoria. Se conserva la ventaja del round-trip
+unico de pymes, sin pagarlo al abrir.
+
+**Tope de espera de 15 s** en el cliente: pase lo que pase del otro lado, el overlay se apaga y
+dice que hacer. Un loader que depende de que el servidor conteste para poder apagarse es un loader
+que puede quedarse puesto para siempre —esta planilla ya pago ese precio dos veces—.
+
+**`diagnosticarShell()`** (menu `Dev > Shell`) cronometra por separado el costo de abrir la
+planilla y cada una de las cinco lecturas, mas el total. Cinco lecturas encadenadas detras de un
+overlay dan un unico numero que no dice nada; esto dice cual tarda. Solo lectura.
+
+**Banco 13, seccion 9 nueva:** exige que el listener de arranque no llame al servidor, que el
+overlay nazca apagado, que el pie venga de la plantilla y que exista el tope de espera. La
+regresion queda cerrada por prueba, no por promesa.
+
+---
+
 ## v0.47.0 - Centro de Operaciones: el shell y su Home (2026-08-24)
 
 Fase 5 del arnes, portada de `planilla-pymes`. `src/16_ShellService.js` y `src/UI_Shell.html`:

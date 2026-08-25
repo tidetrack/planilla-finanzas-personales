@@ -235,12 +235,14 @@ body { padding: 0; background: var(--bg-secondary); }
 </div>
 
 <div class="shell-foot">
-    <span id="shellPlanilla"></span>
+    <span><?= planilla ?></span>
     <span class="spacer"></span>
-    <span id="shellVersion"></span>
+    <span>v<?= version ?></span>
 </div>
 
-<div class="shell-overlay" id="shellLoader"><div class="shell-spinner"></div></div>
+<!-- El loader arranca APAGADO: el shell no espera nada para dejarte ver el Home. Solo se
+     enciende cuando vos disparas una accion que va al servidor. -->
+<div class="shell-overlay hidden" id="shellLoader"><div class="shell-spinner"></div></div>
 
 <script>
 // La lista de vistas y las dimensiones vienen INYECTADAS del backend. No hay una segunda
@@ -338,28 +340,60 @@ function procesarLote() {
 // ARRANQUE
 // ============================================
 
-document.addEventListener('DOMContentLoaded', function () {
-    irAVista(VISTA_INICIAL);
+/**
+ * Trae el catalogo del Plan de Cuentas y despues llama a `cuando`.
+ *
+ * PEREZOSO Y UNA SOLA VEZ. No corre al abrir: lo llama la primera vista que necesite un
+ * desplegable, y de ahi en mas el catalogo ya esta en memoria. El shell arranca sin pedirle
+ * NADA al servidor -- el Home son seis tarjetas de texto fijo y el pie viene en la plantilla.
+ *
+ * La version anterior pedia esto en el DOMContentLoaded detras de un overlay a pantalla
+ * completa: en la planilla real tardo mas de 30 segundos y el Home quedo inusable todo ese
+ * rato, para llenar desplegables que ninguna pantalla abierta estaba mostrando.
+ */
+function asegurarCatalogo(cuando) {
+    if (catalogo) { cuando(catalogo); return; }
+
+    loader(true);
+    // Tope de espera: pase lo que pase del otro lado, el overlay se apaga. Un loader que
+    // depende de que el servidor conteste para poder apagarse es un loader que puede quedarse
+    // puesto para siempre, y esta planilla ya pago ese precio dos veces.
+    var contestó = false;
+    var tope = window.setTimeout(function () {
+        if (contestó) { return; }
+        contestó = true;
+        loader(false);
+        mostrarError('El Plan de Cuentas esta tardando mas de la cuenta. Proba de nuevo, y si ' +
+            'sigue igual corre "Tidetrack Dev > Shell > Diagnosticar tiempos" para ver que lo demora.');
+    }, 15000);
+
+    function cerrar() { contestó = true; window.clearTimeout(tope); loader(false); }
 
     google.script.run
         .withSuccessHandler(function (data) {
-            loader(false);
+            if (contestó) { return; }
+            cerrar();
             if (!data || !data.ok) {
                 mostrarError('No se pudo leer el Plan de Cuentas: ' +
                     ((data && data.error) || 'error desconocido'));
                 return;
             }
             catalogo = data;
-            document.getElementById('shellPlanilla').textContent = data.planilla || '';
-            document.getElementById('shellVersion').textContent = data.version ? 'v' + data.version : '';
+            cuando(catalogo);
         })
         .withFailureHandler(function (err) {
             // Sin esta rama el loader queda puesto para siempre tapando el shell entero: es
             // exactamente el bug que costo cuatro dias en la v0.45.2.
-            loader(false);
+            if (contestó) { return; }
+            cerrar();
             mostrarError('No se pudo leer el Plan de Cuentas: ' + err.message);
         })
         .obtenerCatalogoShell();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Cero llamadas al servidor. El shell se ve completo apenas abre.
+    irAVista(VISTA_INICIAL);
 });
 </script>
 </body>
