@@ -228,7 +228,7 @@ for i in "${!TARGET_NAMES[@]}"; do
             # Hay diferencia, pero eso NO dice en que direccion. La pregunta que importa --
             # el remoto tiene algo que el repo nunca vio? -- la contesta el verificador
             # comparando hashes de blob contra el src/ de cada commit alcanzable.
-            commit_remoto="$(python3 "$REPO_DIR/devtools/verificar_remoto.py" "$pulled_dir" 2>/dev/null)"
+            commit_remoto="$(python3 "$REPO_DIR/devtools/verificar_remoto.py" "$pulled_dir" 2>"$tmp_dir/verif.log")"
             ver_rc=$?
             if [ "$ver_rc" -eq 0 ]; then
                 echo "  LOCAL ADELANTE: el remoto es exactamente un commit de este repo."
@@ -237,10 +237,13 @@ for i in "${!TARGET_NAMES[@]}"; do
                 DRIFT_STATUS+=("adelante")
             else
                 echo "  DRIFT DETECTADO: remoto y src/ local difieren (un push sobreescribe el remoto)."
-                if [ "$ver_rc" -eq 1 ]; then
-                    echo "    El remoto NO coincide con ningun commit del repo: tiene contenido propio."
-                else
+                if [ "$ver_rc" -ne 1 ]; then
                     echo "    Ademas, no se pudo verificar contra la historia del repo."
+                fi
+                # El diagnostico del verificador nombra la rama y el comando que destraba.
+                # Antes iba a /dev/null: se perdia justo cuando mas falta hacia.
+                if [ -s "$tmp_dir/verif.log" ]; then
+                    sed 's/^/    /' "$tmp_dir/verif.log"
                 fi
                 echo "  Archivos que difieren:"
                 sed 's/^/    /' "$tmp_dir/diff.log"
