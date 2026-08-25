@@ -30,12 +30,40 @@
   filas de "Proyeccion" son de origen base) y tiene un mensaje propio, nunca una tabla vacia sin
   explicacion.
 
+  [INCIDENTE 2026-08-25 -- PERMISSION_DENIED al abrir]
+  El listado (unica llamada a `listarPeriodosProyeccion()`, disparada en DOMContentLoaded) fallaba
+  siempre con "Se produjo un error en el servidor al leer desde el almacenamiento. Codigo de error
+  PERMISSION_DENIED" -- mensaje enganoso: la funcion es SpreadsheetApp puro, cero
+  PropertiesService, y los mismos datos se leen bien desde el menu (ver
+  DEVTOOL_DIAG_PermisoProyeccionAbm.js, que descarta dato/funcion rotos). Hipotesis de trabajo: el
+  canal google.script.run (que el iframe de googleusercontent.com negocia contra
+  script.google.com) todavia no esta listo cuando dispara DOMContentLoaded, y Google reporta esa
+  falta de canal como PERMISSION_DENIED en vez de un error de timing. La sostiene un dato medido:
+  el Shell (16_ShellService.js, otra sesion) pide su catalogo por el MISMO canal, MISMA cuenta,
+  MISMA planilla, y responde en ~537ms SIEMPRE que sale DESPUES de un gesto del usuario -- nunca
+  al abrir. Eso descarta que el canal este roto en este contenedor, y en gran medida que sea la
+  cuenta (start.tidetrack@gmail.com vs francodiazpizarro@gmail.com, ver DEVTOOL_DIAG): con la
+  MISMA cuenta, llamando DESPUES de un gesto, anda. Lo que NO se descarta es si es demora fija de
+  negociacion o una carrera contra esa negociacion (la llamada de este modal, a diferencia de la
+  del Shell, compite con la apertura del propio modal) -- por eso el diagnostico de mas abajo
+  guarda el intento ganador de CADA apertura, no solo si hubo reintento.
+  No se movio el disparo a `window.onload`: este modal carga una webfont externa
+  (fonts.googleapis.com, ver <head>) y 'onload' espera tambien a que esa fuente termine de bajar.
+  Si el error desaparece por mudar a 'onload', no se puede distinguir "se arreglo el canal" de "se
+  espero a que bajara una tipografia" sin medir el tiempo de la fuente aparte -- esa medicion no
+  se hizo, asi que se prefirio quedarse en DOMContentLoaded y resolver con reintentos (inmediato,
+  ~600ms, ~1800ms de espera creciente) mas un boton "Reintentar" si los tres fallan. El intento
+  ganador (o el agotamiento de los tres) queda en una linea discreta del pie del modal y en
+  localStorage (ultimas 8 aperturas), para poder ver a ojo si el patron es fijo (siempre el mismo
+  intento -> demora fija) o varia (carrera).
+
   @see src/DEVTOOL_ProyeccionAbm.js (capa de datos: listarPeriodosProyeccion,
        detalleFilasPeriodoProyeccion, eliminarPeriodoProyeccion, revertirBajaProyeccionAbm,
        actualizarMontoFilaProyeccion, revertirEdicionMontoProyeccion)
+  @see src/DEVTOOL_DIAG_PermisoProyeccionAbm.js (diagnostico que descarto dato/funcion rotos)
   @see src/UI_AbmPlanCuentas.html (patron de modal HtmlService que este archivo sigue)
   @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
-  @version 0.52.0
+  @version 0.56.0
   @since 2026-08-25
 -->
 <!DOCTYPE html>
@@ -180,9 +208,14 @@
         .estado-vacio { padding: 10px 2px 4px; color: var(--text-secondary); font-size: 13px; }
 
         .pie-modal {
-            display: flex; justify-content: flex-end; margin-top: 20px; padding-top: 14px;
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            margin-top: 20px; padding-top: 14px;
             border-top: 1px solid var(--border-color);
         }
+        /* Linea discreta de diagnostico del canal google.script.run -- ver cabecera, INCIDENTE
+           2026-08-25. Se muestra despues de cada carga (exito o agotamiento de reintentos), nunca
+           antes: no hay nada que diagnosticar todavia. */
+        #diagLinea { font-size: 11px; color: var(--text-secondary); }
     </style>
 </head>
 <body>
@@ -208,6 +241,9 @@
     <div id="errorGeneral" class="alert alert-error hidden">
         <strong>No se pudo leer "Proyeccion":</strong>
         <span id="errorGeneralTexto"></span>
+        <div style="margin-top: 10px;">
+            <button type="button" class="btn btn-secondary btn-mini" onclick="cargarListado()">Reintentar</button>
+        </div>
     </div>
 
     <div id="cuerpoListado" class="hidden">
@@ -221,6 +257,7 @@
     </div>
 
     <div class="pie-modal">
+        <span id="diagLinea" class="hidden"></span>
         <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cerrar</button>
     </div>
 </div>
@@ -230,6 +267,22 @@
     // listado (que se hace despues de CADA mutacion, para nunca mostrar un total desactualizado).
     var abiertos = {};
     var ultimoRevert = null; // { tipo: 'baja' | 'edicion' }
+
+    // ============================================
+    // REINTENTOS DEL CANAL google.script.run -- ver cabecera, INCIDENTE 2026-08-25
+    // ============================================
+    // 3 intentos con espera creciente antes de rendirse: inmediato, ~600ms, ~1800ms (backoff x3).
+    // 600ms es un margen comodo por encima del ~537ms que mide el Shell para el mismo canal
+    // llamando despues de un gesto -- si la demora es de negociacion fija, un solo reintento a
+    // esa escala deberia alcanzar. 1800ms es el tercer escalon por si la negociacion es mas lenta
+    // (cuenta multi-sesion, red mas lenta): da margen sin que la espera total (2.4s de backoff +
+    // 3 round-trips) se sienta como un modal roto.
+    var REINTENTOS_ESPERA_MS = [0, 600, 1800];
+    var LS_KEY_DIAG = 'tt_diagAbmProyeccion_v1';
+    var HIST_MAX = 8; // aperturas guardadas -- alcanza para ver el patron (fijo vs. carrera) a ojo
+
+    var intentoActual = 0;
+    var tsCicloInicio = 0;
 
     document.addEventListener('DOMContentLoaded', cargarListado);
 
@@ -283,22 +336,101 @@
     // CARGA DEL LISTADO
     // ============================================
 
+    // Punto de entrada publico: lo llama tanto DOMContentLoaded como el boton "Reintentar" del
+    // banner de error (arranca el ciclo de 3 intentos de nuevo, desde cero).
     function cargarListado() {
-        document.getElementById('loader').classList.remove('hidden');
+        intentoActual = 0;
+        tsCicloInicio = performance.now();
         document.getElementById('errorGeneral').classList.add('hidden');
+        intentarCargaListado();
+    }
+
+    function intentarCargaListado() {
+        intentoActual++;
+        document.getElementById('loader').classList.remove('hidden');
         google.script.run
             .withSuccessHandler(function (data) {
+                var ms = Math.round(performance.now() - tsCicloInicio);
+                registrarDiagnostico(intentoActual, ms, null);
                 document.getElementById('loader').classList.add('hidden');
                 document.getElementById('cuerpoListado').classList.remove('hidden');
                 renderListadoCompleto(data);
             })
             .withFailureHandler(function (err) {
+                var ms = Math.round(performance.now() - tsCicloInicio);
+                if (intentoActual < REINTENTOS_ESPERA_MS.length) {
+                    var espera = REINTENTOS_ESPERA_MS[intentoActual];
+                    console.log('[ABM Proyeccion] intento ' + intentoActual + ' fallo a los ' + ms +
+                        'ms (' + err.message + '). Reintentando en ' + espera + 'ms...');
+                    setTimeout(intentarCargaListado, espera);
+                    return;
+                }
+                // Se agotaron los 3 intentos: recien aca es un error de verdad para el usuario.
+                registrarDiagnostico(intentoActual, ms, err.message);
                 document.getElementById('loader').classList.add('hidden');
                 document.getElementById('cuerpoListado').classList.add('hidden');
                 document.getElementById('errorGeneral').classList.remove('hidden');
                 document.getElementById('errorGeneralTexto').textContent = err.message;
             })
             .listarPeriodosProyeccion();
+    }
+
+    // ============================================
+    // DIAGNOSTICO DE CANAL -- linea discreta + historial entre aperturas (ver cabecera)
+    // ============================================
+    // No es telemetria enviada a ningun lado: vive entera en este navegador (consola +
+    // localStorage). Sirve solo para que Franco, mirando la planilla, pueda distinguir "siempre
+    // entra en el mismo intento" (demora fija de negociacion) de "el intento que funciona varia"
+    // (carrera) -- y para el caso limite: si TODAS las aperturas agotan los 3 intentos, no era
+    // timing, hay que mirar del lado de la cuenta/permiso.
+
+    function leerHistorialDiag() {
+        try {
+            var raw = localStorage.getItem(LS_KEY_DIAG);
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return null; // localStorage no disponible en este contexto -- se degrada sin romper nada
+        }
+    }
+
+    function guardarHistorialDiag(hist) {
+        try {
+            localStorage.setItem(LS_KEY_DIAG, JSON.stringify(hist.slice(-HIST_MAX)));
+        } catch (e) {
+            // sin persistencia entre aperturas -- esta apertura igual queda en consola y en pantalla
+        }
+    }
+
+    /**
+     * intento: en que intento (1, 2 o 3) se resolvio el ciclo -- exito o agotamiento.
+     * ms: tiempo desde el primer intento del ciclo hasta que se resolvio.
+     * error: null si tuvo exito; el mensaje del servidor si se agotaron los 3 intentos.
+     */
+    function registrarDiagnostico(intento, ms, error) {
+        var entrada = { intento: intento, ms: ms, error: !!error, ts: new Date().toISOString() };
+        console.log('[ABM Proyeccion] diagnostico de esta apertura:', entrada);
+
+        var hist = leerHistorialDiag();
+        if (hist) {
+            hist.push(entrada);
+            guardarHistorialDiag(hist);
+        }
+        renderDiagLinea(entrada, hist);
+    }
+
+    function renderDiagLinea(entrada, hist) {
+        var el = document.getElementById('diagLinea');
+        var actual = entrada.error
+            ? ('los 3 intentos fallaron (' + entrada.ms + ' ms)')
+            : ('intento ' + entrada.intento + '/3 (' + entrada.ms + ' ms)');
+
+        var linea = 'Canal: ' + actual;
+        if (hist && hist.length > 1) {
+            var codigos = hist.map(function (h) { return h.error ? 'X' : String(h.intento); });
+            linea += ' · ultimas aperturas: ' + codigos.join('-');
+        }
+        el.textContent = linea;
+        el.classList.remove('hidden');
     }
 
     function renderListadoCompleto(data) {

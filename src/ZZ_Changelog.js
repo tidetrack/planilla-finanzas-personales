@@ -3,6 +3,43 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.56.0 - Proyecciones Elaboradas: reintentos ante el PERMISSION_DENIED fantasma al abrir.
+ * - El listado del ABM "Proyecciones Elaboradas" (UI_AbmProyeccionElaborada.html) fallaba SIEMPRE
+ *   al abrir con "Se produjo un error en el servidor al leer desde el almacenamiento. Codigo de
+ *   error PERMISSION_DENIED" -- mensaje enganoso: el camino de lectura (listarPeriodosProyeccion
+ *   -> _preflightPb -> _leerTodasFilasPa) es SpreadsheetApp puro, cero PropertiesService, y los
+ *   mismos datos se leen bien desde el menu (DEVTOOL_DIAG_PermisoProyeccionAbm.js, agregado en
+ *   este mismo release, ya habia descartado dato/funcion rotos midiendo Session, PropertiesService
+ *   y la funcion invocada directo).
+ * - Hipotesis de trabajo, sostenida por un dato medido de otra sesion (16_ShellService.js): el
+ *   canal google.script.run -- que el iframe de googleusercontent.com negocia contra
+ *   script.google.com -- no esta listo cuando dispara DOMContentLoaded, y Google reporta esa
+ *   falta de canal como PERMISSION_DENIED en vez de un error de timing. El Shell pide su catalogo
+ *   por el MISMO canal, MISMA cuenta (start.tidetrack@gmail.com via francodiazpizarro@gmail.com),
+ *   MISMA planilla, y responde en ~537ms SIEMPRE que sale DESPUES de un gesto del usuario -- nunca
+ *   al abrir. Eso descarta canal roto y, en gran medida, cuenta equivocada; no descarta si es
+ *   demora fija de negociacion o una carrera (la llamada de este modal, a diferencia de la del
+ *   Shell, compite con la apertura del propio modal).
+ * - Se corrige con 3 reintentos de listarPeriodosProyeccion() con espera creciente (inmediato,
+ *   ~600ms, ~1800ms -- backoff x3) antes de mostrar error al usuario. 600ms es un margen comodo
+ *   sobre el ~537ms medido del Shell; 1800ms cubre negociaciones mas lentas sin que la espera
+ *   total (2.4s de backoff + 3 round-trips) se sienta como un modal roto. La carga SIGUE siendo
+ *   automatica -- no se degrado a "apretar un boton para cargar".
+ * + Boton "Reintentar" en el banner de error para cuando los 3 intentos fallan: antes el usuario
+ *   quedaba en un callejon sin salida (solo cerrar el modal entero y volver a abrirlo).
+ * + Instrumentacion para saber si la hipotesis es correcta: una linea discreta en el pie del
+ *   modal mas un historial en localStorage (ultimas 8 aperturas, degrada sin romper nada si
+ *   localStorage no esta disponible) mostrando en que intento entro cada apertura. Patron siempre
+ *   igual = demora fija de negociacion; patron que varia = carrera; TODAS agotando los 3 intentos
+ *   = no era timing, hay que mirar del lado de la cuenta/permiso. Nada de esto se envia a ningun
+ *   lado -- vive entero en el navegador (consola + localStorage).
+ * ! Se evaluo mover el disparo de DOMContentLoaded a window.onload (la hipotesis: el canal podria
+ *   estar mas maduro ahi) pero se descarto: el modal carga una webfont externa
+ *   (fonts.googleapis.com) y 'onload' espera tambien a que esa fuente termine de bajar. Un exito
+ *   ahi no distinguiria "se arreglo el canal" de "se espero a que bajara una tipografia" sin medir
+ *   el tiempo de la fuente por separado -- esa medicion no se hizo, asi que quedarse en
+ *   DOMContentLoaded con reintentos es mas honesto que un arreglo que funciona sin saber por que.
+ *
  * [2026-08-25] v0.55.1 - El merge dejo dos patch, y tres numeros de version distintos.
  * - El merge entre las dos lineas de trabajo (el shell y el ABM de Proyecciones) dejo en
  *   01_Version.js DOS lineas `patch:` seguidas: `patch: 0` del release nuevo y `patch: 1` que

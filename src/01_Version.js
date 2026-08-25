@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 55,
- patch: 1,
+ minor: 56,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.55.1 - El merge dejo dos patch, y tres numeros de version distintos',
+ releaseName: 'v0.56.0 - Proyecciones Elaboradas: reintentos ante el PERMISSION_DENIED fantasma al abrir',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.56.0 (2026-08-25) - Proyecciones Elaboradas: reintentos ante el PERMISSION_DENIED fantasma al abrir
+- El listado de "Proyecciones Elaboradas" (UI_AbmProyeccionElaborada.html) fallaba SIEMPRE al abrir con "Se produjo un error en el servidor al leer desde el almacenamiento. Codigo de error PERMISSION_DENIED", pese a que el camino de lectura es SpreadsheetApp puro (cero PropertiesService) y los mismos datos se leen bien desde el menu (DEVTOOL_DIAG_PermisoProyeccionAbm.js ya habia descartado dato/funcion rotos). Se corrige con 3 reintentos de listarPeriodosProyeccion() con espera creciente (inmediato, ~600ms, ~1800ms) antes de mostrar error -- la carga sigue siendo automatica, no se movio detras de un boton.
++ Boton "Reintentar" en el banner de error para cuando los 3 intentos fallan: antes el usuario quedaba en un callejon sin salida (solo recargar el modal entero cerrandolo y abriendolo de nuevo).
++ Instrumentacion para saber si la hipotesis de timing/carrera es correcta: linea discreta en el pie del modal mas un historial en localStorage de las ultimas 8 aperturas, mostrando en que intento entro cada una. Patron siempre igual = demora fija de negociacion del canal; patron que varia = carrera; TODAS agotando los 3 intentos = no era timing, hay que mirar del lado de la cuenta/permiso.
+! Se evaluo mover el disparo de DOMContentLoaded a window.onload (la hipotesis: el canal google.script.run podria estar mas maduro ahi) pero se descarto: el modal carga una webfont externa (fonts.googleapis.com) y 'onload' espera tambien a que esa fuente termine de bajar, asi que un exito ahi no distinguiria "se arreglo el canal" de "se espero a que bajara una tipografia". Sin medir el tiempo de la fuente por separado, quedarse en DOMContentLoaded con reintentos es mas honesto que un arreglo que funciona por un motivo que no se entiende.
+
 v0.55.1 (2026-08-25) - El merge dejo dos patch, y tres numeros de version distintos
 - El merge de las dos lineas de trabajo dejo en 01_Version.js DOS lineas patch seguidas: patch: 0 (del release v0.55.0) y patch: 1 (que venia de v0.53.1). Git no marco conflicto porque son lineas distintas: las conservo las dos.
 - En un literal de objeto JavaScript la clave repetida NO es un error: gana la ultima. Asi que el archivo decia TRES numeros distintos a la vez -- toString() devolvia "0.55.1", releaseName decia v0.55.0, y el changelog embebido seguia encabezado por v0.54.0. targets.yaml, que es la referencia del drift-check, declaraba 0.55.0.
