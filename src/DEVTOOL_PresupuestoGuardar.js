@@ -16,7 +16,7 @@
  *
  * Franco, textual: "Dale con Guardar Proyeccion, con las cotizaciones congeladas. Esto dejalo
  * como funcionalidad por ahora en tidetrack dev. Luego va a tener su boton." -- por eso este
- * modulo SOLO se cablea en el menu Tidetrack Dev (ver 00_Config.js MENU_CONFIG.DEV_ITEMS): CERO
+ * modulo SOLO se cablea en el menu tidetrack Dev (ver 00_Config.js MENU_CONFIG.DEV_ITEMS): CERO
  * botones nuevos en la hoja "Presupuesto". "Luego, en el menu deberiamos poder hacer el ABM de
  * proyecciones elaboradas" -- el ABM es un encargo POSTERIOR, pero condiciona el diseno de ESTE
  * modulo: el marcado que usa (ver decision 3) es justamente lo que el ABM va a necesitar para
@@ -190,7 +190,7 @@
  * QUE NO HACE
  * 1. NO toca J/N/R, la columna V, las tablas resumen ni el selector de Modo: son de las etapas 1
  *    y 2, ya desplegadas. Este modulo solo LEE K/O/S/K8/O8/S8/W8.
- * 2. NO agrega ningun boton a la hoja "Presupuesto": solo menu Tidetrack Dev (pedido explicito).
+ * 2. NO agrega ningun boton a la hoja "Presupuesto": solo menu tidetrack Dev (pedido explicito).
  * 3. NO toca "Registros", el Plan de Cuentas, "Tipos de Cambio", "Inicio" ni el Tablero.
  * 4. NO modifica las filas de PresupuestoBase de OTROS periodos, ni ninguna fila sin marca.
  * 5. NO construye el ABM: deja el marcado (decision 3) listo para que un encargo posterior lo use.
@@ -537,7 +537,7 @@ function _planGuardarPg(ss, prePresupuesto) {
         throw new Error('W8 (' + w8.toFixed(2) + ') no cierra contra K8-O8-S8 (' + netoEsperado.toFixed(2) +
             ') ANTES de guardar nada: el agrupado de la etapa 2 (DEVTOOL_PresupuestoResumen.js) esta ' +
             'roto para el periodo vivo. No se genera ningun guardado sobre un cimiento que no cierra. ' +
-            'Revisar "Presupuesto: categorias y resumen" (Tidetrack Dev) antes de reintentar.');
+            'Revisar "Presupuesto: categorias y resumen" (tidetrack Dev) antes de reintentar.');
     }
 
     const lectura = _leerFilasPresupuestoPg(hoja);
@@ -733,7 +733,7 @@ function estadoGuardarProyeccion() {
 function aplicarGuardarProyeccion() {
     let ui = null;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarGuardarProyeccion necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarGuardarProyeccion necesita UI (menu tidetrack Dev).' }; }
 
     let ss = null, plan = null, respaldo = null, filasRetiradas = [], filaEscritura = null, matrizNueva = [];
     try {
@@ -855,7 +855,7 @@ function aplicarGuardarProyeccion() {
             '- Filas retiradas (base + guardado previo del mismo periodo): ' + filasARetirar.length + '\n' +
             '- Respaldo de lo retirado en la hoja oculta "' + respaldo.nombre + '"\n' +
             '- Invariante verificado: Ingresos/Fijos/Variables y el neto cierran contra K8/O8/S8\n\n' +
-            'Si algo quedo peor: revertirGuardarProyeccion (menu Tidetrack Dev).';
+            'Si algo quedo peor: revertirGuardarProyeccion (menu tidetrack Dev).';
 
         logSuccess('aplicarGuardarProyeccion: ' + matrizNueva.length + ' fila(s), periodo ' + plan.clave + '.');
         _mostrarPg('Guardar Proyeccion - aplicado', detalle);

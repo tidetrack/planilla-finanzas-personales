@@ -50,7 +50,7 @@
  *      comprobacion vieja solo miraba si la serie estaba vacia, y el caso real era el otro: series
  *      con 800+ cotizaciones que se cortan en marzo de 2026 mientras el lote llega a agosto. El TC
  *      congelado es el unico dato del ledger que despues no se puede recalcular.
- *      -> se destraba con "Tidetrack Dev > Tipos de cambio > Forzar carga historica".
+ *      -> se destraba con "tidetrack Dev > Tipos de cambio > Forzar carga historica".
  *
  *   2. NO MIGRA MONTOS NEGATIVOS. Van a su propio bucket y se listan uno por uno en el informe.
  *      Tomarles el valor absoluto los convertiria en un movimiento del sentido contrario que
@@ -1351,7 +1351,7 @@ function _planV031(ss) {
             }).join('; ') + '. Esas filas congelarian por FALLBACK una cotizacion vieja, y el tipo ' +
             'de cambio congelado es el unico dato del ledger que despues NO se puede recalcular: ' +
             'quedarian valuadas para siempre a la cotizacion del ultimo dia que el Data Lake conoce. ' +
-            'QUE HACER: correr "Tidetrack Dev > Tipos de cambio > Forzar carga historica" para ' +
+            'QUE HACER: correr "tidetrack Dev > Tipos de cambio > Forzar carga historica" para ' +
             'extender el Data Lake hasta el ' + plan.tc.maxFechaLote + ', volver a correr ' +
             '"1. Ver estado" y confirmar que las cuatro series lleguen a esa fecha, y recien ahi ' +
             'aplicar. No se escribio nada.'
@@ -2120,7 +2120,7 @@ function cuerpoAplicarV031_(progreso, conducida) {
         return {
             ok: false,
             error: 'Sin UI para confirmar una operacion que escribe sobre produccion. ' +
-                   'Ejecutar desde el menu Tidetrack Dev. No se escribio nada.'
+                   'Ejecutar desde el menu tidetrack Dev. No se escribio nada.'
         };
     } else {
         logInfo('aplicarMigracionV031: sin UI, ejecutada por un llamador que ya tiene el lock.');
@@ -2420,7 +2420,7 @@ function cuerpoRevertirV031_(progreso, conducida) {
         );
         if (resp !== ui.Button.YES) return { ok: false, error: 'Cancelada por el usuario. No se escribio nada.' };
     } else if (conducida !== true) {
-        return { ok: false, error: 'Sin UI para confirmar. Ejecutar desde el menu Tidetrack Dev. No se escribio nada.' };
+        return { ok: false, error: 'Sin UI para confirmar. Ejecutar desde el menu tidetrack Dev. No se escribio nada.' };
     }
 
     var colIni = columnLetterToIndex(cfg.start);

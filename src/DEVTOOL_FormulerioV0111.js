@@ -411,7 +411,7 @@ function estadoFormulerioV0111() {
         }
 
         lineas.push('');
-        lineas.push('Para aplicarlo: Tidetrack Dev > Formulerio v0.11 > 2. Aplicar.');
+        lineas.push('Para aplicarlo: tidetrack Dev > Formulerio v0.11 > 2. Aplicar.');
 
         const detalle = lineas.join('\n');
         _mostrarFormulerio('Formulerio v0.11 - estado', detalle);
@@ -440,7 +440,7 @@ function aplicarFormulerioV0111() {
     try {
         ui = SpreadsheetApp.getUi();
     } catch (e) {
-        return { ok: false, error: 'aplicarFormulerioV0111 necesita UI (correr desde el menu Tidetrack Dev).' };
+        return { ok: false, error: 'aplicarFormulerioV0111 necesita UI (correr desde el menu tidetrack Dev).' };
     }
 
     try {
@@ -514,7 +514,7 @@ function aplicarFormulerioV0111() {
             '  2. El bloque "Movimientos del Mes" (N16:N19) debe dejar de estar en $0,00.\n' +
             '  3. "Tablero"!O23:O25 debe dejar de estar en #REF!.\n' +
             '  4. "Inicio"!F8 (Capital Acumulado) debe BAJAR: hoy incluye el gasto cotidiano.\n\n' +
-            'Si algo quedo peor que antes: Tidetrack Dev > Formulerio v0.11 > 3. Revertir.';
+            'Si algo quedo peor que antes: tidetrack Dev > Formulerio v0.11 > 3. Revertir.';
 
         logSuccess('aplicarFormulerioV0111: ' + escritas.length + ' celda(s) reparadas y verificadas.');
         _mostrarFormulerio('Formulerio v0.11 - aplicado', detalle);
@@ -549,7 +549,7 @@ function revertirFormulerioV0111() {
     try {
         ui = SpreadsheetApp.getUi();
     } catch (e) {
-        return { ok: false, error: 'revertirFormulerioV0111 necesita UI (correr desde el menu Tidetrack Dev).' };
+        return { ok: false, error: 'revertirFormulerioV0111 necesita UI (correr desde el menu tidetrack Dev).' };
     }
 
     try {

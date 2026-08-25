@@ -305,7 +305,7 @@ function aplicarStockYFlujo() {
     const escritas = [];
     let ss = null, yaRevertido = false, ui = null, fotoBloque = null;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarStockYFlujo necesita UI (correr desde el menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarStockYFlujo necesita UI (correr desde el menu tidetrack Dev).' }; }
 
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -389,7 +389,7 @@ function aplicarStockYFlujo() {
             '  3. "Tablero"!O16 tiene que dar 100%: la capitalizacion es el residuo.\n' +
             '  4. "Tablero"!N16 (Ingresos) BAJA respecto de antes. Es correcto: ya no cuenta los\n' +
             '     arrastres de "' + CUENTA_ARRASTRE + '" como si fueran ingresos del mes.\n' +
-            'Si algo quedo peor: Tidetrack Dev > Stock y flujo > 3. Revertir.';
+            'Si algo quedo peor: tidetrack Dev > Stock y flujo > 3. Revertir.';
 
         logSuccess('aplicarStockYFlujo: ' + escritas.length + ' celda(s).');
         _mostrarSyf('Stock y flujo - aplicado', detalle);

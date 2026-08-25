@@ -257,7 +257,7 @@ function aplicarRiquezaCategorias() {
     try {
         ui = SpreadsheetApp.getUi();
     } catch (e) {
-        return { ok: false, error: 'aplicarRiquezaCategorias necesita UI (correr desde el menu Tidetrack Dev).' };
+        return { ok: false, error: 'aplicarRiquezaCategorias necesita UI (correr desde el menu tidetrack Dev).' };
     }
 
     try {
@@ -326,7 +326,7 @@ function aplicarRiquezaCategorias() {
             '  3. Lo que NO tiene que haberse movido: "Inicio"!C8 y "Tablero"!AF9:AF12 (saldos\n' +
             '     cotidianos) y N16/N17/N18 (ingresos y gastos del mes). Si esos cambiaron, avisa:\n' +
             '     significa que se toco una celda del grupo equivocado.\n\n' +
-            'Si algo quedo peor: Tidetrack Dev > Riqueza y categorias > 3. Revertir.';
+            'Si algo quedo peor: tidetrack Dev > Riqueza y categorias > 3. Revertir.';
 
         logSuccess('aplicarRiquezaCategorias: ' + escritas.length + ' celda(s) reparadas y verificadas.');
         _mostrarRiqueza('Riqueza y categorias - aplicado', detalle);
@@ -359,7 +359,7 @@ function revertirRiquezaCategorias() {
     try {
         ui = SpreadsheetApp.getUi();
     } catch (e) {
-        return { ok: false, error: 'revertirRiquezaCategorias necesita UI (correr desde el menu Tidetrack Dev).' };
+        return { ok: false, error: 'revertirRiquezaCategorias necesita UI (correr desde el menu tidetrack Dev).' };
     }
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();

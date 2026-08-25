@@ -9,6 +9,31 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## v0.53.0 - Seis pedidos de Franco sobre el shell (2026-08-25)
+
+| Pedido | Que se hizo |
+|---|---|
+| *"El boton de gestionar cuentas debe tener el mismo peso que el resto"* | Era un chip de 36px sin descripcion al lado de tarjetas de 116. Un chip comunica "accion secundaria", y administrar el Plan de Cuentas es la estructura sobre la que se apoya todo. Pasa a tarjeta |
+| *"Deberia dejar cargar muchos mas movimientos, no solo 15"* | El tope era la altura de la grilla, una restriccion de la hoja y no del acto de cargar. Ahora se procesa en **tandas**, y el cliente avisa cuantas antes de apretar Cargar |
+| *"En el Tipo seria genial que se ponga rojo/verde"* | El estado elegido se tine con el semaforo medido de la hoja, riel incluido: el color solo en la letra a 13px no se lee de un vistazo |
+| *"En TODOS los desplegables deberias poder acortar tipeando"* | Los `select` pasan a `input` con `datalist`: un select salta por **prefijo**, un datalist filtra por **subcadena**. "naran" ahora encuentra "Frascos Naranja X" |
+| *"Los traspasos no tienen interfaz disenada como la de movimientos"* | Eran dos gramaticas para el mismo acto de cargar. Ahora comparten bloques, acordeon y carga multiple |
+| *"El nombre es tidetrack, todo en minusculas"* | El wordmark baja en el shell, en la barra de menu y en los mensajes. **No** se toca la cuenta `Tidetrack` del Plan: es un nombre de cuenta, no la marca |
+
+**Lo mas grave de esta vuelta lo encontro el banco.** El changelog de la v0.52.2 tenia backticks
+adentro, y el campo `changelog` **es** un template literal delimitado por backticks: cerraba el
+literal a la mitad y `01_Version.js` no parseaba. Se commiteo y **pusheo** asi. Apps Script parsea
+el proyecto entero en cada ejecucion, asi que de haberse desplegado la planilla quedaba sin menu,
+sin triggers y sin custom functions —el mismo modo de falla que la v0.50.1—. Solo no llego a
+produccion porque el deploy habia abortado por otro motivo.
+
+`devtools/verificar_sintaxis.py` y su gate en `sync_targets.command`, **antes** del drift-check:
+ningun deploy sale con un archivo que no parsea. Va antes a proposito — no tiene sentido preguntar
+si el remoto cambio cuando lo que se va a subir no arranca.
+
 ---
 
 ## v0.52.2 - El movimiento nuevo ya no arranca en dolares (2026-08-25)

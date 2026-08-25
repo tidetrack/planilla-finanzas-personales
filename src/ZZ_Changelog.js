@@ -3,6 +3,54 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.53.0 - Seis pedidos de Franco sobre el shell.
+ * - "EL BOTON DE GESTIONAR CUENTAS DEBE TENER EL MISMO PESO QUE EL RESTO." Era un chip de
+ *   36 px sin descripcion, al lado de tarjetas de 116. Un chip comunica "accion secundaria", y
+ *   administrar el Plan de Cuentas no lo es: es la estructura sobre la que se apoya todo lo
+ *   demas. Pasa a tarjeta, con la misma grilla y el mismo peso. El CSS de .shell-chip se
+ *   retira entero por quedar sin uso.
+ * - "DEBERIA DEJAR CARGAR MUCHOS MAS MOVIMIENTOS, NO SOLO 15." El tope era la ALTURA DE LA
+ *   GRILLA de Cargas, que es una restriccion de la hoja y no del acto de cargar. Ahora se
+ *   procesa en TANDAS: se siembra lo que entra, se procesa, se repite con lo que queda. Cada
+ *   tanda es un procesarCargas con su pasada de cotizaciones, asi que el cliente avisa cuantas
+ *   van a ser ANTES de apretar Cargar. Lo mismo para traspasos, con una salvedad: una tanda
+ *   nunca parte un traspaso al medio, asi que se divide por PARES.
+ * - "EN EL TIPO SERIA GENIAL QUE SE PONGA ROJO/VERDE SEGUN EL TIPO." El estado elegido se tine
+ *   con el semaforo MEDIDO de la hoja, y el riel tambien: sin fondo, el color solo en la letra
+ *   a 13 px no se lee de un vistazo. Los tonos son los -ink verificados contra AA sobre su
+ *   propio riel -- el #c93232 medido daba 4.47:1 sobre #fce8e6, por debajo del minimo.
+ * - "EN TODOS LOS DESPLEGABLES DEBERIAS PODER ACORTAR TIPEANDO." Los select pasan a input con
+ *   datalist. Un select nativo salta por PREFIJO y solo con la lista abierta; un datalist
+ *   filtra por SUBCADENA mientras se tipea, asi que "naran" trae "Frascos Naranja X" y "Dolar
+ *   NaranjaX" -- que un select por prefijo no encuentra nunca. Los datalist son COMPARTIDOS
+ *   por todos los bloques y se pueblan una sola vez: eso es lo que hace barato clonar un
+ *   bloque, porque no arrastra el catalogo adentro. El valor libre NO se bloquea, porque la
+ *   hoja misma acepta valores fuera de lista (setAllowInvalid) y el ledger tiene cuentas que
+ *   el catalogo nunca tuvo; lo que si se hace es AVISAR cuando lo tipeado no esta en el Plan,
+ *   en vez de dejarlo pasar mudo.
+ * - "LOS TRASPASOS NO TIENEN INTERFAZ DISENADA COMO LA DE MOVIMIENTOS." Era un formulario
+ *   suelto de UNA operacion mientras al lado habia bloques repetibles con acordeon: dos
+ *   gramaticas distintas para el mismo acto de cargar. Ahora comparten la misma, y se pueden
+ *   cargar varios traspasos de una sentada. registrarTraspaso queda como una linea que delega
+ *   en registrarTraspasos, y la validacion y el armado de las dos patas salieron a
+ *   _prepararTraspaso para que los use tanto el de a uno como el lote.
+ * - "EL NOMBRE ES TIDETRACK, TODO EN MINUSCULAS." El wordmark baja a minusculas en el shell,
+ *   en la barra de menu de Sheets y en los mensajes que nombran el menu. NO se toca la CUENTA
+ *   "Tidetrack" del Plan de Cuentas: es un nombre de cuenta, no la marca, y cambiarlo la
+ *   desconectaria del historico.
+ * - LO MAS GRAVE DE ESTA VUELTA, y lo encontro el banco: el changelog de la v0.52.2 tenia
+ *   BACKTICKS adentro, y el campo changelog ES un template literal delimitado por backticks.
+ *   Cerraba el literal a la mitad, 01_Version.js no parseaba, y asi se commiteo Y PUSHEO sin
+ *   que nada avisara. Apps Script parsea el proyecto ENTERO en cada ejecucion: de haberse
+ *   desplegado, la planilla quedaba sin menu, sin triggers y sin custom functions. Es el mismo
+ *   modo de falla que la v0.50.1. Solo no llego a produccion porque el deploy habia abortado
+ *   por otro motivo.
+ * - devtools/verificar_sintaxis.py (NUEVO) y su gate en sync_targets.command, ANTES del
+ *   drift-check: ningun deploy sale con un archivo que no parsea. Va antes a proposito -- no
+ *   tiene sentido preguntar si el remoto cambio cuando lo que se va a subir no arranca.
+ *   Probado en las dos direcciones: verde con src/ sano, rojo nombrando el archivo con uno
+ *   roto inyectado.
+ *
  * [2026-08-25] v0.52.2 - El movimiento nuevo ya no arranca en dolares.
  * - ENCONTRADO PROBANDO EL SHELL EN UN NAVEGADOR DE VERDAD, no leyendo codigo. El primer
  *   bloque de "Movimiento nuevo" nacia con el medio "Dolar Cash" y el prefijo del monto decia

@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 52,
- patch: 2,
+ minor: 53,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -23,7 +23,7 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseName: 'v0.52.2 - El movimiento nuevo ya no arranca en dolares',
+ releaseName: 'v0.53.0 - Seis pedidos de Franco sobre el shell',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -35,12 +35,21 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.53.0 (2026-08-25) - Seis pedidos de Franco sobre el shell
++ "El boton de gestionar cuentas debe tener el mismo peso que el resto": era un chip de 36px sin descripcion al lado de tarjetas de 116. Un chip comunica "accion secundaria", y administrar el Plan de Cuentas es la estructura sobre la que se apoya todo. Pasa a tarjeta, misma grilla y mismo peso. El CSS de .shell-chip se retira entero por quedar sin uso.
++ "Deberia dejar cargar muchos mas movimientos, no solo 15": el tope era la ALTURA DE LA GRILLA, que es una restriccion de la hoja y no del acto de cargar. Ahora se procesa en TANDAS -- se siembra lo que entra, se procesa, se repite -- y el cliente avisa cuantas van a ser antes de apretar Cargar. Lo mismo para traspasos, con la salvedad de que una tanda nunca parte un traspaso al medio: se divide por pares.
++ "En el Tipo seria genial que se ponga rojo/verde segun el tipo": el estado elegido se tine con el semaforo MEDIDO de la hoja, riel incluido -- el color solo en la letra a 13px no alcanza. Los tonos son los verificados contra AA sobre su propio riel.
++ "En TODOS los desplegables deberias poder acortar tipeando": los select pasan a input con datalist. Un select nativo salta por PREFIJO; un datalist filtra por SUBCADENA, asi que "naran" trae "Frascos Naranja X" y "Dolar NaranjaX", que un select no encuentra nunca. Los datalist son COMPARTIDOS y se pueblan una vez: es lo que hace barato clonar un bloque. El valor libre no se bloquea -- la hoja acepta valores fuera de lista -- pero se AVISA cuando no esta en el Plan.
++ "Los traspasos no tienen interfaz disenada como la de movimientos": era un formulario suelto de una operacion mientras al lado habia bloques con acordeon. Dos gramaticas para el mismo acto de cargar. Ahora comparten la misma, y se pueden cargar varios.
++ "El nombre es tidetrack, todo en minusculas": el wordmark baja a minusculas en el shell, en la barra de menu de Sheets y en los mensajes que nombran el menu. NO se toca la CUENTA "Tidetrack" del Plan de Cuentas, que es un nombre de cuenta y no la marca.
+! ENCONTRADO POR EL BANCO, y es lo mas grave de esta vuelta: el changelog de la v0.52.2 tenia BACKTICKS adentro, y ese campo ES un template literal delimitado por backticks. Cerraba el literal a la mitad y 01_Version.js no parseaba -- commiteado y pusheado asi. Apps Script parsea el proyecto ENTERO en cada ejecucion: de haberse desplegado, la planilla quedaba sin menu, sin triggers y sin custom functions. Es el mismo modo de falla que la v0.50.1.
++ devtools/verificar_sintaxis.py (nuevo) + gate en sync_targets.command ANTES del drift-check: ningun deploy sale con un archivo que no parsea. No tiene sentido preguntar si el remoto cambio cuando lo que se va a subir no arranca. Probado en las dos direcciones.
 v0.52.2 (2026-08-25) - El movimiento nuevo ya no arranca en dolares
 - ENCONTRADO PROBANDO EL SHELL EN UN NAVEGADOR, no leyendo codigo: el primer bloque de Movimiento nuevo nacia con el medio "Dolar Cash" y el prefijo del monto decia USD. No era una eleccion: era el PRIMERO DEL CATALOGO, que esta ordenado alfabeticamente.
 ! Diez de los quince medios son ARS, y todos los cotidianos tambien. Un default que casi siempre esta mal es peor que no tener default: obliga a corregirlo todas las veces, y el dia que no se corrige entra un gasto en la moneda equivocada.
 + medioPorDefecto(): el primer medio en la MONEDA BASE, que es la primera de MONEDAS_DISPONIBLES (ADR-003: ARS es la base, siempre 1.0). No se retipea "ARS" en el cliente.
 + Banco del shell: exige que exista el default pensado, que la moneda base salga de la constante, y que el primer bloque NO arranque sin medio -- que era lo que dejaba entrar al primero alfabetico.
-+ devtools/servidor_shell/ (nuevo): el shell corriendo fuera de Sheets, con el catalogo real y la latencia medida. servidor.py no usa `python3 -m http.server` porque ese modulo llama a os.getcwd() al importarse y muere en un sandbox donde el cwd no es legible. index.html es una copia que regenera devtools/regenerar_servidor_shell.py leyendo el shell real y SHELL_VISTAS del backend.
++ devtools/servidor_shell/ (nuevo): el shell corriendo fuera de Sheets, con el catalogo real y la latencia medida. servidor.py no usa "python3 -m http.server" porque ese modulo llama a os.getcwd() al importarse y muere en un sandbox donde el cwd no es legible. index.html es una copia que regenera devtools/regenerar_servidor_shell.py leyendo el shell real y SHELL_VISTAS del backend.
 v0.52.1 (2026-08-25) - El bloque que entra desacelera, no rebota
 - La animacion de entrada de un bloque de carga multiple usaba cubic-bezier(.34, 1.56, .64, 1). El 1.56 pasa de largo el valor final y vuelve: el bloque se pasa de posicion y de escala antes de asentarse.
 - POR QUE IMPORTA ACA Y NO EN CUALQUIER LADO: en esa pantalla se agregan hasta QUINCE bloques, asi que el rebote se ve quince veces seguidas en una sola carga. Y es una herramienta de cargar plata, cuya voz de marca "traduce, no impresiona". Un objeto real desacelera; no rebota.

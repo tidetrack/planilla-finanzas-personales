@@ -1177,7 +1177,7 @@ function _preflightTfp(ss) {
 
     if (!ss.getSheetByName(SHEETS.PROYECCION)) {
         throw new Error('No existe la hoja "' + SHEETS.PROYECCION + '": sin ella no hay proyectado que ' +
-            'restar. Correr antes Tidetrack Dev > BD de Proyeccion. No se toco nada.');
+            'restar. Correr antes tidetrack Dev > BD de Proyeccion. No se toco nada.');
     }
 
     // Selectores del Tablero: mismo chequeo liviano que usa el resto del formulerio.
@@ -1510,7 +1510,7 @@ function aplicarTableroFaltanteProyectado() {
     const escritas = [];
     let ui = null, ss = null, yaRevertido = false;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarTableroFaltanteProyectado necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarTableroFaltanteProyectado necesita UI (menu tidetrack Dev).' }; }
 
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1656,7 +1656,7 @@ function aplicarTableroFaltanteProyectado() {
             '     faltante, con el faltante completo.\n' +
             '  5. Si algun bloque no tenia lugar para todas las filas, su ULTIMA fila (30) dice\n' +
             '     en cursiva "y N cuentas mas" y cuanta plata representan.\n\n' +
-            'Si algo quedo peor: revertirTableroFaltanteProyectado (menu Tidetrack Dev).';
+            'Si algo quedo peor: revertirTableroFaltanteProyectado (menu tidetrack Dev).';
 
         logSuccess('aplicarTableroFaltanteProyectado: ' + escritas.length + ' celda(s).');
         _mostrarTfp('Tablero: faltante proyectado - aplicado', detalle);

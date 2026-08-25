@@ -116,7 +116,7 @@ function saveAbmRecord(payload) {
             // mensaje no diria por que. Que lo diga.
             case 'PROYECTOS':
                 throw new Error('La entidad "Proyectos" ya no se administra desde este ABM: esa ' +
-                    'tabla es hoy el catalogo de Categorias de Cuenta. Usar Tidetrack Dev > ' +
+                    'tabla es hoy el catalogo de Categorias de Cuenta. Usar tidetrack Dev > ' +
                     'Categorizar cuentas.');
             
             default:
@@ -225,7 +225,7 @@ function updateAbmRecord(payload) {
             // mensaje no diria por que. Que lo diga.
             case 'PROYECTOS':
                 throw new Error('La entidad "Proyectos" ya no se administra desde este ABM: esa ' +
-                    'tabla es hoy el catalogo de Categorias de Cuenta. Usar Tidetrack Dev > ' +
+                    'tabla es hoy el catalogo de Categorias de Cuenta. Usar tidetrack Dev > ' +
                     'Categorizar cuentas.');
             default: 
                 throw new Error('Entidad desconocida: ' + entity);

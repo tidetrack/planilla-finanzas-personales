@@ -349,7 +349,7 @@ function estadoPresupuestoSembrar() {
 function aplicarPresupuestoSembrar() {
     let ui = null, ss = null, hoja = null, escritas = [];
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarPresupuestoSembrar necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarPresupuestoSembrar necesita UI (menu tidetrack Dev).' }; }
 
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -361,7 +361,7 @@ function aplicarPresupuestoSembrar() {
             throw new Error(plan.fuenteInvalida.length + ' cuenta(s) tienen una celda de origen (J/N/R) ' +
                 'que no es un numero valido, por ejemplo ' + plan.fuenteInvalida[0].celda + ' = ' +
                 JSON.stringify(plan.fuenteInvalida[0].crudo) + '. No deberia pasar mientras la cuenta ' +
-                'exista (revisar "Presupuesto: selector de Modo" en Tidetrack Dev). No se escribio nada.');
+                'exista (revisar "Presupuesto: selector de Modo" en tidetrack Dev). No se escribio nada.');
         }
 
         if (!plan.aSembrar.length) {
@@ -425,7 +425,7 @@ function aplicarPresupuestoSembrar() {
         l.push('Celdas escritas y verificadas: ' + escritas.length);
         l.push('Celdas que ya tenian contenido y NO se tocaron: ' + plan.yaLlenas.length);
         l.push('');
-        l.push('Para deshacer: "3. Revertir" (Tidetrack Dev). Solo vacia las celdas que TODAVIA tengan');
+        l.push('Para deshacer: "3. Revertir" (tidetrack Dev). Solo vacia las celdas que TODAVIA tengan');
         l.push('exactamente el numero que esta corrida escribio -- si corregiste alguna a mano despues,');
         l.push('revertir la deja como la dejaste, no la pisa.');
         const detalle = l.join('\n');

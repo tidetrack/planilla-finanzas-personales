@@ -340,7 +340,7 @@ function _preflightPb(ss) {
     const hoja = ss.getSheetByName(nombre);
     if (!hoja) {
         throw new Error('No existe la hoja "' + nombre + '". Correr antes ' +
-            'Tidetrack Dev > BD de Proyeccion (presupuesto) > 2. Crear y cablear.');
+            'tidetrack Dev > BD de Proyeccion (presupuesto) > 2. Crear y cablear.');
     }
 
     // La hoja es un espejo del ledger: si los encabezados no coinciden, escribir ahi seria
@@ -525,7 +525,7 @@ function estadoPresupuestoBase() {
 function aplicarPresupuestoBase() {
     let ui = null;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarPresupuestoBase necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarPresupuestoBase necesita UI (menu tidetrack Dev).' }; }
 
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -641,7 +641,7 @@ function aplicarPresupuestoBase() {
             '  4. "Disponibilidad de fondos" (O23:O25) ya puede repartir contra algo.\n\n' +
             'Es un PUNTO DE PARTIDA, no una decision: las filas estan en "' + pre.nombre + '" y se\n' +
             'editan como cualquier otra.\n\n' +
-            'Para sacarlo: Tidetrack Dev > Presupuesto base > 3. Quitar la carga.';
+            'Para sacarlo: tidetrack Dev > Presupuesto base > 3. Quitar la carga.';
 
         logSuccess('aplicarPresupuestoBase: ' + matriz.length + ' filas.');
         _mostrarPb('Presupuesto base - cargado', detalle);
@@ -659,7 +659,7 @@ function aplicarPresupuestoBase() {
 function quitarPresupuestoBase() {
     let ui = null;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'quitarPresupuestoBase necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'quitarPresupuestoBase necesita UI (menu tidetrack Dev).' }; }
 
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();

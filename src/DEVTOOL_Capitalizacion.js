@@ -312,7 +312,7 @@ function _preflightCap(ss) {
     const proy = ss.getSheetByName(SHEETS.PROYECCION);
     if (!proy) {
         throw new Error('No existe la hoja "' + SHEETS.PROYECCION + '". Correr antes ' +
-            'Tidetrack Dev > BD de Proyeccion (presupuesto) > 2. Crear y cablear.');
+            'tidetrack Dev > BD de Proyeccion (presupuesto) > 2. Crear y cablear.');
     }
 
     return { hoja: hoja, nombre: nombre, monedas: monedas };
@@ -394,7 +394,7 @@ function aplicarCapitalizacion() {
     const escritas = [];
     let ui = null, ss = null, yaRevertido = false;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarCapitalizacion necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarCapitalizacion necesita UI (menu tidetrack Dev).' }; }
 
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -474,7 +474,7 @@ function aplicarCapitalizacion() {
             '  3. En un mes con las tres categorias arriba del 100%, "Disponibilidad de fondos"\n' +
             '     reparte entre las tres en vez de darle todo a una. Julio 2026 es ese caso.\n' +
             '  4. Las tres filas de disponibilidad tienen que sumar la liquidez, siempre.\n\n' +
-            'Si algo quedo peor: Tidetrack Dev > Capitalizacion > 3. Revertir.';
+            'Si algo quedo peor: tidetrack Dev > Capitalizacion > 3. Revertir.';
 
         logSuccess('aplicarCapitalizacion: ' + escritas.length + ' celda(s).');
         _mostrarCap('Capitalizacion - aplicado', detalle);

@@ -1137,7 +1137,7 @@ function _preflightIp(ss) {
     const hojaProy = ss.getSheetByName(SHEETS.PROYECCION);
     if (!hojaProy) {
         throw new Error('No existe la hoja "' + SHEETS.PROYECCION + '": sin ella la columna ' +
-            'Presupuesto no tiene fuente. Correr antes Tidetrack Dev > BD de Proyeccion. No se toco nada.');
+            'Presupuesto no tiene fuente. Correr antes tidetrack Dev > BD de Proyeccion. No se toco nada.');
     }
     ['monto', 'cuenta', 'tipo_cuenta', 'moneda', 'fecha'].forEach(function (clave) {
         const esperado = headerLedger[clave];
@@ -1168,7 +1168,7 @@ function _preflightIp(ss) {
     if (!estadoResumen.saldo.conFormula) {
         // C8 es la liquidez del reparto: sin formula ahi, la columna G repartiria basura.
         throw new Error('"' + nombre + '"!' + IP_RESUMEN.saldo.celda + ' (Saldo Actual) no tiene ' +
-            'formula, y es la liquidez que reparte la columna G. Reponerla con Tidetrack Dev > ' +
+            'formula, y es la liquidez que reparte la columna G. Reponerla con tidetrack Dev > ' +
             'Stock y Flujo antes de correr esto. No se toco nada.');
     }
     if (!estadoResumen.capital.conFormula) {
@@ -1620,7 +1620,7 @@ function aplicarInicioPresupuesto() {
     const escritas = [];
     let ui = null, ss = null, yaRevertido = false;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarInicioPresupuesto necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarInicioPresupuesto necesita UI (menu tidetrack Dev).' }; }
 
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1777,7 +1777,7 @@ function aplicarInicioPresupuesto() {
             '     elegido. Si alguna muestra "Loading..." es la cotizacion todavia resolviendo,\n' +
             '     no un error -- se corrige sola al reabrir o recalcular la hoja.\n' +
             '  5. Las columnas AV:AW (la trastienda de los tres deltas) tienen que quedar OCULTAS.\n\n' +
-            'Si algo quedo peor: revertirInicioPresupuesto (menu Tidetrack Dev).';
+            'Si algo quedo peor: revertirInicioPresupuesto (menu tidetrack Dev).';
 
         logSuccess('aplicarInicioPresupuesto: ' + escritas.length + ' celda(s).');
         _mostrarIp('Inicio: presupuesto - aplicado', detalle);

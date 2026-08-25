@@ -2226,7 +2226,7 @@ function _cuerpoAplicarCP(progreso, conducida) {
         return {
             ok: false,
             error: 'Sin UI para confirmar una operacion que escribe sobre produccion. ' +
-                   'Ejecutar desde el menu Tidetrack Dev. No se escribio nada.'
+                   'Ejecutar desde el menu tidetrack Dev. No se escribio nada.'
         };
     } else {
         logInfo('aplicarCableadoPresupuesto: sin UI, ejecutado por un llamador que ya tiene el lock.');
@@ -2503,7 +2503,7 @@ function _cuerpoRevertirCP(progreso, conducida) {
         );
         if (resp !== ui.Button.YES) return { ok: false, error: 'Cancelado por el usuario. No se escribio nada.' };
     } else if (conducida !== true) {
-        return { ok: false, error: 'Sin UI para confirmar. Ejecutar desde el menu Tidetrack Dev. No se escribio nada.' };
+        return { ok: false, error: 'Sin UI para confirmar. Ejecutar desde el menu tidetrack Dev. No se escribio nada.' };
     }
 
     var restauradas = 0;

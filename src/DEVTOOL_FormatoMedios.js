@@ -389,7 +389,7 @@ function estadoFormatoMedios() {
 function aplicarFormatoMedios() {
     let ui = null;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarFormatoMedios necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarFormatoMedios necesita UI (menu tidetrack Dev).' }; }
 
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
