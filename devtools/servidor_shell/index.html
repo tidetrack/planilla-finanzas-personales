@@ -1,0 +1,2207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<!-- LA FUENTE SE CARGA DE VERDAD. UI_SharedStyles declara la familia pero sin este link no se
+     descarga nunca. Verificado contra la API de Google Fonts: responde 200 y sirve los cuatro
+     pesos en subset latin. -->
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+ * DESIGN SYSTEM CONSTANTS - TIDETRACK (GLOBAL)
+ * ============================================
+ */
+
+:root {
+ /* Color Palette */
+ --primary-color: #34475d; /* Darkest, relevant blocks */
+ --primary-dark: #2b3a4d; /* Slightly darker shade */
+ --secondary-color: #6e7f8d;
+ --secondary-hover: #5d6c78;
+ --accent-color: #b5bfc6; /* Button para "botones seleccionados" */
+ --accent-hover: #9eabb5;
+ 
+ /* Backgrounds */
+ --bg-main: #eff2f9; /* Fondo de hojas / paneles */
+ --bg-secondary: #FFFFFF;
+ --bg-tertiary: #e2e8f0;
+
+ /* Texts */
+ --text-main: #34475d;
+ /* El color del CUERPO DE DATOS de la hoja: 4.136 celdas, el mas usado por lejos, y NO es
+  * negro puro (el default de Sheets es #000000, asi que si esta serializado es porque Franco
+  * lo puso a mano). Los numeros y el texto de tabla del shell van con este, no con --text-main,
+  * que es la tinta de la CHROME (titulos de bloque y headers). */
+ --text-data: #39444d;
+ /* decision Franco 2026-08-25: #6e7f8d daba 3.69:1 sobre el fondo de bloque #eff2f9 y
+  * 4.14:1 sobre blanco -- por debajo del minimo AA de 4.5:1 para texto normal. Se veia
+  * lavado, y "lavado" en un modal chico se lee como "sin terminar". #5f6368 -- el que usa
+  * pymes -- da 6.4:1 sobre blanco. */
+ --text-secondary: #5f6368;
+ --text-accent: #6e7f8d;
+ --text-inverse: #FFFFFF;
+
+ /* Semantic Colors
+  * decision Franco 2026-08-24: los tres colores de estado pasan a ser los MEDIDOS de la
+  * planilla, no los de Tailwind. Antes eran #10B981 / #EF4444 / #F59E0B, que no aparecen en
+  * ninguna celda de la hoja: un popup con esos verdes y rojos se lee como otro producto.
+  * Los de abajo son los que el codigo declaro canonicos el 2026-08-21 y los que viven
+  * LITERALES dentro de las formulas SPARKLINE de Inicio!F19:F22, con su riel al lado.
+  * @see DEVTOOL_InicioPresupuesto.js (IP_COLOR_VERDE / NARANJA / ROJO y sus fondos)
+  */
+ --success: #356854;
+ --success-bg: #e6f4ea;
+ --danger: #c93232;
+ --danger-bg: #fce8e6;
+ --warning: #ffb300;
+ --warning-bg: #fef7e0;
+ --info: #3B82F6;
+ --info-bg: #DBEAFE;
+
+ /* Visual Styles */
+ --border-color: #E2E8F0; /* Slate 200 */
+ --border-radius-sm: 6px;
+ --border-radius-md: 8px;
+ --border-radius-lg: 12px;
+ --border-radius-xl: 16px;
+ 
+ /* Shadows */
+ --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+ --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+ --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+ /* Fonts */
+ --font-family: 'Google Sans', 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+ /* decision Franco 2026-08-25: se RETIRA --font-mono. Declaraba JetBrains Mono y Fira Code,
+  * ninguna de las dos instalada en macOS/Chrome, asi que en la practica resolvia a Courier
+  * New -- cuya altura de x es ~0.42em contra ~0.53em de una grotesca. Usado en un rotulo de
+  * 11px, las minusculas median ~4,4px al lado de un control de 14px sans, y eso se lee como
+  * texto roto, no como jerarquia. Fue la causa de las "distorciones de tamanos de letras".
+  * Un token que resuelve a algo que nadie eligio es una trampa para el que venga: se saca.
+  * Si algun dia hace falta mono de verdad, se carga la webfont primero. */
+
+ /* Transitions */
+ --transition-fast: 0.15s ease-in-out;
+ --transition-normal: 0.25s ease-in-out;
+}
+
+/* ============================================
+ * RESET & BASE COMPONENT STYLES
+ * ============================================
+ */
+
+* {
+ box-sizing: border-box;
+ margin: 0;
+ padding: 0;
+ font-family: var(--font-family);
+}
+
+body {
+ background-color: var(--bg-main);
+ color: var(--text-main);
+ font-size: 14px;
+ line-height: 1.5;
+ padding: 16px;
+ -webkit-font-smoothing: antialiased;
+}
+
+/* Layout */
+.container {
+ max-width: 1200px;
+ margin: 0 auto;
+ width: 100%;
+}
+
+.container-xs { max-width: 480px; }
+.container-sm { max-width: 640px; }
+.container-md { max-width: 768px; }
+
+/* Utilities */
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-danger { color: var(--danger); }
+.text-success { color: var(--success); }
+.text-muted { color: var(--text-secondary); }
+
+/* Dividers */
+hr.divider {
+ border: 0;
+ border-top: 1px solid var(--border-color);
+ margin: 24px 0;
+}
+
+/* ============================================
+ * FORMS & INPUTS
+ * ============================================
+ */
+
+.form-group {
+ margin-bottom: 20px;
+}
+
+.form-label {
+ display: block;
+ font-weight: 500;
+ margin-bottom: 8px;
+ color: var(--primary-color);
+ font-size: 13px;
+ letter-spacing: 0.3px;
+}
+
+.form-input, .form-select {
+ width: 100%;
+ padding: 12px 14px;
+ border: 1px solid var(--border-color);
+ border-radius: var(--border-radius-md);
+ font-size: 14px;
+ color: var(--text-main);
+ background-color: var(--bg-secondary);
+ transition: all var(--transition-fast);
+ box-shadow: var(--shadow-sm);
+}
+
+/* decision Franco 2026-08-25: el foco era un halo GRIS sobre fondo gris, o sea invisible.
+ * Ahora es el mismo tratamiento que el de los botones -- un solo foco para todo el sistema,
+ * como hace pymes. */
+.form-input:focus, .form-select:focus {
+ outline: 2px solid var(--primary-color);
+ outline-offset: 1px;
+ border-color: var(--primary-color);
+ box-shadow: none;
+}
+
+.form-input::placeholder {
+ color: #94A3B8;
+}
+
+/* ============================================
+ * BUTTONS
+ * ============================================
+ */
+
+.btn {
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ padding: 10px 18px;
+ font-weight: 500;
+ border-radius: var(--border-radius-md);
+ cursor: pointer;
+ border: none;
+ font-size: 14px;
+ transition: all var(--transition-fast);
+ gap: 8px;
+}
+
+.btn:active {
+ transform: translateY(1px);
+}
+
+.btn-primary {
+ background-color: var(--primary-color);
+ color: var(--text-inverse);
+ box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+ background-color: var(--primary-dark);
+ box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+ background-color: var(--bg-secondary);
+ color: var(--text-main);
+ border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+ background-color: var(--bg-tertiary);
+ border-color: #CBD5E1;
+}
+
+.btn-danger {
+ background-color: var(--danger);
+ color: var(--text-inverse);
+}
+
+.btn-danger:hover {
+ background-color: #DC2626; /* Red 600 */
+}
+
+.btn-selected {
+ background-color: var(--accent-color);
+ color: var(--primary-color);
+ border: 1px solid var(--accent-color);
+ font-weight: 500;
+}
+
+.btn-selected:hover {
+ background-color: var(--accent-hover);
+ color: var(--primary-color);
+}
+
+.btn:disabled {
+ opacity: 0.6;
+ cursor: not-allowed;
+ transform: none;
+}
+
+.form-actions {
+ display: flex;
+ justify-content: flex-end;
+ gap: 12px;
+}
+
+/* ============================================
+ * CARDS & PANELS
+ * ============================================
+ */
+
+.card {
+ background-color: var(--bg-secondary);
+ border-radius: var(--border-radius-lg);
+ border: 1px solid var(--border-color);
+ box-shadow: var(--shadow-sm);
+ padding: 24px;
+ margin-bottom: 24px;
+}
+
+/* ============================================
+ * ALERTAS
+ * ============================================
+ * decision Franco 2026-08-24: fondo tenido y tinta, SIN franja de acento lateral.
+ * La planilla no usa bordes en ningun lado -- no hay un solo setBorder en todo src/ y los
+ * bloques se separan con una columna vacia, no con lineas -- asi que una barra de color de
+ * 3px al costado se lee como de otro producto. El color del fondo ya dice todo lo que la
+ * franja diria. Los pares fondo/tinta son los del semaforo medido de la hoja.
+ */
+
+.alert {
+ padding: 12px 15px;
+ border-radius: var(--border-radius-sm);
+ font-size: 13px;
+ margin-bottom: 16px;
+}
+
+.alert-error { background-color: var(--danger-bg); color: var(--danger); }
+.alert-ok { background-color: var(--success-bg); color: var(--success); }
+.alert-warning { background-color: var(--warning-bg); color: #6d4d00; }
+.alert-info { background-color: var(--bg-main); color: var(--text-main); }
+
+/* ============================================
+ * CUSTOM SCROLLBAR
+ * ============================================
+ */
+
+::-webkit-scrollbar {
+ width: 8px;
+ height: 8px;
+}
+
+::-webkit-scrollbar-track {
+ background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+ background: #CBD5E1;
+ border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+ background: #94A3B8;
+}
+
+</style>
+
+<style>
+/* ============================================================
+   SHELL -- Centro de Operaciones. 900x700 (16_ShellService.js:61).
+   La base viene de UI_SharedStyles (include en :11); esto redefine lo que el
+   shell necesita y NADA mas. Un solo design system, no dos (regla del arnes).
+
+   Dos capas de tokens: primitivos de marca (--tt-*) y alias semanticos. Los
+   componentes SOLO tocan la capa semantica. Metodo portado de la webapp PyME.
+   ============================================================ */
+
+:root {
+    /* ---- PRIMITIVOS ------------------------------------------------
+       El navy es el MEDIDO de la planilla (#34475d, UI_SharedStyles.html:9),
+       el de la banda de cada pestania. NO se importa el #182040 del brandbook
+       v3: ese es el navy de la webapp PyME, y usarlo aca rompe la unica
+       continuidad visual que el modal tiene con la hoja. De la webapp se
+       importa el METODO y el acento, no su navy. */
+    --tt-navy:       #34475d;   /* = --primary-color */
+    --tt-navy-dark:  #2b3a4d;   /* = --primary-dark (UI_SharedStyles.html:10) */
+
+    /* Teal editorial, brandbook v3. El unico croma del producto.
+       6.00:1 sobre blanco, 5.35:1 sobre el lienzo: sirve como TINTA, no solo
+       como adorno. Hue 192 contra el hue 212 del navy: 20 grados, misma
+       temperatura -- da vida sin pelear con la marca. */
+    --tt-teal:       #2E6B7A;
+    --tt-teal-mid:   #25596b;   /* 7.72:1 sobre blanco. Hover de superficie teal */
+    --tt-teal-soft:  #cfe2e7;   /* borde decorativo de hover */
+    --tt-teal-rgb:   46, 107, 122;   /* var() no entra adentro de un hex */
+    --tt-sand-rgb:   232, 227, 213;  /* la mitad "mas calido" del contrato de segmento */
+
+    /* ---- SUPERFICIES: tres planos, y se INVIERTE la relacion de hoy -------
+       Hoy la pagina es blanca (UI_Shell.html:43, --bg-secondary) y las cards
+       son #eff2f9 (:87, --bg-main): una card GRIS con sombra se lee como un
+       pozo. Card blanca sobre lienzo templado con sombra se lee como objeto
+       que levanta. El lienzo es el gris de bloque MEDIDO de la hoja: cero
+       colores inventados en esta capa. */
+    --sup-page:  #eff2f9;   /* lienzo. El gris de bloque de la planilla */
+    --sup-card:  #FFFFFF;   /* papel: card, bloque, panel, barra */
+    --sup-hueco: #eff2f9;   /* campo hundido DENTRO del papel. 1.12:1 vs card */
+    --sup-hover: #e2e8f0;   /* el mismo campo bajo el cursor (= --bg-tertiary) */
+
+    /* ---- FILO -------------------------------------------------------
+       Vuelve el hairline, y es la ruptura deliberada con la doctrina escrita
+       en UI_Shell.html:132-134 ("la superficie se define por fondo, porque la
+       hoja no tiene un solo setBorder"). Es un mal transplante: una celda de
+       Sheets no necesita borde porque LA GRILLA YA ES EL BORDE. Un input
+       flotando en un modal no tiene grilla. Va como inset box-shadow y no como
+       border: no ocupa layout, asi que no puede desalinear una fila del grid
+       de 12. #d4dbe8 ya existe en el repo (UI_AbmPlanCuentas.html:42). */
+    --linea:        #d4dbe8;   /* 1.39:1 sobre papel: hairline, no cerco */
+    --linea-fuerte: #c3cddf;
+    --filo:  inset 0 0 0 1px var(--linea);
+
+    /* ---- ELEVACION: tres niveles, dos capas, TINTE NAVY --------------
+       Nunca negro puro. Una sombra negra sobre superficie fria se ve sucia;
+       con rgb(52,71,93) -- el propio navy -- el papel parece levantar del
+       mismo material. --shadow-md/lg de UI_SharedStyles.html:62-63 son negras
+       y el shell nunca las uso: quedan para el ABM hasta su segundo pase. */
+    --elev-1: 0 1px 2px rgba(52,71,93,0.06), 0 1px 3px rgba(52,71,93,0.05);
+    --elev-2: 0 4px 10px rgba(52,71,93,0.10), 0 2px 4px rgba(52,71,93,0.06);
+    --elev-3: 0 12px 28px rgba(52,71,93,0.15), 0 4px 8px rgba(52,71,93,0.07);
+
+    /* ---- TINTA: tres roles, con su piso de contraste medido ---------- */
+    --ink-1:  #34475d;   /* titulos y chrome.  9.52:1 papel / 8.50:1 lienzo */
+    --ink-2:  #39444d;   /* CUERPO Y NUMEROS.  9.96:1 papel / 8.89:1 hueco.
+                            El color del cuerpo de datos de la hoja: 4.136
+                            celdas y NO es negro puro (UI_SharedStyles.html:27) */
+    --ink-3:  #5f6368;   /* rotulos. NO texto de lectura. 6.05:1 papel */
+    --ink-inv:   #FFFFFF;
+    --ink-band:  #c9d5e2;   /* sobre banda. 6.39:1 sobre navy pleno, 4.75:1 en
+                               el punto MAS claro de la aurora: AA en todo el
+                               recorrido, medido */
+    --ink-ph:    #6f7a88;   /* placeholder. 3.89:1 sobre el hueco. Sube del
+                               #94A3B8 de UI_SharedStyles.html:168, que da 2.56 */
+
+    /* ---- SEMAFORO: los MEDIDOS de la hoja. Fondos y puntos NO se tocan --
+       Viven literales en las formulas SPARKLINE de Inicio!F19:F22.
+       @see DEVTOOL_InicioPresupuesto.js (IP_COLOR_VERDE / NARANJA / ROJO)
+       Lo unico que se separa es la TINTA del error: #c93232 sobre #fce8e6 da
+       4.47:1, un pelo abajo del AA -- y es el texto que MAS importa leer. En
+       la hoja ese par es barra-sobre-riel, no texto-sobre-riel, asi que
+       oscurecer la tinta no contradice nada medido. */
+    --est-verde:      #356854;   /* punto y barra. Medido. 6.44:1 sobre papel */
+    --est-verde-bg:   #e6f4ea;   /* riel. Medido */
+    --est-verde-ink:  #2a5544;   /* 7.45:1 sobre su riel */
+    --est-rojo:       #c93232;   /* punto y barra. Medido */
+    --est-rojo-bg:    #fce8e6;   /* riel. Medido */
+    --est-rojo-ink:   #ad2727;   /* 5.76:1 sobre su riel (contra 4.47 del medido) */
+    --est-ambar:      #ffb300;   /* punto y barra. Medido */
+    --est-ambar-bg:   #fef7e0;   /* riel. Medido */
+    --est-ambar-ink:  #6d4d00;   /* 7.23:1. Ya existia en UI_SharedStyles.html:282 */
+
+    /* ---- TIPOGRAFIA -------------------------------------------------
+       DM Sans, familia unica, tambien para los numeros: contrato de marca
+       vigente (brandbook v3). Verificado contra la API: variable 400..700,
+       subset latin, un solo woff2. Google Sans queda de fallback y TAMBIEN
+       resuelve (v70, verificado): si la red se cae, no cae a Arial.
+       Los digitos se alinean con font-variant-numeric, NUNCA con una segunda
+       familia -- esa es la causa raiz de la v0.49.0 (01_Version.js:39-41).
+       Se redefine --font-family, que es el token que consume el `*` de
+       UI_SharedStyles.html:89: un solo punto de cambio propaga a todo. */
+    --font-family: 'DM Sans', 'Google Sans', -apple-system, BlinkMacSystemFont,
+                   'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+    /* SEIS pasos, TODOS ENTEROS. Se van los fraccionarios por la misma razon
+       que se fueron los 10.5px: Chrome los redondea a subpixel distinto segun
+       donde caiga la caja (UI_Shell.html:30-32). */
+    --fs-monto:  19px;   /* NUEVO. El dato que la herramienta existe para capturar */
+    --fs-band:   18px;   /* titulo de la banda */
+    --fs-hero:   16px;   /* titulo de la card hero */
+    --fs-vista:  14px;   /* titulo de card compacta y de bloque */
+    --fs-body:   14px;   /* inputs, selects, parrafos, botones */
+    --fs-aux:    12px;   /* descripcion, hint, alerta, pie */
+    --fs-rotulo: 11px;   /* versalitas: seccion, label */
+
+    /* ---- GEOMETRIA. Base 4 estricta -------------------------------
+       Hoy conviven 6, 7, 10, 11, 12, 14, 16, 18, 22, 24 y 26 px. Nada cae en
+       grilla, y el desalineado inconsciente es la mitad de "se ve feo". */
+    --e1: 4px;  --e2: 8px;  --e3: 12px; --e4: 16px;
+    --e5: 20px; --e6: 24px; --e8: 32px;
+
+    --r-xs:   6px;    /* pastilla, badge */
+    --r-sm:  10px;    /* input, select, boton, segmentado */
+    --r-md:  14px;    /* card, bloque, panel, barra */
+    --r-lg:  18px;    /* card hero */
+    --r-full: 999px;
+
+    --alto-control: 40px;   /* baja de 42 (UI_Shell.html:40): seis campos por
+                               bloque, cada px cuenta */
+    --alto-cta:     42px;
+    --h-banda:      60px;
+    --h-pie:        32px;
+
+    /* ---- MOVIMIENTO. Tres curvas, tres duraciones, nunca transition: all -- */
+    --mov-out:    cubic-bezier(.33, 1, .68, 1);      /* easeOutCubic: hover-lift */
+    --mov-std:    cubic-bezier(.4, 0, .2, 1);        /* color, fondo, colapso */
+    /* El bloque que entra. Era un rebote (.34, 1.56, .64, 1): el 1.56 pasa de largo el
+       valor final y vuelve, o sea que el bloque se pasa de posicion y de escala. En una
+       pantalla donde se agregan hasta QUINCE bloques, ese rebote se ve quince veces
+       seguidas -- y esto es una herramienta de cargar plata, no una app de juego. Un objeto
+       real desacelera, no rebota. easeOutQuint: entra rapido y se frena, sin pasarse. */
+    --mov-entra:  cubic-bezier(.22, 1, .36, 1);
+    --t1: 120ms;  --t2: 200ms;  --t3: 280ms;
+
+    /* Chevron propio para los select. Data-URI porque el CSP del iframe de
+       HtmlService no deja traer un asset externo, y porque hoy no hay un solo
+       appearance:none en los dos archivos: cada bloque muestra cuatro
+       flechitas nativas de Chrome, los unicos "iconos" del formulario y
+       ninguno es nuestro. */
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%232E6B7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5'/%3E%3C/svg%3E");
+}
+
+
+/* ============================================================
+   1. ESQUELETO -- columna de altura fija: banda, scroll, pie.
+   Reemplaza el `position: fixed` del pie (UI_Shell.html:196-197) y el
+   `padding: 0 0 44px` del body (:43). Con esto el pie NO PUEDE solaparse con
+   la ultima tarjeta -- que hoy pasa, porque el pie y la card son literalmente
+   el mismo color (--bg-main en :87 y en :200).
+   ============================================================ */
+html { height: 100%; }
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--sup-page);
+    color: var(--ink-2);
+    font-size: var(--fs-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+.shell-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;   /* que el scroll no se escape a la planilla */
+    padding: var(--e5) var(--e6) 22px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--linea-fuerte) transparent;
+}
+/* La de 8px de UI_SharedStyles.html:290-293 se lee como cromo de navegador viejo. */
+.shell-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.shell-scroll::-webkit-scrollbar-track { background: transparent; }
+.shell-scroll::-webkit-scrollbar-thumb {
+    background: var(--linea-fuerte); border-radius: var(--r-full);
+}
+.shell-scroll::-webkit-scrollbar-thumb:hover { background: #a9b6cb; }
+
+/* Ancho POR NATURALEZA DE CONTENIDO. Se conserva la decision de
+   UI_Shell.html:65-71, que es correcta; solo se baja 852 -> 840 para dejar
+   lugar a la barra de scroll de 6px sin que el Home se corra. */
+.vista-ancha { max-width: 840px; margin: 0 auto; }
+.vista-form  { max-width: 660px; margin: 0 auto; }
+.hidden { display: none !important; }
+
+
+/* ============================================================
+   2. LA BANDA -- sigue siendo la continuacion de la hoja, pero deja de ser
+   un rectangulo plano. Dos auroras radiales sobre un degrade navy: cero DOM,
+   cero animacion, y es donde el contrato del segmento pide lo organico. El
+   lado derecho, que hoy son ~700px de navy vacio (UI_Shell.html:224-229), es
+   justo donde florece la aurora.
+   Medido: en el punto MAS claro del recorrido, blanco da 7.08:1 y --ink-band
+   4.75:1. AA en toda la banda, no solo en el navy pleno.
+   ============================================================ */
+.shell-band {
+    flex: 0 0 auto;
+    position: relative;
+    height: var(--h-banda);
+    padding: 0 var(--e6) 0 var(--e5);
+    display: flex;
+    align-items: center;
+    gap: var(--e3);
+    color: var(--ink-inv);
+    background:
+        radial-gradient(115% 190% at 92% 6%,
+            rgba(var(--tt-teal-rgb), 0.30) 0%, rgba(var(--tt-teal-rgb), 0) 60%),
+        radial-gradient(80% 150% at 62% 118%,
+            rgba(var(--tt-sand-rgb), 0.07) 0%, rgba(var(--tt-sand-rgb), 0) 64%),
+        linear-gradient(102deg, var(--tt-navy-dark) 0%, var(--tt-navy) 58%);
+    box-shadow: 0 1px 0 rgba(52,71,93,0.18), 0 4px 14px rgba(52,71,93,0.10);
+    z-index: 20;
+}
+/* Filo inferior: 1px de luz. Separa la banda del lienzo sin dibujar un borde. */
+.shell-band::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+    background: linear-gradient(90deg,
+        rgba(255,255,255,0.05), rgba(var(--tt-teal-rgb),0.55) 66%, rgba(255,255,255,0.07));
+}
+
+/* Monograma: la marca que NO desaparece al navegar. Hoy el h1 se reemplaza
+   por el titulo de la vista (UI_Shell.html:396) y "Tidetrack" se va del
+   producto entero apenas entras a un formulario. */
+.shell-mono {
+    flex: 0 0 auto;
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.12);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16);
+    font-size: 13px; font-weight: 700; letter-spacing: -0.02em;
+    color: var(--ink-inv);
+}
+.shell-band .titulos {
+    display: flex; align-items: baseline; gap: 9px; min-width: 0;
+}
+.shell-band h1 {
+    margin: 0;
+    font-size: var(--fs-band); font-weight: 700; letter-spacing: -0.3px;
+    line-height: 1.15; white-space: nowrap;
+}
+.shell-band .sub {
+    font-size: var(--fs-aux); font-weight: 400; color: var(--ink-band);
+    line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.shell-band .sub::before {
+    content: ""; display: inline-block;
+    width: 3px; height: 3px; border-radius: 50%;
+    background: var(--ink-band); opacity: 0.7;
+    vertical-align: middle; margin-right: 9px;
+}
+.shell-band .spacer { flex: 1 1 auto; }
+
+/* Volver a la IZQUIERDA. A la derecha (UI_Shell.html:228) choca con la "x"
+   propia del dialogo de Google, que esta a ~16px, y ademas es
+   contra-convencion en toda interfaz de navegacion. */
+.shell-volver {
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 30px; padding: 0 12px 0 9px;
+    border: 0; border-radius: var(--r-full);
+    background: rgba(255,255,255,0.13);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+    color: var(--ink-inv);
+    font: inherit;
+    font-size: var(--fs-rotulo); font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color var(--t1) var(--mov-std),
+                transform var(--t1) var(--mov-std);
+}
+.shell-volver:hover  { background: rgba(255,255,255,0.24); transform: translateX(-1px); }
+.shell-volver:active { transform: translateX(0); }
+.shell-volver:focus-visible { outline: 2px solid var(--ink-inv); outline-offset: 2px; }
+.shell-volver svg { width: 13px; height: 13px; flex: 0 0 auto; }
+
+
+/* ============================================================
+   3. ROTULO DE SECCION -- registro tipografico 1 de 3, y el hilo teal.
+   Hoy .shell-sec (:74-77), .bloque-num (:157-159) y .f label (:121-124) son
+   EL MISMO estilo exacto: 11px / 700 / uppercase / --text-secondary. Tres
+   jerarquias semanticas renderizadas identicas es cero jerarquia.
+   Teal sobre lienzo: 5.35:1, AA.
+   ============================================================ */
+.shell-sec {
+    display: flex; align-items: center; gap: 10px;
+    min-height: 14px;
+    margin: 22px 0 10px;
+    font-size: var(--fs-rotulo); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--tt-teal);
+}
+.shell-sec:first-of-type { margin-top: 0; }
+/* La regla se estira y se apaga. La actual usa --border-color #E2E8F0, que
+   sobre papel da 1.23:1 y directamente no se ve: se pierde el recurso entero. */
+.shell-sec::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--linea), rgba(212,219,232,0));
+}
+
+
+/* ============================================================
+   4. TARJETAS DEL HOME -- una anatomia, tres escalas.
+   Horizontal y no vertical: una card ancha HORIZONTAL se lee deliberada, una
+   card ancha VERTICAL se lee vacia -- que es el bug de "Estructura" en
+   UI_Shell.html:268-274, una tarjeta con 564px de blanco al lado.
+   auto-fit + minmax hace el huerfano estructuralmente imposible: con un item
+   ocupa el ancho entero y sigue leyendose bien. La grilla fija de :84 fue el
+   "fix" del problema que su propio comentario declara arreglar (:82-83) y no
+   lo arreglo: con dos columnas el hueco era 430px, con tres es 564.
+   ============================================================ */
+.shell-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--e3);
+}
+.shell-card {
+    position: relative; overflow: hidden;
+    display: flex; align-items: flex-start; gap: var(--e3);
+    width: 100%; min-height: 78px;
+    padding: 14px var(--e4);
+    text-align: left; font: inherit; color: inherit; cursor: pointer;
+    background: var(--sup-card);
+    border: 0; border-radius: var(--r-md);
+    box-shadow: var(--elev-1), var(--filo);
+    transition: box-shadow var(--t2) var(--mov-out),
+                transform var(--t2) var(--mov-out);
+}
+/* Shimmer de 2px arriba. En reposo es casi invisible y le da a la card un
+   TOPE en vez de un borde plano; en hover se tinie de teal. Acento sin gritar. */
+.shell-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg,
+        rgba(212,219,232,0), var(--linea) 50%, rgba(212,219,232,0));
+    transition: background var(--t2) var(--mov-std);
+}
+.shell-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
+}
+.shell-card:hover::before {
+    background: linear-gradient(90deg,
+        rgba(var(--tt-teal-rgb),0), rgba(var(--tt-teal-rgb),0.55) 50%, rgba(var(--tt-teal-rgb),0));
+}
+/* :active vuelve a una sombra MENOR, no al reposo. Es "se apoyo", no "se apago". */
+.shell-card:active { transform: translateY(0); box-shadow: var(--elev-1), var(--filo); }
+.shell-card:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
+
+.shell-card .ico {
+    flex: 0 0 auto;
+    width: 36px; height: 36px; margin-top: 1px;   /* alineacion optica con la
+                                mediana de la mayuscula del titulo, no con el
+                                tope de su caja */
+    display: grid; place-items: center;
+    border-radius: 11px;
+    background: var(--sup-page);
+    box-shadow: inset 0 0 0 1px var(--linea);
+    color: var(--tt-navy);
+    transition: background-color var(--t2) var(--mov-std),
+                color var(--t2) var(--mov-std),
+                box-shadow var(--t2) var(--mov-std);
+}
+/* El unico cambio de color de toda la interaccion, y es lo que hace que la
+   card se sienta un objeto y no un rectangulo con hover. */
+.shell-card:hover .ico {
+    background: var(--tt-teal); color: var(--ink-inv);
+    box-shadow: inset 0 0 0 1px rgba(var(--tt-teal-rgb), 0.9);
+}
+.shell-card .txt { display: block; min-width: 0; }
+/* Registro tipografico 2 de 3: caja alta y baja, peso 600, tinta fuerte. */
+.shell-card .t {
+    display: block;
+    font-size: var(--fs-vista); font-weight: 600; letter-spacing: -0.15px;
+    line-height: 1.25; color: var(--ink-1);
+}
+.shell-card .d {
+    display: block; margin-top: 3px;
+    font-size: var(--fs-aux); line-height: 1.45; color: var(--ink-3);
+}
+/* Chevron que aparece en hover: el hint de "esto se clickea". */
+.shell-card .chev {
+    flex: 0 0 auto; margin-left: auto; align-self: center;
+    color: var(--tt-teal);
+    opacity: 0; transform: translateX(-4px);
+    transition: opacity var(--t2) var(--mov-std), transform var(--t2) var(--mov-out);
+}
+.shell-card:hover .chev { opacity: 1; transform: translateX(0); }
+
+/* Punto de estado. SHELL_VISTAS ya trae `listo` (16_ShellService.js:65-71) y
+   el HTML nunca lo uso: una tarjeta que promete lo que no hace es peor que
+   una que dice a que atenerse -- lo dice el propio comentario del backend.
+   Sin el atributo no se muestra nada: si el loop no corre, degrada limpio. */
+.shell-card .pend { display: none; }
+.shell-card[data-listo="0"] .pend {
+    display: block;
+    position: absolute; top: 13px; right: 13px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--est-ambar);
+    box-shadow: 0 0 0 3px var(--est-ambar-bg);
+}
+.shell-card[data-listo="0"] .chev { display: none; }
+
+/* --- Card HERO: la accion del dia. La unica grande y la unica con acento. --- */
+.shell-card--hero {
+    align-items: center;
+    gap: var(--e4);
+    min-height: 80px;
+    padding: 18px var(--e5);
+    border-radius: var(--r-lg);
+    background:
+        radial-gradient(140% 220% at 96% 0%,
+            rgba(var(--tt-teal-rgb),0.07) 0%, rgba(var(--tt-teal-rgb),0) 58%),
+        var(--sup-card);
+    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
+}
+.shell-card--hero::before {
+    height: 3px;
+    background: linear-gradient(90deg,
+        var(--tt-teal), rgba(var(--tt-teal-rgb),0.45) 62%, rgba(var(--tt-teal-rgb),0));
+}
+.shell-card--hero:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--elev-3), inset 0 0 0 1px var(--tt-teal);
+}
+.shell-card--hero .ico {
+    width: 44px; height: 44px; margin-top: 0; border-radius: 14px;
+    background: linear-gradient(140deg, var(--tt-teal), var(--tt-teal-mid));
+    color: var(--ink-inv);
+    box-shadow: 0 3px 8px rgba(var(--tt-teal-rgb), 0.30),
+                inset 0 0 0 1px rgba(255,255,255,0.18);
+}
+.shell-card--hero:hover .ico {
+    box-shadow: 0 5px 14px rgba(var(--tt-teal-rgb), 0.38),
+                inset 0 0 0 1px rgba(255,255,255,0.26);
+}
+.shell-card--hero .t { font-size: var(--fs-hero); }
+
+/* --- Chips: lo que no merece una tarjeta. Es la tercera escala. --- */
+.shell-chips { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.shell-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 15px 0 12px;
+    border: 0; border-radius: var(--r-full);
+    background: var(--sup-card);
+    box-shadow: var(--elev-1), var(--filo);
+    color: var(--ink-1); font: inherit; font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    transition: box-shadow var(--t1) var(--mov-std),
+                transform var(--t1) var(--mov-out),
+                color var(--t1) var(--mov-std);
+}
+.shell-chip:hover {
+    transform: translateY(-1px); color: var(--tt-teal);
+    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
+}
+.shell-chip:active { transform: translateY(0); }
+.shell-chip:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
+.shell-chip svg { color: var(--tt-teal); flex: 0 0 auto; }
+
+
+/* ============================================================
+   5. FORMULARIO -- se conserva la grilla de 12 con cortes COMPARTIDOS entre
+   filas (UI_Shell.html:112-120): es la mejor decision del archivo y no se toca.
+   ============================================================ */
+.shell-form { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--e3); }
+.f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.f.c3 { grid-column: span 3; }  .f.c4 { grid-column: span 4; }
+.f.c5 { grid-column: span 5; }  .f.c6 { grid-column: span 6; }
+.f.c7 { grid-column: span 7; }  .f.c8 { grid-column: span 8; }
+.f.c12 { grid-column: span 12; }
+
+/* Registro tipografico 3 de 3: caja normal, peso 500, gris.
+   Catorce rotulos uppercase en pantalla es la firma de un panel de admin de
+   2015, y ademas hoy son IDENTICOS al rotulo de seccion y al numero de bloque.
+   Aca el label es lo mas callado de la pantalla, que es lo que corresponde:
+   el protagonista es el valor. */
+.f > .rot {
+    font-size: var(--fs-aux); font-weight: 500; letter-spacing: 0;
+    text-transform: none; color: var(--ink-3); line-height: 1.2;
+}
+/* min-height RESERVADO SIEMPRE. Sin esto la fila con hint es 16px mas alta
+   que sus vecinas y el borde inferior del bloque queda dentado: hoy solo
+   Moneda lleva hint (UI_Shell.html:561) y por eso la esquina del bloque queda
+   con un hueco asimetrico. */
+.f .hint {
+    min-height: 16px;
+    font-size: var(--fs-aux); line-height: 1.35; color: var(--ink-3);
+}
+.f .hint.fuerte { color: var(--ink-2); font-weight: 500; }
+.f .hint.alerta { color: var(--est-ambar-ink); }
+
+/* ALTURA FIJA en todos los controles. Se conserva el fix de UI_Shell.html:127-140:
+   un select ignora line-height y calcula su alto con su metrica interna, y un
+   input[type=date] trae su propio shadow DOM. Nunca se iguala un input con un
+   select por padding -- se fija height.
+   Lo que SI cambia: el control ahora EXISTE. Hoy es #eff2f9 dentro de un
+   bloque #eff2f9 (:161), o blanco dentro de #eff2f9: 1.12:1 en los dos casos
+   y sin sombra. Hay texto flotando, no cajas. */
+.f .form-input, .f .form-select {
+    width: 100%;
+    height: var(--alto-control);
+    padding: 0 12px;
+    margin: 0;
+    line-height: normal;
+    font-size: var(--fs-body);
+    color: var(--ink-2);
+    background: var(--sup-hueco);
+    border: 0;
+    border-radius: var(--r-sm);
+    box-shadow: var(--filo);
+    transition: background-color var(--t1) var(--mov-std),
+                box-shadow var(--t1) var(--mov-std);
+}
+.f .form-input:hover, .f .form-select:hover {
+    background: var(--sup-hover);
+    box-shadow: inset 0 0 0 1px var(--linea-fuerte);
+}
+.f .form-input::placeholder { color: var(--ink-ph); }
+/* Foco: anillo teal de 3px + filo teal, sin outline. Un outline de 2px con
+   offset sobre un control de 40px en una grilla de 12 se pisa con el vecino. */
+.f .form-input:focus, .f .form-select:focus {
+    outline: none;
+    background: var(--sup-card);
+    box-shadow: inset 0 0 0 1.5px var(--tt-teal),
+                0 0 0 3px rgba(var(--tt-teal-rgb), 0.18);
+}
+
+.f .form-select {
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    padding-right: 34px;
+    background-image: var(--chevron);
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 11px 7px;
+    background-color: var(--sup-hueco);
+}
+.f .form-select:hover { background-color: var(--sup-hover); }
+.f .form-select:focus { background-color: var(--sup-card); }
+
+.f .form-input[type="date"] { padding-right: var(--e2); }
+.f .form-input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.5; cursor: pointer;
+    filter: invert(35%) sepia(24%) saturate(760%) hue-rotate(150deg);
+    transition: opacity var(--t1) var(--mov-std);
+}
+.f .form-input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 0.9; }
+.f .form-input[type="date"]::-webkit-inner-spin-button { display: none; }
+
+
+/* ------------------------------------------------------------
+   EL MONTO. Unico campo con tamanio propio y el unico con adorno de moneda.
+   Hoy .campo-monto (UI_Shell.html:146) tiene el mismo 14px que la Nota: el
+   dato mas importante del producto pesa lo mismo que un campo opcional.
+   La altura la sigue mandando --alto-control: el font-size NUNCA maneja la
+   altura de un control.
+
+   El <select> de moneda vive ENCIMA del prefijo, transparente. Asi Moneda
+   deja de ocupar cuatro doceavos de la grilla (UI_Shell.html:559-561) sin
+   dejar de ser editable, y es lo que baja el bloque de tres filas a dos.
+   El <input> va PRIMERO en el DOM y se reordena por CSS: asi el <label> que
+   envuelve el campo asocia al monto y no al select.
+   ------------------------------------------------------------ */
+.f .campo-monto {
+    position: relative;
+    display: flex; align-items: stretch;
+    height: var(--alto-control);
+    background: var(--sup-hueco);
+    border-radius: var(--r-sm);
+    box-shadow: var(--filo);
+    transition: background-color var(--t1) var(--mov-std),
+                box-shadow var(--t1) var(--mov-std);
+}
+.f .campo-monto:hover { background: var(--sup-hover); }
+.f .campo-monto:focus-within {
+    background: var(--sup-card);
+    box-shadow: inset 0 0 0 1.5px var(--tt-teal),
+                0 0 0 3px rgba(var(--tt-teal-rgb), 0.18);
+}
+.f .campo-monto .pref {
+    order: 1; flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 0 10px 0 12px;
+    font-size: var(--fs-aux); font-weight: 700; letter-spacing: 0.06em;
+    color: var(--ink-3); pointer-events: none;
+    box-shadow: inset -1px 0 0 rgba(52,71,93,0.12);   /* riel, no borde */
+    transition: color var(--t1) var(--mov-std);
+}
+.f .campo-monto:focus-within .pref { color: var(--tt-teal); }
+.f .campo-monto .pref::after {
+    content: ""; display: inline-block;
+    border-left: 3px solid transparent; border-right: 3px solid transparent;
+    border-top: 3.5px solid currentColor; opacity: 0.65;
+}
+.f .campo-monto .moneda {
+    position: absolute; left: 0; top: 0; height: 100%; width: 74px;
+    opacity: 0; cursor: pointer;
+    border: 0; background: transparent; font: inherit; font-size: var(--fs-body);
+    border-radius: var(--r-sm) 0 0 var(--r-sm);
+}
+/* Un control invisible tiene que poder recibir foco de teclado Y verse. Al
+   enfocarlo con teclado se materializa: cero dependencias, cero :has(). */
+.f .campo-monto .moneda:focus-visible {
+    opacity: 1;
+    background: var(--sup-card); color: var(--ink-1);
+    font-size: var(--fs-aux); font-weight: 700;
+    outline: 2px solid var(--tt-teal); outline-offset: -2px;
+}
+.f .campo-monto .monto {
+    order: 2; flex: 1 1 auto; min-width: 0; height: 100%;
+    padding: 0 12px 0 10px; margin: 0;
+    border: 0; background: transparent; box-shadow: none; outline: none;
+    font-size: var(--fs-monto); font-weight: 600; letter-spacing: -0.35px;
+    text-align: right; color: var(--ink-1);
+    font-variant-numeric: tabular-nums;
+}
+.f .campo-monto .monto::placeholder {
+    font-weight: 500; font-size: var(--fs-body); color: var(--ink-ph);
+}
+/* La tinta del monto la decide el TIPO, con el semaforo MEDIDO de la hoja.
+   Es color funcional, no decoracion: el mismo criterio con el que la hoja
+   pinta una celda. El Egreso queda navy y NO rojo: en una herramienta cuya
+   promesa es "paz financiera, todos los dias", pintar de rojo cada gasto
+   normal castiga el habito que se quiere construir. El rojo se reserva para
+   el error de validacion. */
+.bloque[data-tipo="Ingreso"] .campo-monto .monto { color: var(--est-verde); }
+
+
+/* ------------------------------------------------------------
+   SEGMENTADO Egreso / Ingreso. Un <select> de dos opciones
+   (UI_Shell.html:549-550) son dos clicks y una lista contra un click.
+   ------------------------------------------------------------ */
+.seg {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3px;
+    height: var(--alto-control); padding: 3px;
+    background: var(--sup-hueco);
+    border-radius: var(--r-sm);
+    box-shadow: var(--filo);
+}
+.seg button {
+    border: 0; border-radius: 7px; cursor: pointer;
+    font: inherit; font-size: var(--fs-aux); font-weight: 600; letter-spacing: 0.02em;
+    background: transparent; color: var(--ink-3);
+    transition: background-color var(--t1) var(--mov-std),
+                color var(--t1) var(--mov-std),
+                box-shadow var(--t1) var(--mov-std);
+}
+.seg button:hover { color: var(--ink-1); background: rgba(52,71,93,0.05); }
+.seg button[aria-pressed="true"] {
+    background: var(--sup-card); color: var(--ink-1);
+    box-shadow: 0 1px 2px rgba(52,71,93,0.12), inset 0 0 0 1px var(--linea);
+}
+.seg button[aria-pressed="true"][data-v="Ingreso"] { color: var(--est-verde); }
+.seg button:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 1px; }
+
+
+/* ============================================================
+   6. BLOQUES REPETIBLES -- dos estados: EDICION (formulario) y RESUMEN (una
+   fila de 48px). Es lo que hace que quince movimientos entren en 700px.
+   El default es EDICION: si el JS del acordeon no corre, todos los bloques
+   quedan abiertos y el formulario sigue siendo usable. Falla en seguro.
+   ============================================================ */
+.bloque {
+    background: var(--sup-card);
+    border-radius: var(--r-md);
+    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
+    margin-bottom: 10px;
+    transition: box-shadow var(--t2) var(--mov-std);
+}
+.bloque[data-estado="resumen"] { box-shadow: var(--elev-1), var(--filo); }
+/* Entrada del bloque nuevo: 8px y un rebote chico. Unico rebote del sistema. */
+.bloque--nuevo { animation: bloqueEntra var(--t3) var(--mov-entra) both; }
+@keyframes bloqueEntra {
+    from { opacity: 0; transform: translateY(8px) scale(0.985); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --- Fila de resumen --- */
+.bloque-resumen {
+    display: none;
+    align-items: center; gap: 10px;
+    width: 100%; height: 48px; padding: 0 10px 0 14px;
+    border: 0; background: transparent; border-radius: var(--r-md);
+    text-align: left; font: inherit; cursor: pointer;
+    transition: background-color var(--t1) var(--mov-std);
+}
+.bloque[data-estado="resumen"] .bloque-resumen { display: flex; }
+.bloque[data-estado="resumen"] .bloque-head { display: none; }
+.bloque-resumen:hover { background: var(--sup-hueco); }
+.bloque-resumen:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: -2px; }
+
+.bloque-punto {
+    flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--tt-navy);
+    box-shadow: 0 0 0 3px rgba(52,71,93,0.13);
+}
+.bloque-punto[data-tipo="Ingreso"] {
+    background: var(--est-verde);
+    box-shadow: 0 0 0 3px rgba(53,104,84,0.16);
+}
+.bloque-cuenta {
+    flex: 0 1 auto; min-width: 0;
+    font-size: 13px; font-weight: 600; color: var(--ink-1);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* El eco de lo HEREDADO (medio + fecha). Con seis bloques cargados es lo que
+   deja verificar de un scroll que el medio y el dia son los que corresponden,
+   sin abrir seis selects. Es justo el dato que la herencia hace invisible
+   (UI_Shell.html:526-536). */
+.bloque-meta {
+    flex: 1 1 auto; min-width: 0;
+    font-size: var(--fs-aux); color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bloque-monto {
+    flex: 0 0 auto; margin-left: auto;
+    font-size: 15px; font-weight: 600; letter-spacing: -0.2px;
+    color: var(--ink-1); font-variant-numeric: tabular-nums;
+}
+.bloque-monto .u {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--ink-3); margin-left: 5px;
+}
+/* Sin dato es un guion largo, NUNCA un cero: no se inventa un parcial. */
+.bloque-monto[data-vacio="1"] { color: var(--ink-ph); font-weight: 500; }
+.bloque-resumen .chev-abrir { flex: 0 0 auto; color: var(--ink-3); }
+.bloque-resumen:hover .chev-abrir { color: var(--tt-teal); }
+
+/* --- Cuerpo de edicion. Colapso con grid-template-rows 0fr -> 1fr: altura
+       real animable sin medir con JS y sin max-height inventado. --- */
+.bloque-cuerpo {
+    display: grid; grid-template-rows: 1fr;
+    transition: grid-template-rows var(--t3) var(--mov-std);
+}
+.bloque[data-estado="resumen"] .bloque-cuerpo { grid-template-rows: 0fr; }
+.bloque-cuerpo > .inner { overflow: hidden; min-height: 0; }
+.bloque-cuerpo .pad { padding: 10px var(--e4) var(--e4); }
+
+.bloque-head {
+    display: flex; align-items: center; gap: 10px;
+    min-height: 26px; padding: 12px 10px 0 var(--e4);
+}
+/* El titulo de bloque NO es una versalita: es un titulo, mismo registro que
+   el titulo de card. Antes era 11/700/uppercase/gris, o sea identico al label
+   de campo que tiene tres pixeles mas abajo. */
+.bloque-num {
+    flex: 1 1 auto;
+    font-size: 13px; font-weight: 600; letter-spacing: -0.1px;
+    text-transform: none; color: var(--ink-1);
+}
+/* El indice como pastilla: un ancla circular repetida en la columna izquierda
+   que el ojo cuenta sin leer. Es la pregunta real del que carga en lote. */
+.bloque-num .n {
+    display: inline-grid; place-items: center;
+    width: 19px; height: 19px; margin-right: 8px; vertical-align: -3px;
+    border-radius: var(--r-xs);
+    background: var(--tt-teal); color: var(--ink-inv);
+    font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.btn-quitar {
+    flex: 0 0 auto;
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    border: 0; border-radius: 9px;
+    background: transparent; color: var(--ink-3);
+    font: inherit; font-size: 16px; line-height: 1; cursor: pointer;
+    transition: background-color var(--t1) var(--mov-std), color var(--t1) var(--mov-std);
+}
+.btn-quitar:hover { background: var(--est-rojo-bg); color: var(--est-rojo-ink); }
+.btn-quitar:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 1px; }
+
+/* Agregar: FILL, no borde punteado. El `1px dashed --border-color` de
+   UI_Shell.html:170 da 1.23:1 sobre papel: se ve el texto, no se ve la caja. */
+.btn-agregar {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; height: 44px; margin-top: 2px;
+    border: 0; border-radius: var(--r-md);
+    background: var(--sup-card);
+    box-shadow: inset 0 0 0 1px var(--linea);
+    color: var(--tt-teal);
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: box-shadow var(--t1) var(--mov-std);
+}
+.btn-agregar:hover { box-shadow: inset 0 0 0 1.5px var(--tt-teal-soft), var(--elev-1); }
+.btn-agregar:disabled {
+    opacity: 0.45; cursor: not-allowed; box-shadow: inset 0 0 0 1px var(--linea);
+}
+.btn-agregar:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
+
+
+/* ============================================================
+   7. BOTONES
+   ============================================================ */
+.btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: var(--alto-cta); padding: 0 var(--e5);
+    border: 0; border-radius: var(--r-sm);
+    font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background-color var(--t1) var(--mov-std),
+                box-shadow var(--t1) var(--mov-std),
+                transform var(--t1) var(--mov-out);
+}
+.btn:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-primary {
+    background: linear-gradient(140deg, var(--tt-navy) 0%, var(--tt-navy-dark) 100%);
+    color: var(--ink-inv);
+    box-shadow: 0 1px 2px rgba(52,71,93,0.24), inset 0 1px 0 rgba(255,255,255,0.10);
+}
+.btn-primary:hover:not(:disabled) {
+    background: var(--tt-navy-dark);
+    box-shadow: 0 4px 12px rgba(52,71,93,0.28), inset 0 1px 0 rgba(255,255,255,0.14);
+    transform: translateY(-1px);
+}
+.btn-primary:active:not(:disabled) {
+    transform: translateY(0); box-shadow: 0 1px 2px rgba(52,71,93,0.24);
+}
+
+/* Fill, no borde. El `1px solid --border-color` de UI_SharedStyles.html:208
+   sobre papel blanco da 1.23:1: "Cancelar" era texto navy suelto al lado de
+   un boton lleno, no un boton. */
+.btn-secondary {
+    background: var(--sup-page); color: var(--ink-1); box-shadow: var(--filo);
+}
+.btn-secondary:hover:not(:disabled) {
+    background: var(--sup-hover); box-shadow: inset 0 0 0 1px var(--linea-fuerte);
+}
+.btn-secondary:active:not(:disabled) { transform: translateY(1px); }
+
+
+/* ============================================================
+   8. BARRA DE ACCIONES -- sticky al piso, de vidrio.
+   Hoy .shell-acciones (UI_Shell.html:178-180) es ESTATICA: con dos bloques
+   cargados el boton "Cargar" queda ~230px por debajo de la vista. El pliegue
+   se rompe exactamente al usar la funcion que la vista existe para ofrecer.
+   Los margenes negativos sangran a los bordes del scroll (padding 24 / 22).
+   ============================================================ */
+.shell-acciones {
+    position: sticky; bottom: -22px; z-index: 10;
+    display: flex; align-items: center; gap: 10px;
+    height: 60px;
+    margin: 14px calc(-1 * var(--e6)) -22px;
+    padding: 0 var(--e6);
+    background: rgba(239, 242, 249, 0.84);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
+    box-shadow: 0 -1px 0 var(--linea), 0 -8px 20px rgba(52,71,93,0.06);
+}
+/* Piso: sin backdrop-filter la barra queda opaca y sigue siendo legible. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .shell-acciones { background: var(--sup-page); }
+}
+/* Este es el hueco de #movCupo (UI_Shell.html:284, :605-612). Hoy dice
+   "2 de hasta 15. Se cargan todos juntos..." y la barra se lee como una
+   oracion con dos botones al final. */
+.shell-acciones .crece {
+    margin-right: auto; min-width: 0;
+    font-size: var(--fs-aux); line-height: 1.35; color: var(--ink-3);
+}
+/* El total del lote. Es la diferencia entre "formulario de carga" y "producto
+   de finanzas": con seis movimientos cargados hoy no hay un solo lugar que
+   diga cuanto suman. Si el lote mezcla monedas muestra el conteo, no un total
+   falso: sumar monedas distintas es peor que no sumar. */
+.shell-acciones .total {
+    display: flex; flex-direction: column; align-items: flex-end;
+    margin-right: var(--e3);
+}
+.shell-acciones .total .rot {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);
+}
+.shell-acciones .total .val {
+    font-size: 15px; font-weight: 700; letter-spacing: -0.2px; line-height: 1.2;
+    color: var(--ink-1); font-variant-numeric: tabular-nums;
+}
+
+
+/* ============================================================
+   9. ALERTAS -- se conserva la decision de UI_SharedStyles.html:266-271
+   (fondo tenido y tinta, sin franja lateral). Lo que cambia: la tinta del
+   error sube de 4.47:1 a 5.76:1, y el punto de 7px reemplaza a la franja --
+   senial redundante sin ser cromo.
+   ============================================================ */
+.alert {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 11px 14px; margin-bottom: var(--e4);
+    border-radius: var(--r-sm);
+    font-size: 13px; line-height: 1.45;
+    animation: alertaEntra 180ms var(--mov-out) both;
+}
+@keyframes alertaEntra { from { opacity: 0; transform: translateY(-4px); } }
+.alert::before {
+    content: ""; flex: 0 0 auto;
+    width: 7px; height: 7px; margin-top: 6px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.7);
+}
+.alert-error   { background: var(--est-rojo-bg);  color: var(--est-rojo-ink); }
+.alert-ok      { background: var(--est-verde-bg); color: var(--est-verde-ink); }
+.alert-warning { background: var(--est-ambar-bg); color: var(--est-ambar-ink); }
+.alert-info    { background: var(--sup-card); color: var(--ink-2); box-shadow: var(--filo); }
+.alert-info::before { background: var(--tt-teal); box-shadow: none; }
+
+
+/* ============================================================
+   10. VISTA EN CONSTRUCCION -- el copy ya esta a nivel producto
+   (UI_Shell.html:331-358); lo que le falta es un contenedor.
+   ============================================================ */
+.shell-pendiente {
+    padding: var(--e5) var(--e5) var(--e4);
+    background: var(--sup-card);
+    border-radius: var(--r-md);
+    box-shadow: var(--elev-1), var(--filo);
+}
+.shell-pendiente .marca {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 24px; padding: 0 11px; margin-bottom: 12px;
+    border-radius: var(--r-full);
+    background: var(--est-ambar-bg); color: var(--est-ambar-ink);
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+}
+.shell-pendiente h2 {
+    margin: 0 0 8px;
+    font-size: var(--fs-hero); font-weight: 600; letter-spacing: -0.15px;
+    color: var(--ink-1);
+}
+.shell-pendiente p {
+    margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--ink-2);
+}
+.shell-pendiente ul { margin: 0; padding-left: 0; list-style: none; }
+.shell-pendiente li {
+    position: relative; padding-left: 18px; margin: 7px 0;
+    font-size: 13px; line-height: 1.5; color: var(--ink-2);
+}
+.shell-pendiente li::before {
+    content: ""; position: absolute; left: 2px; top: 8px;
+    width: 5px; height: 5px; border-radius: 50%; background: var(--tt-teal-soft);
+}
+
+
+/* ============================================================
+   11. PIE -- se conserva que sea fijo (el argumento de UI_Shell.html:195-197
+   es correcto: un cromo que salta de lugar al navegar hace que la UI se
+   sienta amateur). Lo que le falta es separacion: hoy el pie y la card son
+   EL MISMO #eff2f9 (--bg-main en :87 y en :200), asi que la ultima tarjeta
+   se funde con el pie.
+   ============================================================ */
+.shell-foot {
+    flex: 0 0 auto;
+    height: var(--h-pie);
+    display: flex; align-items: center; gap: var(--e4);
+    padding: 0 var(--e6);
+    background: var(--sup-card);
+    box-shadow: 0 -1px 0 var(--linea);
+    font-size: var(--fs-rotulo); letter-spacing: 0.02em; color: var(--ink-3);
+}
+.shell-foot .spacer { flex: 1; }
+.shell-foot .vivo {
+    display: inline-flex; align-items: center; gap: 7px; min-width: 0;
+    color: var(--ink-2); font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Dice "conectado a ESTA planilla" sin una palabra de mas. */
+.shell-foot .vivo::before {
+    content: ""; flex: 0 0 auto;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--est-verde);
+    box-shadow: 0 0 0 3px rgba(53,104,84,0.16);
+}
+.shell-foot .ver {
+    font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--ink-ph);
+}
+
+
+/* ============================================================
+   12. OVERLAY -- el loader SIEMPRE tiene que poder apagarse
+   (cicatriz v0.45.2 y v0.47.1). Esto es solo su ropa.
+   ============================================================ */
+.shell-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    display: grid; place-items: center; align-content: center; gap: 14px;
+    background: rgba(239, 242, 249, 0.74);
+    -webkit-backdrop-filter: blur(6px) saturate(130%);
+    backdrop-filter: blur(6px) saturate(130%);
+    animation: overlayEntra 160ms var(--mov-std) both;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .shell-overlay { background: rgba(239, 242, 249, 0.96); }
+}
+@keyframes overlayEntra { from { opacity: 0; } }
+.shell-spinner {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2.5px solid rgba(52,71,93,0.14);
+    border-top-color: var(--tt-teal);
+    animation: shell-spin 800ms linear infinite;
+}
+@keyframes shell-spin { to { transform: rotate(360deg); } }
+.shell-overlay .leyenda {
+    font-size: var(--fs-rotulo); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-3);
+}
+
+
+/* ============================================================
+   13. ENTRADA -- una sola animacion en todo el sistema, 8px y 200ms.
+   Suficiente para leerse como movimiento, no tanto como para notar el reflow.
+   ============================================================ */
+@keyframes vistaEntra { from { opacity: 0; transform: translateY(8px); } }
+#vista-home .shell-card, #vista-home .shell-chips {
+    animation: vistaEntra 300ms var(--mov-out) both;
+}
+#vista-home .shell-cards:nth-of-type(1) .shell-card { animation-delay: 0.02s; }
+#vista-home .shell-cards:nth-of-type(2) .shell-card:nth-child(1) { animation-delay: 0.06s; }
+#vista-home .shell-cards:nth-of-type(2) .shell-card:nth-child(2) { animation-delay: 0.09s; }
+#vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(1) { animation-delay: 0.12s; }
+#vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(2) { animation-delay: 0.15s; }
+#vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(3) { animation-delay: 0.18s; }
+#vista-home .shell-chips { animation-delay: 0.21s; }
+
+
+/* ============================================================
+   14. MOVIMIENTO REDUCIDO -- hoy cubre solo el spinner (UI_Shell.html:217).
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    /* El spinner es la unica excepcion: si no gira, no informa nada. */
+    .shell-spinner { animation: shell-spin 900ms linear infinite !important; }
+}
+
+
+/* ============================================================
+   15. MODAL ANGOSTO -- Sheets recorta el dialogo si la ventana del navegador
+   es mas chica que el setWidth pedido (16_ShellService.js:141). Un solo
+   breakpoint. auto-fit ya cubre las tarjetas; esto ordena el resto.
+   ============================================================ */
+@media (max-width: 700px) {
+    .shell-scroll { padding: var(--e4) var(--e4) 18px; }
+    .shell-acciones { margin-left: calc(-1 * var(--e4)); margin-right: calc(-1 * var(--e4)); padding: 0 var(--e4); }
+    .shell-band .sub { display: none; }
+    .f.c3, .f.c4, .f.c5 { grid-column: span 6; }
+}
+</style>
+</head>
+<body>
+
+<header class="shell-band">
+    <button class="shell-volver hidden" id="shellVolver" onclick="salirDeVista()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        Volver
+    </button>
+    <span class="shell-mono" aria-hidden="true">tt.</span>
+    <div class="titulos">
+        <h1 id="shellTitulo">Tidetrack</h1>
+        <span class="sub" id="shellSubtitulo">Que queres hacer</span>
+    </div>
+    <span class="spacer"></span>
+</header>
+
+<main class="shell-scroll">
+    <div id="shellAviso" class="vista-ancha"></div>
+
+    <!-- ================= HOME ================= -->
+    <div id="vista-home" class="vista-ancha">
+
+        <div class="shell-sec">Hoy</div>
+        <div class="shell-cards">
+            <button class="shell-card shell-card--hero" data-vista="movimiento"
+                    onclick="irAVista('movimiento')">
+                <span class="ico" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+                <span class="txt">
+                    <span class="t">Movimiento nuevo</span>
+                    <span class="d">Uno o varios gastos e ingresos, de una sentada.</span>
+                </span>
+                <span class="pend" title="Todavia no esta construida"></span>
+                <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+        </div>
+
+        <div class="shell-sec">Registrar</div>
+        <div class="shell-cards">
+            <button class="shell-card" data-vista="traspaso" onclick="irAVista('traspaso')">
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M16 3l4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg></span>
+                <span class="txt">
+                    <span class="t">Traspaso nuevo</span>
+                    <span class="d">Plata de una caja a otra. Escribe las dos patas juntas.</span>
+                </span>
+                <span class="pend" title="Todavia no esta construida"></span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="shell-card" data-vista="proyeccion" onclick="irAVista('proyeccion')">
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-7M14 7h6v6"/></svg></span>
+                <span class="txt">
+                    <span class="t">Proyeccion nueva</span>
+                    <span class="d">Lo que pensas gastar el mes que viene.</span>
+                </span>
+                <span class="pend" title="Todavia no esta construida"></span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+        </div>
+
+        <div class="shell-sec">Revisar</div>
+        <div class="shell-cards">
+            <button class="shell-card" data-listo="1" onclick="procesarLote()">
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span>
+                <span class="txt">
+                    <span class="t">Procesar Cargas</span>
+                    <span class="d">Manda al ledger lo que tipeaste en la grilla.</span>
+                </span>
+                <span class="pend"></span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="shell-card" data-vista="conciliacion" onclick="irAVista('conciliacion')">
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                <span class="txt">
+                    <span class="t">Conciliacion</span>
+                    <span class="d">Emparejar cada caja con lo que dice el banco.</span>
+                </span>
+                <span class="pend" title="Todavia no esta construida"></span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="shell-card" data-vista="recurrentes" onclick="irAVista('recurrentes')">
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></span>
+                <span class="txt">
+                    <span class="t">Gastos recurrentes</span>
+                    <span class="d">Lo que se repite todos los meses.</span>
+                </span>
+                <span class="pend" title="Todavia no esta construida"></span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+        </div>
+
+        <div class="shell-sec">Estructura</div>
+        <div class="shell-chips">
+            <button class="shell-chip" onclick="abrirAbm()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h11"/></svg>
+                Gestionar cuentas
+            </button>
+        </div>
+    </div>
+
+<div id="vista-movimiento" class="vista-form hidden">
+    <div id="movLista"></div>
+    <button type="button" class="btn-agregar" id="movAgregar" onclick="agregarBloqueMovimiento()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Agregar otro movimiento
+    </button>
+    <div class="shell-acciones">
+        <span class="crece" id="movCupo"></span>
+        <span class="total">
+            <span class="rot">Lote</span>
+            <span class="val" id="movTotal">&mdash;</span>
+        </span>
+        <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
+        <button class="btn btn-primary" id="movBtnGuardar" onclick="guardarMovimientos()">Cargar</button>
+    </div>
+</div>
+
+    <div id="vista-traspaso" class="vista-form hidden">
+        <div class="shell-form">
+            <label class="f c6"><span class="rot">Sale de</span>
+                <select class="form-select" id="trasOrigen" onchange="trasMonedas()"></select></label>
+            <label class="f c6"><span class="rot">Entra a</span>
+                <select class="form-select" id="trasDestino" onchange="trasMonedas()"></select></label>
+            <label class="f c4"><span class="rot">Monto que sale</span>
+                <span class="campo-monto">
+                    <input class="monto" id="trasMontoO" inputmode="decimal" placeholder="0,00"
+                           autocomplete="off" oninput="trasTipoDeCambio()">
+                    <span class="pref" id="trasPrefO" aria-hidden="true"></span>
+                </span>
+                <span class="hint" id="trasHintO"></span></label>
+            <label class="f c4 hidden" id="trasCampoDestino"><span class="rot">Monto que entra</span>
+                <span class="campo-monto">
+                    <input class="monto" id="trasMontoD" inputmode="decimal" placeholder="0,00"
+                           autocomplete="off" oninput="trasTipoDeCambio()">
+                    <span class="pref" id="trasPrefD" aria-hidden="true"></span>
+                </span>
+                <span class="hint" id="trasHintD"></span></label>
+            <label class="f c4"><span class="rot">Fecha</span>
+                <input class="form-input" id="trasFecha" type="date"></label>
+            <label class="f c12"><span class="rot">Nota</span>
+                <input class="form-input" id="trasNota" placeholder="Opcional" autocomplete="off">
+                <span class="hint" id="trasAviso"></span></label>
+        </div>
+        <div class="shell-acciones">
+            <span class="crece">Las dos patas se escriben juntas o no se escribe ninguna.</span>
+            <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
+            <button class="btn btn-primary" id="trasBtnGuardar" onclick="guardarTraspaso()">Registrar</button>
+        </div>
+    </div>
+
+    <div id="vista-proyeccion" class="vista-form hidden">
+        <div class="shell-pendiente">
+            <h2>Todavia no esta construida</h2>
+            <p>Va a guardar lo que pensas gastar en la base <b>Proyeccion</b>, que ya existe, para que el Tablero pueda medir cuanto te falta.</p>
+            <ul>
+                <li>Es el paso que hoy le falta a la hoja Presupuesto: bajar lo que escribis a mano a la base.</li>
+                <li>Lo proyectado en dolares no lleva cotizacion congelada a proposito: un movimiento que no ocurrio no tiene tipo de cambio.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="vista-recurrentes" class="vista-form hidden">
+        <div class="shell-pendiente">
+            <h2>Todavia no esta construida</h2>
+            <p>Va a guardar las suscripciones y los gastos que se repiten todos los meses, para que la proyeccion los tenga en cuenta sola.</p>
+            <ul>
+                <li>Cada regla dice cuenta, medio, monto, dia del mes y desde cuando hasta cuando.</li>
+                <li>Al regenerar no toca los meses ya cerrados, y avisa antes de pisar una fila que hayas editado a mano.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="vista-conciliacion" class="vista-form hidden">
+        <div class="shell-pendiente">
+            <h2>Todavia no esta construida</h2>
+            <p>Va a poner lado a lado, por cada caja, lo que dice la planilla y lo que hay de verdad, y cargar la diferencia con la cuenta <b>Ajuste</b>, que es la que ya usas.</p>
+            <ul>
+                <li>El saldo lo calcula con la regla que ya cierra al centavo: el ultimo <b>Inicio Mes</b> de cada caja mas todo lo posterior.</li>
+                <li>Una caja que no declares conserva su saldo. Nunca se asume cero.</li>
+            </ul>
+        </div>
+    </div>
+
+</main>
+
+<footer class="shell-foot">
+    <span class="vivo">PLANILLA FINANZAS_v4 .WIP | Personal</span>
+    <span class="spacer"></span>
+    <span class="ver">vservidor local</span>
+</footer>
+
+<div class="shell-overlay hidden" id="shellLoader">
+    <div class="shell-spinner"></div>
+    <span class="leyenda" id="shellLoaderTxt">Leyendo el Plan de Cuentas</span>
+</div>
+<script>
+/* ENTORNO DE PRUEBAS -- no hay servidor.
+   Se reemplaza google.script.run por un doble que devuelve el catalogo REAL de la planilla
+   (sacado del gemelo digital) con la latencia medida en vivo: 537 ms para el catalogo. Asi lo
+   que se prueba es la interfaz de verdad, con los tiempos de verdad, y no una maqueta. */
+var CATALOGO_REAL = {"ingresos": ["Tidetrack", "Umoh", "Ingresos Extra", "Intereses bancos", "Ingreso Asesor", "Plata Prestada", "Sueldo", "FF", "Ingreso Viejo", "Inversiones", "Rendimientos", "Ajuste"], "fijos": ["Auto", "Gatos", "Linea telefónica", "MONOTRIBUTO", "Nafta", "Pago tarjeta", "Prepaga Salud", "SportClub", "Prestamo Galicia", "Deuda Eze", "Deuda Viejo", "Deuda Dima", "Prestamo Viejo", "Subscripciones", "Seguro Compu", "Seguro Celu", "Pago Tarjeta MP"], "variables": ["Comidas", "Computación", "Corte Pelo", "Entretenimiento", "Estacionamiento", "Facultad", "Imprevistos", "Juntadas", "Medicamentos / Higiene", "Regalos", "Reparaciones Auto", "Ropa", "Trabajo", "Viajes", "Salidas", "Compra USD", "Entrenamiento", "Impuestos", "Otros"], "medios": [{"nombre": "Dolar Cash", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar Galicia", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar Mercado Pago", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar NaranjaX", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar Patagonia", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Efectivo", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Frasco Transitorio NaranjaX", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Frascos Naranja X", "moneda": "ARS", "tipo": "Ahorros"}, {"nombre": "Frascos Nx - Préstamo", "moneda": "ARS", "tipo": "Financiación"}, {"nombre": "Galicia", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Mercado Pago", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "NaranjaX", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Patagonia", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Ualá", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "YPF", "moneda": "ARS", "tipo": "Hogar"}], "monedas": ["ARS", "USD", "AUD", "EUR"], "comodines": ["Traspaso", "Inicio Mes"], "libres": 15, "ok": true, "planilla": "PLANILLA FINANZAS_v4 .WIP | Personal", "version": "0.52.1"};
+window.google = { script: {
+  run: (function () {
+    function cadena() {
+      var exito = function () {}, falla = function () {};
+      var api = {
+        withSuccessHandler: function (f) { exito = f; return api; },
+        withFailureHandler: function (f) { falla = f; return api; },
+        obtenerCatalogoShell: function () {
+          setTimeout(function () { exito(JSON.parse(JSON.stringify(CATALOGO_REAL))); }, 537);
+        },
+        registrarMovimientos: function (lista) {
+          setTimeout(function () {
+            exito({ ok: true, mensaje: 'Listo. Cargaste ' + lista.length + ' movimiento(s). ' +
+                    '(Entorno de pruebas: no se escribio en la planilla.)' });
+          }, 900);
+        },
+        registrarTraspaso: function () {
+          setTimeout(function () {
+            exito({ ok: true, mensaje: 'Listo. Traspaso registrado. ' +
+                    '(Entorno de pruebas: no se escribio en la planilla.)' });
+          }, 900);
+        },
+        procesarCargasDesdeShell: function () {
+          setTimeout(function () { exito({ ok: true }); }, 700);
+        },
+        abrirAbmDesdeShell: function () {
+          setTimeout(function () {
+            exito();
+            document.getElementById('shellLoader').classList.add('hidden');
+            document.getElementById('shellAviso').innerHTML =
+              '<div class="alert alert-ok">En la planilla real, esto reemplaza el modal por el ' +
+              'ABM del Plan de Cuentas. Aca no, para que puedas seguir comentando.</div>';
+          }, 400);
+        }
+      };
+      return api;
+    }
+    var r = {};
+    ['withSuccessHandler','withFailureHandler','obtenerCatalogoShell','registrarMovimientos',
+     'registrarTraspaso','procesarCargasDesdeShell','abrirAbmDesdeShell'].forEach(function (m) {
+      r[m] = function () { var c = cadena(); return c[m].apply(c, arguments); };
+    });
+    return r;
+  })(),
+  host: { close: function () {} }
+} };
+</script>
+<script>
+// OJO CON EL SCRIPTLET: para inyectar JSON va la forma con signo de admiracion, la que NO
+// escapa. La otra hace escapado contextual de HTML y convierte cada comilla en su entidad, que
+// adentro de un script es un error de sintaxis -- y un error de sintaxis mata el archivo
+// entero. La forma que escapa SI es la correcta para texto que va al HTML, como el pie.
+var VISTAS = [{"id": "home", "titulo": "Tidetrack", "subtitulo": "Que queres hacer", "listo": true}, {"id": "movimiento", "titulo": "Movimiento nuevo", "subtitulo": "Un gasto o un ingreso", "listo": true}, {"id": "traspaso", "titulo": "Traspaso nuevo", "subtitulo": "Plata de una caja a otra", "listo": true}, {"id": "proyeccion", "titulo": "Proyeccion nueva", "subtitulo": "Lo que pensas gastar", "listo": false}, {"id": "recurrentes", "titulo": "Gastos recurrentes", "subtitulo": "Lo que se repite todos los meses", "listo": false}, {"id": "conciliacion", "titulo": "Conciliacion", "subtitulo": "Lo que dice el sistema contra lo que hay", "listo": false}];
+var VISTA_INICIAL = 'home';
+var TIPOS_RIQUEZA_CLIENTE = ["Ahorros", "Inversiones"];
+
+var catalogo = null;
+var VISTAS_CON_CATALOGO = { movimiento: prepararMovimiento, traspaso: prepararTraspaso };
+
+// ============================================
+// ROUTER
+// ============================================
+
+function irAVista(id) {
+    if (!VISTAS.some(function (v) { return v.id === id; })) { id = 'home'; }
+    VISTAS.forEach(function (v) {
+        var el = document.getElementById('vista-' + v.id);
+        if (el) { el.classList.toggle('hidden', v.id !== id); }
+    });
+    var vista = VISTAS.filter(function (v) { return v.id === id; })[0];
+    document.getElementById('shellTitulo').textContent = vista.titulo;
+    document.getElementById('shellSubtitulo').textContent = vista.subtitulo;
+    document.getElementById('shellVolver').classList.toggle('hidden', id === 'home');
+    document.querySelector('.shell-scroll').scrollTop = 0;
+    limpiarAviso();
+    var preparar = VISTAS_CON_CATALOGO[id];
+    if (preparar) { asegurarCatalogo(preparar); }
+}
+
+/** Volver. NUNCA cierra el modal: el contenedor decide que significa "salir". */
+function salirDeVista() { irAVista('home'); }
+
+// ============================================
+// AVISOS
+// ============================================
+
+function mostrarError(t) {
+    document.getElementById('shellAviso').innerHTML =
+        '<div class="alert alert-error">' + escapar(t) + '</div>';
+}
+function mostrarOk(t) {
+    document.getElementById('shellAviso').innerHTML =
+        '<div class="alert alert-ok">' + escapar(t) + '</div>';
+}
+function limpiarAviso() { document.getElementById('shellAviso').innerHTML = ''; }
+function escapar(t) {
+    var d = document.createElement('div');
+    d.textContent = String(t == null ? '' : t);
+    return d.innerHTML;
+}
+function loader(v, txt) {
+    document.getElementById('shellLoader').classList.toggle('hidden', !v);
+    if (txt) document.getElementById('shellLoaderTxt').textContent = txt;
+}
+
+// ============================================
+// CATALOGO PEREZOSO
+// ============================================
+
+function asegurarCatalogo(cuando) {
+    if (catalogo) { cuando(catalogo); return; }
+    loader(true, 'Leyendo el Plan de Cuentas');
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true; loader(false);
+        mostrarError('El Plan de Cuentas esta tardando mas de la cuenta. Proba de nuevo, y si ' +
+            'sigue igual corre Tidetrack Dev > Shell > Diagnosticar tiempos.');
+    }, 15000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); };
+
+    google.script.run
+        .withSuccessHandler(function (data) {
+            if (contesto) return;
+            cerrar();
+            if (!data || !data.ok) {
+                mostrarError('No se pudo leer el Plan de Cuentas: ' + ((data && data.error) || 'error desconocido'));
+                return;
+            }
+            catalogo = data;
+            cuando(catalogo);
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            cerrar();
+            mostrarError('No se pudo leer el Plan de Cuentas: ' + err.message);
+        })
+        .obtenerCatalogoShell();
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
+function hoyISO() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+        '-' + String(d.getDate()).padStart(2, '0');
+}
+
+/** Convierte lo que se tipea ("12.400,50" o "12400.50") al numero que espera el backend. */
+function aNumero(txt) {
+    var t = String(txt == null ? '' : txt).trim();
+    if (t === '') return '';
+    if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+    var n = Number(t);
+    return isNaN(n) ? '' : n;
+}
+
+function opcion(v) {
+    var o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    return o;
+}
+
+/** Llena un select con grupos, para que 60 cuentas no lleguen como una lista plana. */
+function llenarSelect(sel, grupos, seleccionado) {
+    sel.innerHTML = '';
+    grupos.forEach(function (g) {
+        if (!g.items || !g.items.length) return;
+        if (g.titulo) {
+            var og = document.createElement('optgroup');
+            og.label = g.titulo;
+            g.items.forEach(function (it) { og.appendChild(opcion(it)); });
+            sel.appendChild(og);
+        } else {
+            g.items.forEach(function (it) { sel.appendChild(opcion(it)); });
+        }
+    });
+    if (seleccionado) sel.value = seleccionado;
+}
+
+// ============================================
+// MOVIMIENTO -- carga multiple con acordeon
+// ============================================
+
+/**
+ * UN SOLO BLOQUE ABIERTO A LA VEZ.
+ * El cupo son 15 filas de la grilla de Cargas. Quince bloques abiertos de 194px son 2.910px
+ * dentro de un modal de 700: el acordeon es la unica forma de que la carga multiple escale
+ * hasta el tope real. Colapsado, un bloque son 48px, y quince entran con scroll corto mientras
+ * el boton de Cargar queda pegado abajo y nunca sale de pantalla.
+ */
+function abrirBloque(el) {
+    var b = el.closest('.bloque');
+    document.querySelectorAll('#movLista .bloque').forEach(function (o) {
+        if (o !== b) { resumirBloque(o); o.dataset.estado = 'resumen'; }
+    });
+    b.dataset.estado = 'edicion';
+    b.querySelector('.b-monto').focus();
+}
+
+/** El resumen se arma con lo que ya hay en los campos: no guarda un segundo estado. */
+function resumirBloque(b) {
+    var v = function (s) { var e = b.querySelector(s); return e ? e.value : ''; };
+    var monto = aNumero(v('.b-monto'));
+    var f = v('.b-fecha');
+    b.querySelector('.bloque-punto').dataset.tipo = v('.b-tipo');
+    b.querySelector('.bloque-cuenta').textContent = v('.b-cuenta') || 'Sin cuenta';
+    b.querySelector('.bloque-meta').textContent =
+        [v('.b-medio'), f ? f.slice(8) + '/' + f.slice(5, 7) : ''].filter(Boolean).join(' \u00b7 ');
+    var caja = b.querySelector('.bloque-monto');
+    caja.dataset.vacio = monto ? '0' : '1';
+    caja.innerHTML = (monto ? escapar(monto.toFixed(2).replace('.', ','))
+                            : '\u2014') + '<span class="u">' + escapar(v('.b-moneda')) + '</span>';
+}
+
+/** Segmentado -> input oculto. guardarMovimientos() no cambia una linea. */
+function segTipo(btn) {
+    var b = btn.closest('.bloque');
+    b.querySelectorAll('.seg button').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x === btn));
+    });
+    b.querySelector('.b-tipo').value = btn.dataset.v;
+    b.dataset.tipo = btn.dataset.v;
+    actualizarTotal();
+}
+
+function prepararMovimiento() {
+    if (!document.querySelectorAll('#movLista .bloque').length) {
+        agregarBloqueMovimiento();
+    }
+    actualizarCupo();
+}
+
+var PLANTILLA_BLOQUE =
+        '<div class="bloque bloque--nuevo" data-estado="edicion" data-tipo="Egreso">' +
+        '<button type="button" class="bloque-resumen" onclick="abrirBloque(this)">' +
+        '<span class="bloque-punto" data-tipo="Egreso" aria-hidden="true"></span>' +
+        '<span class="bloque-cuenta">Sin cuenta</span>' +
+        '<span class="bloque-meta"></span>' +
+        '<span class="bloque-monto" data-vacio="1">&mdash;<span class="u">ARS</span></span>' +
+        '<svg class="chev-abrir" width="15" height="15" viewBox="0 0 24 24" fill="none"' +
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round"' +
+        'stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+        '</button>' +
+        '<div class="bloque-head">' +
+        '<span class="bloque-num"><span class="n">1</span>Movimiento</span>' +
+        '<button type="button" class="btn-quitar" title="Quitar este movimiento"' +
+        'onclick="quitarBloqueMovimiento(this)">&times;</button>' +
+        '</div>' +
+        '<div class="bloque-cuerpo"><div class="inner"><div class="pad">' +
+        '<div class="shell-form">' +
+        '<!-- El <input> va PRIMERO en el DOM y se reordena por CSS: asi el <label>' +
+        'que envuelve asocia al monto y no al <select> de moneda. -->' +
+        '<label class="f c4">' +
+        '<span class="rot">Monto</span>' +
+        '<span class="campo-monto">' +
+        '<input class="monto b-monto" inputmode="decimal" placeholder="0,00" autocomplete="off">' +
+        '<span class="pref b-pref" aria-hidden="true">ARS</span>' +
+        '<select class="moneda b-moneda" aria-label="Moneda de este movimiento"></select>' +
+        '</span>' +
+        '</label>' +
+        '<div class="f c3">' +
+        '<span class="rot">Tipo</span>' +
+        '<div class="seg" role="group" aria-label="Tipo de movimiento">' +
+        '<button type="button" data-v="Egreso" aria-pressed="true" onclick="segTipo(this)">Egreso</button>' +
+        '<button type="button" data-v="Ingreso" aria-pressed="false" onclick="segTipo(this)">Ingreso</button>' +
+        '</div>' +
+        '<input type="hidden" class="b-tipo" value="Egreso">' +
+        '</div>' +
+        '<label class="f c5">' +
+        '<span class="rot">Cuenta</span>' +
+        '<select class="form-select b-cuenta"></select>' +
+        '</label>' +
+        '<label class="f c4">' +
+        '<span class="rot">Medio</span>' +
+        '<select class="form-select b-medio"></select>' +
+        '</label>' +
+        '<label class="f c3">' +
+        '<span class="rot">Fecha</span>' +
+        '<input class="form-input b-fecha" type="date">' +
+        '</label>' +
+        '<label class="f c5">' +
+        '<span class="rot">Nota</span>' +
+        '<input class="form-input b-nota" placeholder="Opcional" autocomplete="off">' +
+        '</label>' +
+        '</div>' +
+        '</div></div></div>' +
+        '</div>';
+
+/**
+ * Agrega un bloque heredando del anterior lo que casi siempre se repite.
+ * Se hereda MEDIO, FECHA y TIPO; nunca monto, cuenta ni nota. Cuando se cargan seis gastos de
+ * una sentada el medio y el dia son los mismos y el resto cambia siempre: heredar lo que
+ * cambia obliga a borrarlo, que es peor que tipearlo.
+ */
+function agregarBloqueMovimiento() {
+    var lista = document.getElementById('movLista');
+    var previos = lista.querySelectorAll('.bloque');
+    if (previos.length >= cupoMaximo()) return;
+
+    var heredaMedio = '', heredaFecha = hoyISO(), heredaTipo = 'Egreso';
+    if (previos.length) {
+        var ult = previos[previos.length - 1];
+        heredaMedio = ult.querySelector('.b-medio').value;
+        heredaFecha = ult.querySelector('.b-fecha').value;
+        heredaTipo = ult.querySelector('.b-tipo').value;
+        resumirBloque(ult);
+        ult.dataset.estado = 'resumen';
+    }
+
+    var envoltorio = document.createElement('div');
+    envoltorio.innerHTML = PLANTILLA_BLOQUE;
+    var div = envoltorio.firstElementChild;
+    lista.appendChild(div);
+
+    // Los select se pueblan DESPUES de insertar: un value interpolado en el HTML de un select
+    // no selecciona nada.
+    llenarSelect(div.querySelector('.b-cuenta'), [
+        { titulo: 'Gastos variables', items: catalogo.variables },
+        { titulo: 'Gastos fijos', items: catalogo.fijos },
+        { titulo: 'Ingresos', items: catalogo.ingresos }
+    ]);
+    llenarSelect(div.querySelector('.b-medio'),
+        [{ items: catalogo.medios.map(function (m) { return m.nombre; }) }], heredaMedio);
+    llenarSelect(div.querySelector('.b-moneda'), [{ items: catalogo.monedas }]);
+    div.querySelector('.b-fecha').value = heredaFecha;
+    div.querySelector('.b-tipo').value = heredaTipo;
+    div.dataset.tipo = heredaTipo;
+    div.querySelectorAll('.seg button').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x.dataset.v === heredaTipo));
+    });
+    div.querySelector('.b-medio').onchange = function () { monedaDelMedio(div); };
+    div.querySelector('.b-monto').oninput = actualizarTotal;
+    div.querySelector('.b-moneda').onchange = function () {
+        div.querySelector('.b-pref').textContent = div.querySelector('.b-moneda').value;
+        actualizarTotal();
+    };
+    monedaDelMedio(div);
+
+    renumerarBloques();
+    actualizarCupo();
+    actualizarTotal();
+    div.querySelector('.b-monto').focus();
+}
+
+function quitarBloqueMovimiento(btn) {
+    var lista = document.getElementById('movLista');
+    if (lista.querySelectorAll('.bloque').length <= 1) return;
+    btn.closest('.bloque').remove();
+    renumerarBloques();
+    actualizarCupo();
+    actualizarTotal();
+}
+
+/** El numero va DENTRO de la pastilla, y el boton de quitar desaparece si hay uno solo. */
+function renumerarBloques() {
+    var bs = document.querySelectorAll('#movLista .bloque');
+    bs.forEach(function (b, i) {
+        b.querySelector('.bloque-num .n').textContent = (i + 1);
+        b.querySelector('.btn-quitar').style.visibility = bs.length > 1 ? 'visible' : 'hidden';
+    });
+}
+
+/** El tope REAL: las filas libres de la grilla, que el backend informa al abrir la vista. */
+function cupoMaximo() {
+    return (catalogo && typeof catalogo.libres === 'number') ? catalogo.libres : 15;
+}
+
+function actualizarCupo() {
+    var n = document.querySelectorAll('#movLista .bloque').length;
+    var max = cupoMaximo();
+    document.getElementById('movAgregar').disabled = n >= max;
+    document.getElementById('movCupo').textContent = n >= max
+        ? 'Llegaste al tope: quedan ' + max + ' filas libres en la grilla de Cargas.'
+        : n + ' de hasta ' + max + '. Se cargan todos juntos, en una sola pasada.';
+}
+
+/** El total del lote, solo si todo comparte moneda: sumar monedas distintas seria mentir. */
+function actualizarTotal() {
+    var total = 0, monedas = {}, hay = false;
+    document.querySelectorAll('#movLista .bloque').forEach(function (b) {
+        var m = aNumero(b.querySelector('.b-monto').value);
+        if (m === '' || !m) return;
+        hay = true;
+        total += (b.querySelector('.b-tipo').value === 'Ingreso' ? m : -m);
+        monedas[b.querySelector('.b-moneda').value] = true;
+    });
+    var caja = document.getElementById('movTotal');
+    if (!hay) { caja.textContent = '\u2014'; caja.dataset.signo = ''; return; }
+    var claves = Object.keys(monedas);
+    if (claves.length > 1) { caja.textContent = 'varias monedas'; caja.dataset.signo = ''; return; }
+    caja.dataset.signo = total < 0 ? 'neg' : 'pos';
+    caja.textContent = (total < 0 ? '-' : '+') +
+        Math.abs(total).toFixed(2).replace('.', ',') + ' ' + claves[0];
+}
+
+/** La moneda la decide el CATALOGO, igual que hace el onEdit de la hoja de Cargas. */
+function monedaDelMedio(div) {
+    var medio = div.querySelector('.b-medio').value;
+    var m = (catalogo.medios || []).filter(function (x) { return x.nombre === medio; })[0];
+    if (m && m.moneda) div.querySelector('.b-moneda').value = m.moneda;
+    div.querySelector('.b-pref').textContent = div.querySelector('.b-moneda').value;
+    actualizarTotal();
+}
+
+function guardarMovimientos() {
+    var lista = [];
+    document.querySelectorAll('#movLista .bloque').forEach(function (b) {
+        lista.push({
+            monto: aNumero(b.querySelector('.b-monto').value),
+            tipo: b.querySelector('.b-tipo').value,
+            cuenta: b.querySelector('.b-cuenta').value,
+            medio: b.querySelector('.b-medio').value,
+            moneda: b.querySelector('.b-moneda').value,
+            fecha: b.querySelector('.b-fecha').value,
+            nota: b.querySelector('.b-nota').value
+        });
+    });
+    enviar('registrarMovimientos', lista, ['movBtnGuardar'], function () {
+        document.getElementById('movLista').innerHTML = '';
+        catalogo = null;   // las filas libres cambiaron: se relee al volver a entrar
+        irAVista('home');
+    });
+}
+
+// ============================================
+// TRASPASO
+// ============================================
+
+var trasListo = false;
+
+function prepararTraspaso(cat) {
+    if (!trasListo) {
+        var nombres = cat.medios.map(function (m) { return m.nombre; });
+        llenarSelect(document.getElementById('trasOrigen'), [{ items: nombres }]);
+        llenarSelect(document.getElementById('trasDestino'), [{ items: nombres }]);
+        if (nombres.length > 1) document.getElementById('trasDestino').value = nombres[1];
+        trasListo = true;
+    }
+    if (!document.getElementById('trasFecha').value) {
+        document.getElementById('trasFecha').value = hoyISO();
+    }
+    trasMonedas();
+    document.getElementById('trasMontoO').focus();
+}
+
+function monedaDe(n) {
+    var m = ((catalogo && catalogo.medios) || []).filter(function (x) { return x.nombre === n; })[0];
+    return m ? m.moneda : '';
+}
+function tipoDe(n) {
+    var m = ((catalogo && catalogo.medios) || []).filter(function (x) { return x.nombre === n; })[0];
+    return m ? m.tipo : '';
+}
+
+/**
+ * El segundo monto aparece SOLO si las cajas no comparten moneda. Cuando la comparten, pedirlo
+ * seria pedir un dato que ya se sabe, y dejar que se tipee distinto es dejar que un traspaso
+ * invente o destruya plata.
+ */
+function trasMonedas() {
+    var o = document.getElementById('trasOrigen').value;
+    var d = document.getElementById('trasDestino').value;
+    var mo = monedaDe(o), md = monedaDe(d);
+    document.getElementById('trasPrefO').textContent = mo;
+    document.getElementById('trasPrefD').textContent = md;
+    document.getElementById('trasHintO').textContent = mo ? mo + ', del catalogo' : '';
+    var cruza = mo && md && mo !== md;
+    document.getElementById('trasCampoDestino').classList.toggle('hidden', !cruza);
+    document.getElementById('trasHintD').textContent = cruza ? md + ', porque cruza moneda' : '';
+
+    var aviso = 'Se escriben dos filas con la cuenta Traspaso: una que sale y una que entra.';
+    if (o && d && o === d) aviso = 'El origen y el destino son la misma caja.';
+    else if (TIPOS_RIQUEZA_CLIENTE.indexOf(tipoDe(d)) !== -1) {
+        aviso += ' Este traspaso capitaliza: la plata pasa a una caja de ' + tipoDe(d) + '.';
+    }
+    document.getElementById('trasAviso').textContent = aviso;
+    trasTipoDeCambio();
+}
+
+/** Muestra el TC implicito mientras se tipea: es el dato que el ledger no va a guardar. */
+function trasTipoDeCambio() {
+    if (document.getElementById('trasCampoDestino').classList.contains('hidden')) return;
+    var a = aNumero(document.getElementById('trasMontoO').value);
+    var b = aNumero(document.getElementById('trasMontoD').value);
+    var md = monedaDe(document.getElementById('trasDestino').value);
+    var hint = document.getElementById('trasHintD');
+    if (a && b) {
+        hint.textContent = md + '. Tipo de cambio de la operacion: ' +
+            (Math.round((a / b) * 100) / 100).toString().replace('.', ',');
+    } else if (md) {
+        hint.textContent = md + ', porque cruza moneda';
+    }
+}
+
+function guardarTraspaso() {
+    enviar('registrarTraspaso', {
+        origen: document.getElementById('trasOrigen').value,
+        destino: document.getElementById('trasDestino').value,
+        montoOrigen: aNumero(document.getElementById('trasMontoO').value),
+        montoDestino: aNumero(document.getElementById('trasMontoD').value),
+        fecha: document.getElementById('trasFecha').value,
+        nota: document.getElementById('trasNota').value
+    }, ['trasBtnGuardar'], function () {
+        document.getElementById('trasMontoO').value = '';
+        document.getElementById('trasMontoD').value = '';
+        document.getElementById('trasNota').value = '';
+        catalogo = null;
+        irAVista('home');
+    });
+}
+
+// ============================================
+// ACCIONES DEL HOME
+// ============================================
+
+function abrirAbm() {
+    loader(true, 'Abriendo el Plan de Cuentas');
+    google.script.run
+        .withSuccessHandler(function () { /* el modal se reemplaza solo */ })
+        .withFailureHandler(function (err) {
+            loader(false);
+            mostrarError('No se pudo abrir el Plan de Cuentas: ' + err.message);
+        })
+        .abrirAbmDesdeShell();
+}
+
+function procesarLote() {
+    loader(true, 'Procesando la hoja de Cargas');
+    google.script.run
+        .withSuccessHandler(function (r) {
+            loader(false);
+            if (r && r.ok) { mostrarOk('Listo. Se proceso lo que habia en la hoja de Cargas.'); catalogo = null; }
+            else { mostrarError('No se pudo procesar: ' + ((r && r.error) || 'error desconocido')); }
+        })
+        .withFailureHandler(function (err) {
+            loader(false);
+            mostrarError('No se pudo procesar: ' + err.message);
+        })
+        .procesarCargasDesdeShell();
+}
+
+// ============================================
+// ENVIO COMUN
+// ============================================
+
+/**
+ * Manda al backend y maneja los cuatro finales posibles: exito, validacion rechazada, error
+ * del servidor y silencio. Los botones se deshabilitan mientras viaja: dos clicks son dos
+ * movimientos, y en un ledger eso es un duplicado que despues hay que ir a buscar a mano.
+ */
+function enviar(fn, datos, botones, alSalirBien) {
+    var deshabilitar = function (v) {
+        botones.forEach(function (id) {
+            var b = document.getElementById(id);
+            if (b) b.disabled = v;
+        });
+    };
+    deshabilitar(true); loader(true, 'Guardando'); limpiarAviso();
+
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true; loader(false); deshabilitar(false);
+        mostrarError('La planilla esta tardando y no se pudo confirmar si entro. Miralo en la ' +
+            'hoja Registros antes de cargarlo de nuevo.');
+    }, 60000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); deshabilitar(false); };
+
+    google.script.run
+        .withSuccessHandler(function (r) {
+            if (contesto) return;
+            cerrar();
+            if (r && r.ok) { mostrarOk(r.mensaje || 'Listo.'); alSalirBien(); }
+            else if (r && r.problemas) { mostrarError(r.problemas.join(' ')); }
+            else { mostrarError((r && r.error) || 'No se pudo guardar.'); }
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            cerrar();
+            mostrarError('No se pudo guardar: ' + err.message);
+        })[fn](datos);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    // El punto de estado de cada tarjeta sale de SHELL_VISTAS, que lo declara el backend: no se
+    // retipea aca cual esta lista y cual no.
+    document.querySelectorAll('#vista-home .shell-card[data-vista]').forEach(function (c) {
+        var v = VISTAS.filter(function (x) { return x.id === c.dataset.vista; })[0];
+        c.dataset.listo = (v && v.listo) ? '1' : '0';
+    });
+    // Cero llamadas al servidor: el shell se ve completo apenas abre.
+    irAVista(VISTA_INICIAL);
+});
+</script>
+</body>
+</html>
