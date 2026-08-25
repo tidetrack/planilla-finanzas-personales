@@ -33,4 +33,4 @@ targets:
     # corrida de sync_targets.command corrige la planilla y recien ahi este campo sube.
     # El fix real de esta cicatriz es devtools/verificar_remoto.py exigiendo ancestria, no solo
     # "commit conocido" (ver c1f5931, incorporado en este mismo merge).
-    version_desplegada: "0.55.0"
+    version_desplegada: "0.55.1"
