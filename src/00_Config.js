@@ -200,6 +200,47 @@ const RANGES = {
         end: 'P',
         columns: { nombre: 'P' }
     },
+    // decision Franco 2026-08-24: las CUENTAS COMODIN entran al Plan de Cuentas, ocultas.
+    // No son ingreso, ni gasto fijo, ni gasto variable: son mecanismos del sistema
+    // ("Traspaso" mueve plata entre dos cajas propias, "Inicio Mes" declara con cuanto
+    // arranca una caja). Hasta hoy no tenian donde vivir en la hoja y se tipeaban a mano en
+    // la grilla de Cargas, que es de donde salen las variantes "traspaso " e "Inicio  Mes"
+    // que documenta CUENTAS_NEUTRAS mas abajo. Con la cuenta en el desplegable, la variante
+    // no se puede escribir.
+    //
+    // POR QUE T:U y no antes: E, H, K, O y Q son el AIRE entre bloques -- la hoja separa por
+    // columna vacia y no por borde --, R es la consolidada de servicio y S es su aire. T es
+    // la primera columna libre de verdad. Medido sobre el gemelo el 2026-08-24: la hoja usa
+    // C, D, F, G, I, J, L, M, N, P y R, y nada mas.
+    //
+    // EL CATALOGO NO VIVE ACA: el bloque es la PROYECCION de CUENTAS_NEUTRAS. Una cuenta
+    // comodin nueva se agrega a esa constante y se vuelve a correr el devtool.
+    // @see DEVTOOL_CuentasComodin.js
+    CUENTAS_COMODIN: {
+        sheet: SHEETS.PLAN_CUENTAS,
+        start: 'T',
+        end: 'U',
+        columns: { nombre: 'T', nota: 'U' }
+    },
+
+    // La columna de servicio que consolida las cuentas de los cuatro bloques con un
+    // QUERY(FLATTEN(...)) y alimenta el desplegable de Cuenta de la hoja de Cargas.
+    //
+    // ENTRA AL SSOT PORQUE YA SE MOVIO UNA VEZ SIN QUE NADIE SE ENTERARA: nacio en S
+    // (MIGRACION_v0.11_SwapHojasFix.js) y quedo en R cuando la limpieza borro fisicamente la
+    // columna Q. Hasta hoy su coordenada existia SOLO como constante local de un devtool ya
+    // consumido (DEVTOOL_LimpiarPlanCuentas.js, LPC_COL_CONSOLIDADA) y CLAUDE.md seguia
+    // diciendo S. Un modulo que la busque en S opera sobre una columna vacia y reporta exito.
+    //
+    // NO SE ESCRIBE A MANO. La escribe la migracion del swap y la extiende el devtool de
+    // cuentas comodin; el resto del sistema solo la LEE.
+    PLAN_CONSOLIDADA: {
+        sheet: SHEETS.PLAN_CUENTAS,
+        start: 'R',
+        end: 'R',
+        columns: { nombre: 'R' }
+    },
+
     // --- Cargas: layout Fix (titulo B2, header fila 6, datos filas 7-21, numeracion B7:B21) ---
     // decision Franco 2026-08-13: la geometria de la grilla de carga entra a Config como SSOT.
     // Antes vivia como literal 'I5:O19' en 06_RegistrosService y como numeros magicos (9, 12,
@@ -433,6 +474,14 @@ const MENU_CONFIG = {
 
     // --- Menu de uso diario ---
     ITEMS: [
+        // decision Franco 2026-08-24: el Centro de Operaciones entra como PRIMER item y como
+        // puerta principal. Los tres items que ya estaban NO se retiran: "Procesar Cargas" es
+        // el habito vivo (Franco tipea en la grilla y despues procesa) y el ABM sigue siendo la
+        // unica pantalla de estructura que funciona hoy. El shell los absorbe cuando cada vista
+        // este construida, no antes: un menu que promete lo que todavia no hace es peor que uno
+        // corto. @see 16_ShellService.js
+        { name: 'Abrir Tidetrack', function: 'abrirTidetrack' },
+        { separator: true },
         { seccion: 'REGISTRAR' },
         { name: 'Procesar Cargas', function: 'procesarCargas' },
         { separator: true },
@@ -620,18 +669,18 @@ const MENU_CONFIG = {
                 { name: '2. Aplicar', function: 'aplicarBloqueCategorias' }
             ]
         },
-        {
-            submenu: 'Limpiar Plan de Cuentas', items: [
-                { name: '1. Ver estado (no escribe nada)', function: 'estadoLimpiarPlan' },
-                { name: '2. Aplicar', function: 'aplicarLimpiarPlan' }
-            ]
-        },
-        {
-            submenu: 'Tipo de medios', items: [
-                { name: '1. Ver estado (no escribe nada)', function: 'estadoTipoDeMedios' },
-                { name: '2. Aplicar', function: 'aplicarTipoDeMedios' }
-            ]
-        },
+        // decision Franco 2026-08-24: SALEN DEL MENU 'Limpiar Plan de Cuentas' y 'Tipo de
+        // medios'. Los dos YA CORRIERON sobre la planilla y sus constantes describen el Plan
+        // de ANTES de que corrieran, no el de hoy. El patron estado/aplicar de este repo
+        // protege contra escribir MAL; no protege contra escribir DOS VECES con un catalogo
+        // congelado en el momento en que se escribio el modulo. Concretamente:
+        //   - 'Limpiar Plan de Cuentas' borra lo que su lista declara como resto de migracion.
+        //     Esa lista es de antes del alta de la categoria 'Seguros' (Plan!P29): un segundo
+        //     clic se la lleva puesta.
+        //   - 'Tipo de medios' reescribe el Tipo de CADA medio desde su catalogo interno, y
+        //     revierte en silencio los que Franco edito a mano en la hoja despues.
+        // Los archivos se conservan enteros: lo que se saca es la PUERTA, no el codigo. Para
+        // reponerlos hay que actualizar antes sus constantes contra la planilla viva.
         {
             // decision Franco 2026-08-21: el modulo existia desde el 2026-08-20 pero nunca se
             // habia cableado, asi que no habia forma de correrlo desde la planilla.
@@ -666,14 +715,40 @@ const MENU_CONFIG = {
             ]
         },
         {
-            // Concilia el saldo de cada medio contra los saldos reales que declaro Franco,
-            // cargando un movimiento de cuenta 'Ajuste' por la diferencia -- su propio mecanismo,
-            // el mismo de las 70 filas historicas. @see DEVTOOL_ConciliarSaldos.js
-            submenu: 'Conciliar saldos', items: [
-                { name: '1. Ver estado (no escribe nada)', function: 'estadoConciliarSaldos' },
-                { name: '2. Cargar los ajustes', function: 'aplicarConciliarSaldos' }
+            // Cronometra por separado cada lectura del catalogo del Plan de Cuentas. Existe
+            // porque la primera version del shell tardaba mas de 30 segundos en abrir y cinco
+            // lecturas encadenadas detras de un overlay dan un unico numero inutil: este las
+            // separa y las mide una por una. Solo lectura. @see 16_ShellService.js
+            submenu: 'Shell', items: [
+                { name: 'Diagnosticar tiempos (no escribe nada)', function: 'diagnosticarShell' }
             ]
         },
+        {
+            // Crea el bloque OCULTO de cuentas comodin en el Plan de Cuentas (T:U) y lo suma a
+            // la consolidada, para que el desplegable de Cuenta de la hoja de Cargas ofrezca
+            // "Traspaso" e "Inicio Mes" en vez de que se tipeen a mano -- que es de donde
+            // salen las variantes "traspaso " e "Inicio  Mes" que documenta CUENTAS_NEUTRAS.
+            // No toca una sola fila del ledger ni mueve la cuenta 'Ajuste'.
+            // @see DEVTOOL_CuentasComodin.js
+            submenu: 'Cuentas comodin (bloque oculto)', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoCuentasComodin' },
+                { name: '2. Aplicar', function: 'aplicarCuentasComodin' },
+                { separator: true },
+                { name: '3. Revertir', function: 'revertirCuentasComodin' }
+            ]
+        },
+        // decision Franco 2026-08-24: SALE DEL MENU 'Conciliar saldos', y es la mas urgente de
+        // las tres. No es un modulo roto: es un modulo que YA CUMPLIO y quedo apuntando a un
+        // estado que ya no existe. CONC_OBJETIVOS (DEVTOOL_ConciliarSaldos.js:50) tiene SIETE
+        // saldos escritos a mano del 2026-08-19, y CONC_RESTO_EN_CERO = true (:61) significa
+        // "todo medio del Plan que no este en esa lista tiene saldo cero". El catalogo tiene
+        // QUINCE medios. O sea que "2. Cargar los ajustes", hoy, forzaria siete medios a sus
+        // saldos de hace cinco dias y PONDRIA LOS OTROS OCHO EN CERO, con asientos reales en
+        // el ledger. Un boton al que solo se le puede acertar el dia que se escribio.
+        // El archivo se conserva entero -- su calculo del saldo teorico (ultimo 'Inicio Mes'
+        // de cada medio + todo lo posterior, validado 5/7 al centavo) es la base de la
+        // pantalla de Conciliacion del centro de operaciones, que SI va a pedir los saldos en
+        // vez de tenerlos escritos. @see DEVTOOL_ConciliarSaldos.js
         {
             submenu: 'Stock y flujo', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoStockYFlujo' },

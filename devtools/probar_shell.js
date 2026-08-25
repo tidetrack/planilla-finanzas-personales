@@ -1,0 +1,369 @@
+/**
+ * devtools/probar_shell.js
+ * Banco de pruebas de src/16_ShellService.js + src/UI_Shell.html.
+ *
+ * El shell no escribe en la planilla, asi que el riesgo no es corromper datos: es que la
+ * PUERTA no abra, o que abra a un loader eterno. Ese fue el bug de la v0.45.2 y costo cuatro
+ * dias. Por eso el banco prueba, en este orden de importancia:
+ *
+ *   1. Que ningun camino deje al usuario sin nada. obtenerCatalogoShell NUNCA lanza: devuelve
+ *      {ok:false, error} aunque el Plan de Cuentas no exista, aunque getTableData explote y
+ *      aunque la planilla entera falle. Una excepcion del servidor deja al cliente esperando.
+ *   2. Que la whitelist de vistas sea UNA SOLA. En pymes la lista vive en tres lugares y ya
+ *      fallo: dos items de menu abrian el Home en silencio. Aca el banco cruza SHELL_VISTAS
+ *      contra los divs del HTML, contra el router y contra las funciones de menu.
+ *   3. Que cada puerta del menu exista de verdad como funcion.
+ *
+ * Nada se retipea: las vistas, las dimensiones y los ids salen de los archivos reales,
+ * cargados desde RAIZ derivada de __dirname.
+ *
+ * USO:  node devtools/probar_shell.js       (exit 0 si pasa, 1 si algo sale mal)
+ *
+ * @version 0.1.0
+ * @since 2026-08-24
+ * @see src/16_ShellService.js
+ */
+const fs = require('fs'), vm = require('vm'), path = require('path');
+const RAIZ = path.join(__dirname, '..');
+
+let fallas = 0;
+const ok = (c, m) => { if (c) console.log('  OK  ' + m); else { console.log('  !!! ' + m); fallas++; } };
+const seccion = (t) => console.log('\n== ' + t + ' ==');
+
+// ============================================
+// STUBS
+// ============================================
+let ultimoModal = null;
+let tablasFalsas = {
+    INGRESOS: [['Sueldo', 'Trabajo y negocio'], ['Tidetrack', 'Negocios propios'], ['', '']],
+    GASTOS_FIJOS: [['Nafta', 'Vehiculo'], ['Prepaga Salud', 'Salud']],
+    GASTOS_VARIABLES: [['Comidas', 'Alimentacion y social']],
+    CATEGORIAS_CUENTA: [['Vehiculo'], ['Salud'], ['']],
+    MEDIOS_PAGO: [['Galicia', 'ARS', 'Hogar'], ['Dolar Cash', 'USD', 'Ahorros'], ['', '', '']]
+};
+let getTableDataExplota = false;
+
+function plantillaFalsa() {
+    const t = {};
+    t.evaluate = () => ({
+        setWidth: function (w) { t._ancho = w; return this; },
+        setHeight: function (h) { t._alto = h; return this; }
+    });
+    return t;
+}
+
+const ctx = {
+    console, Date, Math, Number, String, Array, Object, isFinite, JSON, RegExp, Error,
+    HtmlService: {
+        createTemplateFromFile: (n) => { const t = plantillaFalsa(); t._archivo = n; ultimoModal = t; return t; },
+        createHtmlOutputFromFile: () => ({ getContent: () => '' })
+    },
+    SpreadsheetApp: {
+        getUi: () => ({ showModalDialog: (h, titulo) => { if (ultimoModal) ultimoModal._titulo = titulo; } }),
+        getActiveSpreadsheet: () => ({ getName: () => 'PLANILLA FINANZAS_v4 .WIP | Personal' })
+    },
+    PropertiesService: { getDocumentProperties: () => ({ getProperty: () => null, setProperty() {}, deleteProperty() {} }) },
+    Utilities: { formatDate: () => '2026-08-24_1200' },
+    Session: { getScriptTimeZone: () => 'America/Argentina/Buenos_Aires' },
+    Logger: { log() {} },
+    logInfo() {}, logError() {}, logSuccess() {},
+    // Se stubean SOLO las dependencias externas al shell, nunca su propia logica.
+    getTableData: (clave) => {
+        if (getTableDataExplota) throw new Error('boom');
+        if (!(clave in tablasFalsas)) throw new Error('tabla desconocida: ' + clave);
+        return tablasFalsas[clave];
+    },
+    showAbmPlanCuentas() { ctx._abmAbierto = true; },
+    procesarCargas() { if (ctx._procesarExplota) throw new Error('el lote fallo'); ctx._loteProcesado = true; },
+    LockService: { getDocumentLock: () => ({ tryLock: () => !ctx._lockOcupado, releaseLock() {} }) }
+};
+vm.createContext(ctx);
+vm.runInContext(
+    fs.readFileSync(path.join(RAIZ, 'src/00_Config.js'), 'utf8') + '\n' +
+    fs.readFileSync(path.join(RAIZ, 'src/01_Version.js'), 'utf8') + '\n' +
+    // 03_SheetManager aporta columnLetterToIndex/getDataRow, que el shell usa para derivar
+    // la geometria de la grilla desde RANGES en vez de retipear posiciones.
+    fs.readFileSync(path.join(RAIZ, 'src/03_SheetManager.js'), 'utf8') + '\n' +
+    fs.readFileSync(path.join(RAIZ, 'src/16_ShellService.js'), 'utf8') +
+    '\n;Object.assign(globalThis,{SHELL_VISTAS,SHELL_GEOMETRIA,SHELL_VISTA_DEFECTO,_abrirShell,' +
+    'abrirTidetrack,abrirMovimientoNuevo,abrirTraspasoNuevo,abrirProyeccionNueva,' +
+    'abrirRecurrentes,abrirConciliacionNueva,obtenerCatalogoShell,abrirAbmDesdeShell,' +
+    'procesarCargasDesdeShell,diagnosticarShell,registrarMovimiento,registrarTraspaso,_validarMovimiento,_estadoGrillaCargas,_filaDeCarga,_plata,TIPOS_RIQUEZA,columnLetterToIndex,RANGES,SHEETS,MENU_CONFIG,CUENTAS_NEUTRAS,MONEDAS_DISPONIBLES});',
+    ctx
+);
+
+// 03_SheetManager declara su propio getTableData y, al cargarse, PISA el stub del contexto.
+// Se repone despues: este banco prueba el shell, no la capa de datos, y necesita catalogos
+// deterministas. Lo que NO se stubea es columnLetterToIndex/getDataRow, que son justamente lo
+// que hace que el shell derive la geometria de RANGES en vez de retipearla.
+ctx.getTableData = (clave) => {
+    if (getTableDataExplota) throw new Error('boom');
+    if (!(clave in tablasFalsas)) throw new Error('tabla desconocida: ' + clave);
+    return tablasFalsas[clave];
+};
+
+const HTML = fs.readFileSync(path.join(RAIZ, 'src/UI_Shell.html'), 'utf8');
+
+console.log('BANCO: 16_ShellService + UI_Shell');
+console.log('  vistas declaradas: ' + ctx.SHELL_VISTAS.map(v => v.id).join(', '));
+console.log('  modal: ' + ctx.SHELL_GEOMETRIA.ancho + 'x' + ctx.SHELL_GEOMETRIA.alto);
+
+seccion('1. Las dimensiones se declaran UNA sola vez');
+ctx.abrirTidetrack();
+ok(ultimoModal._archivo === 'UI_Shell', 'abre la plantilla UI_Shell');
+ok(ultimoModal._ancho === ctx.SHELL_GEOMETRIA.ancho && ultimoModal._alto === ctx.SHELL_GEOMETRIA.alto,
+    'el modal usa exactamente SHELL_GEOMETRIA (' + ctx.SHELL_GEOMETRIA.ancho + 'x' + ctx.SHELL_GEOMETRIA.alto + ')');
+ok(/^\s+$/.test(ultimoModal._titulo), 'el titulo del modal va en blanco (barra de Sheets sin texto)');
+ok(ultimoModal.vistasJson === JSON.stringify(ctx.SHELL_VISTAS),
+    'la whitelist se INYECTA al HTML: el cliente no tiene una lista propia');
+ok(ultimoModal.ancho === ctx.SHELL_GEOMETRIA.ancho,
+    'el ancho tambien viaja al HTML, para que ningun CSS lo contradiga');
+// El riesgo real, y la cicatriz de pymes, no es que el CSS tenga anchos: es que las
+// DIMENSIONES DEL MODAL aparezcan escritas tambien en el HTML y dejen de coincidir con el
+// backend (en pymes el comentario dice 1120, el codigo 1000 y el fragmento 1080). Se busca
+// eso y no cualquier max-width -- el 560px de un parrafo es ancho de LECTURA, no de shell.
+const dims = new RegExp('(' + ctx.SHELL_GEOMETRIA.ancho + '|' + ctx.SHELL_GEOMETRIA.alto + ')\\s*px');
+ok(!dims.test(HTML),
+    'las dimensiones del modal NO estan retipeadas en el CSS: solo viven en SHELL_GEOMETRIA');
+
+seccion('2. Cada puerta de entrada abre SU vista');
+const PUERTAS = {
+    abrirTidetrack: 'home', abrirMovimientoNuevo: 'movimiento', abrirTraspasoNuevo: 'traspaso',
+    abrirProyeccionNueva: 'proyeccion', abrirRecurrentes: 'recurrentes',
+    abrirConciliacionNueva: 'conciliacion'
+};
+Object.keys(PUERTAS).forEach(function (fn) {
+    ok(typeof ctx[fn] === 'function', fn + '() existe');
+    ctx[fn]();
+    ok(ultimoModal.vistaInicial === PUERTAS[fn], fn + '() abre en "' + PUERTAS[fn] + '"');
+});
+
+seccion('3. Una vista desconocida cae al Home, no rompe');
+ctx._abrirShell('esta-vista-no-existe');
+ok(ultimoModal.vistaInicial === ctx.SHELL_VISTA_DEFECTO,
+    'una puerta mal escrita deja al usuario en el Home en vez de darle un error');
+
+seccion('4. La whitelist es UNA SOLA: backend, HTML y router coinciden');
+ctx.SHELL_VISTAS.forEach(function (v) {
+    ok(HTML.indexOf('id="vista-' + v.id + '"') !== -1,
+        'el HTML tiene el div de la vista "' + v.id + '"');
+});
+const divs = (HTML.match(/id="vista-([a-z]+)"/g) || []).map(s => s.replace(/id="vista-|"/g, ''));
+divs.forEach(function (d) {
+    ok(ctx.SHELL_VISTAS.some(v => v.id === d),
+        'el div "vista-' + d + '" corresponde a una vista declarada (no hay huerfanos)');
+});
+ok(divs.length === ctx.SHELL_VISTAS.length,
+    'hay exactamente ' + ctx.SHELL_VISTAS.length + ' vistas en el HTML, ni una de mas');
+
+seccion('5. El menu solo apunta a funciones que existen');
+function funcionesDeMenu(items, acc) {
+    (items || []).forEach(function (it) {
+        if (it.function) acc.push(it.function);
+        if (it.items) funcionesDeMenu(it.items, acc);
+    });
+    return acc;
+}
+const delMenu = funcionesDeMenu(ctx.MENU_CONFIG.ITEMS, []);
+ok(delMenu.indexOf('abrirTidetrack') !== -1, 'el menu principal tiene "Abrir Tidetrack"');
+ok(ctx.MENU_CONFIG.ITEMS[0].function === 'abrirTidetrack',
+    'es el PRIMER item: es la puerta principal');
+['estadoConciliarSaldos', 'aplicarConciliarSaldos', 'estadoLimpiarPlan', 'aplicarLimpiarPlan',
+ 'estadoTipoDeMedios', 'aplicarTipoDeMedios'].forEach(function (f) {
+    const todos = funcionesDeMenu(ctx.MENU_CONFIG.ITEMS, funcionesDeMenu(ctx.MENU_CONFIG.DEV_ITEMS, []));
+    ok(todos.indexOf(f) === -1, '"' + f + '" ya NO esta en ningun menu (boton cargado retirado)');
+});
+
+seccion('6. El catalogo llega entero en un solo viaje');
+let cat = ctx.obtenerCatalogoShell();
+ok(cat.ok === true, 'devuelve ok');
+ok(cat.ingresos.length === 2 && cat.ingresos.indexOf('Sueldo') !== -1, 'trae los ingresos, sin filas vacias');
+ok(cat.fijos.length === 2 && cat.variables.length === 1, 'trae fijos y variables');
+ok(cat.medios.length === 2, 'trae los medios sin filas vacias');
+ok(cat.medios[0].nombre === 'Galicia' && cat.medios[0].moneda === 'ARS' && cat.medios[0].tipo === 'Hogar',
+    'cada medio trae nombre, moneda Y tipo (los tres ejes que el formulario necesita)');
+ok(JSON.stringify(cat.monedas) === JSON.stringify(ctx.MONEDAS_DISPONIBLES),
+    'las monedas salen de la constante de backend (ADR-003)');
+ok(JSON.stringify(cat.comodines) === JSON.stringify(ctx.CUENTAS_NEUTRAS),
+    'las comodines viajan APARTE de las tres listas de cuentas');
+ok(cat.planilla.length > 0 && cat.version.length > 0, 'trae el nombre de la planilla y la version');
+
+seccion('7. MUTACION: el catalogo NUNCA lanza, aunque todo falle');
+getTableDataExplota = true;
+cat = ctx.obtenerCatalogoShell();
+getTableDataExplota = false;
+ok(cat && cat.ok === true, 'si una tabla explota igual devuelve ok: el shell abre');
+ok(cat.ingresos.length === 0 && cat.medios.length === 0,
+    'las listas quedan vacias en vez de romper el viaje entero');
+
+const guardar = ctx.SpreadsheetApp.getActiveSpreadsheet;
+ctx.SpreadsheetApp.getActiveSpreadsheet = () => { throw new Error('sin planilla'); };
+cat = ctx.obtenerCatalogoShell();
+ctx.SpreadsheetApp.getActiveSpreadsheet = guardar;
+ok(cat && typeof cat === 'object' && !(cat instanceof Error),
+    'ni siquiera una planilla caida hace lanzar a obtenerCatalogoShell');
+
+seccion('8. Las acciones devuelven resultado, no excepciones');
+ctx._loteProcesado = false; ctx._procesarExplota = false;
+let r = ctx.procesarCargasDesdeShell();
+ok(r.ok === true && ctx._loteProcesado === true, 'procesar delega en procesarCargas y avisa que salio bien');
+ctx._procesarExplota = true;
+r = ctx.procesarCargasDesdeShell();
+ctx._procesarExplota = false;
+ok(r.ok === false && /el lote fallo/.test(r.error || ''),
+    'si el lote falla devuelve {ok:false, error} en vez de lanzar');
+ctx._abmAbierto = false;
+ctx.abrirAbmDesdeShell();
+ok(ctx._abmAbierto === true, 'abrirAbmDesdeShell llama al ABM que ya existe, sin duplicarlo');
+
+seccion('9. ABRIR NO CUESTA NINGUN VIAJE AL SERVIDOR');
+// La regresion que motiva esta seccion: la primera v0.47.0 pedia el catalogo en el
+// DOMContentLoaded detras de un overlay a pantalla completa, y en la planilla real tardo mas de
+// 30 segundos con el Home tapado todo ese rato -- para llenar desplegables que ninguna pantalla
+// abierta estaba mostrando.
+// Se ancla al LISTENER, no a la palabra: "DOMContentLoaded" tambien aparece en el docstring
+// de asegurarCatalogo (que si llama al servidor, y debe), y un regex flojo lo agarraba a el.
+const domReady = (HTML.match(/addEventListener\('DOMContentLoaded'[\s\S]*?\n\}\);/) || [''])[0];
+ok(domReady.length > 0, 'se encontro el listener de arranque para inspeccionarlo');
+ok(domReady.indexOf('google.script.run') === -1,
+    'el arranque NO llama al servidor: el Home se ve apenas abre');
+ok(/class="shell-overlay hidden"/.test(HTML),
+    'el loader arranca APAGADO, no tapando el shell');
+ok(HTML.indexOf('<?= planilla ?>') !== -1 && HTML.indexOf('<?= version ?>') !== -1,
+    'el pie viene inyectado por la plantilla, no por un round-trip');
+ok(!!ultimoModal.planilla && !!ultimoModal.version,
+    'el backend le pasa planilla y version a la plantilla al renderizar');
+ok(/function asegurarCatalogo/.test(HTML), 'el catalogo se pide con asegurarCatalogo(), perezoso');
+ok(/if \(catalogo\)/.test(HTML), 'una vez traido, no se vuelve a pedir');
+ok(/setTimeout/.test(HTML) && /clearTimeout/.test(HTML),
+    'hay tope de espera: el overlay se apaga aunque el servidor no conteste nunca');
+ok(typeof ctx.diagnosticarShell === 'function', 'existe diagnosticarShell() para medir');
+ok(funcionesDeMenu(ctx.MENU_CONFIG.DEV_ITEMS, []).indexOf('diagnosticarShell') !== -1,
+    'el diagnostico esta cableado al menu Dev');
+
+seccion('10. El cliente no puede quedarse con el loader puesto');
+const cadenas = HTML.split('google.script.run').slice(1);
+ok(cadenas.length >= 3, 'hay al menos tres llamadas al backend');
+cadenas.forEach(function (c, i) {
+    ok(c.indexOf('withFailureHandler') !== -1,
+        'la llamada #' + (i + 1) + ' tiene withFailureHandler');
+});
+ok((HTML.match(/loader\(false\)/g) || []).length >= 4,
+    'todos los caminos apagan el loader, exito y falla');
+// Se miran solo las lineas EJECUTABLES: el modulo tiene un comentario que dice "NUNCA
+// google.script.host.close()", y un test que se tropieza con su propia documentacion es ruido.
+const jsShell = (HTML.match(/<script[^>]*>([\s\S]*?)<\/script>/) || ['', ''])[1]
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
+ok(jsShell.indexOf('host.close') === -1,
+    'salirDeVista NO cierra el modal: el contrato de fragmentos lo prohibe');
+ok(/function salirDeVista\s*\(\s*\)\s*\{\s*irAVista\('home'\)/.test(jsShell),
+    'salirDeVista vuelve al Home, que es lo que el contenedor decide que significa "salir"');
+
+seccion('11. Validacion de Movimiento: el gap de procesarCargas se tapa aca');
+// procesarCargas filtra SOLO por "monto no vacio": una fila sin cuenta entra igual al ledger
+// con tipo vacio. Ese gap es conocido y no se arregla en el pipeline; se tapa en la puerta.
+const catalogosVal = { medios: ['Galicia', 'Dolar Cash'] };
+const okBase = { monto: 100, tipo: 'Egreso', cuenta: 'Comidas', medio: 'Galicia', moneda: 'ARS' };
+ok(ctx._validarMovimiento(okBase, catalogosVal).length === 0, 'un movimiento completo pasa');
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { cuenta: '' }), catalogosVal).length === 1,
+    'sin cuenta NO pasa (es el gap de procesarCargas)');
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { monto: '' }), catalogosVal).length === 1, 'sin monto no pasa');
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { monto: -5 }), catalogosVal).length === 1,
+    'monto negativo no pasa: para que salga plata se usa el tipo Egreso');
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { medio: 'Banco Inventado' }), catalogosVal).length === 1,
+    'un medio que no esta en el Plan no pasa');
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { moneda: 'BRL' }), catalogosVal).length === 1,
+    'una moneda que la planilla no maneja no pasa');
+const manana = new Date(); manana.setDate(manana.getDate() + 2);
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { fecha: manana.toISOString() }), catalogosVal).length === 1,
+    'fecha futura no pasa: procesarCargas aborta el LOTE ENTERO si encuentra una');
+const hoy = new Date();
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { fecha: hoy.toISOString() }), catalogosVal).length === 0,
+    'la fecha de hoy SI pasa (se compara contra el fin del dia, no contra el instante)');
+
+seccion('12. La fila se arma desde RANGES, no retipeando posiciones');
+const fila = ctx._filaDeCarga({ monto: 123, tipo: 'Egreso', cuenta: 'Comidas', medio: 'Galicia',
+    moneda: 'ARS', fecha: '2026-08-25', nota: 'hola' });
+const cc = ctx.RANGES.CARGAS.columns;
+const base = ctx.RANGES.CARGAS.start.charCodeAt(0) - 64;
+const idx = (l) => l.charCodeAt(0) - 64 - base;
+ok(fila.length === 7, 'la fila tiene el ancho de la grilla (C:I)');
+ok(fila[idx(cc.monto)] === 123, 'el monto cae en la columna que declara RANGES');
+ok(fila[idx(cc.cuenta)] === 'Comidas', 'la cuenta tambien');
+ok(fila[idx(cc.nota)] === 'hola', 'y la nota');
+
+seccion('13. Formato de plata igual al de la hoja');
+ok(ctx._plata(319569.7, 'ARS') === '$319.569,70', 'ARS: simbolo pegado, miles con punto, coma decimal');
+ok(ctx._plata(1430, 'USD') === 'US$1.430,00', 'USD lleva US$');
+
+seccion('14. Las dos vistas nuevas estan marcadas como listas');
+const porId = {};
+ctx.SHELL_VISTAS.forEach(v => { porId[v.id] = v; });
+ok(porId.movimiento.listo === true, 'movimiento: listo');
+ok(porId.traspaso.listo === true, 'traspaso: listo');
+ok(porId.proyeccion.listo === false && porId.recurrentes.listo === false &&
+   porId.conciliacion.listo === false, 'las otras tres siguen declaradas como NO listas');
+ok(/class="[^"]*b-monto/.test(HTML) && HTML.indexOf('id="trasMontoO"') !== -1,
+    'los formularios existen en el HTML');
+ok(/enviar\('registrarMovimientos'/.test(HTML) && /enviar\('registrarTraspaso'/.test(HTML),
+    'el cliente llama a los endpoints de escritura');
+
+seccion('16. Carga multiple: bloques repetibles con tope real');
+ok(/function agregarBloqueMovimiento/.test(HTML), 'se pueden agregar bloques');
+ok(/function quitarBloqueMovimiento/.test(HTML), 'y quitarlos');
+ok(/function renumerarBloques/.test(HTML), 'los bloques se renumeran al agregar o quitar');
+ok(/function cupoMaximo/.test(HTML) && /catalogo\.libres/.test(HTML),
+    'el tope sale de las filas LIBRES que informa el backend, no de un numero inventado');
+ok(typeof ctx._filasLibresCargas === 'function', 'el backend sabe cuantas filas quedan libres');
+ok(/heredaMedio|heredaFecha/.test(HTML),
+    'un bloque nuevo hereda medio y fecha del anterior');
+ok(!/heredaMonto|heredaCuenta|heredaNota/.test(HTML),
+    'y NO hereda monto, cuenta ni nota: heredar lo que cambia obliga a borrarlo');
+ok(typeof ctx.registrarMovimientos === 'function', 'existe el endpoint de lote');
+const lote = ctx.registrarMovimientos([]);
+ok(lote.ok === false, 'un lote vacio se rechaza');
+
+seccion('17. Tipografia: una sola familia y la fuente se carga de verdad');
+// El bug que Franco vio como "distorciones de tamanos de letras": --font-mono declara
+// JetBrains Mono y Fira Code, ninguna instalada, asi que los rotulos caian en Courier New.
+// A 10.5px la altura de x de Courier es ~4,4px al lado de un select de 14px sans.
+// Se miran las DECLARACIONES, no el archivo entero: los comentarios de este shell explican
+// el bug y nombran tanto --font-mono como 10.5px. Un test que se tropieza con la
+// documentacion del bug que previene es ruido, y ya paso tres veces en esta campana.
+const sinComentarios = HTML
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .split('\n').map(l => l.replace(/^\s*\/\/.*$/, '')).join('\n');
+ok(/fonts\.googleapis\.com/.test(HTML),
+    'el HTML CARGA la webfont: sin el link, Google Sans nunca se descarga');
+ok(!/var\(--font-mono\)/.test(sinComentarios),
+    'cero usos de la familia mono en el shell: una sola familia, como pymes');
+ok(!/10\.5px/.test(sinComentarios),
+    'cero 10.5px: Chrome los redondea distinto segun donde caiga la caja');
+ok(!/var\(--font-mono\)/.test(
+        fs.readFileSync(path.join(RAIZ, 'src/UI_SharedStyles.html'), 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, '')),
+    'el token --font-mono ya no existe en el design system: resolvia a Courier New');
+ok(/--alto-control/.test(HTML) && /height: var\(--alto-control\)/.test(HTML),
+    'los controles tienen ALTURA FIJA: un select ignora line-height y un date trae su propio shadow DOM');
+ok(/b\.disabled = v/.test(HTML),
+    'los botones se deshabilitan mientras viaja: dos clicks serian dos movimientos en el ledger');
+ok(HTML.indexOf('tiposRiquezaJson') !== -1,
+    'TIPOS_RIQUEZA viaja del backend al cliente, no se retipea');
+
+seccion('15. El JSON se inyecta con el scriptlet que NO escapa');
+// El bug de la v0.48.0: se inyecto con la forma que hace escapado contextual, que convierte
+// cada comilla en &quot;. Adentro de un <script> eso es un error de sintaxis, y un error de
+// sintaxis mata el archivo entero -- no corre el router, no corre ningun onclick. El sintoma
+// ("abre pero no reacciona") se parece tanto a una llamada lenta que costo dos diagnosticos.
+const escapa = (v) => new RegExp('<\\?=\\s*' + v + '\\s*\\?>').test(HTML);
+const noEscapa = (v) => new RegExp('<\\?!=\\s*' + v + '\\s*\\?>').test(HTML);
+ok(noEscapa('vistasJson') && !escapa('vistasJson'), 'vistasJson usa la forma que NO escapa');
+ok(noEscapa('tiposRiquezaJson') && !escapa('tiposRiquezaJson'),
+    'tiposRiquezaJson tambien');
+ok(escapa('planilla') && escapa('version'),
+    'el pie SI usa la que escapa: va a texto HTML, y ahi escapar es lo correcto');
+
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (17 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+process.exit(fallas === 0 ? 0 : 1);

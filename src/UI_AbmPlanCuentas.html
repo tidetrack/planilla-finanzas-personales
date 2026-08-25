@@ -247,7 +247,7 @@
 
                 // El select del tercer campo NO se llena aca: su dominio depende de la entidad
                 // elegida, asi que lo puebla handleEntityChange.
-                llenarDominioRelacionado(document.getElementById('entitySelect').value);
+                llenarDominioRelacionado(document.getElementById('entityType').value);
                 document.getElementById('loader').classList.add('hidden');
             })
             .withFailureHandler(err => {
@@ -348,6 +348,12 @@
                     data.forEach(x => dl.innerHTML += `<option value="${x.nombre}"></option>`);
                     inp.placeholder = 'Tipéá para filtrar...'; inp.disabled = false; inp.focus();
                 })
+                .withFailureHandler(err => {
+                    // Sin esta rama el input queda deshabilitado diciendo 'Buscando...' para
+                    // siempre: el mismo modo de falla que el loader de arriba.
+                    inp.placeholder = 'No se pudo cargar la lista'; inp.disabled = false;
+                    console.error(err);
+                })
                 .getCategoryAccounts(document.getElementById('entityType').value);
         }
     }
@@ -410,6 +416,12 @@
                 document.getElementById('successMessage').innerHTML = 'El registro fue borrado permanentemente.';
                 document.getElementById('successState').classList.remove('hidden');
                 document.getElementById('loader').classList.add('hidden');
+            }).withFailureHandler(err => {
+                // El borrado es la unica operacion irreversible del ABM: si falla, el usuario
+                // tiene que enterarse, no quedarse mirando un spinner.
+                document.getElementById('loader').classList.add('hidden');
+                bd.textContent = 'No se pudo eliminar';
+                console.error(err);
             }).deleteAbmRecord({ entityType: document.getElementById('entityType').value, rowIndex: selectedAccount.rowIndex });
         };
     }

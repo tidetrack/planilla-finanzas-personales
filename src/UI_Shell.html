@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<!-- LA FUENTE SE CARGA DE VERDAD.
+     UI_SharedStyles declara 'Google Sans' pero sin este link no se descarga nunca: Google Sans
+     no es una fuente del sistema, asi que caia a Roboto (que no esta en macOS) y de ahi al
+     sistema. El shell y la planilla decian usar la misma tipografia y no la estaban usando.
+     pymes SI lo carga (07_UI_Shell.html:25) y por eso los dos productos no se parecian. -->
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<?!= include('UI_SharedStyles'); ?>
+<style>
+/* Estilos PROPIOS del shell. La base viene de UI_SharedStyles: contrato de fragmentos de la
+   Fase 5, un solo design system y no dos. */
+
+/* ============================================================
+   ESCALA TIPOGRAFICA -- cinco pasos, enteros, UNA SOLA FAMILIA.
+
+   decision Franco 2026-08-25 ("hay distorciones de tamanos de letras"): el problema NO era la
+   escala, era la FAMILIA. Los cinco rotulos mas chicos usaban var(--font-mono), que declara
+   JetBrains Mono y Fira Code -- ninguna instalada -- asi que caian en Courier New. La altura
+   de x de Courier es ~0.42em contra ~0.53em de una grotesca: a 10.5px las minusculas median
+   4,4px reales al lado de un select de 14px. Eso no se lee como jerarquia, se lee como texto
+   roto. Y habia DOS cosas declaradas en 20px que no se parecian en nada, porque una era sans
+   y la otra Courier.
+
+   La regla que se estaba violando no es "usa pocos tamanos". Es: dos textos de tamano parecido
+   tienen que ser de la MISMA familia, o el lector lee la diferencia de familia como diferencia
+   de tamano. Cero mono en todo el shell, igual que pymes.
+
+   Tambien se van los 10.5px: Chrome los redondea a subpixel distinto segun donde caiga la
+   caja, asi que dos rotulos declarados igual no median igual. 11px es el piso practico.
+   ============================================================ */
+:root {
+    --fs-band: 22px;    /* titulo de la banda */
+    --fs-vista: 16px;   /* titulo de tarjeta y de bloque */
+    --fs-body: 14px;    /* inputs, selects, parrafos, botones */
+    --fs-aux: 13px;     /* descripcion de tarjeta, hint, alerta */
+    --fs-rotulo: 11px;  /* versalita: seccion, label, pie, Volver */
+    --alto-control: 42px;
+}
+
+body { padding: 0 0 44px; background: var(--bg-secondary); }
+
+/* --- La banda navy: la hoja abre TODAS sus pestanias con una, y el shell tiene que leerse
+       como una continuacion de la planilla. --- */
+.shell-band {
+    background: var(--primary-color); color: var(--text-inverse);
+    padding: 16px 24px; display: flex; align-items: center; gap: 12px;
+}
+.shell-band h1 {
+    font-size: var(--fs-band); font-weight: 600; margin: 0; letter-spacing: -0.3px;
+}
+.shell-band .sub { color: var(--bg-main); font-size: var(--fs-aux); }
+.shell-band .spacer { flex: 1; }
+.shell-band .volver {
+    font-size: var(--fs-rotulo); font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--bg-main);
+    background: rgba(255,255,255,0.14); border: 0;
+    padding: 7px 12px; border-radius: var(--border-radius-sm); cursor: pointer;
+}
+.shell-band .volver:hover { background: rgba(255,255,255,0.26); }
+.shell-band .volver:focus-visible { outline: 2px solid var(--bg-main); outline-offset: 2px; }
+
+/* --- Ancho POR TIPO DE PANTALLA, y siempre centrado.
+       El Home usa el ancho del modal; los formularios viven en columna angosta, que es donde
+       se lee mejor. Antes el formulario de 660px vivia contra el margen izquierdo con 240px de
+       blanco muerto a la derecha. --- */
+.shell-body { padding: 24px; }
+.vista-ancha { max-width: 852px; margin: 0 auto; }
+.vista-form { max-width: 640px; margin: 0 auto; }
+
+/* --- Rotulo de seccion, con la regla que se estira: separa sin ocupar una fila entera. --- */
+.shell-sec {
+    font-size: var(--fs-rotulo); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 10px; margin: 26px 0 12px;
+}
+.shell-sec:first-of-type { margin-top: 0; }
+.shell-sec::after { content: ""; flex: 1; height: 1px; background: var(--border-color); }
+
+/* --- Tarjetas del Home. Tres columnas: con dos, la septima tarjeta quedaba huerfana y con
+       430px de blanco al lado, que era lo primero que se veia al abrir. --- */
+.shell-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.shell-card {
+    display: flex; flex-direction: column; gap: 10px; text-align: left; width: 100%;
+    background: var(--bg-main); border: 0; border-radius: 12px;
+    padding: 18px; min-height: 116px;
+    font: inherit; color: inherit; cursor: pointer;
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+.shell-card:hover { background: var(--bg-tertiary); transform: translateY(-1px); }
+.shell-card:active { transform: translateY(0); }
+.shell-card:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.shell-card .ico {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--bg-secondary); display: grid; place-items: center;
+    color: var(--primary-color); flex: 0 0 auto;
+}
+.shell-card:hover .ico { background: var(--primary-color); color: var(--text-inverse); }
+.shell-card .t {
+    font-weight: 600; color: var(--primary-color);
+    font-size: var(--fs-vista); letter-spacing: -0.2px; display: block;
+}
+/* Contraste: la descripcion estaba en --text-secondary (#6e7f8d), que sobre el fondo de la
+   tarjeta da 3.69:1 -- por debajo del minimo AA de 4.5:1, y se veia lavada. */
+.shell-card .d {
+    color: var(--text-data); font-size: var(--fs-aux); line-height: 1.45;
+    margin-top: 2px; display: block;
+}
+
+/* --- Formularios.
+       Los cortes de columna se COMPARTEN entre filas. Antes la fila 1 cortaba en 4 y 7 y la
+       fila 2 en 5 y 8: corridos exactamente una columna, que es la peor distancia posible --
+       no es alineacion ni es contraste, es error. --- */
+.shell-form { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px 12px; }
+.f { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.f.c3 { grid-column: span 3; } .f.c4 { grid-column: span 4; }
+.f.c5 { grid-column: span 5; } .f.c6 { grid-column: span 6; }
+.f.c8 { grid-column: span 8; } .f.c12 { grid-column: span 12; }
+.f label {
+    font-size: var(--fs-rotulo); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary);
+}
+.f .hint { font-size: var(--fs-aux); color: var(--text-data); }
+
+/* ALTURA FIJA en todos los controles.
+   Un select ignora line-height en Chrome y calcula su alto con su metrica interna; un
+   input[type=date] agrega su propio shadow DOM. Con el mismo font-size y el mismo padding
+   daban 43 y 47 px, y el Monto a 20px daba 56: tres alturas en la misma fila. Nunca se iguala
+   un input con un select por padding -- se fija height.
+   Y sin borde, porque la doctrina de este shell es que la superficie se define por fondo. La
+   version anterior la aplicaba solo a las tarjetas y dejaba siete cajas con contorno y sombra
+   en el formulario: Home y formulario parecian dos productos. */
+.f .form-input, .f .form-select {
+    height: var(--alto-control); padding: 0 12px; line-height: normal;
+    margin-bottom: 0; font-size: var(--fs-body);
+    background: var(--bg-main); border: 0; box-shadow: none;
+    border-radius: var(--border-radius-sm); color: var(--text-data);
+}
+.f .form-input:focus, .f .form-select:focus {
+    outline: 2px solid var(--primary-color); outline-offset: 1px; box-shadow: none;
+}
+/* El monto conserva las cifras tabulares -- que es lo que hace que un numero se lea como
+   numero -- pero NO cambia de tamano ni de familia. */
+.campo-monto { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+
+/* --- Bloques repetibles: la carga multiple.
+       Portado de pymes. El contenedor arranca vacio y el boton de agregar vive AFUERA. --- */
+.bloque {
+    background: var(--bg-main); border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 12px;
+}
+.bloque-head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.bloque-num {
+    font-size: var(--fs-rotulo); font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-secondary); flex: 1;
+}
+.bloque .form-input, .bloque .form-select { background: var(--bg-secondary); }
+.btn-quitar {
+    width: 28px; height: 28px; border: 0; border-radius: 50%;
+    background: var(--bg-secondary); color: var(--text-secondary);
+    font-size: var(--fs-body); line-height: 1; cursor: pointer;
+}
+.btn-quitar:hover { background: var(--danger-bg); color: var(--danger); }
+.btn-quitar:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.btn-agregar {
+    width: 100%; padding: 12px; border: 1px dashed var(--border-color);
+    border-radius: 12px; background: transparent; color: var(--primary-color);
+    font: inherit; font-size: var(--fs-body); font-weight: 600; cursor: pointer;
+}
+.btn-agregar:hover { border-color: var(--primary-color); background: var(--bg-main); }
+.btn-agregar:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-agregar:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+.shell-acciones {
+    display: flex; gap: 10px; align-items: center; margin-top: 22px;
+}
+.shell-acciones .crece { margin-right: auto; font-size: var(--fs-aux); color: var(--text-data); }
+
+/* --- Vista en construccion: dice QUE va a hacer, no "proximamente". --- */
+.shell-pendiente h2 {
+    font-size: var(--fs-vista); color: var(--primary-color); margin: 0 0 10px;
+}
+.shell-pendiente p {
+    font-size: var(--fs-body); color: var(--text-data); line-height: 1.55; margin: 0 0 10px;
+}
+.shell-pendiente ul {
+    margin: 0 0 14px; padding-left: 1.15em; font-size: var(--fs-body); color: var(--text-data);
+}
+.shell-pendiente li { margin: 4px 0; }
+
+/* --- Pie FIJO al piso. Antes era estatico y quedaba a 500px del borde en el Home y a 260 en
+       otra vista: un cromo que salta de lugar al navegar hace que la UI se sienta amateur
+       aunque cada pantalla por separado este bien. --- */
+.shell-foot {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: var(--bg-main); padding: 11px 24px;
+    font-size: var(--fs-rotulo); letter-spacing: 0.03em; color: var(--text-secondary);
+    display: flex; gap: 16px; align-items: center;
+}
+.shell-foot .spacer { flex: 1; }
+
+/* --- Overlay. El loader SIEMPRE tiene que poder apagarse. --- */
+.shell-overlay {
+    position: fixed; inset: 0; background: rgba(255,255,255,0.9);
+    display: grid; place-items: center; z-index: 2000;
+}
+.shell-spinner {
+    width: 30px; height: 30px; border: 3px solid var(--bg-tertiary);
+    border-top-color: var(--primary-color); border-radius: 50%;
+    animation: shell-spin 1s linear infinite;
+}
+@keyframes shell-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .shell-spinner { animation: none; } }
+
+/* Las alertas viven en UI_SharedStyles: son componente de base y las seis pantallas las usan. */
+</style>
+</head>
+<body>
+
+<div class="shell-band">
+    <h1 id="shellTitulo">Tidetrack</h1>
+    <span class="sub" id="shellSubtitulo">Que queres hacer</span>
+    <span class="spacer"></span>
+    <button class="volver hidden" id="shellVolver" onclick="salirDeVista()">Volver</button>
+</div>
+
+<div class="shell-body">
+    <div id="shellAviso" class="vista-ancha"></div>
+
+    <!-- ================= HOME ================= -->
+    <div id="vista-home" class="vista-ancha">
+        <div class="shell-sec">Registrar</div>
+        <div class="shell-cards">
+            <button class="shell-card" onclick="irAVista('movimiento')">
+                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+                <span><span class="t">Movimiento nuevo</span><span class="d">Uno o varios gastos e ingresos, de una sentada.</span></span>
+            </button>
+            <button class="shell-card" onclick="irAVista('traspaso')">
+                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg></span>
+                <span><span class="t">Traspaso nuevo</span><span class="d">Plata de una caja a otra. Escribe las dos patas juntas.</span></span>
+            </button>
+            <button class="shell-card" onclick="irAVista('proyeccion')">
+                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-7M14 7h6v6"/></svg></span>
+                <span><span class="t">Proyeccion nueva</span><span class="d">Lo que pensas gastar el mes que viene.</span></span>
+            </button>
+        </div>
+
+        <div class="shell-sec">Revisar</div>
+        <div class="shell-cards">
+            <button class="shell-card" onclick="irAVista('conciliacion')">
+                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                <span><span class="t">Conciliacion</span><span class="d">Emparejar cada caja con lo que dice el banco.</span></span>
+            </button>
+            <button class="shell-card" onclick="procesarLote()">
+                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span>
+                <span><span class="t">Procesar la hoja de Cargas</span><span class="d">Manda al ledger lo que tipeaste a mano en la grilla.</span></span>
+            </button>
+            <button class="shell-card" onclick="irAVista('recurrentes')">
+                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></span>
+                <span><span class="t">Gastos recurrentes</span><span class="d">Lo que se repite todos los meses.</span></span>
+            </button>
+        </div>
+
+        <div class="shell-sec">Estructura</div>
+        <div class="shell-cards">
+            <button class="shell-card" onclick="abrirAbm()">
+                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h11"/></svg></span>
+                <span><span class="t">Gestionar cuentas</span><span class="d">Alta, baja y cambio de nombre del Plan de Cuentas.</span></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= MOVIMIENTO (carga multiple) ================= -->
+    <div id="vista-movimiento" class="vista-form hidden">
+        <div id="movLista"></div>
+        <button type="button" class="btn-agregar" id="movAgregar" onclick="agregarBloqueMovimiento()">
+            Agregar otro movimiento
+        </button>
+        <div class="shell-acciones">
+            <span class="crece" id="movCupo"></span>
+            <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
+            <button class="btn btn-primary" id="movBtnGuardar" onclick="guardarMovimientos()">Cargar</button>
+        </div>
+    </div>
+
+    <!-- ================= TRASPASO ================= -->
+    <div id="vista-traspaso" class="vista-form hidden">
+        <div class="shell-form">
+            <div class="f c6">
+                <label for="trasOrigen">Sale de</label>
+                <select class="form-select" id="trasOrigen" onchange="trasMonedas()"></select>
+            </div>
+            <div class="f c6">
+                <label for="trasDestino">Entra a</label>
+                <select class="form-select" id="trasDestino" onchange="trasMonedas()"></select>
+            </div>
+            <div class="f c4">
+                <label for="trasMontoO">Monto que sale</label>
+                <input class="form-input campo-monto" id="trasMontoO" inputmode="decimal" placeholder="0,00" oninput="trasTipoDeCambio()">
+                <span class="hint" id="trasHintO"></span>
+            </div>
+            <div class="f c4 hidden" id="trasCampoDestino">
+                <label for="trasMontoD">Monto que entra</label>
+                <input class="form-input campo-monto" id="trasMontoD" inputmode="decimal" placeholder="0,00" oninput="trasTipoDeCambio()">
+                <span class="hint" id="trasHintD"></span>
+            </div>
+            <div class="f c4">
+                <label for="trasFecha">Fecha</label>
+                <input class="form-input" id="trasFecha" type="date">
+            </div>
+            <div class="f c12">
+                <label for="trasNota">Nota</label>
+                <input class="form-input" id="trasNota" placeholder="Opcional">
+                <span class="hint" id="trasAviso"></span>
+            </div>
+        </div>
+        <div class="shell-acciones">
+            <span class="crece">Las dos patas se escriben juntas o no se escribe ninguna.</span>
+            <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
+            <button class="btn btn-primary" id="trasBtnGuardar" onclick="guardarTraspaso()">Registrar</button>
+        </div>
+    </div>
+
+    <!-- ============ VISTAS EN CONSTRUCCION ============ -->
+    <div id="vista-proyeccion" class="vista-form hidden">
+        <div class="shell-pendiente">
+            <h2>Todavia no esta construida</h2>
+            <p>Va a guardar lo que pensas gastar en la base <b>Proyeccion</b>, que ya existe, para que el Tablero pueda medir cuanto te falta.</p>
+            <ul>
+                <li>Es el paso que hoy le falta a la hoja Presupuesto: bajar lo que escribis a mano a la base.</li>
+                <li>Lo proyectado en dolares no lleva cotizacion congelada a proposito: un movimiento que no ocurrio no tiene tipo de cambio.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="vista-recurrentes" class="vista-form hidden">
+        <div class="shell-pendiente">
+            <h2>Todavia no esta construida</h2>
+            <p>Va a guardar las suscripciones y los gastos que se repiten todos los meses, para que la proyeccion los tenga en cuenta sola.</p>
+            <ul>
+                <li>Cada regla dice cuenta, medio, monto, dia del mes y desde cuando hasta cuando.</li>
+                <li>Al regenerar no toca los meses ya cerrados, y avisa antes de pisar una fila que hayas editado a mano.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="vista-conciliacion" class="vista-form hidden">
+        <div class="shell-pendiente">
+            <h2>Todavia no esta construida</h2>
+            <p>Va a poner lado a lado, por cada caja, lo que dice la planilla y lo que hay de verdad, y cargar la diferencia como un movimiento con la cuenta <b>Ajuste</b>, que es la que ya usas.</p>
+            <ul>
+                <li>El saldo lo calcula con la regla que ya cierra al centavo: el ultimo <b>Inicio Mes</b> de cada caja mas todo lo posterior.</li>
+                <li>Una caja que no declares conserva su saldo. Nunca se asume cero.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="shell-foot">
+    <span><?= planilla ?></span>
+    <span class="spacer"></span>
+    <span>v<?= version ?></span>
+</div>
+
+<div class="shell-overlay hidden" id="shellLoader"><div class="shell-spinner"></div></div>
+
+<script>
+// OJO CON EL SCRIPTLET: para inyectar JSON va la forma con signo de admiracion, la que NO
+// escapa. La otra hace escapado contextual de HTML y convierte cada comilla en &quot;, que
+// adentro de un script es un error de sintaxis -- y un error de sintaxis mata el archivo
+// entero. La forma que escapa SI es la correcta para texto que va al HTML, como el pie.
+// No se escriben los delimitadores literales ni en un comentario: la plantilla se procesa
+// ANTES que el JS, asi que un scriptlet dentro de un comentario tambien se evalua.
+var VISTAS = <?!= vistasJson ?>;
+var VISTA_INICIAL = '<?= vistaInicial ?>';
+var TIPOS_RIQUEZA_CLIENTE = <?!= tiposRiquezaJson ?>;
+
+var catalogo = null;
+var VISTAS_CON_CATALOGO = { movimiento: prepararMovimiento, traspaso: prepararTraspaso };
+
+// ============================================
+// ROUTER
+// ============================================
+
+function irAVista(id) {
+    if (!VISTAS.some(function (v) { return v.id === id; })) { id = 'home'; }
+    VISTAS.forEach(function (v) {
+        var el = document.getElementById('vista-' + v.id);
+        if (el) { el.classList.toggle('hidden', v.id !== id); }
+    });
+    var vista = VISTAS.filter(function (v) { return v.id === id; })[0];
+    document.getElementById('shellTitulo').textContent = vista.titulo;
+    document.getElementById('shellSubtitulo').textContent = vista.subtitulo;
+    document.getElementById('shellVolver').classList.toggle('hidden', id === 'home');
+    limpiarAviso();
+
+    var preparar = VISTAS_CON_CATALOGO[id];
+    if (preparar) { asegurarCatalogo(preparar); }
+}
+
+/** Volver. NUNCA cierra el modal: el contenedor decide que significa "salir". */
+function salirDeVista() { irAVista('home'); }
+
+// ============================================
+// AVISOS
+// ============================================
+
+function mostrarError(t) {
+    document.getElementById('shellAviso').innerHTML =
+        '<div class="alert alert-error">' + escapar(t) + '</div>';
+}
+function mostrarOk(t) {
+    document.getElementById('shellAviso').innerHTML =
+        '<div class="alert alert-ok">' + escapar(t) + '</div>';
+}
+function limpiarAviso() { document.getElementById('shellAviso').innerHTML = ''; }
+function escapar(t) {
+    var d = document.createElement('div');
+    d.textContent = String(t == null ? '' : t);
+    return d.innerHTML;
+}
+function loader(v) { document.getElementById('shellLoader').classList.toggle('hidden', !v); }
+
+// ============================================
+// CATALOGO PEREZOSO
+// ============================================
+
+function asegurarCatalogo(cuando) {
+    if (catalogo) { cuando(catalogo); return; }
+    loader(true);
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true; loader(false);
+        mostrarError('El Plan de Cuentas esta tardando mas de la cuenta. Proba de nuevo, y si ' +
+            'sigue igual corre Tidetrack Dev > Shell > Diagnosticar tiempos.');
+    }, 15000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); };
+
+    google.script.run
+        .withSuccessHandler(function (data) {
+            if (contesto) return;
+            cerrar();
+            if (!data || !data.ok) {
+                mostrarError('No se pudo leer el Plan de Cuentas: ' + ((data && data.error) || 'error desconocido'));
+                return;
+            }
+            catalogo = data;
+            cuando(catalogo);
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            cerrar();
+            mostrarError('No se pudo leer el Plan de Cuentas: ' + err.message);
+        })
+        .obtenerCatalogoShell();
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
+function hoyISO() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+        '-' + String(d.getDate()).padStart(2, '0');
+}
+
+/** Convierte lo que se tipea ("12.400,50" o "12400.50") al numero que espera el backend. */
+function aNumero(txt) {
+    var t = String(txt == null ? '' : txt).trim();
+    if (t === '') return '';
+    if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+    var n = Number(t);
+    return isNaN(n) ? '' : n;
+}
+
+function opcion(v) {
+    var o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    return o;
+}
+
+/** Llena un select con grupos, para que 60 cuentas no lleguen como una lista plana. */
+function llenarSelect(sel, grupos, seleccionado) {
+    sel.innerHTML = '';
+    grupos.forEach(function (g) {
+        if (!g.items || !g.items.length) return;
+        if (g.titulo) {
+            var og = document.createElement('optgroup');
+            og.label = g.titulo;
+            g.items.forEach(function (it) { og.appendChild(opcion(it)); });
+            sel.appendChild(og);
+        } else {
+            g.items.forEach(function (it) { sel.appendChild(opcion(it)); });
+        }
+    });
+    if (seleccionado) sel.value = seleccionado;
+}
+
+// ============================================
+// MOVIMIENTO -- carga multiple
+// ============================================
+
+var movN = 0;
+
+function prepararMovimiento() {
+    if (!document.querySelectorAll('#movLista .bloque').length) {
+        agregarBloqueMovimiento();
+    }
+    actualizarCupo();
+}
+
+/**
+ * Agrega un bloque, heredando del anterior lo que casi siempre se repite.
+ *
+ * Se hereda MEDIO y FECHA, nunca monto, cuenta ni nota. Cuando se cargan seis gastos de una
+ * sentada, el medio y el dia son los mismos y el resto cambia siempre: heredar lo que cambia
+ * obliga a borrarlo, que es peor que tipearlo.
+ */
+function agregarBloqueMovimiento() {
+    var lista = document.getElementById('movLista');
+    var previos = lista.querySelectorAll('.bloque');
+    if (previos.length >= cupoMaximo()) return;
+
+    var heredaMedio = '', heredaFecha = hoyISO(), heredaTipo = 'Egreso';
+    if (previos.length) {
+        var ult = previos[previos.length - 1];
+        heredaMedio = ult.querySelector('.b-medio').value;
+        heredaFecha = ult.querySelector('.b-fecha').value;
+        heredaTipo = ult.querySelector('.b-tipo').value;
+    }
+
+    movN++;
+    var div = document.createElement('div');
+    div.className = 'bloque';
+    div.innerHTML =
+        '<div class="bloque-head">' +
+            '<span class="bloque-num"></span>' +
+            '<button type="button" class="btn-quitar" title="Quitar" onclick="quitarBloqueMovimiento(this)">&times;</button>' +
+        '</div>' +
+        '<div class="shell-form">' +
+            '<div class="f c4"><label>Monto</label>' +
+                '<input class="form-input campo-monto b-monto" inputmode="decimal" placeholder="0,00"></div>' +
+            '<div class="f c4"><label>Tipo</label>' +
+                '<select class="form-select b-tipo"><option>Egreso</option><option>Ingreso</option></select></div>' +
+            '<div class="f c4"><label>Fecha</label>' +
+                '<input class="form-input b-fecha" type="date"></div>' +
+            '<div class="f c6"><label>Cuenta</label>' +
+                '<select class="form-select b-cuenta"></select></div>' +
+            '<div class="f c6"><label>Medio</label>' +
+                '<select class="form-select b-medio"></select></div>' +
+            '<div class="f c8"><label>Nota</label>' +
+                '<input class="form-input b-nota" placeholder="Opcional"></div>' +
+            '<div class="f c4"><label>Moneda</label>' +
+                '<select class="form-select b-moneda"></select>' +
+                '<span class="hint">La hereda del medio</span></div>' +
+        '</div>';
+    lista.appendChild(div);
+
+    // Los select se pueblan DESPUES del appendChild: un value interpolado en el HTML de un
+    // select no selecciona nada.
+    llenarSelect(div.querySelector('.b-cuenta'), [
+        { titulo: 'Gastos variables', items: catalogo.variables },
+        { titulo: 'Gastos fijos', items: catalogo.fijos },
+        { titulo: 'Ingresos', items: catalogo.ingresos }
+    ]);
+    llenarSelect(div.querySelector('.b-medio'),
+        [{ items: catalogo.medios.map(function (m) { return m.nombre; }) }], heredaMedio);
+    llenarSelect(div.querySelector('.b-moneda'), [{ items: catalogo.monedas }]);
+    div.querySelector('.b-fecha').value = heredaFecha;
+    div.querySelector('.b-tipo').value = heredaTipo;
+    div.querySelector('.b-medio').onchange = function () { monedaDelMedio(div); };
+    monedaDelMedio(div);
+
+    renumerarBloques();
+    actualizarCupo();
+    div.querySelector('.b-monto').focus();
+}
+
+function quitarBloqueMovimiento(btn) {
+    var lista = document.getElementById('movLista');
+    if (lista.querySelectorAll('.bloque').length <= 1) return;
+    btn.closest('.bloque').remove();
+    renumerarBloques();
+    actualizarCupo();
+}
+
+function renumerarBloques() {
+    var bloques = document.querySelectorAll('#movLista .bloque');
+    bloques.forEach(function (b, i) {
+        b.querySelector('.bloque-num').textContent = 'Movimiento ' + (i + 1);
+        b.querySelector('.btn-quitar').style.visibility = bloques.length > 1 ? 'visible' : 'hidden';
+    });
+}
+
+/** El tope REAL: las filas libres de la grilla, que el backend informa al abrir la vista. */
+function cupoMaximo() {
+    return (catalogo && typeof catalogo.libres === 'number') ? catalogo.libres : 15;
+}
+
+function actualizarCupo() {
+    var n = document.querySelectorAll('#movLista .bloque').length;
+    var max = cupoMaximo();
+    document.getElementById('movAgregar').disabled = n >= max;
+    document.getElementById('movCupo').textContent = n >= max
+        ? 'Llegaste al tope: en la grilla de Cargas quedan ' + max + ' filas libres.'
+        : n + ' de hasta ' + max + '. Se cargan todos juntos, en una sola pasada.';
+}
+
+/** La moneda la decide el CATALOGO, igual que hace el onEdit de la hoja de Cargas. */
+function monedaDelMedio(div) {
+    var medio = div.querySelector('.b-medio').value;
+    var m = (catalogo.medios || []).filter(function (x) { return x.nombre === medio; })[0];
+    if (m && m.moneda) div.querySelector('.b-moneda').value = m.moneda;
+}
+
+function guardarMovimientos() {
+    var lista = [];
+    document.querySelectorAll('#movLista .bloque').forEach(function (b) {
+        lista.push({
+            monto: aNumero(b.querySelector('.b-monto').value),
+            tipo: b.querySelector('.b-tipo').value,
+            cuenta: b.querySelector('.b-cuenta').value,
+            medio: b.querySelector('.b-medio').value,
+            moneda: b.querySelector('.b-moneda').value,
+            fecha: b.querySelector('.b-fecha').value,
+            nota: b.querySelector('.b-nota').value
+        });
+    });
+    enviar('registrarMovimientos', lista, ['movBtnGuardar'], function () {
+        document.getElementById('movLista').innerHTML = '';
+        catalogo = null;   // las filas libres cambiaron: se relee al volver a entrar
+        irAVista('home');
+    });
+}
+
+// ============================================
+// TRASPASO
+// ============================================
+
+var trasListo = false;
+
+function prepararTraspaso(cat) {
+    if (!trasListo) {
+        var nombres = cat.medios.map(function (m) { return m.nombre; });
+        llenarSelect(document.getElementById('trasOrigen'), [{ items: nombres }]);
+        llenarSelect(document.getElementById('trasDestino'), [{ items: nombres }]);
+        if (nombres.length > 1) document.getElementById('trasDestino').value = nombres[1];
+        trasListo = true;
+    }
+    if (!document.getElementById('trasFecha').value) {
+        document.getElementById('trasFecha').value = hoyISO();
+    }
+    trasMonedas();
+    document.getElementById('trasMontoO').focus();
+}
+
+function monedaDe(n) {
+    var m = ((catalogo && catalogo.medios) || []).filter(function (x) { return x.nombre === n; })[0];
+    return m ? m.moneda : '';
+}
+function tipoDe(n) {
+    var m = ((catalogo && catalogo.medios) || []).filter(function (x) { return x.nombre === n; })[0];
+    return m ? m.tipo : '';
+}
+
+/**
+ * El segundo monto aparece SOLO si las cajas no comparten moneda. Cuando la comparten, pedirlo
+ * seria pedir un dato que ya se sabe, y dejar que se tipee distinto es dejar que un traspaso
+ * invente o destruya plata.
+ */
+function trasMonedas() {
+    var o = document.getElementById('trasOrigen').value;
+    var d = document.getElementById('trasDestino').value;
+    var mo = monedaDe(o), md = monedaDe(d);
+    document.getElementById('trasHintO').textContent = mo ? mo + ', del catalogo' : '';
+    var cruza = mo && md && mo !== md;
+    document.getElementById('trasCampoDestino').classList.toggle('hidden', !cruza);
+    document.getElementById('trasHintD').textContent = cruza ? md + ', porque cruza moneda' : '';
+
+    var aviso = 'Se escriben dos filas con la cuenta Traspaso: una que sale y una que entra.';
+    if (o && d && o === d) aviso = 'El origen y el destino son la misma caja.';
+    else if (TIPOS_RIQUEZA_CLIENTE.indexOf(tipoDe(d)) !== -1) {
+        aviso += ' Este traspaso capitaliza: la plata pasa a una caja de ' + tipoDe(d) + '.';
+    }
+    document.getElementById('trasAviso').textContent = aviso;
+    trasTipoDeCambio();
+}
+
+/** Muestra el TC implicito mientras se tipea: es el dato que el ledger no va a guardar. */
+function trasTipoDeCambio() {
+    if (document.getElementById('trasCampoDestino').classList.contains('hidden')) return;
+    var a = aNumero(document.getElementById('trasMontoO').value);
+    var b = aNumero(document.getElementById('trasMontoD').value);
+    var md = monedaDe(document.getElementById('trasDestino').value);
+    var hint = document.getElementById('trasHintD');
+    if (a && b) {
+        hint.textContent = md + '. Tipo de cambio de la operacion: ' +
+            (Math.round((a / b) * 100) / 100).toString().replace('.', ',');
+    } else if (md) {
+        hint.textContent = md + ', porque cruza moneda';
+    }
+}
+
+function guardarTraspaso() {
+    enviar('registrarTraspaso', {
+        origen: document.getElementById('trasOrigen').value,
+        destino: document.getElementById('trasDestino').value,
+        montoOrigen: aNumero(document.getElementById('trasMontoO').value),
+        montoDestino: aNumero(document.getElementById('trasMontoD').value),
+        fecha: document.getElementById('trasFecha').value,
+        nota: document.getElementById('trasNota').value
+    }, ['trasBtnGuardar'], function () {
+        document.getElementById('trasMontoO').value = '';
+        document.getElementById('trasMontoD').value = '';
+        document.getElementById('trasNota').value = '';
+        catalogo = null;
+        irAVista('home');
+    });
+}
+
+// ============================================
+// ACCIONES DEL HOME
+// ============================================
+
+function abrirAbm() {
+    loader(true);
+    google.script.run
+        .withSuccessHandler(function () { /* el modal se reemplaza solo */ })
+        .withFailureHandler(function (err) {
+            loader(false);
+            mostrarError('No se pudo abrir el Plan de Cuentas: ' + err.message);
+        })
+        .abrirAbmDesdeShell();
+}
+
+function procesarLote() {
+    loader(true);
+    google.script.run
+        .withSuccessHandler(function (r) {
+            loader(false);
+            if (r && r.ok) { mostrarOk('Listo. Se proceso lo que habia en la hoja de Cargas.'); catalogo = null; }
+            else { mostrarError('No se pudo procesar: ' + ((r && r.error) || 'error desconocido')); }
+        })
+        .withFailureHandler(function (err) {
+            loader(false);
+            mostrarError('No se pudo procesar: ' + err.message);
+        })
+        .procesarCargasDesdeShell();
+}
+
+// ============================================
+// ENVIO COMUN
+// ============================================
+
+/**
+ * Manda al backend y maneja los cuatro finales posibles: exito, validacion rechazada, error
+ * del servidor y silencio. Los botones se deshabilitan mientras viaja: dos clicks son dos
+ * movimientos, y en un ledger eso es un duplicado que despues hay que ir a buscar a mano.
+ */
+function enviar(fn, datos, botones, alSalirBien) {
+    var deshabilitar = function (v) {
+        botones.forEach(function (id) {
+            var b = document.getElementById(id);
+            if (b) b.disabled = v;
+        });
+    };
+    deshabilitar(true); loader(true); limpiarAviso();
+
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true; loader(false); deshabilitar(false);
+        mostrarError('La planilla esta tardando y no se pudo confirmar si entro. Miralo en la ' +
+            'hoja Registros antes de cargarlo de nuevo.');
+    }, 60000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); deshabilitar(false); };
+
+    google.script.run
+        .withSuccessHandler(function (r) {
+            if (contesto) return;
+            cerrar();
+            if (r && r.ok) { mostrarOk(r.mensaje || 'Listo.'); alSalirBien(); }
+            else if (r && r.problemas) { mostrarError(r.problemas.join(' ')); }
+            else { mostrarError((r && r.error) || 'No se pudo guardar.'); }
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            cerrar();
+            mostrarError('No se pudo guardar: ' + err.message);
+        })[fn](datos);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Cero llamadas al servidor: el shell se ve completo apenas abre.
+    irAVista(VISTA_INICIAL);
+});
+</script>
+</body>
+</html>

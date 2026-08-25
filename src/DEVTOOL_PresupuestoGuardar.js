@@ -212,7 +212,7 @@
  * @see DEVTOOL_PresupuestoModo.js
  * @see DEVTOOL_PresupuestoResumen.js
  * @see DEVTOOL_PresupuestoBase.js
- * @version 0.47.0
+ * @version 0.50.0
  * @since 2026-08-25
  * @lastModified 2026-08-25
  */

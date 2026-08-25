@@ -18,7 +18,7 @@
  *    fallo de la API de cotizaciones a mitad de camino (no debe dejar nada escrito).
  *
  * USO:  node devtools/probar_presupuesto_guardar.js
- * @version 0.47.0
+ * @version 0.50.0
  * @since 2026-08-25
  */
 const fs = require('fs'), vm = require('vm'), path = require('path');

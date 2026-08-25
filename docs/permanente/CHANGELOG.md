@@ -9,7 +9,7 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
-## v0.47.0 - Presupuesto: Guardar Proyeccion, con cotizaciones congeladas (2026-08-25)
+## v0.50.0 - Presupuesto: Guardar Proyeccion, con cotizaciones congeladas (2026-08-25)
 
 Tercera y ultima etapa de la hoja "Presupuesto" (sobre el Modo v0.45.1 y el resumen v0.46.1, ya
 desplegados): `DEVTOOL_PresupuestoGuardar.js` toma "Monto a Proyectar" (`K`/`O`/`S`) del periodo
@@ -50,6 +50,294 @@ a este commit: la corrida final la hace Franco.
 
 ---
 
+### Nota de concurrencia (renumeracion v0.47.0 -> v0.50.0)
+
+Esta entrada nacio como "v0.47.0" en los commits de esta sesion (rama `fix/tablero-pendientes`)
+mientras, en paralelo y sin visibilidad mutua, la sesion de `fix/abm-desplegable-entidad` tambien
+usaba v0.47.0 para el Centro de Operaciones y ya lo habia desplegado. Al mergear las dos ramas
+(2026-08-25) esta entrada se renumero dos veces: primero a v0.49.0 (con la rama abm anclada en
+v0.48.1), y esa segunda asignacion tambien quedo obsoleta porque la rama abm siguio pusheando
+mientras se armaba el merge y llego ELLA MISMA a v0.49.0 ("La tipografia nunca cargaba, y carga
+multiple de movimientos", desplegado real, confirmado contra la planilla en vivo). El numero
+final es v0.50.0, por encima de todo lo que `fix/abm-desplegable-entidad` llevaba en produccion
+al momento de cerrar este merge (v0.49.0, anclado a `f820f2a`, verificado con un fetch
+inmediatamente antes de commitear). Guardar Proyeccion en si nunca se desplego bajo ningun numero
+(los trece bancos verificaron en local, sin deploy posterior a ningun commit de esta entrada), asi
+que renumerar no reescribe historial real desplegado. No toca ningun archivo de la otra sesion
+(`16_ShellService.js`, `UI_Shell.html`, `UI_SharedStyles.html`, `DEVTOOL_CuentasComodin.js`,
+`DEVTOOL_DIAG_Desplegables.js`, `DEVTOOL_DIAG_PresupuestoTitulos.js`).
+
+---
+
+## v0.49.0 - La tipografia nunca cargaba, y carga multiple (2026-08-25)
+
+**La causa raiz de "hay distorciones de tamanos de letras" no era la escala: era la familia.**
+
+Dos cosas encadenadas. `UI_SharedStyles` declara `'Google Sans'` pero el shell **no tenia el
+`<link>` a Google Fonts**, asi que la fuente nunca se descargaba. Y peor: los cinco rotulos mas
+chicos usaban `var(--font-mono)`, que declara JetBrains Mono y Fira Code —ninguna instalada— y
+por lo tanto resolvia a **Courier New**. Su altura de x es ~0.42em contra ~0.53em de una
+grotesca: a 10.5px las minusculas median **4,4 px reales** al lado de un select de 14px sans. Y
+habia dos textos declarados en 20px que no se parecian en nada, porque uno era sans y el otro
+Courier. Se venia ajustando la *escala*, que era tratar el sintoma.
+
+Se carga la webfont y se **retira el token `--font-mono`**: un token que resuelve a algo que nadie
+eligio es una trampa. Una sola familia, como pymes. Escala de cinco pasos enteros —**22/16/14/13/11**—
+y se van los 10.5px, que Chrome redondea distinto segun donde caiga la caja.
+
+**Altura fija (42px) en todos los controles.** Un `select` ignora `line-height` y calcula su alto
+con su metrica interna; un `input[type=date]` trae su propio shadow DOM. Con el mismo `font-size`
+y el mismo padding daban 43 y 47px, y el Monto a 20px daba 56: **tres alturas en la misma fila**.
+
+**Carga multiple**, portada de pymes. Bloques repetibles con agregar, quitar y renumerar. Hereda
+medio y fecha del bloque anterior, nunca monto, cuenta ni nota. El tope sale de las filas **libres**
+que informa el backend: la grilla de personales tiene 15 filas contra las 50 de pymes. Y no es solo
+comodidad: cada movimiento suelto disparaba un `procesarCargas` completo, asi que seis gastos de a
+uno eran seis pasadas; ahora es una.
+
+**Mas:** los cortes del grid se comparten entre filas (antes estaban corridos exactamente una
+columna); Home de tres columnas (la septima tarjeta quedaba huerfana); pie fijo al piso; los inputs
+pierden borde y sombra, porque la doctrina de "superficie por fondo" estaba aplicada solo a las
+tarjetas; `--text-secondary` sube a `#5f6368` (el anterior daba 3.69:1, por debajo de AA); y el
+foco deja de ser un halo gris sobre gris.
+
+---
+
+## v0.48.1 - El shell reacciona: el scriptlet escapaba el JSON (2026-08-25)
+
+**Sintoma**, reportado por Franco: el shell abria pero **no reaccionaba**. Ningun click hacia
+nada. *"Recargo la pagina y no ocurre nada."*
+
+**Causa.** El JSON de las vistas se inyectaba con el scriptlet que hace **escapado contextual de
+HTML**, el que convierte cada comilla en `&quot;`. Adentro de un `<script>`, en posicion de valor,
+eso es un error de sintaxis — y un error de sintaxis **mata el archivo entero**: no se define el
+router, no se define ningun `onclick`, no se apaga ningun loader. Para inyectar un valor en JS va
+la otra forma, la que no escapa.
+
+pymes nunca lo piso porque su shell solo inyecta un string simple **entre comillas**, donde el
+escapado es inofensivo. El problema aparece recien al inyectar un objeto crudo, que es lo que hace
+falta para tener una sola lista de vistas.
+
+**Este release corrige el diagnostico de la v0.47.1.** Ahi se afirmo que los 30 segundos con el
+spinner girando eran porque el `DOMContentLoaded` pedia el catalogo detras de un overlay. **Era
+falso**: el script nunca corria, y el loader de esa version nacia visible, asi que no tenia quien
+lo apagara. El sintoma se parecia tanto a una llamada lenta que se acepto la explicacion sin
+probarla. Lo que **si** quedo bien de esa version, y se conserva: el shell abre sin pedirle nada al
+servidor, el catalogo es perezoso y hay tope de espera. Buena arquitectura, diagnostico equivocado.
+
+**`verificar_modales.py` suma el chequeo 5**, y existe porque este bug se colo justo por el **punto
+ciego del chequeo 2**: los scriptlets se reemplazan por un literal antes de `node --check`, asi que
+el parser nunca ve el escapado y un archivo roto pasaba en verde.
+
+Y **no se escriben los delimitadores literales ni siquiera en un comentario**: la plantilla se
+procesa antes que el JS, asi que un scriptlet dentro de un comentario tambien se evalua. El
+chequeo 5 lo detecto sobre el comentario escrito para explicar el bug.
+
+---
+
+## v0.48.0 - Movimiento y Traspaso operan, y el shell deja de ser cuadrado (2026-08-25)
+
+**Movimiento nuevo** siembra una fila en la grilla de Cargas y llama a `procesarCargas`. No
+escribe en `Registros` directo, y es deliberado: ese es el unico lugar que congela las cuatro
+cotizaciones, persiste las nuevas al Data Lake, deduce el tipo de cuenta y reordena el ledger.
+
+**Traspaso nuevo** escribe **las dos patas juntas**, en una sola llamada: media operacion hace
+desaparecer plata del sistema. La moneda de cada caja la decide el catalogo, no el operador. Si
+cruzan monedas pide los dos montos y deja el TC de la operacion escrito en la nota —el ledger
+congela el TC *oficial*, que casi nunca es al que se opero—. Y avisa cuando el traspaso capitaliza.
+
+**El gap de `procesarCargas` se tapa en la puerta.** Su unico filtro es "monto no vacio": una fila
+con monto y sin cuenta entra igual al ledger con tipo vacio. No se toca el pipeline —3.469 filas
+dependen de que se comporte igual—; se valida en el shell.
+
+**`LockService` en las dos rutas de escritura.** Ninguna ruta productiva de este repo tomaba lock:
+dos pestanias abiertas pueden sembrar la misma fila libre y una pisa a la otra.
+
+**"Usar estos datos"** propone cuenta, medio y tipo del ultimo movimiento —la ruta de dos toques
+del arnes—, leyendo cinco filas de `Registros`, nunca el ledger entero.
+
+**Diseno.** Decision de Franco, textual: *"esta todo muy cuadrado"*. Se van los bordes de 1px de
+las tarjetas y el radio chico. Cada tarjeta era un rectangulo con contorno adentro de otro con
+contorno, y el chip del icono era un tercero. Ahora la superficie se define por **fondo**, que es
+lo que hace la hoja: cero `setBorder` en toda la planilla, los bloques se separan por aire. Iconos
+circulares, radio 14px, mas aire, y fuera la linea del rotulo de seccion y la del pie.
+
+**`verificar_modales.py` suma el chequeo 4:** cada `onclick`/`onchange` tiene que apuntar a una
+funcion que exista. El chequeo 1 mira JS→DOM; este mira DOM→JS, que es por donde se cuela un boton
+que no hace nada. Probado en las dos direcciones.
+
+**Faltan tres:** Proyeccion, Recurrentes y Conciliacion siguen mostrando que van a hacer.
+
+---
+
+## Herramienta - deploy verificado: "pisar" deja de ser una pregunta (2026-08-25)
+
+*Cambio de herramienta y gobernanza; no toca `src/`, asi que no mueve la version desplegada.*
+
+`sync_targets.command` pedia escribir **"pisar"** cuando el remoto difiere de `src/`. Esa palabra
+existe para que una persona conteste **una** pregunta: *estoy sobreescribiendo trabajo que el repo
+no tiene?* Es la pregunta correcta —este repo descubrio de la peor manera que la produccion puede
+ir adelante— pero se contestaba mirando un diff a ojo, y un guard que depende de que alguien mire
+bien a las once de la noche es un guard debil.
+
+**Esa pregunta es mecanica.** `devtools/verificar_remoto.py` la contesta comparando los **hashes de
+blob** de lo que bajo del remoto contra el `src/` de cada commit alcanzable del repo. Si el remoto
+es exactamente un commit nuestro, nadie edito en el editor de Apps Script y no hay nada que
+adjudicar. Si no coincide con ninguno, hay contenido que el repo nunca vio y ahi si decide una
+persona.
+
+Estado nuevo en el drift-check: **`adelante`** —hay diferencia, pero el remoto es un commit
+conocido y el local va adelante—. Ese caso ya no pide `pisar`.
+
+**Flag `--verificado`**: deploya sin preguntar, pero **solo** si todos los targets quedaron en
+`ok` o `adelante`. Si alguno no verifica, **aborta con exit 4** en vez de preguntar. Es
+deliberado: en modo no interactivo no hay nadie para contestar, y un flag que ante la duda sigue
+de largo no es una automatizacion, es un guard apagado.
+
+**Por que no se copio la solucion de pymes.** Alla el agente puede deployar porque
+`npm run legacy:sync` corre `clasp push -w` —push a ciegas, en watch, sin drift-check— y hay un
+`Bash(npm run:*)` que lo habilita. Su camino gobernado (`sync_clients.command`) tiene **cero**
+menciones de drift contra 37 de este script. pymes no resolvio este problema: nunca construyo el
+rail. Copiarlo hubiera sido desarmar lo que descubrio que `main` estaba 22 versiones atras.
+
+Banco 14: `devtools/probar_verificar_remoto.py`, contra la historia real del repo. Insiste en el
+unico modo de falla inaceptable —el falso positivo— por las tres vias posibles: archivo
+modificado, de mas y de menos. Y en que cualquier problema devuelva 2, jamas 0.
+
+---
+
+## v0.47.1 - El shell abre instantaneo: cero viajes al servidor (2026-08-24)
+
+**Sintoma**, reportado por Franco con captura: el Centro de Operaciones abria, mostraba el Home en
+gris detras de un overlay con el spinner girando, y a los 30 segundos seguia igual.
+
+**Causa**, y es un error de diseno propio, no un bug de Apps Script: el `DOMContentLoaded` pedia
+`obtenerCatalogoShell()` —cinco lecturas del Plan de Cuentas— detras de un overlay a pantalla
+completa, y recien al volver apagaba el loader. El costo de **abrir** pasaba a ser el costo del
+formulario mas caro que todavia no se habia abierto.
+
+**Lo que lo hace evitable:** el Home no necesita **un solo dato** de ese catalogo. Son seis
+tarjetas de texto fijo. Se estaba esperando para llenar desplegables que ninguna pantalla abierta
+estaba mostrando. El diagnostico correcto no era "que lectura tarda" sino "por que estamos leyendo
+antes de dejar ver".
+
+**Ahora el shell hace cero llamadas al servidor al abrir.** El loader nace apagado y el Home se ve
+completo apenas abre. Lo unico que si venia del servidor —nombre de planilla y version, para el
+pie— se inyecta por la **plantilla**, que el backend ya esta renderizando: no cuesta ningun viaje.
+
+**El catalogo pasa a ser perezoso.** `asegurarCatalogo(cuando)` lo pide la primera pantalla que
+necesite un desplegable, y de ahi en mas queda en memoria. Se conserva la ventaja del round-trip
+unico de pymes, sin pagarlo al abrir.
+
+**Tope de espera de 15 s** en el cliente: pase lo que pase del otro lado, el overlay se apaga y
+dice que hacer. Un loader que depende de que el servidor conteste para poder apagarse es un loader
+que puede quedarse puesto para siempre —esta planilla ya pago ese precio dos veces—.
+
+**`diagnosticarShell()`** (menu `Dev > Shell`) cronometra por separado el costo de abrir la
+planilla y cada una de las cinco lecturas, mas el total. Cinco lecturas encadenadas detras de un
+overlay dan un unico numero que no dice nada; esto dice cual tarda. Solo lectura.
+
+**Banco 13, seccion 9 nueva:** exige que el listener de arranque no llame al servidor, que el
+overlay nazca apagado, que el pie venga de la plantilla y que exista el tope de espera. La
+regresion queda cerrada por prueba, no por promesa.
+
+---
+
+## v0.47.0 - Centro de Operaciones: el shell y su Home (2026-08-24)
+
+Fase 5 del arnes, portada de `planilla-pymes`. `src/16_ShellService.js` y `src/UI_Shell.html`:
+modal de **900x700** con Home de seis tarjetas, router de vistas del lado del cliente y el
+catalogo entero del Plan de Cuentas en **un solo round-trip**. Entra al menu `Tidetrack` como
+primer item: **Abrir Tidetrack**.
+
+**Modal y no sidebar**, aunque el argumento a favor del sidebar era el fuerte —es la unica
+superficie que deja ver la hoja y el formulario a la vez—. Se cae por dos razones duras.
+`showSidebar` tiene **300 px fijos** (la API ignora `setWidth()`) y la pantalla de Conciliacion
+necesita cuatro columnas de numeros por cada uno de los quince medios: en 280 px eso es una
+columna con scroll, justo la superficie donde *no* se ve el conjunto. Y lo que hay que mirar no
+esta en la hoja: el saldo por medio lo produce la regla del ultimo corte, no una celda. El
+sidebar resuelve "ver la hoja"; el problema real es "ver los numeros", y esos entran adentro de
+la herramienta.
+
+**900 y no los 1000 de pymes** porque el contenido mas ancho entra con holgura en 860 px.
+**700 y no 760** porque el ABM ya esta en 750 y ese es el techo practico en una pantalla de
+900 px con el chrome de Chrome mas el de Sheets: 700 entra siempre, 760 entra a veces, y un
+modal que se corta abajo esconde el boton de confirmar.
+
+**Una sola whitelist de vistas**, y esta es la correccion a pymes. Alla la lista vive en tres
+lugares que el propio comentario del codigo pide "mantener siempre a la par", y ya fallo: dos
+items de menu abrian el Home en silencio porque sus vistas faltaban en la whitelist del backend.
+Aca `SHELL_VISTAS` es la unica: el backend valida contra ella y **se la inyecta al HTML**, asi que
+el router del cliente se arma desde ella y no existe una segunda lista que pueda diferir. Mismo
+criterio con las dimensiones: `SHELL_GEOMETRIA` viaja al HTML y ningun `max-width` del CSS puede
+contradecirla —en pymes el comentario dice 1120, el codigo 1000 y el fragmento 1080—.
+
+**Dos tarjetas ya operan hoy.** "Gestionar cuentas" abre el ABM (que volvio a abrir en la v0.45.2)
+y "Procesar la hoja de Cargas" dispara `procesarCargas` sin duplicar una linea de su logica. Las
+otras cuatro muestran **que** van a hacer y contra que hoja escriben, en vez de un
+"proximamente": una tarjeta que promete algo que no hace es peor que una que dice a que atenerse.
+
+**El design system se alinea con la hoja.** Los tres colores de estado de `UI_SharedStyles.html`
+eran `#10B981` / `#EF4444` / `#F59E0B` —los de Tailwind—, que no aparecen en una sola celda de la
+planilla. Ahora son `#356854` / `#c93232` / `#ffb300` con sus rieles, que son los que el codigo
+declaro canonicos el 21/08 y los que viven literales dentro de las formulas SPARKLINE de
+`Inicio!F19:F22`. Se agrega `--text-data` (`#39444d`), el color del cuerpo de datos de la hoja:
+4.136 celdas, el mas usado por lejos, y no es negro puro. Un solo design system y no dos, que es
+la regla que el arnes fijo para esta fase.
+
+**Las alertas suben al design system.** Nacieron como `.shell-error` / `.shell-ok` locales con
+una franja de acento lateral de 3px, y las dos cosas estaban mal. La franja porque **la planilla
+no usa bordes**: no hay un solo `setBorder` en todo `src/` y los bloques se separan con una
+columna vacia, asi que una barra de color al costado se lee como de otro producto —el patron de
+la casa, en pymes, es borde completo de 1px—. Y locales porque una alerta es componente de
+**base**, y el contrato de fragmentos prohibe declarar estilos base fuera del archivo compartido.
+Ahora son `.alert` y sus variantes en `UI_SharedStyles.html`, resueltas con fondo tenido y tinta:
+el color del fondo ya dice lo que la franja diria.
+
+**La escala tipografica se colapsa a cinco pasos.** La primera version tenia siete tamanos y dos
+pares que diferian un 4% —`10.5/11` y `13.5/14`—: esa diferencia no se ve, asi que no era una
+decision sino deriva. Queda **20 / 16 / 14 / 12 / 10.5**, con el salto grande arriba (`20/16` =
+1.25), que es donde hace falta, y los parrafos heredando el cuerpo de 14 px del design system en
+vez de declarar un 13.5 propio. Abajo los pasos siguen siendo chicos a proposito: es una UI densa
+de operacion, y ahi la jerarquia la cargan tambien el peso, la versalita, el color y la familia
+mono. La hoja hace lo mismo —sus saltos dramaticos estan en los KPI (45/32/30/26) y sus rotulos y
+datos viven apretados en 15/14/12/11/10—.
+
+**Banco 13.** `devtools/probar_shell.js` cruza `SHELL_VISTAS` contra los divs del HTML en las dos
+direcciones, prueba que cada puerta abre su vista, que una vista desconocida cae al Home, que
+`obtenerCatalogoShell` **nunca lanza** —ni con `getTableData` explotando ni sin planilla activa,
+porque una excepcion del servidor deja al cliente con el loader puesto— y que toda cadena
+`google.script.run` tiene `withFailureHandler`. Los trece bancos en verde y
+`verificar_modales.py` en verde sobre los tres modales.
+
+---
+
+## v0.46.1 - Tres botones cargados salen del menu Dev (2026-08-24)
+
+Salio de revisar con que convive el menu nuevo, no de un bug reportado. Tres entradas del menu
+`Tidetrack Dev` apuntan a modulos que **ya corrieron** y cuyas constantes describen el estado de
+la planilla *antes* de que corrieran. No son modulos rotos: son modulos que cumplieron su trabajo
+y se quedaron en el menu apuntando a un estado que ya no existe.
+
+| Entrada | Que hace hoy si se la clickea |
+|---|---|
+| **Conciliar saldos** | `CONC_OBJETIVOS` tiene **siete** saldos escritos a mano del 19/08 y `CONC_RESTO_EN_CERO = true`. El catalogo tiene **quince** medios. "2. Cargar los ajustes" forzaria los siete a saldos de hace cinco dias y **pondria los otros ocho en cero**, con asientos reales en el ledger |
+| **Limpiar Plan de Cuentas** | Su lista de restos de migracion es anterior al alta de la categoria `Seguros` (`Plan!P29`). Un segundo clic se la lleva puesta |
+| **Tipo de medios** | Reescribe el Tipo de cada medio desde su catalogo interno, revirtiendo en silencio los que Franco edito a mano despues |
+
+**La leccion, que vale mas que las tres entradas.** El patron estado/aplicar/revertir de este repo
+protege contra escribir *mal*. No protege contra escribir *dos veces* con un catalogo congelado en
+el momento en que se escribio el modulo. Un modulo de una sola vez tiene que salir del menu cuando
+termina su trabajo, no quedarse "por si acaso".
+
+**Los tres archivos se conservan enteros**: lo que se saca es la puerta, no el codigo. El calculo
+del saldo teorico de `ConciliarSaldos` —ultimo `Inicio Mes` de cada medio mas todo lo posterior,
+validado 5 de 7 al centavo contra los saldos reales— es exactamente la base de la pantalla de
+Conciliacion del centro de operaciones, que **si** va a pedir los saldos en vez de tenerlos
+escritos en una constante.
+
+---
+
 ## v0.46.1 - Presupuesto: V7 es dinamico, W7 dice "Monto a Proyectar" (2026-08-24)
 
 `v0.46.0` se desplego. Franco corrio `"1. Ver estado"` en la planilla real y el preflight freno
@@ -79,6 +367,74 @@ columna a mano (`K8` = $1.000.000,00 en la planilla real).
 preflight (mismo mensaje que reporto Franco); nueva seccion 3b prueba con un mock completo de
 hoja, y un caso sano de cero fallas, que el invariante atrapa a `V7` si dejara de seguir al modo.
 Los doce bancos en verde.
+
+---
+
+### Nota de concurrencia (v0.46.1, dos lineas de trabajo con el mismo numero)
+
+Las dos entradas de arriba se escribieron en paralelo, sin visibilidad mutua, desde el mismo
+commit base (`e952fc2`). "Tres botones cargados salen del menu Dev"
+(`fix/abm-desplegable-entidad`, 2026-08-24 20:46) es la que sigue viva en la planilla hoy, dentro
+de la cadena ininterrumpida que llega hasta v0.49.0. "V7 es dinamico, W7 dice Monto a Proyectar"
+(`fix/tablero-pendientes`, 2026-08-24 21:16) nunca se desplego bajo el numero v0.46.1 -- se deja
+tal cual quedo escrita en su propio commit, como registro historico honesto, y su trabajo continua
+en v0.50.0 una vez mergeadas las dos ramas.
+
+---
+
+## v0.46.0 - Cuentas comodin: el bloque oculto del Plan de Cuentas (2026-08-24)
+
+Franco, textual: *"En realidad es una cuenta comodin, no es ingreso fijo o variable. Agregala
+oculta por algun lado"*.
+
+**El problema que cierra.** `Traspaso` e `Inicio Mes` no son ingreso, ni gasto fijo, ni gasto
+variable, asi que no tenian donde vivir en la hoja `Plan de Cuentas` y se tipeaban a mano en la
+grilla de Cargas. De ese "a mano" salen las variantes que el propio `00_Config.js` documenta —en
+el ledger conviven `"Traspaso"`, `"traspaso "` e `"Inicio  Mes"`— y que llama la falla mas cara
+posible, porque una sola fila colada infla el agregado. Con la cuenta en el desplegable, la
+variante ya no se puede escribir.
+
+**Que se construyo.** `src/DEVTOOL_CuentasComodin.js` crea el bloque en `Plan de Cuentas!T:U` con
+titulo, headers, una nota que explica que es cada comodin, formato **copiado** del bloque de
+Ingresos (ni un hex hardcodeado: si Franco cambia el azul de la hoja, el bloque lo sigue solo) y
+las **columnas ocultas**. Tres publicas: estado, aplicar y revertir.
+
+**Por que T:U, medido y no elegido.** `E`, `H`, `K`, `O` y `Q` son el aire entre bloques —la hoja
+separa por columna vacia y no por borde, esa es su regla visual—, `R` es la consolidada de
+servicio y `S` es el aire que le corresponde. `T` es la primera columna libre de verdad. Sobre el
+gemelo, la hoja usa `C`, `D`, `F`, `G`, `I`, `J`, `L`, `M`, `N`, `P` y `R`, y nada mas.
+
+**La consolidada se extiende, no se reescribe.** Se detecta el ultimo rango que la formula ya
+aplana y se le agrega `T8:T1000` al lado, con **el separador que la propia formula usa**. El
+separador de argumentos depende del locale de la planilla (aca `;`) y adivinarlo es exactamente la
+trampa que documenta la cabecera de `07_MiradaInteranual.js`. Una formula rearmada a mano es la
+forma barata de dejar sin lista al desplegable de Cuenta, que es lo unico que consume esa columna.
+
+**Dos cosas que NO hace, y son deliberadas.**
+
+1. **No cambia una sola fila del ledger.** `deducirTipoCuenta` lee solo los catalogos de ingresos,
+   fijos y variables, asi que una cuenta en un bloque nuevo sigue devolviendo `''` —que es lo
+   correcto para un comodin— y no obliga a migrar ninguna de las 3.469 filas historicas. Las 533
+   patas de traspaso con `Ingreso` y las 96 con vacio quedan como estan; las sigue corrigiendo en
+   la lectura la exclusion por `CUENTAS_NEUTRAS`.
+2. **No mueve la cuenta `Ajuste`.** Conceptualmente tambien es un comodin, pero hoy vive en el
+   bloque de Ingresos con su destino declarado a proposito (`ALTA_SIN_TIPO`). Moverla cambiaria el
+   tipo de cuenta de todo `Ajuste` futuro: es una decision de Franco.
+
+**El catalogo no se retipea.** El bloque es la *proyeccion* de `CUENTAS_NEUTRAS`, que sigue siendo
+la fuente unica. Una comodin nueva se agrega ahi y se vuelve a correr "2. Aplicar".
+
+**Dos entradas nuevas en `RANGES`.** `CUENTAS_COMODIN` (T:U) es la del bloque. `PLAN_CONSOLIDADA`
+(R) entra porque **ya se movio una vez sin que nadie se enterara**: nacio en `S` y quedo en `R`
+cuando la limpieza borro fisicamente la columna `Q`. Hasta hoy su coordenada existia solo como
+constante local de un devtool ya consumido, y `CLAUDE.md` seccion 4 sigue diciendo `S`.
+
+**Banco 12.** `devtools/probar_cuentas_comodin.js`: la hoja falsa **evalua** el
+`QUERY(FLATTEN(...))` de verdad, asi que "Traspaso aparece en el desplegable" se prueba y no se
+promete. Cuatro mutaciones, cada una por un modo de falla real de este repo: celda que se traga la
+escritura como la mitad muda de una combinada (revierte y **no** oculta las columnas, para que el
+problema quede a la vista); formula escrita que no derrama; bloque modelo sin titulo; columna
+destino ocupada. Los doce bancos en verde.
 
 ---
 
@@ -118,6 +474,57 @@ revierte. Cableado en `MENU_CONFIG`: "Presupuesto: categorias y resumen".
 `devtools/probar_presupuesto_resumen.js` (nuevo, banco 12). Se retiran los dos diagnosticos
 temporales que ya cumplieron (`DEVTOOL_DIAG_Desplegables.js`,
 `DEVTOOL_DIAG_PresupuestoTitulos.js`) y sus entradas de menu. Los doce bancos en verde.
+
+---
+
+### Nota de concurrencia (v0.46.0, dos lineas de trabajo con el mismo numero)
+
+Las dos entradas de arriba se escribieron en paralelo, sin visibilidad mutua, desde el mismo
+commit base (`e952fc2`). "Cuentas comodin: el bloque oculto del Plan de Cuentas"
+(`fix/abm-desplegable-entidad`, 2026-08-24 20:44) es la que sigue viva en la planilla hoy, dentro
+de la cadena ininterrumpida que llega hasta v0.49.0. "Presupuesto: categorias (V/W), mes de
+referencia y el bug de Tabla 2" (`fix/tablero-pendientes`, 2026-08-24 20:56) si se desplego bajo
+v0.46.0 -- `targets.yaml` lo declaro a las 21:01 del mismo dia -- pero quedo pisado horas despues
+por el deploy de v0.48.0 (`fix/abm-desplegable-entidad`, 2026-08-25 14:32), cuyo `src/` local no
+incluia `DEVTOOL_PresupuestoResumen.js` ni `DEVTOOL_PresupuestoGuardar.js`. Se deja tal cual quedo
+escrita en su propio commit, como registro historico honesto de que si estuvo en produccion; su
+trabajo continua en v0.50.0 una vez mergeadas las dos ramas, que es tambien cuando vuelve a
+desplegarse.
+
+---
+
+## v0.45.2 - El ABM abre: el id del selector de entidad (2026-08-24)
+
+El unico item funcional del menu diario, `Plan de Cuentas`, **no abria desde la v0.24.0**.
+Mostraba un loader `position:fixed; inset:0; z-index:2000` que nunca se apagaba y tapaba el
+formulario entero. Lo desplegado era `v0.45.1`: cuatro dias con la unica pantalla del producto
+muerta.
+
+**Causa.** `src/UI_AbmPlanCuentas.html:250` llamaba a `getElementById('entitySelect')`. Ese id no
+existe: el `<select>` se llama `entityType` (`:152`), y las otras **ocho** referencias del archivo
+lo escriben bien. Es un typo, no un renombre a medias. El `TypeError` ocurria dentro del
+`withSuccessHandler` de `getAbmFormData`, asi que la linea 251 -- la unica que apaga el loader --
+nunca corria.
+
+**Por que no lo atrapo nada.** `withFailureHandler` cubre fallas del *servidor*, no excepciones
+del *cliente* dentro del handler de exito. Esta clase de falla no deja rastro: no hay error en
+pantalla, ni log, ni fila mal escrita. Solo un modal que no abre.
+
+**De donde vino.** Entro en `a7129d2 [v0.24.0]`, un commit titulado *"tres fixes de la revision
+adversarial pre-merge"*, en el mismo diff que agrego la funcion `llenarDominioRelacionado()`. El
+llamado nacio con un id inventado. No estaba en `main`: era una regresion viva solo en lo
+desplegado.
+
+**Ademas.** Se agrega `withFailureHandler` en los otros dos puntos con el mismo modo de falla:
+`getCategoryAccounts` (`:343`), que dejaba el input deshabilitado con el placeholder
+`'Buscando...'` de forma permanente, y `deleteAbmRecord` (`:408`) -- la unica operacion
+irreversible del ABM -- que dejaba el loader puesto sin decir si el borrado habia ocurrido.
+
+**Lo que este bug deja anotado.** El repo tiene verificacion adversarial para todo lo que
+*escribe* en la planilla y cero para lo que *muestra*. `planilla-pymes` resuelve exactamente esto
+con `legacy/devtools/verificar_modales.py`, que resuelve los `include()`, concatena los scripts,
+corre `node --check` y cruza cada `getElementById` del JS contra los ids del DOM. Portarlo es
+parte de la Fase 5 del arnes y habria encontrado esto en la primera corrida.
 
 ---
 

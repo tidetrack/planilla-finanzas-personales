@@ -20,17 +20,33 @@
 
  /* Texts */
  --text-main: #34475d;
- --text-secondary: #6e7f8d;
+ /* El color del CUERPO DE DATOS de la hoja: 4.136 celdas, el mas usado por lejos, y NO es
+  * negro puro (el default de Sheets es #000000, asi que si esta serializado es porque Franco
+  * lo puso a mano). Los numeros y el texto de tabla del shell van con este, no con --text-main,
+  * que es la tinta de la CHROME (titulos de bloque y headers). */
+ --text-data: #39444d;
+ /* decision Franco 2026-08-25: #6e7f8d daba 3.69:1 sobre el fondo de bloque #eff2f9 y
+  * 4.14:1 sobre blanco -- por debajo del minimo AA de 4.5:1 para texto normal. Se veia
+  * lavado, y "lavado" en un modal chico se lee como "sin terminar". #5f6368 -- el que usa
+  * pymes -- da 6.4:1 sobre blanco. */
+ --text-secondary: #5f6368;
  --text-accent: #6e7f8d;
  --text-inverse: #FFFFFF;
 
- /* Semantic Colors */
- --success: #10B981;
- --success-bg: #D1FAE5;
- --danger: #EF4444; /* Red 500 */
- --danger-bg: #FEE2E2;
- --warning: #F59E0B; /* Amber 500 */
- --warning-bg: #FEF3C7;
+ /* Semantic Colors
+  * decision Franco 2026-08-24: los tres colores de estado pasan a ser los MEDIDOS de la
+  * planilla, no los de Tailwind. Antes eran #10B981 / #EF4444 / #F59E0B, que no aparecen en
+  * ninguna celda de la hoja: un popup con esos verdes y rojos se lee como otro producto.
+  * Los de abajo son los que el codigo declaro canonicos el 2026-08-21 y los que viven
+  * LITERALES dentro de las formulas SPARKLINE de Inicio!F19:F22, con su riel al lado.
+  * @see DEVTOOL_InicioPresupuesto.js (IP_COLOR_VERDE / NARANJA / ROJO y sus fondos)
+  */
+ --success: #356854;
+ --success-bg: #e6f4ea;
+ --danger: #c93232;
+ --danger-bg: #fce8e6;
+ --warning: #ffb300;
+ --warning-bg: #fef7e0;
  --info: #3B82F6;
  --info-bg: #DBEAFE;
 
@@ -48,7 +64,13 @@
 
  /* Fonts */
  --font-family: 'Google Sans', 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
- --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+ /* decision Franco 2026-08-25: se RETIRA --font-mono. Declaraba JetBrains Mono y Fira Code,
+  * ninguna de las dos instalada en macOS/Chrome, asi que en la practica resolvia a Courier
+  * New -- cuya altura de x es ~0.42em contra ~0.53em de una grotesca. Usado en un rotulo de
+  * 11px, las minusculas median ~4,4px al lado de un control de 14px sans, y eso se lee como
+  * texto roto, no como jerarquia. Fue la causa de las "distorciones de tamanos de letras".
+  * Un token que resuelve a algo que nadie eligio es una trampa para el que venga: se saca.
+  * Si algun dia hace falta mono de verdad, se carga la webfont primero. */
 
  /* Transitions */
  --transition-fast: 0.15s ease-in-out;
@@ -132,10 +154,14 @@ hr.divider {
  box-shadow: var(--shadow-sm);
 }
 
+/* decision Franco 2026-08-25: el foco era un halo GRIS sobre fondo gris, o sea invisible.
+ * Ahora es el mismo tratamiento que el de los botones -- un solo foco para todo el sistema,
+ * como hace pymes. */
 .form-input:focus, .form-select:focus {
- outline: none;
- border-color: var(--accent-color);
- box-shadow: 0 0 0 3px rgba(181, 191, 198, 0.35);
+ outline: 2px solid var(--primary-color);
+ outline-offset: 1px;
+ border-color: var(--primary-color);
+ box-shadow: none;
 }
 
 .form-input::placeholder {
@@ -233,6 +259,28 @@ hr.divider {
  padding: 24px;
  margin-bottom: 24px;
 }
+
+/* ============================================
+ * ALERTAS
+ * ============================================
+ * decision Franco 2026-08-24: fondo tenido y tinta, SIN franja de acento lateral.
+ * La planilla no usa bordes en ningun lado -- no hay un solo setBorder en todo src/ y los
+ * bloques se separan con una columna vacia, no con lineas -- asi que una barra de color de
+ * 3px al costado se lee como de otro producto. El color del fondo ya dice todo lo que la
+ * franja diria. Los pares fondo/tinta son los del semaforo medido de la hoja.
+ */
+
+.alert {
+ padding: 12px 15px;
+ border-radius: var(--border-radius-sm);
+ font-size: 13px;
+ margin-bottom: 16px;
+}
+
+.alert-error { background-color: var(--danger-bg); color: var(--danger); }
+.alert-ok { background-color: var(--success-bg); color: var(--success); }
+.alert-warning { background-color: var(--warning-bg); color: #6d4d00; }
+.alert-info { background-color: var(--bg-main); color: var(--text-main); }
 
 /* ============================================
  * CUSTOM SCROLLBAR
