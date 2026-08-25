@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 50,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.50.0 - Presupuesto: Guardar Proyeccion, con cotizaciones congeladas',
+ releaseName: 'v0.50.1 - El proyecto no cargaba: un const leia otro archivo',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

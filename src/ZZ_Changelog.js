@@ -3,6 +3,27 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.50.1 - El proyecto no cargaba: un const leia otro archivo.
+ * ! HOTFIX. v0.50.0 dejo la planilla sin funciones personalizadas: la hoja "Inicio" mostraba
+ *   #ERROR! en Saldo Actual, Capital Acumulado y la distribucion de fondos. El error real,
+ *   leido del tooltip de la celda, era del SCRIPT y no de la hoja:
+ *   "ReferenceError: PM_UMBRAL_IDENTIDAD is not defined (linea 225)".
+ * ! CAUSA. Apps Script no tiene modulos: todos los archivos comparten un scope global y se
+ *   evaluan en orden. Sin filePushOrder en .clasp.json ese orden es el ALFABETICO, y
+ *   DEVTOOL_PresupuestoGuardar.js (G) carga ANTES que DEVTOOL_PresupuestoModo.js (M). Su linea
+ *   225 hacia "const PG_UMBRAL_IDENTIDAD = PM_UMBRAL_IDENTIDAD": leer al CARGAR un simbolo que
+ *   todavia no existe. Un ReferenceError de carga no rompe su modulo, rompe el PROYECTO ENTERO.
+ * ! POR QUE NO SE VIO ANTES. DEVTOOL_PresupuestoResumen.js (R) tenia el MISMO patron
+ *   ("const PC_CLAVES_BLOQUE = PM_CLAVES_BLOQUE") y nunca fallo, porque R va DESPUES de M. El
+ *   bug no estaba en el codigo nuevo: estaba en la letra inicial del nombre del archivo.
+ * + FIX. Los dos casos se leen ahora al INVOCAR, no al cargar: _umbralIdentidadPg() y
+ *   _clavesBloquePc(). El orden de archivos deja de importar. Se arreglo tambien el de Resumen,
+ *   que hoy funcionaba de casualidad.
+ * + GUARD NUEVO: devtools/probar_carga_apps_script.js concatena src/*.js en orden alfabetico y
+ *   EVALUA el proyecto como lo hace Apps Script. "node --check" jamas iba a agarrar esto -- la
+ *   sintaxis es valida, falla al evaluar -- y ninguno de los 16 bancos lo cubria. Cuando falla,
+ *   nombra el simbolo, el archivo que lo define y por que carga tarde. Probado por mutacion.
+ *
  * [2026-08-25] v0.50.0 - Presupuesto: Guardar Proyeccion, con cotizaciones congeladas.
  * + Tercera y ultima etapa de la hoja "Presupuesto" (sobre el Modo v0.45.1 y el resumen v0.46.1,
  *   ambos ya desplegados): DEVTOOL_PresupuestoGuardar.js (nuevo) toma "Monto a Proyectar"

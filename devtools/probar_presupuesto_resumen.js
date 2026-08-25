@@ -70,7 +70,7 @@ vm.runInContext(
     'PC_COL_CATEGORIA,PC_COL_MODO_AGRUPADO,PC_COL_PROYECTAR_AGRUPADO,' +
     'PC_TITULO_PROYECTAR,PC_ROTULO_CATEGORIAS,PC_ROTULO_NOMBRE,' +
     'PC_CELDA_TITULO_TABLA1,PC_TITULO_TABLA1,PC_FILAS_TABLA2,PC_TOKEN_ROTO,PC_TOKEN_CORRECTO,' +
-    'PC_BLOQUES,PC_CLAVES_BLOQUE,_formulaAgrupadoPc,_formulaRotuloMesRefPc,_repararReferenciaTabla2Pc,' +
+    'PC_BLOQUES,_clavesBloquePc,_formulaAgrupadoPc,_formulaRotuloMesRefPc,_repararReferenciaTabla2Pc,' +
     '_recalcularAgrupadoPc,_leerMapaCategoriaPc,_verificarInvariantesPc,_preflightPc,_planPc});',
     ctx);
 

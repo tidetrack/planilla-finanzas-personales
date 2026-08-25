@@ -222,7 +222,13 @@
 // ============================================
 
 const PG_MARCA = 'Presupuesto guardado';
-const PG_UMBRAL_IDENTIDAD = PM_UMBRAL_IDENTIDAD;   // 0.01, reusado de DEVTOOL_PresupuestoModo.js
+// decision Franco 2026-08-25: NO inicializar un const de nivel superior leyendo un simbolo de
+// OTRO archivo. Apps Script evalua los archivos en orden alfabetico y no hay filePushOrder en
+// .clasp.json, asi que "...Guardar" corre ANTES que "...Modo" y PM_* todavia no existe. El
+// ReferenceError no rompe este modulo: rompe la carga del PROYECTO ENTERO, y con ella todas las
+// funciones personalizadas de la planilla (Inicio quedo con #ERROR! en Saldo Actual y Capital
+// Acumulado). Se lee al INVOCAR, que es cuando el simbolo ya existe, y asi el orden deja de importar.
+function _umbralIdentidadPg() { return PM_UMBRAL_IDENTIDAD; }   // 0.01, definido en DEVTOOL_PresupuestoModo.js
 
 const PG_PROP_PREVIOS = 'presupuesto_guardar_previos';
 const PG_PREFIJO_RESPALDO = 'Respaldo presupuesto guardar ';
@@ -527,7 +533,7 @@ function _planGuardarPg(ss, prePresupuesto) {
     };
     const w8 = Number(hoja.getRange(PC_COL_PROYECTAR_AGRUPADO + '8').getValue());
     const netoEsperado = totalesVivos.ingresos - totalesVivos.fijos - totalesVivos.variables;
-    if (Math.abs(w8 - netoEsperado) >= PG_UMBRAL_IDENTIDAD) {
+    if (Math.abs(w8 - netoEsperado) >= _umbralIdentidadPg()) {
         throw new Error('W8 (' + w8.toFixed(2) + ') no cierra contra K8-O8-S8 (' + netoEsperado.toFixed(2) +
             ') ANTES de guardar nada: el agrupado de la etapa 2 (DEVTOOL_PresupuestoResumen.js) esta ' +
             'roto para el periodo vivo. No se genera ningun guardado sobre un cimiento que no cierra. ' +
@@ -820,14 +826,14 @@ function aplicarGuardarProyeccion() {
         ['ingresos', 'fijos', 'variables'].forEach(function (k) {
             const esperado = plan.totalesVivos[k];
             const desvio = Math.abs(sumaReleida[k] - esperado);
-            if (desvio >= PG_UMBRAL_IDENTIDAD) {
+            if (desvio >= _umbralIdentidadPg()) {
                 fallas.push(k + ': releido ' + sumaReleida[k].toFixed(2) + ' vs esperado (celda de Presupuesto) ' +
                     esperado.toFixed(2) + ' (desvio ' + desvio.toFixed(2) + ')');
             }
         });
         const netoReleido = sumaReleida.ingresos - sumaReleida.fijos - sumaReleida.variables;
         const netoEsperado = plan.totalesVivos.ingresos - plan.totalesVivos.fijos - plan.totalesVivos.variables;
-        if (Math.abs(netoReleido - netoEsperado) >= PG_UMBRAL_IDENTIDAD) {
+        if (Math.abs(netoReleido - netoEsperado) >= _umbralIdentidadPg()) {
             fallas.push('neto: releido ' + netoReleido.toFixed(2) + ' vs esperado ' + netoEsperado.toFixed(2));
         }
 

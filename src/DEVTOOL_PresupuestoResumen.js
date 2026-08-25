@@ -226,7 +226,13 @@ const PC_BLOQUES = {
         colProyectar: 'S', rangesCfg: RANGES.GASTOS_VARIABLES
     }
 };
-const PC_CLAVES_BLOQUE = PM_CLAVES_BLOQUE;   // ['ingresos','fijos','variables'], mismo orden
+// decision Franco 2026-08-25: NO inicializar un const de nivel superior leyendo un simbolo de
+// OTRO archivo. Apps Script evalua los archivos en orden alfabetico y no hay filePushOrder en
+// .clasp.json, asi que aca el orden HOY zafa ("...Resumen" va despues de "...Modo"), pero es la misma bomba. El
+// ReferenceError no rompe este modulo: rompe la carga del PROYECTO ENTERO, y con ella todas las
+// funciones personalizadas de la planilla (Inicio quedo con #ERROR! en Saldo Actual y Capital
+// Acumulado) por el caso gemelo de Guardar. Se lee al INVOCAR, que es cuando el simbolo ya existe, y asi el orden deja de importar.
+function _clavesBloquePc() { return PM_CLAVES_BLOQUE; }   // ['ingresos','fijos','variables'], mismo orden
 
 const PC_PROP_RESPALDO = 'presupuesto_resumen_respaldo';
 const PC_PROP_PREVIOS = 'presupuesto_resumen_previos';
@@ -247,7 +253,7 @@ function _formulaAgrupadoPc(tipo, fila) {
     const celdaCategoria = _absPm(PC_COL_CATEGORIA + fila);
     const defs = [];
     const terminos = [];
-    PC_CLAVES_BLOQUE.forEach(function (k, i) {
+    _clavesBloquePc().forEach(function (k, i) {
         const b = PC_BLOQUES[k];
         const cfg = b.rangesCfg;
         const idx = columnLetterToIndex(cfg.columns.proyecto) - columnLetterToIndex(cfg.columns.nombre) + 1;
@@ -526,7 +532,7 @@ function _preflightPc(ss) {
     chequear(PC_ROTULO_NOMBRE.celda, PC_ROTULO_NOMBRE.esperado);
 
     // --- 2. Las tres columnas "Monto a Proyectar" (K/O/S) -- este modulo las LEE, no las escribe ---
-    PC_CLAVES_BLOQUE.forEach(function (k) {
+    _clavesBloquePc().forEach(function (k) {
         chequear(PC_BLOQUES[k].colProyectar + '7', PC_TITULO_PROYECTAR);
     });
 

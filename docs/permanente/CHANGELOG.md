@@ -9,6 +9,27 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.50.1 - El proyecto no cargaba: un const leia otro archivo (2026-08-25)
+
+HOTFIX. v0.50.0 dejo la planilla sin funciones personalizadas: "Inicio" mostraba `#ERROR!` en
+Saldo Actual, Capital Acumulado y la distribucion de fondos. El error era del script, no de la
+hoja: `ReferenceError: PM_UMBRAL_IDENTIDAD is not defined (linea 225)`.
+
+Apps Script no tiene modulos: todos los archivos comparten un scope global y se evaluan en orden.
+Sin `filePushOrder` en `.clasp.json` ese orden es el alfabetico, y `DEVTOOL_PresupuestoGuardar.js`
+(G) carga antes que `DEVTOOL_PresupuestoModo.js` (M). Su linea 225 inicializaba un `const` de
+nivel superior leyendo un `const` del otro archivo. Un ReferenceError de carga no rompe un modulo:
+rompe el proyecto entero, y con el todas las funciones personalizadas de la planilla.
+
+`DEVTOOL_PresupuestoResumen.js` tenia el mismo patron y nunca fallo, porque la R va despues de la
+M. El bug no estaba en el codigo nuevo, estaba en la letra inicial del nombre del archivo. Los dos
+casos pasan a leerse al invocar (`_umbralIdentidadPg()`, `_clavesBloquePc()`).
+
+Guard nuevo: `devtools/probar_carga_apps_script.js` evalua el proyecto completo en orden
+alfabetico, que es lo que `node --check` no hace y lo que ninguno de los 16 bancos cubria.
+
+---
+
 ## v0.50.0 - Presupuesto: Guardar Proyeccion, con cotizaciones congeladas (2026-08-25)
 
 Tercera y ultima etapa de la hoja "Presupuesto" (sobre el Modo v0.45.1 y el resumen v0.46.1, ya
