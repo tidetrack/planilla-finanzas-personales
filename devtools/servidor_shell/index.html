@@ -1593,7 +1593,7 @@ body {
 <footer class="shell-foot">
     <span class="vivo">PLANILLA FINANZAS_v4 .WIP | Personal</span>
     <span class="spacer"></span>
-    <span class="ver">vservidor local</span>
+    <span class="ver">v0.52.1 local</span>
 </footer>
 
 <div class="shell-overlay hidden" id="shellLoader">
@@ -1908,7 +1908,7 @@ function agregarBloqueMovimiento() {
     var previos = lista.querySelectorAll('.bloque');
     if (previos.length >= cupoMaximo()) return;
 
-    var heredaMedio = '', heredaFecha = hoyISO(), heredaTipo = 'Egreso';
+    var heredaMedio = medioPorDefecto(), heredaFecha = hoyISO(), heredaTipo = 'Egreso';
     if (previos.length) {
         var ult = previos[previos.length - 1];
         heredaMedio = ult.querySelector('.b-medio').value;
@@ -1969,6 +1969,25 @@ function renumerarBloques() {
         b.querySelector('.bloque-num .n').textContent = (i + 1);
         b.querySelector('.btn-quitar').style.visibility = bs.length > 1 ? 'visible' : 'hidden';
     });
+}
+
+/**
+ * El medio con el que arranca un bloque nuevo.
+ *
+ * Sin esto quedaba el PRIMERO DEL CATALOGO, que esta ordenado alfabeticamente: "Dolar Cash".
+ * O sea que cada movimiento nuevo nacia en DOLARES, y el prefijo del monto decia USD, cuando
+ * diez de los quince medios son ARS y todos los cotidianos tambien. Un default que casi
+ * siempre esta mal es peor que no tener default: obliga a corregirlo todas las veces, y el
+ * dia que no se corrige entra un gasto en la moneda equivocada.
+ *
+ * La regla es el primer medio en la MONEDA BASE, que es la primera de MONEDAS_DISPONIBLES
+ * (ADR-003: ARS es la base, siempre 1.0). No se retipea "ARS" aca.
+ */
+function medioPorDefecto() {
+    if (!catalogo || !catalogo.medios || !catalogo.medios.length) return '';
+    var base = (catalogo.monedas || [])[0];
+    var enBase = catalogo.medios.filter(function (m) { return m.moneda === base; })[0];
+    return (enBase || catalogo.medios[0]).nombre;
 }
 
 /** El tope REAL: las filas libres de la grilla, que el backend informa al abrir la vista. */

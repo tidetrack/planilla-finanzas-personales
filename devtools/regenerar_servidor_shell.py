@@ -38,7 +38,9 @@ def main():
     shell = shell.replace('<?!= tiposRiquezaJson ?>', json.dumps(['Ahorros', 'Inversiones']))
     shell = shell.replace('<?= vistaInicial ?>', 'home')
     shell = shell.replace('<?= planilla ?>', 'PLANILLA FINANZAS_v4 .WIP | Personal')
-    shell = shell.replace('<?= version ?>', 'servidor local')
+    # El HTML ya escribe la 'v' antes del scriptlet: si aca se pone texto, sale
+    # "vservidor local". Va solo el numero.
+    shell = shell.replace('<?= version ?>', '0.52.1 local')
     if '<?' in shell:
         sys.stderr.write('Quedo un scriptlet sin resolver: revisar el generador\n')
         return 1

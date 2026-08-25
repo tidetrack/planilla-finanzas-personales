@@ -8,6 +8,28 @@ Historial de versiones y cambios significativos del proyecto.
 > Este archivo refleja los releases principales para lectura humana rapida.
 
 
+
+---
+
+## v0.52.2 - El movimiento nuevo ya no arranca en dolares (2026-08-25)
+
+Encontrado **probando el shell en un navegador de verdad**, no leyendo codigo. El primer bloque de
+"Movimiento nuevo" nacia con el medio `Dolar Cash` y el prefijo del monto decia `USD`. No era una
+eleccion: era el primero del catalogo, que esta ordenado alfabeticamente.
+
+Diez de los quince medios son ARS y todos los cotidianos tambien. **Un default que casi siempre
+esta mal es peor que no tener default**: obliga a corregirlo todas las veces, y el dia que no se
+corrige entra un gasto en la moneda equivocada — en un ledger donde la moneda decide con que
+cotizacion se congela la fila.
+
+`medioPorDefecto()` toma el primer medio en la **moneda base**, que es la primera de
+`MONEDAS_DISPONIBLES` (ADR-003). No se retipea `"ARS"` en el cliente.
+
+**`devtools/servidor_shell/`** es lo que permitio encontrarlo: el shell corriendo fuera de Sheets,
+con el catalogo real y la latencia medida. `servidor.py` no usa `python3 -m http.server` porque ese
+modulo llama a `os.getcwd()` al importarse y muere en un sandbox donde el cwd no es legible. El
+`index.html` es una copia que regenera `regenerar_servidor_shell.py` leyendo el shell real.
+
 ---
 
 ## v0.52.1 - El bloque que entra desacelera, no rebota (2026-08-25)

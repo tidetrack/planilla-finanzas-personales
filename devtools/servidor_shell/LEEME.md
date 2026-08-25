@@ -13,9 +13,15 @@ verdad sin desplegar nada.
 
 ## Correrlo
 
-    cd devtools/servidor_shell && python3 -m http.server 8765
+    python3 devtools/servidor_shell/servidor.py
 
-y abrir http://localhost:8765
+y abrir http://localhost:8765 (o pasarle otro puerto como argumento).
+
+NO se usa `python3 -m http.server`: en Python 3.9 ese modulo llama a `os.getcwd()` al
+importarse como __main__, para el default de `--directory`, y esa llamada ocurre se pase o no
+el flag. Si el proceso arranca en un directorio cuyo padre no es accesible -- el caso del
+sandbox de esta maquina -- muere con `PermissionError` antes de escuchar. `servidor.py` deriva
+el directorio de `__file__` y no llama a getcwd() ni una vez.
 
 ## Regenerarlo despues de tocar el shell
 

@@ -328,6 +328,12 @@ ok(/function cupoMaximo/.test(HTML) && /catalogo\.libres/.test(HTML),
 ok(typeof ctx._filasLibresCargas === 'function', 'el backend sabe cuantas filas quedan libres');
 ok(/heredaMedio|heredaFecha/.test(HTML),
     'un bloque nuevo hereda medio y fecha del anterior');
+ok(/function medioPorDefecto/.test(HTML),
+    'el PRIMER bloque tiene un default pensado, no el primero del catalogo');
+ok(/catalogo\.monedas \|\| \[\]\)\[0\]/.test(HTML),
+    'la moneda base sale de MONEDAS_DISPONIBLES, no se retipea "ARS"');
+ok(!/heredaMedio = ''/.test(HTML),
+    'el primer bloque NO arranca sin medio: eso dejaba el primero alfabetico, que es en USD');
 ok(!/heredaMonto|heredaCuenta|heredaNota/.test(HTML),
     'y NO hereda monto, cuenta ni nota: heredar lo que cambia obliga a borrarlo');
 ok(typeof ctx.registrarMovimientos === 'function', 'existe el endpoint de lote');

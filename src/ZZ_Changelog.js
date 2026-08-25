@@ -3,6 +3,29 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.52.2 - El movimiento nuevo ya no arranca en dolares.
+ * - ENCONTRADO PROBANDO EL SHELL EN UN NAVEGADOR DE VERDAD, no leyendo codigo. El primer
+ *   bloque de "Movimiento nuevo" nacia con el medio "Dolar Cash" y el prefijo del monto decia
+ *   USD. No era una eleccion de nadie: era el PRIMERO DEL CATALOGO, que esta ordenado
+ *   alfabeticamente, y el codigo arrancaba con heredaMedio = '' para el primer bloque.
+ * - POR QUE IMPORTA: diez de los quince medios son ARS y todos los cotidianos tambien. Un
+ *   default que casi siempre esta mal es PEOR que no tener default: obliga a corregirlo todas
+ *   las veces, y el dia que no se corrige entra un gasto en la moneda equivocada -- en un
+ *   ledger donde la moneda decide con que cotizacion se congela la fila.
+ * - medioPorDefecto(): el primer medio en la MONEDA BASE, que es la primera de
+ *   MONEDAS_DISPONIBLES (ADR-003: ARS es la base, siempre 1.0). No se retipea "ARS" en el
+ *   cliente: si manana cambia la base, cambia sola.
+ * - El banco lo cubre por las tres puntas: que exista el default pensado, que la moneda base
+ *   salga de la constante, y que el primer bloque NO arranque sin medio.
+ * - devtools/servidor_shell/ (NUEVO), y es lo que permitio encontrar el bug: el shell corriendo
+ *   fuera de Google Sheets, con el catalogo REAL de la planilla y la latencia MEDIDA (537 ms el
+ *   catalogo, 900 ms una escritura). servidor.py NO usa `python3 -m http.server`: ese modulo,
+ *   en Python 3.9, llama a os.getcwd() al importarse como __main__ para el default de
+ *   --directory, y esa llamada ocurre se pase o no el flag; en un sandbox donde el cwd no es
+ *   legible muere con PermissionError antes de escuchar. El index.html servido es una COPIA
+ *   que regenera devtools/regenerar_servidor_shell.py leyendo el shell real y SHELL_VISTAS del
+ *   backend: una copia editada a mano deja de representar lo desplegado.
+ *
  * [2026-08-25] v0.52.1 - El bloque que entra desacelera, no rebota.
  * - La animacion de entrada de un bloque de carga multiple usaba
  *   cubic-bezier(.34, 1.56, .64, 1). Ese 1.56 pasa de largo el valor final y vuelve: el bloque
