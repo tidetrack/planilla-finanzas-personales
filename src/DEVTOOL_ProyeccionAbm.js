@@ -366,7 +366,19 @@ function _respaldarFilasPa(ss, hojaProy, filas, sello) {
  * `listarPeriodosProyeccion()` no tiene nada que ver; si el ping anda y el listado sigue
  * fallando, el canal esta bien y el problema es especifico de esa funcion o de su respuesta.
  */
+// decision Franco 2026-08-25: el ping deja una HUELLA del lado del servidor antes de devolver
+// nada. Sirve para bisecar el fallo del canal sin depender de ningun gesto: si la huella aparece,
+// la llamada LLEGO y la funcion CORRIO, y el problema esta en el viaje de VUELTA (respuesta,
+// serializacion, canal de retorno). Si no aparece, la llamada nunca salio del cliente y el
+// problema esta en la IDA -- y entonces lo que devuelva la funcion es irrelevante.
+// La huella la lee Y LA BORRA el DIAG (DEVTOOL_DIAG_PermisoProyeccionAbm.js), para que cada
+// medicion empiece en cero: leer la marca de la corrida anterior seria concluir "llego" cuando
+// no llego.
+const PA_PROP_HUELLA_PING = 'ping_abm_ultimo';
+
 function pingProyeccionAbm() {
+    PropertiesService.getDocumentProperties()
+        .setProperty(PA_PROP_HUELLA_PING, String(new Date().getTime()));
     return { mensaje: 'pong', ts: Date.now() };
 }
 

@@ -169,6 +169,26 @@ function _DIAG_diagnosticarPermisoProyeccionAbm() {
         log(e.stack || '(sin stack disponible)');
     }
 
+    // PASO 6 - BISECCION IDA / VUELTA.
+    // Lee la huella que pingProyeccionAbm() deja al ENTRAR, y la borra para dejar el instrumento
+    // en cero. El orden de la medicion es: (1) correr este DIAG -- limpia; (2) abrir el modal --
+    // el ping sale solo; (3) correr este DIAG de nuevo -- y mirar si hay huella.
+    try {
+        const props6 = PropertiesService.getDocumentProperties();
+        const huella = props6.getProperty('ping_abm_ultimo');
+        if (huella) {
+            log('HUELLA DEL PING: SI, sellada ' + new Date(Number(huella)).toISOString() + '.');
+            log('  -> la llamada LLEGO al servidor y la funcion CORRIO. El fallo esta en la VUELTA.');
+        } else {
+            log('HUELLA DEL PING: NO hay.');
+            log('  -> si acabas de abrir el modal, la llamada NUNCA SALIO del cliente: falla la IDA.');
+        }
+        props6.deleteProperty('ping_abm_ultimo');
+        log('  (huella borrada: la proxima medicion arranca en cero)');
+    } catch (e6) {
+        log('PASO 6 (huella del ping): ERROR -- ' + e6.message);
+    }
+
     log('=== FIN DIAG ===');
     const resumen = lineas.join('\n');
 
