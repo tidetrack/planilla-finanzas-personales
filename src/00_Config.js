@@ -640,6 +640,21 @@ const MENU_CONFIG = {
             ]
         },
         {
+            // Siembra K/O/S ("Monto a Proyectar") con lo que J/N/R ya muestran para el modo
+            // vivo (Proyeccion o Historico), solo en las cuentas donde esa celda todavia esta
+            // vacia -- nunca pisa un numero que Franco ya cargo a mano. Pedido explicito:
+            // "que te arme los valores de 'Monto a proyectar' que sean iguales a la
+            // 'Proyeccion' del mes seleccionado", disparado por estadoGuardarProyeccion
+            // reportando 53 cuentas con Monto a Proyectar vacio. @see DEVTOOL_PresupuestoSembrar.js
+            // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
+            submenu: 'Presupuesto: sembrar Monto a Proyectar', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoPresupuestoSembrar' },
+                { name: '2. Aplicar', function: 'aplicarPresupuestoSembrar' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirPresupuestoSembrar' }
+            ]
+        },
+        {
             submenu: 'Capitalizacion y disponibilidad', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoCapitalizacion' },
                 { name: '2. Aplicar', function: 'aplicarCapitalizacion' },
