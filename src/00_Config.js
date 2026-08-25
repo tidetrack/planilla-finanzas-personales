@@ -573,6 +573,24 @@ const MENU_CONFIG = {
             ]
         },
         {
+            // Tercera y ultima etapa de "Presupuesto": el guardado a la BD. Toma "Monto a
+            // Proyectar" (K/O/S, lo que Franco escribe a mano) del periodo de J2/J3 y lo
+            // appendea a "Proyeccion" con las cuatro cotizaciones del dia CONGELADAS como valor
+            // (nunca formula). Idempotente por periodo (guardar el mismo mes dos veces
+            // reemplaza, no duplica) y la proyeccion manual retira, para ese mes, las filas del
+            // presupuesto base historico (DEVTOOL_PresupuestoBase.js): la decision deliberada
+            // gana sobre el promedio generico. Pedido de Franco: "por ahora en tidetrack dev,
+            // luego va a tener su boton" -- por eso NO hay boton nuevo en la hoja "Presupuesto".
+            // @see DEVTOOL_PresupuestoGuardar.js
+            // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
+            submenu: 'Presupuesto: guardar proyeccion', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoGuardarProyeccion' },
+                { name: '2. Aplicar', function: 'aplicarGuardarProyeccion' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirGuardarProyeccion' }
+            ]
+        },
+        {
             submenu: 'Capitalizacion y disponibilidad', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoCapitalizacion' },
                 { name: '2. Aplicar', function: 'aplicarCapitalizacion' },

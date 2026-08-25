@@ -1466,7 +1466,13 @@ console.log('\n=== 9. Ninguna otra celda del repo escribe donde este modulo escr
         // Fijos, TFP_BLOQUES.fijos). El barrido es texto plano, sin nocion de hoja, asi que
         // colisiona por casualidad de token. Mismo tipo de falso positivo que ya tuvo
         // DEVTOOL_DIAG_PresupuestoTitulos.js con 'S7' (retirado junto con ese diagnostico).
-        'DEVTOOL_PresupuestoResumen.js': ['U8']
+        'DEVTOOL_PresupuestoResumen.js': ['U8'],
+        // FALSO POSITIVO, mismo tipo que el anterior: DEVTOOL_PresupuestoGuardar.js lee
+        // Presupuesto!S8 (el total de Gastos Variables de "Monto a Proyectar", SUM(S9:S38) --
+        // parte del invariante de esa etapa) y Presupuesto!K8/O8 tambien, pero solo S8 coincide
+        // con una celda que este modulo posee en Tablero. Hoja y concepto totalmente distintos;
+        // el barrido es texto plano sin nocion de hoja.
+        'DEVTOOL_PresupuestoGuardar.js': ['S8']
     };
     const dir = path.join(RAIZ, 'src');
     const choques = [];
