@@ -1,0 +1,534 @@
+<!--
+  UI_AbmProyeccionElaborada.html
+  ABM (Listar + Corregir + Borrar) de lo guardado en la hoja-BD "Proyeccion".
+
+  [CONCEPTO DE NEGOCIO]
+  Franco, textual: "en el menu deberiamos poder hacer el ABM de proyecciones elaboradas".
+  "Proyeccion" recibe filas por DOS caminos -- el promedio historico automatico
+  (DEVTOOL_PresupuestoBase.js, marca "Presupuesto base historico") y el guardado deliberado desde
+  la hoja "Presupuesto" (DEVTOOL_PresupuestoGuardar.js, marca "Presupuesto guardado") -- y hasta
+  este modal no habia forma de revisar, corregir ni borrar lo que quedo escrito sin abrir la hoja
+  a mano y leer filas crudas. Este modal es esa pantalla.
+
+  Alcance decidido (no un CRUD completo por simetria, "menos superficie bien pensada"):
+    - Alta: NO EXISTE ACA. Ya existe -- se elabora en la hoja "Presupuesto" y se guarda con
+      "Guardar Proyeccion" (menu Tidetrack Dev). Reconstruir esa logica en un modal duplicaria
+      superficie peligrosa sobre una BD de produccion; el banner de arriba del modal redirige ahi.
+    - Modificacion: SOLO el monto, SOLO en filas "guardado a mano". Las filas de presupuesto base
+      son un promedio automatico -- editarlas a mano las dejaria con una Nota que miente sobre su
+      origen. El gate real vive en el servidor (DEVTOOL_ProyeccionAbm.js), esto es una segunda
+      barrera de UX, no la unica.
+    - Baja: por periodo completo (clave+origen), con respaldo y reversion inmediata (una sola
+      accion revertible a la vez, se pierde al hacer otro cambio -- avisado en el propio dialogo
+      de confirmacion).
+
+  [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+  Principios de diseno (docs/permanente/PRINCIPIOS_DISENO.md): multi-moneda siempre rotulada
+  (nunca se suman monedas distintas en un mismo total, ver DEVTOOL_ProyeccionAbm.js), estados
+  explicitos de carga/vacio/error/exito, coherencia con el Design System de UI_SharedStyles.html.
+  El caso "cero proyecciones guardadas a mano" es el estado REAL de produccion hoy (todas las
+  filas de "Proyeccion" son de origen base) y tiene un mensaje propio, nunca una tabla vacia sin
+  explicacion.
+
+  @see src/DEVTOOL_ProyeccionAbm.js (capa de datos: listarPeriodosProyeccion,
+       detalleFilasPeriodoProyeccion, eliminarPeriodoProyeccion, revertirBajaProyeccionAbm,
+       actualizarMontoFilaProyeccion, revertirEdicionMontoProyeccion)
+  @see src/UI_AbmPlanCuentas.html (patron de modal HtmlService que este archivo sigue)
+  @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
+  @version 0.52.0
+  @since 2026-08-25
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <?!= include('UI_SharedStyles'); ?>
+
+    <style>
+        body { margin: 0; padding: 0; }
+
+        .modal-shell {
+            padding: 20px 24px 24px;
+        }
+
+        .intro-header {
+            margin-bottom: 16px;
+        }
+
+        .intro-header h1 {
+            color: var(--primary-dark);
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 4px;
+            letter-spacing: -0.4px;
+        }
+
+        .intro-header p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin: 0;
+        }
+
+        /* ── Loader / error general (pantalla completa del cuerpo) ── */
+        .loading-overlay {
+            position: fixed; inset: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2000;
+        }
+        .spinner {
+            width: 30px; height: 30px;
+            border: 3px solid #e2e8f0; border-top-color: var(--primary-color);
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* ── Banner "no hay Alta aca" ── */
+        .alert-info-static {
+            background-color: var(--bg-main);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            padding: 10px 14px;
+            font-size: 12.5px;
+            margin-bottom: 18px;
+        }
+
+        /* ── Banner de deshacer ── */
+        #undoBanner {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            background-color: var(--success-bg); color: var(--success);
+            border-radius: var(--border-radius-sm);
+            padding: 10px 14px; margin-bottom: 16px; font-size: 13px;
+        }
+        #undoBanner button { flex-shrink: 0; }
+
+        /* ── Secciones ── */
+        .seccion-titulo {
+            display: flex; align-items: baseline; gap: 8px;
+            font-size: 14px; font-weight: 700; color: var(--primary-color);
+            margin: 20px 0 10px;
+            text-transform: uppercase; letter-spacing: 0.04em;
+        }
+        .seccion-titulo .contador {
+            font-size: 12px; font-weight: 500; color: var(--text-secondary);
+            text-transform: none; letter-spacing: normal;
+        }
+        .seccion-subtitulo {
+            font-size: 12px; color: var(--text-secondary); margin: -6px 0 10px;
+        }
+
+        /* ── Tarjeta de periodo ── */
+        .periodo-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-md);
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .periodo-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 14px; cursor: pointer;
+        }
+        .periodo-header:hover { background-color: var(--bg-main); }
+        .periodo-header .meta { font-size: 12px; color: var(--text-secondary); }
+        .chevron { color: var(--text-secondary); transition: transform var(--transition-fast); display: inline-block; }
+        .periodo-card.abierto .chevron { transform: rotate(180deg); }
+
+        .periodo-totales {
+            display: flex; flex-wrap: wrap; gap: 4px 16px;
+            padding: 0 14px 12px;
+            font-size: 12.5px; color: var(--text-data);
+        }
+        .periodo-totales b { color: var(--text-main); }
+
+        .periodo-detalle {
+            border-top: 1px solid var(--border-color);
+            padding: 12px 14px 14px;
+            background-color: var(--bg-main);
+        }
+
+        .tabla-proy {
+            width: 100%; border-collapse: collapse; font-size: 13px;
+        }
+        .tabla-proy th {
+            text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+            color: var(--text-secondary); font-weight: 600; padding: 4px 6px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .tabla-proy td {
+            padding: 6px; border-bottom: 1px solid #e8ecf3;
+            color: var(--text-data);
+        }
+        .tabla-proy tr:last-child td { border-bottom: none; }
+
+        .monto-view { cursor: pointer; }
+        .monto-view:hover { text-decoration: underline; }
+        .edit-icon { opacity: 0.45; font-size: 12px; }
+
+        .monto-input { width: 110px !important; display: inline-block; padding: 6px 8px !important; font-size: 13px; }
+        .btn-mini { padding: 5px 10px; font-size: 12px; margin-left: 4px; }
+
+        .borrar-zona { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border-color); }
+        .confirmar-borrado {
+            background-color: var(--danger-bg); color: var(--danger);
+            border-radius: var(--border-radius-sm); padding: 12px; margin-top: 10px; font-size: 13px;
+        }
+        .confirmar-borrado p { margin-bottom: 10px; }
+
+        .estado-vacio { padding: 10px 2px 4px; color: var(--text-secondary); font-size: 13px; }
+
+        .pie-modal {
+            display: flex; justify-content: flex-end; margin-top: 20px; padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+<div id="loader" class="loading-overlay"><div class="spinner"></div></div>
+
+<div class="modal-shell">
+    <div class="intro-header">
+        <h1>Proyecciones Elaboradas</h1>
+        <p>Lo que ya esta guardado en la BD de Proyeccion: revisar, corregir un monto o borrar un periodo.</p>
+    </div>
+
+    <div class="alert-info-static">
+        Para cargar una proyeccion nueva usa la hoja <b>Presupuesto</b> y "Guardar Proyeccion"
+        (menu Tidetrack Dev). Esta pantalla es para lo que ya quedo escrito.
+    </div>
+
+    <div id="undoBanner" class="hidden">
+        <span id="undoMensaje"></span>
+        <button type="button" class="btn btn-primary btn-mini" onclick="deshacerUltimaAccion()">Deshacer</button>
+    </div>
+
+    <div id="errorGeneral" class="alert alert-error hidden">
+        <strong>No se pudo leer "Proyeccion":</strong>
+        <span id="errorGeneralTexto"></span>
+    </div>
+
+    <div id="cuerpoListado" class="hidden">
+        <div class="seccion-titulo">Guardado a mano <span class="contador" id="contadorGuardado"></span></div>
+        <div class="seccion-subtitulo">Decisiones deliberadas, guardadas desde la hoja Presupuesto.</div>
+        <div id="listaGuardado"></div>
+
+        <div class="seccion-titulo">Presupuesto base <span class="contador" id="contadorBase"></span></div>
+        <div class="seccion-subtitulo">Promedio historico automatico (DEVTOOL_PresupuestoBase.js). No se edita a mano.</div>
+        <div id="listaBase"></div>
+    </div>
+
+    <div class="pie-modal">
+        <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cerrar</button>
+    </div>
+</div>
+
+<script>
+    // Claves 'origen:clave' de las tarjetas abiertas -- sobrevive a un re-render completo del
+    // listado (que se hace despues de CADA mutacion, para nunca mostrar un total desactualizado).
+    var abiertos = {};
+    var ultimoRevert = null; // { tipo: 'baja' | 'edicion' }
+
+    document.addEventListener('DOMContentLoaded', cargarListado);
+
+    // ============================================
+    // FORMATO
+    // ============================================
+
+    function escapeHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = (s === null || s === undefined) ? '' : String(s);
+        return d.innerHTML;
+    }
+
+    function fmtMonto(item) {
+        var signo = item.monto < 0 ? '-' : '';
+        return signo + Math.round(Math.abs(item.monto)).toLocaleString('es-AR') + ' ' + item.moneda;
+    }
+
+    function fmtLista(arr) {
+        if (!arr || !arr.length) return '—';
+        return arr.map(fmtMonto).join(' + ');
+    }
+
+    function fmtSello(sello) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(sello || '');
+        if (!m) return sello || '';
+        return m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5];
+    }
+
+    // ============================================
+    // CARGA DEL LISTADO
+    // ============================================
+
+    function cargarListado() {
+        document.getElementById('loader').classList.remove('hidden');
+        document.getElementById('errorGeneral').classList.add('hidden');
+        google.script.run
+            .withSuccessHandler(function (data) {
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('cuerpoListado').classList.remove('hidden');
+                renderListadoCompleto(data);
+            })
+            .withFailureHandler(function (err) {
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('cuerpoListado').classList.add('hidden');
+                document.getElementById('errorGeneral').classList.remove('hidden');
+                document.getElementById('errorGeneralTexto').textContent = err.message;
+            })
+            .listarPeriodosProyeccion();
+    }
+
+    function renderListadoCompleto(data) {
+        document.getElementById('contadorGuardado').textContent = '(' + data.grupos.guardado.length + ')';
+        document.getElementById('contadorBase').textContent = '(' + data.grupos.base.length + ')';
+
+        renderSeccion('listaGuardado', data.grupos.guardado, 'guardado', data.vacioGuardado,
+            'Todavia no guardaste ninguna proyeccion a mano. Cuando uses "Guardar Proyeccion" desde la hoja Presupuesto, va a aparecer aca.');
+        renderSeccion('listaBase', data.grupos.base, 'base', data.vacioBase,
+            'No hay presupuesto base cargado. Se genera desde Tidetrack Dev > Presupuesto base (desde el historial).');
+
+        Object.keys(abiertos).forEach(function (key) {
+            var idx = key.indexOf(':');
+            var origen = key.slice(0, idx), clave = key.slice(idx + 1);
+            var card = document.querySelector('.periodo-card[data-clave="' + clave + '"][data-origen="' + origen + '"]');
+            if (!card) return;
+            card.classList.add('abierto');
+            card.querySelector('.periodo-detalle').classList.remove('hidden');
+            cargarDetalle(card, clave, origen);
+        });
+    }
+
+    function renderSeccion(contId, grupos, origen, vacio, msgVacio) {
+        var cont = document.getElementById(contId);
+        if (vacio) {
+            cont.innerHTML = '<p class="estado-vacio">' + escapeHtml(msgVacio) + '</p>';
+            return;
+        }
+        cont.innerHTML = grupos.map(function (g) { return tarjetaGrupo(g, origen); }).join('');
+    }
+
+    // ============================================
+    // TARJETA DE PERIODO
+    // ============================================
+
+    function tarjetaGrupo(grupo, origen) {
+        var meta = grupo.filas.length + ' fila(s)';
+        if (origen === 'guardado') {
+            meta += ' · guardado el ' + fmtSello(grupo.sello);
+        } else if (grupo.sellos && grupo.sellos.length) {
+            var ordenados = grupo.sellos.slice().sort();
+            meta += ' · ultima corrida ' + fmtSello(ordenados[ordenados.length - 1]);
+            if (grupo.sellos.length > 1) meta += ' (+' + (grupo.sellos.length - 1) + ' anteriores)';
+        }
+
+        var otras = grupo.otrasFilas > 0
+            ? '<div class="alert alert-warning" style="margin:0 14px 12px;">' + grupo.otrasFilas +
+              ' fila(s) con categoria no reconocida no entran en estos totales.</div>'
+            : '';
+
+        return '' +
+            '<div class="periodo-card" data-clave="' + grupo.clave + '" data-origen="' + origen + '">' +
+                '<div class="periodo-header" onclick="toggleDetalle(this)">' +
+                    '<div><strong>' + escapeHtml(grupo.mesLabel) + '</strong> <span class="meta">· ' + escapeHtml(meta) + '</span></div>' +
+                    '<span class="chevron">&#9662;</span>' +
+                '</div>' +
+                '<div class="periodo-totales">' +
+                    '<span>Ingresos: <b>' + fmtLista(grupo.totales.ingresos) + '</b></span>' +
+                    '<span>Fijos: <b>' + fmtLista(grupo.totales.fijos) + '</b></span>' +
+                    '<span>Variables: <b>' + fmtLista(grupo.totales.variables) + '</b></span>' +
+                    '<span>Neto: <b>' + fmtLista(grupo.totales.neto) + '</b></span>' +
+                '</div>' +
+                otras +
+                '<div class="periodo-detalle hidden"></div>' +
+            '</div>';
+    }
+
+    function toggleDetalle(headerEl) {
+        var card = headerEl.closest('.periodo-card');
+        var clave = card.dataset.clave, origen = card.dataset.origen;
+        var key = origen + ':' + clave;
+        var body = card.querySelector('.periodo-detalle');
+        var estabaAbierto = !body.classList.contains('hidden');
+
+        if (estabaAbierto) {
+            body.classList.add('hidden');
+            card.classList.remove('abierto');
+            delete abiertos[key];
+            return;
+        }
+        abiertos[key] = true;
+        card.classList.add('abierto');
+        body.classList.remove('hidden');
+        cargarDetalle(card, clave, origen);
+    }
+
+    function cargarDetalle(card, clave, origen) {
+        var body = card.querySelector('.periodo-detalle');
+        body.innerHTML = '<p class="text-muted" style="margin:0;">Cargando...</p>';
+        google.script.run
+            .withSuccessHandler(function (det) { body.innerHTML = renderDetalle(det, origen); })
+            .withFailureHandler(function (err) {
+                body.innerHTML = '<div class="alert alert-error" style="margin:0;">' + escapeHtml(err.message) + '</div>';
+            })
+            .detalleFilasPeriodoProyeccion(clave, origen);
+    }
+
+    // ============================================
+    // DETALLE FILA POR FILA
+    // ============================================
+
+    function renderDetalle(det, origen) {
+        var filasHtml = det.filas.map(filaHtml).join('');
+        var nota = origen === 'guardado'
+            ? '<p class="text-muted" style="font-size:12px; margin:8px 0 0;">Toca un monto para corregirlo.</p>'
+            : '<p class="text-muted" style="font-size:12px; margin:8px 0 0;">Presupuesto base: se recalcula corriendo de nuevo ese modulo, no se edita a mano.</p>';
+
+        return '' +
+            '<table class="tabla-proy"><thead><tr><th>Cuenta</th><th>Categoria</th><th style="text-align:right;">Monto</th></tr></thead>' +
+            '<tbody>' + filasHtml + '</tbody></table>' +
+            nota +
+            '<div class="borrar-zona">' +
+                '<button type="button" class="btn btn-danger btn-mini btn-abrir-confirmacion" onclick="pedirBorrado(this)">Borrar este periodo</button>' +
+                '<div class="confirmar-borrado hidden">' +
+                    '<p>Se van a borrar <b>' + det.filas.length + '</b> fila(s) de <b>' + escapeHtml(det.mesLabel) + '</b> (' +
+                    (origen === 'guardado' ? 'guardado a mano' : 'presupuesto base') + '). ' +
+                    'Se puede deshacer justo despues, pero no una vez que hagas otro cambio.</p>' +
+                    '<button type="button" class="btn btn-secondary btn-mini" onclick="cancelarBorrado(this)">Cancelar</button>' +
+                    '<button type="button" class="btn btn-danger btn-mini" onclick="confirmarBorrado(this)">Confirmar borrado</button>' +
+                '</div>' +
+            '</div>';
+    }
+
+    function filaHtml(f) {
+        var montoTxt = fmtMonto({ moneda: f.moneda, monto: f.monto });
+        if (!f.editable) {
+            return '<tr data-fila="' + f.fila + '">' +
+                '<td>' + escapeHtml(f.cuenta) + '</td><td>' + escapeHtml(f.tipoCuenta) + '</td>' +
+                '<td style="text-align:right;">' + montoTxt + '</td></tr>';
+        }
+        return '<tr data-fila="' + f.fila + '">' +
+            '<td>' + escapeHtml(f.cuenta) + '</td><td>' + escapeHtml(f.tipoCuenta) + '</td>' +
+            '<td style="text-align:right;" class="celda-monto" data-monto="' + f.monto + '" data-moneda="' + f.moneda + '">' +
+                celdaVistaHtml(f.monto, f.moneda) +
+            '</td></tr>';
+    }
+
+    function celdaVistaHtml(monto, moneda) {
+        return '<span class="monto-view" onclick="iniciarEdicionMonto(this)">' +
+            fmtMonto({ moneda: moneda, monto: Number(monto) }) +
+            ' <span class="edit-icon">&#9998;</span></span>';
+    }
+
+    function iniciarEdicionMonto(spanEl) {
+        var celda = spanEl.closest('.celda-monto');
+        celda.innerHTML = '' +
+            '<input type="number" step="0.01" class="form-input monto-input" value="' + celda.dataset.monto + '">' +
+            '<button type="button" class="btn btn-secondary btn-mini" onclick="cancelarEdicionMonto(this)">Cancelar</button>' +
+            '<button type="button" class="btn btn-primary btn-mini" onclick="confirmarEdicionMonto(this)">Guardar</button>';
+        celda.querySelector('input').focus();
+    }
+
+    function cancelarEdicionMonto(btn) {
+        var celda = btn.closest('.celda-monto');
+        celda.innerHTML = celdaVistaHtml(celda.dataset.monto, celda.dataset.moneda);
+    }
+
+    function confirmarEdicionMonto(btn) {
+        var celda = btn.closest('.celda-monto');
+        var fila = celda.closest('tr').dataset.fila;
+        var input = celda.querySelector('input');
+        var nuevoMonto = input.value;
+
+        celda.innerHTML = '<span class="text-muted">Guardando...</span>';
+        google.script.run
+            .withSuccessHandler(function (res) {
+                ultimoRevert = { tipo: 'edicion' };
+                mostrarDeshacer('Monto de "' + res.cuenta + '" corregido a ' +
+                    fmtMonto({ moneda: res.moneda, monto: res.montoNuevo }) + '.');
+                cargarListado();
+            })
+            .withFailureHandler(function (err) {
+                celda.innerHTML = celdaVistaHtml(celda.dataset.monto, celda.dataset.moneda);
+                mostrarErrorPuntual(err.message);
+            })
+            .actualizarMontoFilaProyeccion(fila, nuevoMonto);
+    }
+
+    // ============================================
+    // BAJA DE UN PERIODO
+    // ============================================
+
+    function pedirBorrado(btn) {
+        btn.classList.add('hidden');
+        btn.closest('.borrar-zona').querySelector('.confirmar-borrado').classList.remove('hidden');
+    }
+
+    function cancelarBorrado(btn) {
+        var zona = btn.closest('.borrar-zona');
+        zona.querySelector('.confirmar-borrado').classList.add('hidden');
+        zona.querySelector('.btn-abrir-confirmacion').classList.remove('hidden');
+    }
+
+    function confirmarBorrado(btn) {
+        var card = btn.closest('.periodo-card');
+        var clave = card.dataset.clave, origen = card.dataset.origen;
+        var mesLabel = card.querySelector('strong').textContent;
+        var zona = btn.closest('.borrar-zona');
+
+        zona.innerHTML = '<span class="text-muted">Borrando...</span>';
+        google.script.run
+            .withSuccessHandler(function (res) {
+                delete abiertos[origen + ':' + clave];
+                ultimoRevert = { tipo: 'baja' };
+                mostrarDeshacer(res.filasBorradas + ' fila(s) de ' + mesLabel + ' borradas.');
+                cargarListado();
+            })
+            .withFailureHandler(function (err) {
+                zona.innerHTML = '<div class="alert alert-error" style="margin:0;">' + escapeHtml(err.message) + '</div>';
+            })
+            .eliminarPeriodoProyeccion(clave, origen);
+    }
+
+    // ============================================
+    // DESHACER (una sola accion pendiente, la ultima)
+    // ============================================
+
+    function mostrarDeshacer(mensaje) {
+        document.getElementById('undoMensaje').textContent = mensaje;
+        document.getElementById('undoBanner').classList.remove('hidden');
+    }
+
+    function ocultarDeshacer() {
+        ultimoRevert = null;
+        document.getElementById('undoBanner').classList.add('hidden');
+    }
+
+    function deshacerUltimaAccion() {
+        if (!ultimoRevert) return;
+        document.getElementById('undoMensaje').textContent = 'Deshaciendo...';
+        if (ultimoRevert.tipo === 'baja') {
+            google.script.run
+                .withSuccessHandler(function () { ocultarDeshacer(); cargarListado(); })
+                .withFailureHandler(function (err) { document.getElementById('undoMensaje').textContent = err.message; })
+                .revertirBajaProyeccionAbm();
+        } else {
+            google.script.run
+                .withSuccessHandler(function () { ocultarDeshacer(); cargarListado(); })
+                .withFailureHandler(function (err) { document.getElementById('undoMensaje').textContent = err.message; })
+                .revertirEdicionMontoProyeccion();
+        }
+    }
+
+    // ============================================
+    // ERROR PUNTUAL (no general): un toast breve dentro del banner de deshacer, reusando su lugar
+    // ============================================
+
+    function mostrarErrorPuntual(mensaje) {
+        window.alert(mensaje);
+    }
+</script>
+</body>
+</html>
