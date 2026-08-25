@@ -252,3 +252,29 @@ function deleteAbmRecord(payload) {
  throw new Error(e.message);
  }
 }
+
+// ============================================
+// PROYECCIONES ELABORADAS - ABM API
+// ============================================
+//
+// decision Franco 2026-08-25: los endpoints de DATOS de este ABM (listar, ver detalle,
+// corregir un monto, borrar un periodo, revertir) NO tienen wrapper aca. En Apps Script
+// CUALQUIER funcion global es invocable por google.script.run exista o no un wrapper en este
+// archivo -- un wrapper pass-through no reduce la superficie expuesta ni un poco, solo daria la
+// sensacion de reducirla, que es peor que nada. Esas seis funciones ya viven como globales en
+// DEVTOOL_ProyeccionAbm.js (listarPeriodosProyeccion, detalleFilasPeriodoProyeccion,
+// eliminarPeriodoProyeccion, revertirBajaProyeccionAbm, actualizarMontoFilaProyeccion,
+// revertirEdicionMontoProyeccion) y UI_AbmProyeccionElaborada.html las llama DIRECTO. Lo unico
+// que si vale la pena aca es la DESCUBRIBILIDAD -- que quien audite este catalogo sepa donde
+// mirar -- y eso es este comentario, no seis funciones que solo reenvian argumentos.
+// @see DEVTOOL_ProyeccionAbm.js
+
+/**
+ * Abre el ABM (listar/corregir/borrar) de lo guardado en la hoja-BD "Proyeccion".
+ */
+function showAbmProyeccionElaborada() {
+ const html = HtmlService.createTemplateFromFile('UI_AbmProyeccionElaborada').evaluate()
+ .setWidth(720)
+ .setHeight(680);
+ SpreadsheetApp.getUi().showModalDialog(html, ' ');
+}

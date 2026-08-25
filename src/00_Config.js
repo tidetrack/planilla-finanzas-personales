@@ -487,6 +487,13 @@ const MENU_CONFIG = {
         { separator: true },
         { seccion: 'ADMINISTRAR' },
         { name: 'Plan de Cuentas', function: 'showAbmPlanCuentas' },
+        // Franco, textual: "en el menu deberiamos poder hacer el ABM de proyecciones
+        // elaboradas". Listar/corregir/borrar lo guardado en la hoja-BD "Proyeccion" (el
+        // promedio historico automatico de DEVTOOL_PresupuestoBase.js y lo guardado a mano
+        // desde "Presupuesto" via DEVTOOL_PresupuestoGuardar.js). Sin Alta: eso ya existe en
+        // la hoja Presupuesto + "Guardar Proyeccion" (Tidetrack Dev), y el modal lo dice.
+        // @see DEVTOOL_ProyeccionAbm.js @see UI_AbmProyeccionElaborada.html
+        { name: 'Proyecciones Elaboradas', function: 'showAbmProyeccionElaborada' },
         { separator: true },
         {
             submenu: 'Ir a la hoja', items: [
