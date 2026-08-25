@@ -6,6 +6,522 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-25 - Presupuesto: sembrar "Monto a Proyectar" desde J/N/R (v0.51.0)
+
+### Que pidio Franco
+
+Textual: "me agregas una funcion dev que te arme los valores de 'Monto a proyectar' que sean
+iguales a la 'Proyeccion' del mes seleccionado?". El disparador concreto: al correr
+`estadoGuardarProyeccion` (etapa 3 de "Presupuesto", v0.47.0) la planilla reporto "53 cuenta(s)
+con Monto a Proyectar vacio". Tipear 53 numeros a mano, uno por uno, es exactamente la friccion
+que este modulo nuevo saca del medio: en vez de eso, siembra `K`/`O`/`S` con lo que `J`/`N`/`R`
+YA calcula (`DEVTOOL_PresupuestoModo.js`, v0.45.1), y Franco corrige a mano solo donde el numero
+automatico no le sirve.
+
+### Verificacion previa de la correspondencia (el encargo la pedia explicita)
+
+Antes de escribir una linea de codigo se releyo `docs/permanente/DISENO_HOJA_PRESUPUESTO.md`
+("Que hay en cada columna") y `DEVTOOL_PresupuestoResumen.js`. La correspondencia que el encargo
+suponia -- `J -> K` (Ingresos), `N -> O` (Gastos Fijos), `R -> S` (Gastos Variables) -- **resulto
+CORRECTA**, y ademas ya existe como dato vivo en el codigo: `PC_BLOQUES[k].colModo ->
+PC_BLOQUES[k].colProyectar` (`DEVTOOL_PresupuestoResumen.js`). El modulo nuevo LEE esa
+correspondencia en vez de retipearla -- una tercera copia de la misma geometria es la forma
+barata de que un dia describa algo distinto. "Categorias" (`U`/`V`/`W`) queda afuera a proposito:
+`V`/`W` son un AGRUPADO por categoria, no una cuenta individual con su propio "Monto a
+Proyectar" -- no hay equivalente 1:1 y no fue lo que Franco pidio.
+
+### El selector de Modo manda, y se dice en voz alta
+
+`J`/`N`/`R` son dinamicas (`DEVTOOL_PresupuestoModo.js`): en modo "Proyeccion" muestran el mes de
+referencia, en modo "Historico" el promedio ponderado exponencial de 6 meses. Franco escribio
+"iguales a la Proyeccion", pero si el selector de Modo (`E7`) esta en "Historico" al momento de
+sembrar, lo que se copia NO es una proyeccion -- es el historico ponderado. El modulo NUNCA
+bloquea por eso (es una eleccion legitima de Franco), pero tanto `estadoPresupuestoSembrar()`
+como `aplicarPresupuestoSembrar()` lo anuncian EXPLICITO y en mayuscula cuando aplica, para que
+nunca se copie una cosa por otra sin que quede dicho en pantalla.
+
+### La decision sobre pisar celdas ya cargadas
+
+El encargo pedia explicitamente decidir el default y justificarlo. Se opto por: sembrar SOLO las
+celdas `K`/`O`/`S` que estan REALMENTE vacias; una celda con CUALQUIER contenido -- incluido un
+cero tipeado a mano -- se cuenta como "llena" y no se toca, ni siquiera si el valor sembrado
+seria identico. Justificacion: la hoja existe, segun su propio contrato, "para que Franco
+complete a mano... con criterio en vez de a ojo" -- pisar una decision ya tomada con un numero
+generado automaticamente destruye exactamente el criterio que la hoja fue disenada para
+capturar. Un modo "pisar tambien las llenas" queda deliberadamente FUERA de este encargo: no
+hay pedido explicito de Franco para esa segunda accion, y agregarla sin que se pida es
+superficie extra que despues alguien dispara sin querer.
+
+### La trampa del spill
+
+Advertencia explicita del encargo, y cicatriz REAL de este repo: un `SUMIF(rango;"<>")` ya conto
+`""` de una celda spill como "llena" y dio un total 2,8x inflado. Una celda `J`/`N`/`R` puede
+devolver el string `""` (la rama vacia de `IF($I9=""; ""; <numero>)`) sin ser un numero real. El
+criterio para distinguirlos -- `crudo !== '' && crudo !== null && isFinite(Number(crudo))` -- se
+reusa VERBATIM de `_leerFilasPresupuestoPg` (`DEVTOOL_PresupuestoGuardar.js`), que ya resuelve
+exactamente este problema para leer `K`/`O`/`S`. Una fila sin nombre de cuenta se saltea sin
+mas (la formula lo garantiza vacio); una fila CON cuenta pero fuente invalida (no deberia pasar
+nunca salvo un `#ERROR!` real) es una anomalia que ABORTA la corrida entera -- sembrar 89 cuentas
+bien y una mal en silencio es peor que no sembrar ninguna.
+
+### Escribe valores, nunca formulas
+
+Cada celda sembrada usa `setValue(numero)`, jamas `setFormula(...)`: `K`/`O`/`S` es la columna
+que Franco edita a mano, y una formula ahi se rompe apenas la toca.
+
+### Revertir, mas protector que sus hermanos
+
+Decision tomada dentro del encargo: a diferencia de `DEVTOOL_PresupuestoModo.js`/`Resumen.js`
+(que siempre reponen el estado exacto capturado al aplicar, sin mirar si algo cambio despues --
+correcto ahi porque esas columnas son 100% del sistema), `revertirPresupuestoSembrar()` releE el
+valor VIVO de cada celda que sembro y la vacia SOLO si todavia es exactamente el numero que
+escribio. Si Franco la corrigio despues de sembrarla -- el comportamiento que la hoja busca
+fomentar -- revertir la deja como esta y lo dice en el reporte. Como el modulo nunca pisa una
+celda con contenido, el estado previo de toda celda que pudo escribir es siempre vacio: no hace
+falta un respaldo de formulas en hoja oculta (la tecnica que si necesitan Modo y Resumen);
+alcanza con recordar celda + numero escrito en Document Properties.
+
+### La leccion de v0.50.1, aplicada de entrada
+
+Ese mismo dia, horas antes, un `const` de nivel superior que leia un simbolo de otro archivo
+tumbo el proyecto entero (`DEVTOOL_PresupuestoGuardar.js` leyendo `PM_UMBRAL_IDENTIDAD` de
+`DEVTOOL_PresupuestoModo.js` al cargar, ver la entrada v0.50.1 mas abajo). Este modulo nuevo
+("...Sembrar", carga alfabeticamente DESPUES de "...Modo" y "...Resumen", asi que un `const` de
+nivel superior funcionaria hoy) referencia `PM_*`/`PC_*` EXCLUSIVAMENTE dentro de cuerpos de
+funcion -- nunca en un `const` de nivel superior -- para no ser la proxima mecha larga. Se
+corrio `node devtools/probar_carga_apps_script.js` (el banco que evalua el proyecto entero como
+lo hace Apps Script) antes de dar la tarea por cerrada.
+
+### Verificacion
+
+`devtools/probar_presupuesto_sembrar.js` (nuevo), con pruebas de MUTACION -- cada una se corrio
+a mano rompiendo el modulo real y confirmando que el banco la mata antes de dejarlo en verde:
+no pisar una celda llena (incluido el caso limite "0"), la trampa del spill abortando la corrida
+entera, el preflight rechazando una formula viva en la zona de valores o un rotulo corrido, la
+reversion protectora ante una edicion manual posterior, la reversion de TODO el lote (no solo la
+celda rota) cuando la verificacion post-escritura falla en una sola celda, e idempotencia
+(aplicar dos veces no vuelve a escribir lo ya sembrado). Los 17 bancos preexistentes
+(`devtools/probar_*.js` + `verificar_modales.py`) mas este nuevo, mas
+`probar_carga_apps_script.js`, quedaron en verde. `node --check` sobre todo `src/` y
+`devtools/`, tambien.
+
+### Menu
+
+`MENU_CONFIG.DEV_ITEMS` (`00_Config.js`): submenu nuevo "Presupuesto: sembrar Monto a
+Proyectar" en Tidetrack Dev, mismo trio "1. Ver estado (no escribe nada) / 2. Aplicar /
+3. Revertir (usa el respaldo)" que usan sus hermanos.
+
+---
+
+## 2026-08-25 - Presupuesto: Guardar Proyeccion, con cotizaciones congeladas (v0.47.0)
+
+### Que pidio Franco
+
+Tercera y ultima etapa de la hoja "Presupuesto": el guardado a la base de datos, el cierre del
+circuito con el Tablero. Textual: "Dale con Guardar Proyeccion, con las cotizaciones congeladas.
+Esto dejalo como funcionalidad por ahora en tidetrack dev. Luego va a tener su boton." Y: "Luego,
+en el menu deberiamos poder hacer el ABM de proyecciones elaboradas" -- el ABM es un encargo
+posterior, pero condiciona el diseno de este: el marcado que se elige tiene que dejarlo construible.
+
+Las dos etapas previas (`DEVTOOL_PresupuestoModo.js` v0.45.1, `DEVTOOL_PresupuestoResumen.js`
+v0.46.1) ya le dan a Franco lo que necesita para decidir el mes de referencia, el promedio
+ponderado y el agrupado por categoria. Faltaba persistir lo que el efectivamente escribe a mano en
+`K`/`O`/`S` ("Monto a Proyectar") en la BD `Proyeccion`, para que el Tablero
+(`DEVTOOL_TableroFaltanteProyectado.js`) y la hoja Inicio (`_formulaPresupuestoIp`) tengan, mes a
+mes, contra que medir la realidad.
+
+### Decision 1 -- las cotizaciones congeladas (el punto del encargo)
+
+Medido antes de construir: `Proyeccion` tenia 4 celdas con contenido en las columnas de TC contra
+13.916 en `Registros` -- un volcado batch del presupuesto base (2026-08-20) que deja esas columnas
+vacias a proposito, porque un mes que todavia no ocurrio no tiene cotizacion propia. Consecuencia:
+una proyeccion en USD/AUD/EUR no se podia reconvertir con la cotizacion del dia en que se proyecto.
+
+Las cuatro tasas quedan ahora como VALOR NUMERICO en cada fila nueva -- nunca formula. Se leen
+llamando a `TIDETRACK_USD()`/`TIDETRACK_AUD()`/`TIDETRACK_EUR()` DIRECTO como funciones de Apps
+Script, nunca como formula de celda: llamadas asi ejecutan sincronicamente y devuelven el numero o
+LANZAN, sin el "Loading..." que si puede aparecer la primera vez que el motor de Sheets recalcula
+una custom function en una celda. Mismo patron que ya usa `_tasasPb()` en
+`DEVTOOL_PresupuestoBase.js`, reusado a proposito. Una sola llamada por corrida (no una por fila ni
+por moneda): "congelada" es la cotizacion del MOMENTO del guardado, no de cada fecha de movimiento.
+
+Regla Estricta 9 se cumple por construccion: si `TIDETRACK_USD()`/`AUD()`/`EUR()` fallan (API
+caida, serie vacia, JSON invalido), la excepcion sube sin capturar hasta el catch de
+`aplicarGuardarProyeccion`, que revierte lo que ya se haya escrito y termina en "NO APLICADO". No
+hay ninguna rama que escriba una fila con TC en blanco.
+
+### Decision 2 -- la fecha de cada fila
+
+El primer dia del mes proyectado. No se asumio: se verifico contra los DOS consumidores reales de
+`Proyeccion` -- `_formulaPresupuestoIp` (DEVTOOL_InicioPresupuesto.js) y `_bloqueComunTfp`
+(DEVTOOL_TableroFaltanteProyectado.js) -- que los dos filtran por rango de mes completo
+(`DATE(anio;mes;1)` hasta `EOMONTH`), nunca por igualdad de fecha exacta. El primer dia coincide
+ademas con la convencion que ya usa `DEVTOOL_PresupuestoBase.js`: `Proyeccion` no queda con dos
+convenciones de fecha distintas segun quien escribio la fila.
+
+### Decision 3 -- el marcado, pensado para el ABM que viene despues
+
+La columna Nota de cada fila lleva `"Presupuesto guardado <clave-de-periodo> <sello>"` (ej.
+`"Presupuesto guardado 2026-09 2026-08-25_143012"`). Tres piezas: `PG_MARCA` identifica el ORIGEN
+(distingue de `PB_MARCA`, "Presupuesto base historico"); la clave de periodo (`"2026-09"`)
+identifica el PERIODO -- es lo que permite encontrar "todas las filas de la proyeccion guardada de
+septiembre" con un solo prefijo; el sello (a resolucion de SEGUNDOS, no de minuto) es la traza de
+CUANDO se guardo y la unica pieza que distingue dos corridas de "aplicar" para el mismo periodo.
+
+Este marcado alcanza para el ABM que Franco pidio como encargo aparte: listar los periodos
+guardados es escanear la Nota por el prefijo `PG_MARCA` y agrupar por la clave que sigue; editar o
+borrar un periodo puntual es filtrar por `PG_MARCA + clave` exacto -- la MISMA funcion que ya usa
+este modulo para su propia idempotencia (`_filasPorNotaPrefijoPg`), reusada sin cambios.
+
+### Decision 4 -- convivencia con el presupuesto base historico
+
+`DEVTOOL_PresupuestoBase.js` ya carga en `Proyeccion` un promedio movil de 6 meses para los
+ultimos 7 meses. Si Franco guarda a mano la proyeccion de un mes que el base ya cubre, sin
+intervenir habria dos proyecciones para el mismo mes y el Tablero las sumaria a las dos.
+
+Decision: la proyeccion hecha a mano GANA. Al guardar el periodo X se retiran las filas
+`PB_MARCA` de `Proyeccion` cuya fecha cae dentro del mes X, ademas de las propias filas
+`PG_MARCA` previas del MISMO periodo (idempotencia: guardar dos veces no duplica, reemplaza).
+Nunca se toca una fila de otro periodo ni una sin marca. `estadoGuardarProyeccion()` reporta EXACTO
+cuantas filas de cada origen se retirarian, ANTES de tocar nada -- pedido explicito del encargo.
+
+### El invariante, mas fuerte de lo pedido
+
+El pedido: "la suma de lo guardado para el periodo tiene que ser igual a `K8-O8-S8`... convertido
+a la misma moneda". Como se decidio que todas las filas quedan en la MISMA moneda que `J4` (la
+unica senal de moneda que la hoja tiene para `K`/`O`/`S`, que no llevan una columna de moneda
+propia), no hace falta ninguna conversion: se verifica directo contra las celdas que Franco vio en
+pantalla. Se implementa MAS FUERTE que "el neto cierra": cada bloque por separado (Ingresos ==
+`K8`, Fijos == `O8`, Variables == `S8`) y recien despues el neto -- un bloque de mas compensando
+uno de menos no se cuela. Ademas, ANTES de escribir, se confirma que `W8` (el agrupado de la etapa
+2) cierra contra `K8-O8-S8`: si ese cimiento esta roto, el modulo aborta sin generar ninguna fila.
+
+### El preflight, deliberadamente NO acoplado al de la etapa 1
+
+Se evaluo reusar `_preflightPm` (DEVTOOL_PresupuestoModo.js) entero -- ya valida titulo,
+selectores, los tres bloques y el espejo `I`/`M`/`Q` -- pero se descarto: ese preflight tambien
+exige que el selector de Modo (`E7`) sea valido, una condicion sobre columnas (`J`/`N`/`R`) que
+este modulo jamas lee. Se construyo un preflight propio, mas angosto, que verifica exactamente lo
+que hace falta: identidad de la hoja, selectores de periodo/moneda, titulo y rotulo "Cuenta" de
+los tres bloques, que `K7`/`O7`/`S7`/`W7` digan "Monto a Proyectar" (`PC_TITULO_PROYECTAR`, la
+MISMA constante que ya valida `DEVTOOL_PresupuestoResumen.js` -- la leccion de v0.46.0: nunca una
+segunda constante con un valor "parecido"), sin celdas en error en la banda de datos, y que
+`K8`/`O8`/`S8`/`W8` tengan formula.
+
+### Cableado
+
+Solo menu Tidetrack Dev: "Presupuesto: guardar proyeccion" (estado/aplicar/revertir). Cero botones
+nuevos en la hoja "Presupuesto" -- pedido explicito de Franco.
+
+### El banco, de punta a punta
+
+`devtools/probar_presupuesto_guardar.js` (banco 13) tiene siete secciones. La mas importante,
+pedido explicito del encargo ("la mutacion que mas importa es guardar dos veces el mismo periodo y
+que duplique"): una seccion de punta a punta con un mock completo de "Registros"/"Proyeccion" que
+llama a `aplicarGuardarProyeccion()` REAL dos veces para el mismo periodo y confirma que siguen
+siendo 3 filas propias, no 6. La misma seccion prueba que `revertirGuardarProyeccion()` repone
+EXACTO lo que la ULTIMA corrida retiro (con su propio TC congelado, no el de una corrida
+posterior, y sin traer de vuelta lo que una corrida ANTERIOR ya habia retirado permanentemente), y
+que un fallo de la API de cotizaciones a mitad de camino no deja absolutamente nada escrito ni
+borrado (todo o nada). El resto del banco prueba, con mutaciones dirigidas, el preflight (rotulo
+"parecido" a K7 -- mismo patron que el bug real de v0.46.0 --, celda en error, total sin formula),
+el invariante ANTES de escribir (`W8` desalineado aborta el plan completo) y la anomalia "monto
+sin cuenta" (aborta, no se pisa un dato que no se entiende).
+
+### Un bug propio, atrapado por el banco antes de llegar a produccion
+
+La primera version de `revertirGuardarProyeccion()` verificaba, despues de reponer el respaldo,
+que no quedara ninguna fila con el PREFIJO de periodo de la corrida revertida. Eso fallaba en
+falso: al revertir una SEGUNDA corrida, el respaldo que se repone es el contenido de la PRIMERA
+corrida -- que legitimamente lleva el MISMO prefijo de periodo (`PG_MARCA + "2026-09"`), asi que la
+verificacion se confundia a si misma, contando las filas recien restauradas como "sobrantes de la
+corrida que se esta revirtiendo". El fix: la busqueda de "que borrar" y de "que verificar que ya no
+este" pasa a usar la Nota EXACTA de la corrida (prefijo + sello), nunca solo el prefijo de periodo.
+Atrapado por la mutacion "aplicar dos veces + revertir" antes del primer commit, sin pisar la
+planilla real.
+
+### Estado
+
+Los trece bancos en verde. Sin deploy posterior a este commit: la corrida final ("1. Ver estado"
+antes de "2. Aplicar") la hace Franco.
+
+---
+
+## 2026-08-24 - Presupuesto: V7 es dinamico, W7 dice "Monto a Proyectar" (v0.46.1)
+
+### Lo que reporto Franco
+
+Desplego v0.46.0 y corrio "1. Ver estado" en la planilla real. El preflight freno SOLO, sin
+escribir nada:
+
+    No se pudo medir: La hoja "Presupuesto" no es la que este modulo espera:
+    W7 dice "Monto a Proyectar" y se esperaba "Monto Proyectado".
+    Hay que volver a medir antes de escribir. No se toco nada.
+
+Bien ahi: preferir abortar antes que escribir sobre una hoja que el modulo no entendia bien es
+exactamente el comportamiento que el arnes pide.
+
+### Lo que Franco midio en vivo
+
+Con el modo en "Historico", verificado celda por celda: el patron es uniforme en los CUATRO
+bloques de la hoja, no solo en los tres que ya cablea DEVTOOL_PresupuestoModo.js. Cada bloque
+tiene TRES columnas -- nombre, una que SIGUE AL MODO, y una FIJA:
+
+| Bloque | col 1 (nombre) | col 2 -- sigue al modo | col 3 -- fija |
+|---|---|---|---|
+| Ingresos | `I7` "Ingresos." | `J7` "Monto Historico" | `K7` "Monto a Proyectar" |
+| Gastos Fijos | `M7` "Gastos Fijos." | `N7` "Monto Historico" | `O7` "Monto a Proyectar" |
+| Gastos Variables | `Q7` "Gastos Variables." | `R7` "Monto Historico" | `S7` "Monto a Proyectar" |
+| Categorias | `U7` "Categorias." | `V7` "Monto Historico" | `W7` "Monto a Proyectar" |
+
+`V7` sigue al modo -- igual que `J7`/`N7`/`R7`, que la etapa 1 (DEVTOOL_PresupuestoModo.js) ya
+hace dinamicos. `W7` es fijo y dice EXACTAMENTE lo mismo que `K7`/`O7`/`S7`.
+
+### Dos errores, no uno
+
+El preflight solo reporto el segundo, porque abortaba ahi antes de llegar a evaluar el primero:
+
+1. **`V7` se trataba como un rotulo ESTATICO** (`PC_TITULO_MODO_AGRUPADO = 'Monto Histórico'`,
+   comparado por el preflight, nunca escrito por el modulo). Es DINAMICO: tiene que seguir al
+   modo exactamente igual que `J7`/`N7`/`R7`. La v0.46.0, tal como estaba, nunca lo hubiera
+   actualizado si Franco cambiaba `E7` despues de correr "2. Aplicar" -- se hubiera quedado
+   congelado en el texto del momento en que se escribio.
+2. **`W7` se esperaba como "Monto Proyectado"**. El texto real es "Monto a Proyectar" -- el MISMO
+   texto exacto que `K7`/`O7`/`S7`, no una variante con una palabra de menos.
+
+### La causa raiz, otra vez la misma cicatriz
+
+Se midio contra `docs/permanente/celdas.tsv`, un snapshot commiteado del 2026-08-18 que quedo
+viejo -- "no fiarse de una geometria memorizada" es la cicatriz numero uno de este repo (CLAUDE.md,
+memoria del proyecto), y esta vez se repitio en un lugar todavia mas resbaladizo: un rotulo que
+OTRO modulo (DEVTOOL_PresupuestoModo.js) hace dinamico. Un snapshot de ese rotulo no es "el texto
+de esa celda" -- es "el texto que esa celda mostraba en el momento puntual en que se tomo la foto,
+con el modo que estuviera activo entonces". Tratarlo como una constante fija fue el error.
+
+### El fix
+
+`V7` pasa a escribirse con `_formulaTituloMontoPm()`, la MISMA funcion de
+DEVTOOL_PresupuestoModo.js que ya construye el titulo de `J7`/`N7`/`R7` -- reusada VERBATIM, sin
+ninguna segunda implementacion del mismo texto (el pedido explicito de Franco: "no escribas una
+segunda implementacion"). El plan de `_planPc` pasa de 64 a 65 celdas. El preflight deja de
+rotulo-chequear `V7` contra un texto esperado -- mismo criterio que `DEVTOOL_PresupuestoModo.js`
+ya aplica sobre `J7`/`N7`/`R7`: la idempotencia la resuelve la comparacion de formulas dentro de
+`_planPc`, no un chequeo de texto en el preflight. `V7` si gana un guard nuevo: no puede ser la
+mitad muda de una celda combinada (paso 5b, el mismo patron que el paso 8 de
+`DEVTOOL_PresupuestoModo.js` ya aplica sobre `J7`/`N7`/`R7`).
+
+`W7` pasa a compararse contra `PC_TITULO_PROYECTAR` -- la MISMA constante que ya usa el chequeo de
+`K7`/`O7`/`S7` -- en vez de una segunda constante (`PC_TITULO_PROYECTAR_AGRUPADO`) con un valor
+"parecido" pero distinto. Es el mismo texto en cuatro celdas del mismo bloque conceptual, y tener
+una segunda constante para el mismo dato es EXACTAMENTE el patron que produjo este bug: dos
+fuentes de verdad para una sola cosa, y una de las dos quedo vieja. Se retiro la constante
+redundante.
+
+Se agrego ademas un chequeo nuevo en `_verificarInvariantesPc`: despues de escribir, `V7` tiene
+que mostrar la MISMA palabra que `J7`/`N7`/`R7` para el modo vivo -- mismo criterio que
+`_verificarInvariantesPm` ya aplica sobre esas tres celdas en DEVTOOL_PresupuestoModo.js.
+
+### Lo que se confirmo antes de tocar nada
+
+Franco pidio explicitamente confirmar que el modulo sigue sin escribir `K`/`O`/`S` en ningun
+punto, porque ya empezo a cargar "Monto a Proyectar" a mano (`K8` mostraba $1.000.000,00 en la
+planilla real al momento del freno). Revisado: `_planPc` solo propone `V7`, `V9:V38`, `W9:W38`,
+`C9` y `F19:F21` -- nunca `K`/`O`/`S`. La hoja en uso real no corre ningun riesgo de que este
+modulo pise datos que Franco ya esta cargando.
+
+### El banco, extendido
+
+`devtools/probar_presupuesto_resumen.js` suma una mutacion que reproduce el bug real EXACTO
+(`W7`="Monto Proyectado" en vez de "Monto a Proyectar") contra el preflight real -- aborta con el
+mismo mensaje que reporto Franco. Una seccion nueva (3b) construye, por primera vez en este banco,
+un mock COMPLETO de hoja (a diferencia de la seccion 3, que prueba `_recalcularAgrupadoPc` en
+aislamiento con datos sinteticos, sin pasar por `SpreadsheetApp`) para poder correr
+`_verificarInvariantesPc` de punta a punta: un escenario "sano" (una cuenta, una categoria, todo
+cierra exacto) da CERO fallas, y la MISMA hoja con solo `V7` mutado (muestra "Historico" cuando
+`E7` dice "Proyección") da EXACTAMENTE una falla, la de `V7` -- prueba que el chequeo nuevo esta
+aislado y no se dispara por casualidad de otras partes del invariante. El cableado exacto de la
+seccion 2 se actualizo a 65 celdas (antes 64) e incluye `V7`; se agrego una aserción explícita de
+que `W7` nunca aparece en el plan. Los doce bancos en verde.
+
+### Que no se toco
+
+El descubrimiento de v0.46.0 (dos columnas de agrupado, V y W, no una) y la convencion de signo
+verificada contra Tablero!AA10 quedan sin cambios -- esta correccion es puramente sobre el modelo
+de los TITULOS de fila 7, no sobre el agrupado por categoria de las filas 9-38 ni sobre el
+invariante de totales.
+
+### Pendiente
+
+Franco vuelve a correr "Presupuesto: categorias y resumen > 1. Ver estado" con esta version antes
+de "2. Aplicar". `docs/permanente/DISENO_HOJA_PRESUPUESTO.md` lo actualiza Franco con la tabla de
+los cuatro bloques (comunicado explicitamente en el mismo mensaje que reporto el freno).
+
+Version: v0.46.1.
+
+---
+
+## 2026-08-24 - Presupuesto: categorias (V/W), mes de referencia y el bug de Tabla 2 (v0.46.0)
+
+### El pedido
+
+Segunda etapa de la hoja "Presupuesto", sobre el selector de Modo ya desplegado y verificado
+(v0.45.1): construir el agrupado por categoria (la columna que el encargo llamaba "V"), hacer que
+el cuadro "Movimientos Promedio historicos." (C9:F14) diga cual es el mes de referencia, y
+corregir el bug de copiar-pegar de F19:F21 en "Presupuesto del Mes." (dividian por el Ingresos de
+la OTRA tabla).
+
+### No era una columna, eran dos -- medido antes de escribir la primera formula
+
+El encargo (docs/permanente/DISENO_HOJA_PRESUPUESTO.md, seccion "La columna V") describe una
+unica columna agrupada, con una regla de que fuente usar segun el modo: "en el modo proyectado
+suma desde 'Monto a Proyectar' (K/O/S)... en Historico, desde la columna del modo (J/N/R)". Antes
+de construir nada, se midio la geometria real contra docs/permanente/celdas.tsv (snapshot
+2026-08-18) -- la misma disciplina "no asumas, medi" que ya le costo caro a este repo tres veces
+(CLAUDE.md, memoria del proyecto).
+
+La hoja real tiene DOS columnas de agrupado, no una, y las dos ya estaban tituladas con sus totales
+esperando contenido:
+
+    V7 = "Monto Historico"    V8 = SUM(V9:V)   -> agrupa J/N/R (la columna "modo")
+    W7 = "Monto Proyectado"   W8 = SUM(W9:W)   -> agrupa K/O/S ("Monto a Proyectar", sin modo)
+
+Y las dos tablas resumen ya apuntaban cada una a SU propio total: Tabla 1 "Movimientos Promedio
+historicos." (E11=J8, E12=N8, E13=R8, E14=**V8**) y Tabla 2 "Presupuesto del Mes." (E18=K8, E19=O8,
+E20=S8, E21=**W8**). Ninguna tabla mezcla fuentes -- cada una se explica sola con su propia
+columna de agrupado.
+
+Esto resuelve la ambiguedad del encargo de la unica forma consistente con la geometria: V SIEMPRE
+agrupa J/N/R (que ya resuelve Proyeccion/Historico internamente desde v0.45.0) y W SIEMPRE agrupa
+K/O/S. Ninguna de las dos columnas cambia de fuente por su cuenta -- el "modo" ya esta resuelto
+adentro de J/N/R, y V simplemente re-parte ese resultado por categoria. La frase del encargo "en
+el modo proyectado suma desde Monto a Proyectar" describe exactamente a W (que siempre suma desde
+K/O/S), no a una columna V que cambiaria de fuente.
+
+**Consecuencia sobre el invariante propuesto** ("V8 debe ser igual a K8-O8-S8 en modo
+Proyeccion"): con la geometria real esa igualdad es la de W8, no la de V8. El par correcto -- y
+mas fuerte, porque vale en los DOS modos, no solo Proyeccion -- es:
+
+    V8 = J8 - N8 - R8      (siempre)
+    W8 = K8 - O8 - S8      (siempre)
+
+Este es el invariante que quedo implementado, verificado en JS puro de forma independiente de las
+formulas de Sheets.
+
+### El signo, verificado contra la formula viva del Tablero antes de construir
+
+El encargo pedia expresamente confirmar la convencion de signo contra el bloque "Categorias." del
+Tablero antes de asumir nada -- "es la misma convencion que ya usa el bloque Categorias. del
+Tablero (Negocios propios positivo, Otros negativo)". Se midio la formula viva de esa celda
+(Tablero!AA10, via docs/permanente/TIDETRACK_ARQUITECTURA_ESTRICTA.json, el gemelo digital -- en
+el snapshot todavia aparece como AA9, la corrida de fila del 2026-08-21 documentada en
+DEVTOOL_BloqueCategorias.js). La primera linea del LET:
+
+    monto_neto; ARRAYFORMULA(IF(AJ6:AJ=""; 0; IF(AK9:AK="Egreso"; -AJ6:AJ; AJ6:AJ)))
+
+Confirma la convencion: un Egreso resta, un Ingreso suma, y ese monto con signo es lo que despues
+se agrupa por categoria via QUERY. La hoja "Presupuesto" no tiene un "Tipo" de movimiento por
+fila como el ledger -- I/M/Q son espejos de BLOQUE del Plan de Cuentas (el bloque Ingresos SOLO
+tiene cuentas de ingreso, Gastos Fijos y Variables SOLO cuentas de egreso). El bloque de origen
+reemplaza al "Tipo" como portador del signo: una cuenta espejada desde I suma, desde M o Q resta.
+Misma convencion, expresada con el dato que esta hoja realmente tiene disponible.
+
+### El mes de referencia, en C9
+
+Franco: "en el cuadro C9:F14 deberia decir el mes de referencia". Se eligio ampliar C9 (el titulo
+existente de la Tabla 1, "Movimientos Promedio historicos.") en vez de escribir en una celda
+nueva, por dos razones pesadas antes de decidir:
+
+1. C9 es la unica celda SIEMPRE segura para escribir sin medir en vivo si esta libre: si el
+   titulo esta combinado con las columnas de al lado (un patron ya visto en otras hojas de este
+   repo), C9 es el ANCLA de esa combinada -- la unica celda de un merge donde `setFormula()` hace
+   algo. Elegir una celda nueva (D9, G9...) hubiera exigido primero confirmar en vivo que esa
+   celda no es la mitad muda de otra combinada ni esta ocupada -- exactamente el tipo de
+   geometria no medida que este repo ya pago caro.
+2. El pedido dice "que lo diga", no "que lo diga en una celda aparte".
+
+El rotulo se deriva EN VIVO de E7/J2/J3, reusando `_fragmentoMesRefPm()` y
+`_condModoHistoricoPm()` de DEVTOOL_PresupuestoModo.js verbatim (nunca redeclarados): en
+Proyeccion, "Movimientos Promedio historicos. (Agosto 2026)"; en Historico, "... (Marzo 2026 -
+Agosto 2026)", la ventana completa de 6 meses. Los nombres de mes salen de IP_MESES via `INDEX`,
+no de `TEXT(fecha;"MMMM")` -- ese formato depende del locale del documento, y el locale ya generó
+mas de un bug documentado en este repo (IP_BLOQUE, 00_Config.js).
+
+### El bug de F19:F21
+
+Franco, textual: "Tabla 2: Debe filtrar por E18. Es un error de copiar-pegar". Medido: F19/F20/F21
+eran `=IFERROR(E19/$E$11;0)` (y analogas) -- dividen por $E$11, el Ingresos de la TABLA 1, en vez
+de $E$18, el Ingresos de su propia tabla. Se corrigio por cirugia de token
+(`_repararReferenciaTabla2Pc`): se reusa la formula viva completa y se reemplaza SOLO el token
+`$E$11` por `$E$18`, nunca se reescribe de memoria -- el mismo patron que
+`_repararRangoTipoBcat` en DEVTOOL_BloqueCategorias.js (v0.43.0).
+
+### El invariante, en JS puro
+
+Igual que DEVTOOL_PresupuestoModo.js, `_verificarInvariantesPc` recalcula en JS PURO -- sin
+ninguna formula de Sheets, leyendo I..W de "Presupuesto" y los tres catalogos del Plan de Cuentas
+con `getValues()` -- el agrupado por categoria, y lo compara celda por celda contra V/W en vivo, y
+contra V8=J8-N8-R8 / W8=K8-O8-S8.
+
+Una diferencia deliberada sobre el patron de PresupuestoModo: una cuenta del Plan de Cuentas SIN
+categoria asignada hace que su monto se "escape" del agrupado (no hay ningun U que lo reciba), asi
+que V8/W8 pueden no cerrar exacto contra J8-N8-R8/K8-O8-S8 sin que sea un bug de formula -- es un
+hueco del catalogo, no del codigo. El invariante calcula el monto exacto de ese hueco
+(`gapMontoV`/`gapMontoW`) y solo lo acepta como AVISO si explica el desvio COMPLETO; si el desvio
+no cierra con el hueco conocido, es FALLA real y revierte todo. Mismo criterio que
+`_contarCategoriasSinTipoBcat` en DEVTOOL_BloqueCategorias.js: reportar un hueco de catalogo, no
+confundirlo con un bug de formula.
+
+### El banco, verificado por mutacion
+
+`devtools/probar_presupuesto_resumen.js` (el banco doce) tiene las mismas cuatro mitades que el
+banco de PresupuestoModo: estructura de formulas (incluida la verificacion textual de que V9 suma
+ingresos y resta fijos/variables, y que V lee J/N/R mientras W lee K/O/S), el cableado exacto (64
+celdas: 30 V + 30 W + C9 + F19:F21, nunca J/N/R/K/O/S), la matematica del agrupado espejada en JS
+sobre un fixture sintetico (filas de ETIQUETA de categoria y filas de CUENTA deliberadamente
+separadas, para que el test no pueda acoplar accidentalmente una cuenta a la categoria de su misma
+fila -- la misma independencia que tienen en la hoja real), con una mutacion (vaciar el mapa de
+categorias de Ingresos hace que una categoria 100% de ingreso pase de 1200 a 0, confirmando que el
+resultado depende REALMENTE del mapa y no de una casualidad del fixture), y el preflight con un
+mock de hoja y once mutaciones dirigidas (rotulo corrido en U7/U8/C9, C9 combinada, mirror de
+categorias sin formula, un valor a mano en V15/W20, los totales V8/W8 sin formula, F19/F20 con un
+patron desconocido o sin formula). Los doce bancos del repo en verde.
+
+### Limpieza
+
+Se retiran los dos diagnosticos temporales que ya cumplieron su proposito:
+DEVTOOL_DIAG_Desplegables.js (auditoria de desplegables de Plan de Cuentas y Cargas) y
+DEVTOOL_DIAG_PresupuestoTitulos.js (incidente de v0.45.0, ya confirmado y cerrado en el release
+anterior) -- archivo y entrada de MENU_CONFIG de cada uno.
+
+Al borrar DEVTOOL_DIAG_PresupuestoTitulos.js, su entrada CONVIVENCIA_OK en
+devtools/probar_tablero_faltante.js (`'S7'`, un falso positivo del barrido anti-colision) dejo de
+hacer falta y se retiro. Pero el modulo nuevo introdujo su PROPIO falso positivo: `U8` aparece
+literal en DEVTOOL_PresupuestoResumen.js (`PC_ROTULO_NOMBRE`, el header "Nombre" del espejo de
+categorias de Presupuesto) y colisiona por token con el `U8` real de DEVTOOL_TableroFaltanteProyectado.js
+(`rotuloFaltante` del bloque Gastos Fijos, en el Tablero) -- dos hojas y dos conceptos totalmente
+distintos, el mismo tipo de coincidencia de texto plano que ya paso con `S7`. Se agrego una nueva
+entrada CONVIVENCIA_OK, con la misma justificacion documentada.
+
+### Que no se toco (a proposito)
+
+J/N/R, K/O/S y sus titulos (J7/N7/R7): son de DEVTOOL_PresupuestoModo.js. "Guardar Proyeccion":
+encargo posterior segun el contrato de diseno. El ledger, el Plan de Cuentas, la BD de Proyeccion,
+Inicio y el Tablero: sin tocar.
+
+### Pendiente
+
+Confirmar en vivo (Franco corre "Presupuesto: categorias y resumen > 1. Ver estado" antes de
+"2. Aplicar"). El hueco conocido de la BD de Proyeccion (sin cotizaciones congeladas,
+docs/permanente/DISENO_HOJA_PRESUPUESTO.md) sigue sin resolverse -- no era parte de este encargo.
+docs/permanente/DISENO_HOJA_PRESUPUESTO.md queda con la descripcion original de "una columna V":
+la correccion (dos columnas, V y W) esta documentada aca y en la cabecera de
+DEVTOOL_PresupuestoResumen.js; actualizar el contrato mismo es una decision de Franco, no tomada
+unilateralmente en esta sesion.
+
+Version: v0.46.0.
+
+---
+
 ## 2026-08-24 - El bug real detras del incidente de v0.45.0
 
 ### Lo que reporto Franco

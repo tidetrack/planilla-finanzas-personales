@@ -40,12 +40,33 @@ referencia**, no darlo por sobreentendido.
 
 ## Que hay en cada columna
 
-| Col | Contenido |
-|---|---|
-| `I`, `M`, `Q`, `U` | espejo VIVO del Plan de Cuentas (ingresos, fijos, variables, categorias). Tienen que aparecer TODAS las cuentas |
-| `J`, `N`, `R` | el monto que cambia con el modo (referencia o ponderado) |
-| `K`, `O`, `S` | **lo que Franco escribe a mano**: el monto a proyectar |
-| `V` | el agrupado por categoria |
+El patron es **uniforme en los cuatro bloques**, y es de TRES columnas. Medido en la planilla
+viva el 2026-08-24, con el modo en "Historico":
+
+| Bloque | nombre | sigue al MODO | fijo |
+|---|---|---|---|
+| Ingresos | `I` | `J` -- rotulo `J7` | `K` -- rotulo `K7` "Monto a Proyectar" |
+| Gastos Fijos | `M` | `N` -- rotulo `N7` | `O` -- rotulo `O7` |
+| Gastos Variables | `Q` | `R` -- rotulo `R7` | `S` -- rotulo `S7` |
+| Categorias | `U` | `V` -- rotulo `V7` | `W` -- rotulo `W7` |
+
+- `I`/`M`/`Q`/`U`: espejo VIVO del Plan de Cuentas. Tienen que aparecer TODAS las cuentas.
+- `J`/`N`/`R`: el monto que cambia con el modo (mes de referencia o ponderado).
+- `K`/`O`/`S`: **lo que Franco escribe a mano**, el monto a proyectar. Ningun modulo las escribe
+  con FORMULA (eso las rompe apenas se tocan). Desde v0.51.0, `DEVTOOL_PresupuestoSembrar.js`
+  (Tidetrack Dev > "Presupuesto: sembrar Monto a Proyectar") puede sembrarlas con VALORES,
+  copiados de `J`/`N`/`R` para el modo vivo -- pero solo en las celdas que estan REALMENTE
+  vacias; nunca pisa una que ya tiene contenido. Sigue siendo, en espiritu, la columna que
+  Franco completa: este modulo solo le ahorra tipear lo que el sistema ya sabe.
+- `V`/`W`: **son DOS agrupados por categoria, no uno.** `V` agrupa la columna del modo
+  (`J`/`N`/`R`) y `W` agrupa la de "Monto a Proyectar" (`K`/`O`/`S`). Cada tabla resumen apunta a
+  su propio total: la Tabla 1 a `V8`, la Tabla 2 a `W8`.
+
+**Los rotulos `J7`/`N7`/`R7`/`V7` son DINAMICOS** (los escribe el modulo del modo). Un snapshot
+del gemelo los captura con el texto del modo que estaba puesto en ese momento y los hace pasar
+por constantes: es la trampa que freno el deploy de v0.46.0. Todo preflight que los verifique
+tiene que aceptar cualquiera de los dos valores, o derivarlos de la constante del modulo que los
+escribe -- nunca repetir el string.
 
 ## La columna V
 
@@ -54,6 +75,16 @@ decision Franco 2026-08-24: agrupa **TODO, ingresos incluidos** -- no solo fijos
 No tiene logica de formulerio detras: es agrupar los montos en sus categorias, nada mas. En el
 modo proyectado suma desde la columna **"Monto a Proyectar"** (`K`/`O`/`S`), no desde la columna
 que muestra el modo.
+
+La convencion de signos se confirmo contra la formula viva de `Tablero!AA10`
+(`monto_neto = IF(tipo="Egreso"; -monto; monto)`): ingreso suma, egreso resta. Como la hoja
+Presupuesto no tiene un campo "Tipo" por movimiento, el BLOQUE DE ORIGEN reemplaza esa senal:
+Ingresos suma, Gastos Fijos y Variables restan.
+
+De ahi sale el par de invariantes: **`V8 = J8 - N8 - R8`** y **`W8 = K8 - O8 - S8`**. Si agrupar
+por categoria y restar directo no dan lo mismo, algo esta mal. Y explica por que la Tabla 1
+rotula a `V8` como "Capacidad de Capitalizacion": el total del agrupado ES ingresos menos
+egresos.
 
 Consecuencia a respetar: como agrupa ingresos y egresos juntos, cada categoria queda positiva o
 negativa segun su naturaleza. Es la misma convencion que ya usa el bloque "Categorias." del
@@ -68,14 +99,34 @@ Sigue al modo:
 
 ## El cierre del circuito
 
-"Guardar Proyeccion" escribe el periodo presupuestado en la BD (`Proyeccion`), para poder medirlo
-y seguirlo desde el Tablero.
+**IMPLEMENTADO en v0.47.0** (`src/DEVTOOL_PresupuestoGuardar.js`, menu Tidetrack Dev >
+"Presupuesto: guardar proyeccion" -- por ahora sin boton en la hoja, pedido explicito de Franco).
+"Guardar Proyeccion" toma `K`/`O`/`S` ("Monto a Proyectar") del periodo de `J2`/`J3` y lo appendea
+a la BD (`Proyeccion`), para poder medirlo y seguirlo desde el Tablero. Las decisiones finales,
+justificadas contra el codigo real (no en este documento, que es el contrato PREVIO a construir):
 
-## Lo que ya existe, medido el 2026-08-24
+- **Cotizaciones**: las cuatro tasas (ARS/USD/AUD/EUR) quedan como VALOR NUMERICO en cada fila,
+  nunca formula -- cierra el hueco que esta seccion documentaba mas abajo ("Un hueco conocido").
+- **Fecha**: primer dia del mes proyectado (verificado contra los dos consumidores reales de
+  `Proyeccion`, que filtran por rango de mes completo).
+- **Marcado**: la Nota lleva `"Presupuesto guardado <clave-de-periodo> <sello>"` -- habilita
+  idempotencia (guardar el mismo mes dos veces reemplaza, no duplica) y es la busqueda que el ABM
+  de proyecciones (encargo posterior, todavia sin construir) va a reusar.
+- **Convivencia con el presupuesto base historico** (`DEVTOOL_PresupuestoBase.js`): la proyeccion
+  manual gana -- retira, solo para el mes guardado, las filas del base y de un guardado manual
+  anterior del mismo periodo.
 
-La hoja es hoy un **cascaron**: la estructura esta, el contenido no.
+Detalle completo, con la justificacion de cada decision: cabecera de `DEVTOOL_PresupuestoGuardar.js`
+y `docs/permanente/HISTORIAL_DESARROLLO.md` (entrada 2026-08-25).
 
-| Existe y funciona | Existe y NO esta cableado | No existe |
+## Lo que ya existia, medido el 2026-08-24 (estado PREVIO a construir; historico)
+
+En ese momento la hoja era un **cascaron**: la estructura estaba, el contenido no. Las tres
+columnas "No existe" de esta tabla ya se construyeron -- selector de Modo en v0.45.1, columna V/W
+en v0.46.1, el guardado a la BD en v0.47.0 (ver arriba). Se conserva sin reescribir porque
+describe con precision el punto de partida del encargo.
+
+| Existe y funciona | Existe y NO esta cableado | No existe (en 2026-08-24) |
 |---|---|---|
 | espejo vivo del Plan de Cuentas en `I`/`M`/`Q`/`U`, 1:1 por formula | el selector de Modo (`E7`): CERO formulas de la hoja lo referencian | todo el contenido de `J`,`K`,`N`,`O`,`R`,`S`,`V`,`W` (filas 9-38): vacias |
 | dos tablas resumen (`C9:F14` y `C16:F21`) con formulas | el selector de periodo (`J2`/`J3`/`J4`): tampoco lo lee ninguna formula | el guardado a la BD |
@@ -95,12 +146,16 @@ columnas Y el filtro. El unico cimiento reutilizable es el espejo del Plan de Cu
 
 ## Un hueco conocido que hay que tener presente
 
-La hoja `Proyeccion` (la BD) **no tiene cotizaciones congeladas**: 4 celdas con contenido en las
-columnas de TC contra 13.916 en `Registros`. Es un volcado batch del 2026-08-20, no un flujo
-vivo. Consecuencia: una proyeccion cargada en USD/AUD/EUR no se puede convertir con la cotizacion
-del dia en que se proyecto, solo con la del dia en que se mira -- lo que distorsiona cualquier
-seguimiento a varios meses. Franco ya lo habia marcado. **No se resuelve en este trabajo, pero
-quien construya el guardado tiene que saber que existe.**
+**PARCIALMENTE CERRADO en v0.47.0.** La hoja `Proyeccion` (la BD) tenia -- y para las filas viejas
+sigue teniendo -- **cotizaciones sin congelar**: era un volcado batch del presupuesto base
+(2026-08-20, `DEVTOOL_PresupuestoBase.js`), no un flujo vivo, y esas filas siguen sin TC porque un
+mes que todavia no ocurrio no tiene cotizacion propia (decision de ESE modulo, no se toca).
+`DEVTOOL_PresupuestoGuardar.js` (v0.47.0) SI congela las cuatro tasas como valor en TODA fila que
+escribe -- las guardadas a mano desde ahora tienen su propia cotizacion del dia del guardado.
+Consecuencia que sigue vigente: `_formulaPresupuestoIp` y `_bloqueComunTfp` (los consumidores de
+`Proyeccion`) todavia convierten con `TIDETRACK_*()` EN VIVO, no con el TC congelado de cada
+fila -- ese cableado (leer el TC propio de la fila en vez de la cotizacion de hoy) es un encargo
+posterior, no resuelto aca.
 
 ## Historia previa, para no tropezar
 

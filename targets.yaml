@@ -16,4 +16,8 @@ targets:
     # El valor anterior, "0.23.5", estaba stale: el remoto ya venia en 0.38.3 -- las corridas
     # v0.24-v0.38.3 se deployaron sin actualizar este campo. La verdad del estado es el
     # drift-check, no este archivo; se corrige para que vuelvan a coincidir.
-    version_desplegada: "0.50.0"
+    # 2026-08-25 15:19: deploy v0.50.0 con --verificado (el remoto era f820f2a, un commit
+    # conocido del repo). Drift-check posterior: "sin drift". Este numero se escribe DESPUES
+    # del deploy y verificado contra el remoto, nunca antes: escribirlo por adelantado fue
+    # lo que dejo el campo stale en "0.23.5" mientras la planilla corria 0.38.3.
+    version_desplegada: "0.51.1"

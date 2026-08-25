@@ -9,6 +9,134 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.51.1 - PC_BLOQUES deja de depender del orden de archivos (2026-08-25)
+
+Cierre del incidente de v0.50.1. Ese hotfix arreglo el caso que rompio la planilla y dejo vivo su
+gemelo: `DEVTOOL_PresupuestoResumen.js` inicializaba `PC_BLOQUES` leyendo `PM_BLOQUES` al cargar.
+Nunca fallo, pero no por diseno -- la "R" de Resumen ordena despues de la "M" de Modo, y bastaba
+un rename para despertarlo. Pasa a leerse al invocar (`_bloquesPc()`), memoizado.
+
+El banco de v0.50.1 no podia verlo, y esa era su falla real: evaluaba solo el orden alfabetico
+real, asi que detectaba lo roto y nunca lo fragil. Ahora hace una segunda pasada con los archivos
+numerados en su orden y todo el resto invertido; si el proyecto carga igual, ningun archivo
+no-numerado depende del orden de otro. Contesta el interprete, no una regex.
+
+---
+
+## v0.51.0 - Presupuesto: sembrar "Monto a Proyectar" desde J/N/R (2026-08-25)
+
+Pedido textual de Franco: "me agregas una funcion dev que te arme los valores de 'Monto a
+proyectar' que sean iguales a la 'Proyeccion' del mes seleccionado?". El disparador fue
+`estadoGuardarProyeccion()` reportando "53 cuenta(s) con Monto a Proyectar vacio" -- tipear 53
+numeros a mano es la friccion que este modulo saca del medio.
+
+`DEVTOOL_PresupuestoSembrar.js` (nuevo) siembra `K`/`O`/`S` ("Monto a Proyectar") con lo que
+`J`/`N`/`R` ya muestran para el modo vivo, solo en las cuentas donde esa celda esta REALMENTE
+vacia. La correspondencia `J->K`, `N->O`, `R->S` se verifico contra
+`docs/permanente/DISENO_HOJA_PRESUPUESTO.md` antes de escribir una linea, y el modulo la lee de
+`PC_BLOQUES` (`DEVTOOL_PresupuestoResumen.js`) en vez de retipearla.
+
+El selector de Modo manda y se dice en voz alta: Franco escribio "iguales a la Proyeccion", pero
+si el Modo esta en "Historico" al sembrar, lo copiado NO es la Proyeccion sino el promedio
+ponderado exponencial. El modulo no bloquea por eso, pero lo anuncia explicito en mayuscula.
+
+Nunca pisa una celda con contenido -- incluido un cero tipeado a mano, que cuenta como dato real
+y no como "vacio". Escribe VALORES (nunca formulas): `K`/`O`/`S` es la unica columna de la hoja
+que Franco edita a mano, y una formula ahi se rompe apenas la toca.
+
+La trampa del spill (una celda `J`/`N`/`R` puede mostrar `""` sin ser un numero -- la misma
+cicatriz que ya infló un total 2,8x con `SUMIF(rango;"<>")`) se resuelve reusando el criterio de
+`DEVTOOL_PresupuestoGuardar.js`: una fuente invalida con cuenta presente aborta la corrida
+entera, en vez de sembrar 89 cuentas bien y una mal en silencio.
+
+`revertirPresupuestoSembrar()` es mas protector que sus hermanos: solo vacia una celda si
+TODAVIA tiene exactamente el numero que la corrida escribio. Si Franco la corrigio despues de
+sembrarla, revertir la deja como esta -- `K`/`O`/`S` es dato humano por definicion, a diferencia
+de `J`/`N`/`R` y `V`/`W`, que son 100% del sistema.
+
+Banco nuevo con pruebas de mutacion: `devtools/probar_presupuesto_sembrar.js`. Menu nuevo en
+Tidetrack Dev: "Presupuesto: sembrar Monto a Proyectar" (estado / aplicar / revertir).
+
+---
+
+## v0.50.1 - El proyecto no cargaba: un const leia otro archivo (2026-08-25)
+
+HOTFIX. v0.50.0 dejo la planilla sin funciones personalizadas: "Inicio" mostraba `#ERROR!` en
+Saldo Actual, Capital Acumulado y la distribucion de fondos. El error era del script, no de la
+hoja: `ReferenceError: PM_UMBRAL_IDENTIDAD is not defined (linea 225)`.
+
+Apps Script no tiene modulos: todos los archivos comparten un scope global y se evaluan en orden.
+Sin `filePushOrder` en `.clasp.json` ese orden es el alfabetico, y `DEVTOOL_PresupuestoGuardar.js`
+(G) carga antes que `DEVTOOL_PresupuestoModo.js` (M). Su linea 225 inicializaba un `const` de
+nivel superior leyendo un `const` del otro archivo. Un ReferenceError de carga no rompe un modulo:
+rompe el proyecto entero, y con el todas las funciones personalizadas de la planilla.
+
+`DEVTOOL_PresupuestoResumen.js` tenia el mismo patron y nunca fallo, porque la R va despues de la
+M. El bug no estaba en el codigo nuevo, estaba en la letra inicial del nombre del archivo. Los dos
+casos pasan a leerse al invocar (`_umbralIdentidadPg()`, `_clavesBloquePc()`).
+
+Guard nuevo: `devtools/probar_carga_apps_script.js` evalua el proyecto completo en orden
+alfabetico, que es lo que `node --check` no hace y lo que ninguno de los 16 bancos cubria.
+
+---
+
+## v0.50.0 - Presupuesto: Guardar Proyeccion, con cotizaciones congeladas (2026-08-25)
+
+Tercera y ultima etapa de la hoja "Presupuesto" (sobre el Modo v0.45.1 y el resumen v0.46.1, ya
+desplegados): `DEVTOOL_PresupuestoGuardar.js` toma "Monto a Proyectar" (`K`/`O`/`S`) del periodo
+de `J2`/`J3` y lo appendea a la BD `Proyeccion`. Cierra el circuito con el Tablero, que hasta
+ahora no tenia contra que medir una proyeccion deliberada de Franco, solo el promedio historico
+automatico de `DEVTOOL_PresupuestoBase.js`.
+
+Cuatro decisiones, todas justificadas contra el codigo real, no asumidas:
+
+1. **Cotizaciones congeladas**: las cuatro tasas (ARS/USD/AUD/EUR) quedan como VALOR NUMERICO en
+   cada fila, nunca formula -- se leen llamando a `TIDETRACK_USD()`/`AUD()`/`EUR()` DIRECTO como
+   funciones de Apps Script (nunca como formula de celda, asi se evita el "Loading..." de la
+   primera recalculacion). Regla Estricta 9: si la API falla, la excepcion sube sin capturar y no
+   se escribe nada.
+2. **Fecha**: el primer dia del mes proyectado -- verificado contra los dos consumidores reales de
+   `Proyeccion` (`_formulaPresupuestoIp`, `_bloqueComunTfp`), que filtran por rango de mes
+   completo, y coincide con la convencion que ya usa `DEVTOOL_PresupuestoBase.js`.
+3. **Marcado**: la Nota lleva `"Presupuesto guardado <clave-de-periodo> <sello>"` -- la clave de
+   periodo habilita idempotencia (guardar el mismo mes dos veces reemplaza, no duplica) y es la
+   busqueda que el ABM futuro va a reusar.
+4. **Convivencia con el presupuesto base**: la proyeccion manual gana. Al guardar un periodo se
+   retiran, solo para ese mes, las filas del base historico y de un guardado manual anterior del
+   mismo periodo; ninguna otra fila se toca.
+
+El invariante va mas alla de lo pedido: verifica cada bloque por separado (Ingresos == `K8`,
+Fijos == `O8`, Variables == `S8`) y recien despues el neto, y antes de escribir confirma que `W8`
+(la etapa 2) cierra contra `K8-O8-S8`. Solo menu Tidetrack Dev, cero botones nuevos en la hoja
+(pedido explicito de Franco).
+
+`devtools/probar_presupuesto_guardar.js` (banco 13) prueba de punta a punta con un mock completo
+de "Registros"/"Proyeccion": aplicar el mismo periodo dos veces no duplica, revertir repone
+exactamente lo que la ultima corrida retiro (con su propio TC, no el de una corrida posterior), y
+un fallo de la API de cotizaciones a mitad de camino no deja nada escrito ni borrado. El banco
+atrapo un bug propio antes del commit: la verificacion post-revert comparaba por prefijo de
+periodo en vez de por Nota exacta, confundiendo las filas restauradas de una corrida anterior con
+sobrantes de la corrida que se estaba revirtiendo. Los trece bancos en verde. Sin deploy posterior
+a este commit: la corrida final la hace Franco.
+
+---
+
+### Nota de concurrencia (renumeracion v0.47.0 -> v0.50.0)
+
+Esta entrada nacio como "v0.47.0" en los commits de esta sesion (rama `fix/tablero-pendientes`)
+mientras, en paralelo y sin visibilidad mutua, la sesion de `fix/abm-desplegable-entidad` tambien
+usaba v0.47.0 para el Centro de Operaciones y ya lo habia desplegado. Al mergear las dos ramas
+(2026-08-25) esta entrada se renumero dos veces: primero a v0.49.0 (con la rama abm anclada en
+v0.48.1), y esa segunda asignacion tambien quedo obsoleta porque la rama abm siguio pusheando
+mientras se armaba el merge y llego ELLA MISMA a v0.49.0 ("La tipografia nunca cargaba, y carga
+multiple de movimientos", desplegado real, confirmado contra la planilla en vivo). El numero
+final es v0.50.0, por encima de todo lo que `fix/abm-desplegable-entidad` llevaba en produccion
+al momento de cerrar este merge (v0.49.0, anclado a `f820f2a`, verificado con un fetch
+inmediatamente antes de commitear). Guardar Proyeccion en si nunca se desplego bajo ningun numero
+(los trece bancos verificaron en local, sin deploy posterior a ningun commit de esta entrada), asi
+que renumerar no reescribe historial real desplegado. No toca ningun archivo de la otra sesion
+(`16_ShellService.js`, `UI_Shell.html`, `UI_SharedStyles.html`, `DEVTOOL_CuentasComodin.js`,
+`DEVTOOL_DIAG_Desplegables.js`, `DEVTOOL_DIAG_PresupuestoTitulos.js`).
 ## v0.50.0 - Rediseno del Centro de Operaciones (2026-08-25)
 
 Pedido de Franco: *"necesito un equipo agentico que se ocupe de que el menu tenga un frontend
@@ -323,6 +451,50 @@ escritos en una constante.
 
 ---
 
+## v0.46.1 - Presupuesto: V7 es dinamico, W7 dice "Monto a Proyectar" (2026-08-24)
+
+`v0.46.0` se desplego. Franco corrio `"1. Ver estado"` en la planilla real y el preflight freno
+SOLO -- correctamente -- antes de escribir nada: `"W7 dice 'Monto a Proyectar' y se esperaba
+'Monto Proyectado'"`.
+
+Medido en vivo por Franco (con el modo en "Historico"): el patron es uniforme en los CUATRO
+bloques de la hoja -- Ingresos, Gastos Fijos, Gastos Variables y Categorias -- de TRES columnas
+cada uno: nombre, una columna que SIGUE AL MODO (`J`/`N`/`R`/`V`) y una columna FIJA, siempre
+"Monto a Proyectar" (`K`/`O`/`S`/`W`).
+
+Dos errores, no uno -- el preflight solo reporto el segundo porque abortaba ahi antes de llegar
+al primero: (1) `V7` se trataba como rotulo ESTATICO cuando es DINAMICO, igual que `J7`/`N7`/`R7`;
+(2) `W7` se esperaba como "Monto Proyectado", cuando el texto real es "Monto a Proyectar" -- el
+MISMO texto exacto que `K7`/`O7`/`S7`. Causa raiz: se midio contra `celdas.tsv`, un snapshot
+commiteado que quedo viejo -- especialmente traicionero para un rotulo que otro modulo hace
+dinamico.
+
+El fix: `V7` pasa a escribirse con `_formulaTituloMontoPm()`, reusada VERBATIM de
+`DEVTOOL_PresupuestoModo.js` (nunca una segunda implementacion del mismo titulo) -- el plan pasa
+de 64 a 65 celdas. `W7` pasa a compararse contra la MISMA constante que ya usa el chequeo de
+`K7`/`O7`/`S7`, en vez de una segunda constante con un valor "parecido". Confirmado antes de
+aplicar: el modulo sigue sin escribir `K`/`O`/`S` en ningun punto -- Franco ya esta cargando esa
+columna a mano (`K8` = $1.000.000,00 en la planilla real).
+
+`devtools/probar_presupuesto_resumen.js`: nueva mutacion reproduce el bug real contra el
+preflight (mismo mensaje que reporto Franco); nueva seccion 3b prueba con un mock completo de
+hoja, y un caso sano de cero fallas, que el invariante atrapa a `V7` si dejara de seguir al modo.
+Los doce bancos en verde.
+
+---
+
+### Nota de concurrencia (v0.46.1, dos lineas de trabajo con el mismo numero)
+
+Las dos entradas de arriba se escribieron en paralelo, sin visibilidad mutua, desde el mismo
+commit base (`e952fc2`). "Tres botones cargados salen del menu Dev"
+(`fix/abm-desplegable-entidad`, 2026-08-24 20:46) es la que sigue viva en la planilla hoy, dentro
+de la cadena ininterrumpida que llega hasta v0.49.0. "V7 es dinamico, W7 dice Monto a Proyectar"
+(`fix/tablero-pendientes`, 2026-08-24 21:16) nunca se desplego bajo el numero v0.46.1 -- se deja
+tal cual quedo escrita en su propio commit, como registro historico honesto, y su trabajo continua
+en v0.50.0 una vez mergeadas las dos ramas.
+
+---
+
 ## v0.46.0 - Cuentas comodin: el bloque oculto del Plan de Cuentas (2026-08-24)
 
 Franco, textual: *"En realidad es una cuenta comodin, no es ingreso fijo o variable. Agregala
@@ -376,6 +548,61 @@ promete. Cuatro mutaciones, cada una por un modo de falla real de este repo: cel
 escritura como la mitad muda de una combinada (revierte y **no** oculta las columnas, para que el
 problema quede a la vista); formula escrita que no derrama; bloque modelo sin titulo; columna
 destino ocupada. Los doce bancos en verde.
+
+---
+
+## v0.46.0 - Presupuesto: categorias (V/W), mes de referencia y el bug de Tabla 2 (2026-08-24)
+
+Segunda etapa de la hoja "Presupuesto", sobre el selector de Modo ya desplegado (`v0.45.1`).
+Nuevo `DEVTOOL_PresupuestoResumen.js`: agrupado por categoria, rotulo del mes de referencia en la
+Tabla 1 y correccion del bug de copiar-pegar en la Tabla 2.
+
+**Descubierto antes de construir, medido contra `celdas.tsv` (nunca asumido):** el encargo
+describia "la columna V" como si fuera una unica columna que cambia de fuente segun el modo de
+`E7`. La geometria real tiene DOS columnas de agrupado, ya tituladas y con `SUM()` esperando
+contenido -- `V7`="Monto Historico" / `V8`=`SUM(V9:V)` agrupa `J`/`N`/`R` (la columna "modo", que
+ya resuelve Proyeccion/Historico desde `v0.45.0`); `W7`="Monto Proyectado" / `W8`=`SUM(W9:W)`
+agrupa `K`/`O`/`S` ("Monto a Proyectar", fijo, sin modo). Las dos tablas resumen ya apuntaban cada
+una a su propio total -- Tabla 1 (`E14`=`V8`), Tabla 2 (`E21`=`W8`) -- ninguna mezcla fuentes. El
+invariante que proponia el encargo (`V8 = K8-O8-S8` en modo Proyeccion) es el de `W8`, no el de
+`V8`. El par correcto -- y mas fuerte, porque vale en los DOS modos -- es `V8=J8-N8-R8` y
+`W8=K8-O8-S8`.
+
+**Signo verificado contra la formula viva del Tablero** antes de construir (pedido explicito del
+encargo): la primera linea del `LET` de `Tablero!AA10` (bloque "Categorias.") es
+`monto_neto=IF(Egreso;-monto;monto)` -- Ingreso suma, Egreso resta. Esta hoja no tiene un "Tipo"
+por fila como el ledger: el bloque de origen (Ingresos vs. Gastos Fijos/Variables) reemplaza esa
+senal.
+
+`C9` (titulo de la Tabla 1) agrega el mes de referencia entre parentesis, derivado en vivo de
+`E7`/`J2`/`J3` -- reusa `_fragmentoMesRefPm`/`_condModoHistoricoPm` de `DEVTOOL_PresupuestoModo.js`
+verbatim. `F19:F21` (Tabla 2) dividian por `$E$11` (Ingresos de la Tabla 1) en vez de `$E$18` (el
+de su propia tabla) -- confirmado por Franco como error de copiar-pegar, corregido por cirugia de
+token.
+
+Invariante en JS puro (`_recalcularAgrupadoPc`), independiente de las formulas de Sheets: una
+cuenta sin categoria en el Plan de Cuentas se reporta como aviso (no aborta) solo si el desvio de
+total que produce queda totalmente explicado por esa cuenta -- si no cierra, es falla real y
+revierte. Cableado en `MENU_CONFIG`: "Presupuesto: categorias y resumen".
+`devtools/probar_presupuesto_resumen.js` (nuevo, banco 12). Se retiran los dos diagnosticos
+temporales que ya cumplieron (`DEVTOOL_DIAG_Desplegables.js`,
+`DEVTOOL_DIAG_PresupuestoTitulos.js`) y sus entradas de menu. Los doce bancos en verde.
+
+---
+
+### Nota de concurrencia (v0.46.0, dos lineas de trabajo con el mismo numero)
+
+Las dos entradas de arriba se escribieron en paralelo, sin visibilidad mutua, desde el mismo
+commit base (`e952fc2`). "Cuentas comodin: el bloque oculto del Plan de Cuentas"
+(`fix/abm-desplegable-entidad`, 2026-08-24 20:44) es la que sigue viva en la planilla hoy, dentro
+de la cadena ininterrumpida que llega hasta v0.49.0. "Presupuesto: categorias (V/W), mes de
+referencia y el bug de Tabla 2" (`fix/tablero-pendientes`, 2026-08-24 20:56) si se desplego bajo
+v0.46.0 -- `targets.yaml` lo declaro a las 21:01 del mismo dia -- pero quedo pisado horas despues
+por el deploy de v0.48.0 (`fix/abm-desplegable-entidad`, 2026-08-25 14:32), cuyo `src/` local no
+incluia `DEVTOOL_PresupuestoResumen.js` ni `DEVTOOL_PresupuestoGuardar.js`. Se deja tal cual quedo
+escrita en su propio commit, como registro historico honesto de que si estuvo en produccion; su
+trabajo continua en v0.50.0 una vez mergeadas las dos ramas, que es tambien cuando vuelve a
+desplegarse.
 
 ---
 
