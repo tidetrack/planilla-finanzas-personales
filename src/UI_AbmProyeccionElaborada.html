@@ -253,6 +253,26 @@
         return arr.map(fmtMonto).join(' + ');
     }
 
+    // Orden puramente de presentacion (mismo orden que MONEDAS_DISPONIBLES, 00_Config.js) para
+    // que el total de la confirmacion de Baja se lea siempre en el mismo orden que el resto del
+    // modal. No es una fuente de verdad nueva: SHEETS/RANGES/MONEDAS_DISPONIBLES siguen siendo
+    // el SSOT del lado del servidor: esto solo ordena lo que el servidor ya mando.
+    var MONEDAS_ORDEN_VISTA = ['ARS', 'USD', 'AUD', 'EUR'];
+
+    /**
+     * Suma cruda de `filas` por moneda (nunca junta monedas distintas en un mismo numero) --
+     * pedido explicito: la confirmacion de Baja tiene que decir CUANTO se borra, no solo
+     * cuantas filas ("23 filas de Septiembre" no dice lo mismo que "23 filas por $2.847.000").
+     */
+    function totalMontoFilas(filas) {
+        var acum = {};
+        (filas || []).forEach(function (f) { acum[f.moneda] = (acum[f.moneda] || 0) + f.monto; });
+        var monedas = Object.keys(acum).sort(function (a, b) {
+            return MONEDAS_ORDEN_VISTA.indexOf(a) - MONEDAS_ORDEN_VISTA.indexOf(b);
+        });
+        return monedas.map(function (m) { return { moneda: m, monto: acum[m] }; });
+    }
+
     function fmtSello(sello) {
         var m = /^(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(sello || '');
         if (!m) return sello || '';
@@ -386,6 +406,10 @@
             ? '<p class="text-muted" style="font-size:12px; margin:8px 0 0;">Toca un monto para corregirlo.</p>'
             : '<p class="text-muted" style="font-size:12px; margin:8px 0 0;">Presupuesto base: se recalcula corriendo de nuevo ese modulo, no se edita a mano.</p>';
 
+        // Total real que se borraria si se confirma -- por moneda, nunca sumado entre monedas
+        // distintas (ver totalMontoFilas). "23 filas" solo no le dice a Franco cuanta plata es.
+        var totalTxt = fmtLista(totalMontoFilas(det.filas));
+
         return '' +
             '<table class="tabla-proy"><thead><tr><th>Cuenta</th><th>Categoria</th><th style="text-align:right;">Monto</th></tr></thead>' +
             '<tbody>' + filasHtml + '</tbody></table>' +
@@ -394,7 +418,8 @@
                 '<button type="button" class="btn btn-danger btn-mini btn-abrir-confirmacion" onclick="pedirBorrado(this)">Borrar este periodo</button>' +
                 '<div class="confirmar-borrado hidden">' +
                     '<p>Se van a borrar <b>' + det.filas.length + '</b> fila(s) de <b>' + escapeHtml(det.mesLabel) + '</b> (' +
-                    (origen === 'guardado' ? 'guardado a mano' : 'presupuesto base') + '). ' +
+                    (origen === 'guardado' ? 'guardado a mano' : 'presupuesto base') + ')' +
+                    ', por un total de <b>' + totalTxt + '</b>. ' +
                     'Se puede deshacer justo despues, pero no una vez que hagas otro cambio.</p>' +
                     '<button type="button" class="btn btn-secondary btn-mini" onclick="cancelarBorrado(this)">Cancelar</button>' +
                     '<button type="button" class="btn btn-danger btn-mini" onclick="confirmarBorrado(this)">Confirmar borrado</button>' +
