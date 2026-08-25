@@ -6,6 +6,113 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-25 - Presupuesto: sembrar "Monto a Proyectar" desde J/N/R (v0.51.0)
+
+### Que pidio Franco
+
+Textual: "me agregas una funcion dev que te arme los valores de 'Monto a proyectar' que sean
+iguales a la 'Proyeccion' del mes seleccionado?". El disparador concreto: al correr
+`estadoGuardarProyeccion` (etapa 3 de "Presupuesto", v0.47.0) la planilla reporto "53 cuenta(s)
+con Monto a Proyectar vacio". Tipear 53 numeros a mano, uno por uno, es exactamente la friccion
+que este modulo nuevo saca del medio: en vez de eso, siembra `K`/`O`/`S` con lo que `J`/`N`/`R`
+YA calcula (`DEVTOOL_PresupuestoModo.js`, v0.45.1), y Franco corrige a mano solo donde el numero
+automatico no le sirve.
+
+### Verificacion previa de la correspondencia (el encargo la pedia explicita)
+
+Antes de escribir una linea de codigo se releyo `docs/permanente/DISENO_HOJA_PRESUPUESTO.md`
+("Que hay en cada columna") y `DEVTOOL_PresupuestoResumen.js`. La correspondencia que el encargo
+suponia -- `J -> K` (Ingresos), `N -> O` (Gastos Fijos), `R -> S` (Gastos Variables) -- **resulto
+CORRECTA**, y ademas ya existe como dato vivo en el codigo: `PC_BLOQUES[k].colModo ->
+PC_BLOQUES[k].colProyectar` (`DEVTOOL_PresupuestoResumen.js`). El modulo nuevo LEE esa
+correspondencia en vez de retipearla -- una tercera copia de la misma geometria es la forma
+barata de que un dia describa algo distinto. "Categorias" (`U`/`V`/`W`) queda afuera a proposito:
+`V`/`W` son un AGRUPADO por categoria, no una cuenta individual con su propio "Monto a
+Proyectar" -- no hay equivalente 1:1 y no fue lo que Franco pidio.
+
+### El selector de Modo manda, y se dice en voz alta
+
+`J`/`N`/`R` son dinamicas (`DEVTOOL_PresupuestoModo.js`): en modo "Proyeccion" muestran el mes de
+referencia, en modo "Historico" el promedio ponderado exponencial de 6 meses. Franco escribio
+"iguales a la Proyeccion", pero si el selector de Modo (`E7`) esta en "Historico" al momento de
+sembrar, lo que se copia NO es una proyeccion -- es el historico ponderado. El modulo NUNCA
+bloquea por eso (es una eleccion legitima de Franco), pero tanto `estadoPresupuestoSembrar()`
+como `aplicarPresupuestoSembrar()` lo anuncian EXPLICITO y en mayuscula cuando aplica, para que
+nunca se copie una cosa por otra sin que quede dicho en pantalla.
+
+### La decision sobre pisar celdas ya cargadas
+
+El encargo pedia explicitamente decidir el default y justificarlo. Se opto por: sembrar SOLO las
+celdas `K`/`O`/`S` que estan REALMENTE vacias; una celda con CUALQUIER contenido -- incluido un
+cero tipeado a mano -- se cuenta como "llena" y no se toca, ni siquiera si el valor sembrado
+seria identico. Justificacion: la hoja existe, segun su propio contrato, "para que Franco
+complete a mano... con criterio en vez de a ojo" -- pisar una decision ya tomada con un numero
+generado automaticamente destruye exactamente el criterio que la hoja fue disenada para
+capturar. Un modo "pisar tambien las llenas" queda deliberadamente FUERA de este encargo: no
+hay pedido explicito de Franco para esa segunda accion, y agregarla sin que se pida es
+superficie extra que despues alguien dispara sin querer.
+
+### La trampa del spill
+
+Advertencia explicita del encargo, y cicatriz REAL de este repo: un `SUMIF(rango;"<>")` ya conto
+`""` de una celda spill como "llena" y dio un total 2,8x inflado. Una celda `J`/`N`/`R` puede
+devolver el string `""` (la rama vacia de `IF($I9=""; ""; <numero>)`) sin ser un numero real. El
+criterio para distinguirlos -- `crudo !== '' && crudo !== null && isFinite(Number(crudo))` -- se
+reusa VERBATIM de `_leerFilasPresupuestoPg` (`DEVTOOL_PresupuestoGuardar.js`), que ya resuelve
+exactamente este problema para leer `K`/`O`/`S`. Una fila sin nombre de cuenta se saltea sin
+mas (la formula lo garantiza vacio); una fila CON cuenta pero fuente invalida (no deberia pasar
+nunca salvo un `#ERROR!` real) es una anomalia que ABORTA la corrida entera -- sembrar 89 cuentas
+bien y una mal en silencio es peor que no sembrar ninguna.
+
+### Escribe valores, nunca formulas
+
+Cada celda sembrada usa `setValue(numero)`, jamas `setFormula(...)`: `K`/`O`/`S` es la columna
+que Franco edita a mano, y una formula ahi se rompe apenas la toca.
+
+### Revertir, mas protector que sus hermanos
+
+Decision tomada dentro del encargo: a diferencia de `DEVTOOL_PresupuestoModo.js`/`Resumen.js`
+(que siempre reponen el estado exacto capturado al aplicar, sin mirar si algo cambio despues --
+correcto ahi porque esas columnas son 100% del sistema), `revertirPresupuestoSembrar()` releE el
+valor VIVO de cada celda que sembro y la vacia SOLO si todavia es exactamente el numero que
+escribio. Si Franco la corrigio despues de sembrarla -- el comportamiento que la hoja busca
+fomentar -- revertir la deja como esta y lo dice en el reporte. Como el modulo nunca pisa una
+celda con contenido, el estado previo de toda celda que pudo escribir es siempre vacio: no hace
+falta un respaldo de formulas en hoja oculta (la tecnica que si necesitan Modo y Resumen);
+alcanza con recordar celda + numero escrito en Document Properties.
+
+### La leccion de v0.50.1, aplicada de entrada
+
+Ese mismo dia, horas antes, un `const` de nivel superior que leia un simbolo de otro archivo
+tumbo el proyecto entero (`DEVTOOL_PresupuestoGuardar.js` leyendo `PM_UMBRAL_IDENTIDAD` de
+`DEVTOOL_PresupuestoModo.js` al cargar, ver la entrada v0.50.1 mas abajo). Este modulo nuevo
+("...Sembrar", carga alfabeticamente DESPUES de "...Modo" y "...Resumen", asi que un `const` de
+nivel superior funcionaria hoy) referencia `PM_*`/`PC_*` EXCLUSIVAMENTE dentro de cuerpos de
+funcion -- nunca en un `const` de nivel superior -- para no ser la proxima mecha larga. Se
+corrio `node devtools/probar_carga_apps_script.js` (el banco que evalua el proyecto entero como
+lo hace Apps Script) antes de dar la tarea por cerrada.
+
+### Verificacion
+
+`devtools/probar_presupuesto_sembrar.js` (nuevo), con pruebas de MUTACION -- cada una se corrio
+a mano rompiendo el modulo real y confirmando que el banco la mata antes de dejarlo en verde:
+no pisar una celda llena (incluido el caso limite "0"), la trampa del spill abortando la corrida
+entera, el preflight rechazando una formula viva en la zona de valores o un rotulo corrido, la
+reversion protectora ante una edicion manual posterior, la reversion de TODO el lote (no solo la
+celda rota) cuando la verificacion post-escritura falla en una sola celda, e idempotencia
+(aplicar dos veces no vuelve a escribir lo ya sembrado). Los 17 bancos preexistentes
+(`devtools/probar_*.js` + `verificar_modales.py`) mas este nuevo, mas
+`probar_carga_apps_script.js`, quedaron en verde. `node --check` sobre todo `src/` y
+`devtools/`, tambien.
+
+### Menu
+
+`MENU_CONFIG.DEV_ITEMS` (`00_Config.js`): submenu nuevo "Presupuesto: sembrar Monto a
+Proyectar" en Tidetrack Dev, mismo trio "1. Ver estado (no escribe nada) / 2. Aplicar /
+3. Revertir (usa el respaldo)" que usan sus hermanos.
+
+---
+
 ## 2026-08-25 - Presupuesto: Guardar Proyeccion, con cotizaciones congeladas (v0.47.0)
 
 ### Que pidio Franco

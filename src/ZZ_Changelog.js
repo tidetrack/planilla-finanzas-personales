@@ -3,6 +3,60 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.51.0 - Presupuesto: sembrar "Monto a Proyectar" desde J/N/R.
+ * + PEDIDO TEXTUAL DE FRANCO: "me agregas una funcion dev que te arme los valores de 'Monto a
+ *   proyectar' que sean iguales a la 'Proyeccion' del mes seleccionado?". El disparador
+ *   concreto: estadoGuardarProyeccion() (DEVTOOL_PresupuestoGuardar.js) reportando "53
+ *   cuenta(s) con Monto a Proyectar vacio" -- tipear 53 numeros a mano, uno por uno, es la
+ *   friccion que este modulo nuevo saca del medio.
+ * + DEVTOOL_PresupuestoSembrar.js (nuevo). Siembra K/O/S ("Monto a Proyectar") con lo que J/N/R
+ *   YA calculan (DEVTOOL_PresupuestoModo.js) para el modo vivo, SOLO en las cuentas donde K/O/S
+ *   esta REALMENTE vacia. La correspondencia (J->K, N->O, R->S) se verifico ANTES de escribir
+ *   una linea de codigo contra docs/permanente/DISENO_HOJA_PRESUPUESTO.md, y el modulo la LEE
+ *   de PC_BLOQUES (DEVTOOL_PresupuestoResumen.js) en vez de retipearla.
+ * + EL SELECTOR DE MODO, EN VOZ ALTA. Franco escribio "iguales a la Proyeccion", pero J/N/R son
+ *   dinamicas: si el selector de Modo esta en "Historico" al momento de sembrar, lo que se
+ *   copia NO es la Proyeccion sino el promedio ponderado exponencial de 6 meses. El modulo NO
+ *   bloquea por eso (es una eleccion legitima), pero tanto "1. Ver estado" como "2. Aplicar" lo
+ *   anuncian EXPLICITO en mayuscula, para que nunca se copie una cosa por otra en silencio.
+ * + NO PISA TRABAJO DE FRANCO (decision del encargo, tomada dentro de el): el default -- y la
+ *   UNICA conducta de "2. Aplicar" -- es sembrar solo las celdas K/O/S vacias. Una celda con
+ *   CUALQUIER contenido (incluido un cero tipeado a mano) se cuenta como llena y no se toca. Un
+ *   modo "pisar tambien las llenas" queda deliberadamente fuera de este encargo: no hay pedido
+ *   explicito para esa segunda accion.
+ * + LA TRAMPA DEL SPILL (advertencia explicita del encargo, cicatriz real de este repo: un
+ *   SUMIF(rango;"<>") ya conto un spill "" como celda llena y dio un total 2,8x inflado). Una
+ *   fila con cuenta presente pero fuente J/N/R invalida (no deberia pasar nunca salvo un
+ *   #ERROR! de calculo) ABORTA la corrida entera -- reusa VERBATIM el criterio de
+ *   `_leerFilasPresupuestoPg` (DEVTOOL_PresupuestoGuardar.js) para distinguir un numero real de
+ *   un "" de spill. Una fila SIN cuenta se saltea sin marcarla de anomalia.
+ * + ESCRIBE VALORES, NUNCA FORMULAS: cada celda sembrada usa setValue(numero); K/O/S es la
+ *   columna que Franco edita a mano y una formula ahi se rompe apenas la toca.
+ * + REVERTIR MAS PROTECTOR QUE SUS HERMANOS (decision propia del encargo): a diferencia de
+ *   DEVTOOL_PresupuestoModo.js/Resumen.js (que siempre reponen el estado exacto capturado al
+ *   aplicar), revertirPresupuestoSembrar() solo vacia una celda si TODAVIA tiene exactamente el
+ *   numero que la corrida escribio. Si Franco la corrigio despues de sembrarla -- el
+ *   comportamiento que la hoja busca fomentar --, revertir la deja como esta y lo dice en el
+ *   reporte. K/O/S es la unica columna de la hoja que es dato humano por definicion; sus
+ *   hermanos no necesitan esta proteccion porque J/N/R y V/W son 100% del sistema.
+ * + SIN RESPALDO DE FORMULAS EN HOJA OCULTA (a diferencia de Modo/Resumen): como el modulo
+ *   nunca pisa una celda con contenido, el estado previo de toda celda que pudo escribir es
+ *   SIEMPRE vacio -- alcanza con recordar celda + numero escrito en Document Properties.
+ * + LA LECCION DE v0.50.1, APLICADA DE ENTRADA: ninguna constante de este archivo lee PM_* o
+ *   PC_* (DEVTOOL_PresupuestoModo.js, DEVTOOL_PresupuestoResumen.js) en un const de nivel superior;
+ *   toda referencia va DENTRO de una funcion, se resuelve al invocar. Este archivo carga
+ *   alfabeticamente despues de los dos (asi que un const de nivel superior HOY funcionaria),
+ *   pero es la misma bomba con la mecha mas larga: alcanza con que alguien renombre un archivo
+ *   para que la letra deje de alcanzar.
+ * + devtools/probar_presupuesto_sembrar.js: banco con pruebas de MUTACION -- no pisar llenas
+ *   (incluido el caso limite "0"), la trampa del spill abortando la corrida entera, el
+ *   preflight rechazando una formula viva en la zona de valores, la reversion protectora ante
+ *   una edicion posterior, y la reversion de TODO el lote (no solo la celda rota) cuando la
+ *   verificacion post-escritura falla en una sola celda. Cada mutacion se probo a mano
+ *   rompiendo el modulo real y confirmando que el banco la mata, antes de dejarlo en verde.
+ * + MENU_CONFIG (00_Config.js): submenu nuevo "Presupuesto: sembrar Monto a Proyectar" en
+ *   Tidetrack Dev, mismo trio "1. Ver estado / 2. Aplicar / 3. Revertir" que sus hermanos.
+ *
  * [2026-08-25] v0.50.1 - El proyecto no cargaba: un const leia otro archivo.
  * ! HOTFIX. v0.50.0 dejo la planilla sin funciones personalizadas: la hoja "Inicio" mostraba
  *   #ERROR! en Saldo Actual, Capital Acumulado y la distribucion de fondos. El error real,

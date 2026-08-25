@@ -52,7 +52,12 @@ viva el 2026-08-24, con el modo en "Historico":
 
 - `I`/`M`/`Q`/`U`: espejo VIVO del Plan de Cuentas. Tienen que aparecer TODAS las cuentas.
 - `J`/`N`/`R`: el monto que cambia con el modo (mes de referencia o ponderado).
-- `K`/`O`/`S`: **lo que Franco escribe a mano**, el monto a proyectar. Ningun modulo las escribe.
+- `K`/`O`/`S`: **lo que Franco escribe a mano**, el monto a proyectar. Ningun modulo las escribe
+  con FORMULA (eso las rompe apenas se tocan). Desde v0.51.0, `DEVTOOL_PresupuestoSembrar.js`
+  (Tidetrack Dev > "Presupuesto: sembrar Monto a Proyectar") puede sembrarlas con VALORES,
+  copiados de `J`/`N`/`R` para el modo vivo -- pero solo en las celdas que estan REALMENTE
+  vacias; nunca pisa una que ya tiene contenido. Sigue siendo, en espiritu, la columna que
+  Franco completa: este modulo solo le ahorra tipear lo que el sistema ya sabe.
 - `V`/`W`: **son DOS agrupados por categoria, no uno.** `V` agrupa la columna del modo
   (`J`/`N`/`R`) y `W` agrupa la de "Monto a Proyectar" (`K`/`O`/`S`). Cada tabla resumen apunta a
   su propio total: la Tabla 1 a `V8`, la Tabla 2 a `W8`.

@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 50,
- patch: 1,
+ minor: 51,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.50.1 - El proyecto no cargaba: un const leia otro archivo',
+ releaseName: 'v0.51.0 - Presupuesto: sembrar Monto a Proyectar desde J/N/R',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,27 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.51.0 (2026-08-25) - Presupuesto: sembrar Monto a Proyectar desde J/N/R
++ DEVTOOL_PresupuestoSembrar.js (nuevo): siembra K/O/S ("Monto a Proyectar") con lo que J/N/R
+  ya muestran para el modo vivo (Proyeccion o Historico), solo en las cuentas donde esa celda
+  esta REALMENTE vacia -- nunca pisa un numero que Franco ya cargo a mano. Pedido textual:
+  "que te arme los valores de 'Monto a proyectar' que sean iguales a la 'Proyeccion' del mes
+  seleccionado", disparado por estadoGuardarProyeccion reportando 53 cuentas vacias.
++ El anuncio de modo es explicito: si el selector esta en "Historico" al momento de sembrar, el
+  modulo avisa en mayuscula que lo copiado NO es la Proyeccion sino el promedio ponderado.
++ Trampa del spill (J/N/R puede mostrar "" sin ser un numero): se reusa el mismo criterio que
+  ya usa DEVTOOL_PresupuestoGuardar.js para leer K/O/S, y una fuente invalida con cuenta
+  presente ABORTA la corrida entera en vez de sembrar bien 89 cuentas y mal una en silencio.
++ revertirPresupuestoSembrar es mas protector que sus hermanos: solo vacia una celda si TODAVIA
+  tiene exactamente el numero que la corrida escribio -- si Franco la corrigio despues de
+  sembrarla, revertir la deja como esta.
++ devtools/probar_presupuesto_sembrar.js: banco con pruebas de mutacion (no pisar llenas
+  incluido el caso limite "0", la trampa del spill, revertir protector, verificacion post
+  escritura con reversion de todo el lote).
++ Toda referencia a PM_*/PC_* (DEVTOOL_PresupuestoModo.js, DEVTOOL_PresupuestoResumen.js) se
+  lee DENTRO de una funcion, nunca en un const de nivel superior -- la leccion de v0.50.1,
+  aplicada de entrada en vez de esperar al proximo incidente.
+
 v0.50.0 (2026-08-25) - Presupuesto: Guardar Proyeccion, con cotizaciones congeladas
 + Tercera y ultima etapa de la hoja "Presupuesto" (sobre el Modo v0.45.1 y el resumen v0.46.1,
   ambos ya desplegados): DEVTOOL_PresupuestoGuardar.js (nuevo) toma "Monto a Proyectar"

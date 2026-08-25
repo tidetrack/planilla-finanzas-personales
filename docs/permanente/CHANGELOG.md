@@ -9,6 +9,42 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.51.0 - Presupuesto: sembrar "Monto a Proyectar" desde J/N/R (2026-08-25)
+
+Pedido textual de Franco: "me agregas una funcion dev que te arme los valores de 'Monto a
+proyectar' que sean iguales a la 'Proyeccion' del mes seleccionado?". El disparador fue
+`estadoGuardarProyeccion()` reportando "53 cuenta(s) con Monto a Proyectar vacio" -- tipear 53
+numeros a mano es la friccion que este modulo saca del medio.
+
+`DEVTOOL_PresupuestoSembrar.js` (nuevo) siembra `K`/`O`/`S` ("Monto a Proyectar") con lo que
+`J`/`N`/`R` ya muestran para el modo vivo, solo en las cuentas donde esa celda esta REALMENTE
+vacia. La correspondencia `J->K`, `N->O`, `R->S` se verifico contra
+`docs/permanente/DISENO_HOJA_PRESUPUESTO.md` antes de escribir una linea, y el modulo la lee de
+`PC_BLOQUES` (`DEVTOOL_PresupuestoResumen.js`) en vez de retipearla.
+
+El selector de Modo manda y se dice en voz alta: Franco escribio "iguales a la Proyeccion", pero
+si el Modo esta en "Historico" al sembrar, lo copiado NO es la Proyeccion sino el promedio
+ponderado exponencial. El modulo no bloquea por eso, pero lo anuncia explicito en mayuscula.
+
+Nunca pisa una celda con contenido -- incluido un cero tipeado a mano, que cuenta como dato real
+y no como "vacio". Escribe VALORES (nunca formulas): `K`/`O`/`S` es la unica columna de la hoja
+que Franco edita a mano, y una formula ahi se rompe apenas la toca.
+
+La trampa del spill (una celda `J`/`N`/`R` puede mostrar `""` sin ser un numero -- la misma
+cicatriz que ya infló un total 2,8x con `SUMIF(rango;"<>")`) se resuelve reusando el criterio de
+`DEVTOOL_PresupuestoGuardar.js`: una fuente invalida con cuenta presente aborta la corrida
+entera, en vez de sembrar 89 cuentas bien y una mal en silencio.
+
+`revertirPresupuestoSembrar()` es mas protector que sus hermanos: solo vacia una celda si
+TODAVIA tiene exactamente el numero que la corrida escribio. Si Franco la corrigio despues de
+sembrarla, revertir la deja como esta -- `K`/`O`/`S` es dato humano por definicion, a diferencia
+de `J`/`N`/`R` y `V`/`W`, que son 100% del sistema.
+
+Banco nuevo con pruebas de mutacion: `devtools/probar_presupuesto_sembrar.js`. Menu nuevo en
+Tidetrack Dev: "Presupuesto: sembrar Monto a Proyectar" (estado / aplicar / revertir).
+
+---
+
 ## v0.50.1 - El proyecto no cargaba: un const leia otro archivo (2026-08-25)
 
 HOTFIX. v0.50.0 dejo la planilla sin funciones personalizadas: "Inicio" mostraba `#ERROR!` en
