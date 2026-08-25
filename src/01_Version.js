@@ -36,6 +36,11 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.57.1 (2026-08-25) - El modal moria por 90 lineas de comentario antes del DOCTYPE
+! UI_AbmProyeccionElaborada.html dejaba el DOCTYPE en la linea 93. El navegador entra en quirks mode y el puente que Apps Script inyecta para google.script.run no queda montado: el modal abre perfecto y CUALQUIER llamada al servidor muere con un PERMISSION_DENIED que no habla ni de permisos ni de almacenamiento.
+! Se descartaron antes, midiendo: timing (3 reintentos, 12 s), gesto del usuario (el boton Reintentar falla igual), tamanio del payload (un ping de dos constantes falla igual) y la funcion (invocada directo devuelve sus 7 grupos).
++ La cabecera pasa adentro del head. Guard nuevo devtools/probar_doctype_modales.js, probado por mutacion.
+
 v0.57.0 (2026-08-25) - Proyecciones Elaboradas: ping antes del listado, para aislar canal de respuesta
 + Medido en produccion despues de v0.56.0: los 3 reintentos con espera creciente de listarPeriodosProyeccion() FALLARON TODOS (10764 ms) -- refuta que fuera una demora fija de negociacion del canal, pero deja abiertas dos hipotesis sin separar: el canal de este modal esta roto para cualquier llamada, o el canal esta bien y el problema es especifico de esa funcion/su respuesta.
 + pingProyeccionAbm() (DEVTOOL_ProyeccionAbm.js, nueva): no lee nada, no toca SpreadsheetApp ni PropertiesService, devuelve siempre el mismo objeto minimo (string + numero). El modal la llama PRIMERO, con el mismo backoff de 3 intentos. Si se agota, el canal esta roto para cualquier llamada y no se intenta el listado (ahorra ~10s de espera al pedo); si anda, recien ahi se dispara el ciclo de listarPeriodosProyeccion(), sin tocar su logica de reintentos.
