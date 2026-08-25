@@ -3,6 +3,82 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.47.0 - Presupuesto: Guardar Proyeccion, con cotizaciones congeladas.
+ * + Tercera y ultima etapa de la hoja "Presupuesto" (sobre el Modo v0.45.1 y el resumen v0.46.1,
+ *   ambos ya desplegados): DEVTOOL_PresupuestoGuardar.js (nuevo) toma "Monto a Proyectar"
+ *   (K/O/S) del periodo de J2/J3 y lo appendea a la BD "Proyeccion". Cierra el circuito con el
+ *   Tablero -- hasta ahora no tenia contra que medir una proyeccion DELIBERADA de Franco, solo
+ *   el promedio historico automatico de DEVTOOL_PresupuestoBase.js.
+ *
+ * DECISION 1 -- las cotizaciones congeladas (el punto del encargo):
+ * + Las cuatro tasas (TC ARS/USD/AUD/EUR) quedan como VALOR NUMERICO en cada fila nueva, nunca
+ *   formula. Se leen llamando a TIDETRACK_USD()/AUD()/EUR() DIRECTO como funciones de Apps
+ *   Script (nunca como formula de celda -- asi no hay "Loading..." que esperar), UNA sola vez
+ *   por corrida (mismo patron que `_tasasPb`, DEVTOOL_PresupuestoBase.js).
+ * + Regla Estricta 9: si cualquiera de las tres llamadas falla, la excepcion de
+ *   `fetchArsRate`/`fetchInternationalRates` (15_ExchangeRateApi.js) sube SIN CAPTURAR y no se
+ *   escribe absolutamente nada -- ni una fila a medias, ni un TC en blanco.
+ *
+ * DECISION 2 -- la fecha de cada fila:
+ * + El PRIMER DIA del mes proyectado. Verificado, no asumido, contra los DOS consumidores reales
+ *   de "Proyeccion" (`_formulaPresupuestoIp`, DEVTOOL_InicioPresupuesto.js; `_bloqueComunTfp`,
+ *   DEVTOOL_TableroFaltanteProyectado.js): los dos filtran por rango de mes completo
+ *   [DATE(anio;mes;1), EOMONTH], nunca por igualdad exacta. Coincide ademas con la convencion que
+ *   ya usa DEVTOOL_PresupuestoBase.js: "Proyeccion" no queda con dos convenciones de fecha.
+ *
+ * DECISION 3 -- el marcado, pensado para el ABM que Franco pidio como encargo posterior:
+ * + La Nota lleva "Presupuesto guardado <clave-de-periodo> <sello>" (ej. "Presupuesto guardado
+ *   2026-09 2026-08-25_143012"). La clave de periodo es lo que permite encontrar "todas las
+ *   filas de la proyeccion guardada de septiembre" con un solo prefijo -- la misma busqueda que
+ *   la idempotencia de este modulo y el ABM futuro van a compartir.
+ * + Sello a resolucion de SEGUNDOS, no de minuto (a diferencia de sellos hermanos): es la unica
+ *   pieza que distingue dos corridas de "aplicar" para el mismo periodo, y `revertirGuardarProyeccion`
+ *   solo puede deshacer lo que su propio sello identifica.
+ *
+ * DECISION 4 -- convivencia con el presupuesto base historico (DEVTOOL_PresupuestoBase.js):
+ * + La proyeccion hecha a mano GANA. Al guardar el periodo X se retiran, para ESE mes, las filas
+ *   PB_MARCA del base y las filas propias de un guardado manual anterior del MISMO periodo
+ *   (idempotencia: guardar dos veces no duplica, reemplaza). Nunca se toca una fila de otro
+ *   periodo ni una sin marca. `estadoGuardarProyeccion()` dice EXACTO cuantas filas de cada
+ *   origen se retirarian, antes de tocar nada.
+ *
+ * + EL INVARIANTE, mas fuerte de lo pedido: se verifica CADA BLOQUE por separado (suma de filas
+ *   de Ingresos == K8, Fijos == O8, Variables == S8) y recien despues el neto (== K8-O8-S8) -- un
+ *   bloque de mas compensando uno de menos no se cuela. Ademas, ANTES de escribir (parte del
+ *   preflight): se confirma que W8 (el agrupado de la etapa 2) cierra contra K8-O8-S8; si el
+ *   cimiento aguas arriba esta roto, aborta sin generar ninguna fila.
+ * + Preflight PROPIO (`_preflightPresupuestoPg`), deliberadamente NO acoplado a `_preflightPm`
+ *   (DEVTOOL_PresupuestoModo.js): ese preflight tambien exige que el selector de Modo (E7) sea
+ *   valido, una condicion sobre columnas (J/N/R) que este modulo jamas lee. El preflight propio
+ *   verifica solo lo que hace falta: identidad de la hoja, selectores de periodo/moneda, titulo
+ *   y rotulo "Cuenta" de los tres bloques, que K7/O7/S7/W7 digan "Monto a Proyectar"
+ *   (PC_TITULO_PROYECTAR, la MISMA constante de DEVTOOL_PresupuestoResumen.js -- nunca una
+ *   segunda con un valor "parecido", la leccion de v0.46.0), sin celdas en error en la banda de
+ *   datos, y que K8/O8/S8/W8 tengan formula.
+ * + Solo menu Tidetrack Dev ("Presupuesto: guardar proyeccion": estado/aplicar/revertir), CERO
+ *   botones en la hoja "Presupuesto" -- pedido explicito de Franco: "por ahora... luego va a
+ *   tener su boton".
+ * + devtools/probar_presupuesto_guardar.js (nuevo, banco 13): siete secciones. La mas importante
+ *   (pedido explicito del encargo): DE PUNTA A PUNTA con un mock completo de
+ *   "Registros"/"Proyeccion", aplicar el MISMO periodo DOS VECES y confirmar que siguen siendo 3
+ *   filas propias, no 6; revertir repone EXACTO lo que la ultima corrida retiro (con SU TC
+ *   congelado, no el de una corrida posterior); un fallo de la API de cotizaciones a mitad de
+ *   camino no deja NADA escrito ni borrado (todo o nada). Mas: preflight con mutaciones dirigidas
+ *   (rotulo "parecido", celda en error, total sin formula -- mismo patron que el bug real de
+ *   v0.46.0), el invariante ANTES de escribir (W8 desalineado aborta el plan), y la anomalia
+ *   "monto sin cuenta" (aborta, no se pisa un dato que no se entiende).
+ * - Bug propio atrapado por el banco ANTES de llegar a produccion: la verificacion post-revert
+ *   comparaba por PREFIJO de periodo en vez de por Nota EXACTA (prefijo + sello) -- al revertir
+ *   una segunda corrida, las filas restauradas de la PRIMERA corrida (legitimamente con el mismo
+ *   prefijo de periodo) se confundian con "sobrantes de la corrida que se esta revirtiendo" y el
+ *   revert fallaba en falso. Corregido antes del commit: `revertirGuardarProyeccion()` borra y
+ *   verifica por Nota exacta, nunca por prefijo de periodo solo.
+ * - devtools/probar_tablero_faltante.js: se agrega 'DEVTOOL_PresupuestoGuardar.js': ['S8'] al
+ *   allowlist de falsos positivos del barrido anti-colision (lee Presupuesto!S8, sin relacion
+ *   con el S8 que TFP posee en Tablero -- mismo patron ya documentado para U8 en v0.46.0).
+ * ! Los trece bancos en verde. SIN DEPLOY POSTERIOR A ESTE COMMIT: la corrida final ("1. Ver
+ *   estado" antes de "2. Aplicar") la hace Franco.
+ *
  * [2026-08-24] v0.46.1 - Presupuesto: V7 es dinamico, W7 dice "Monto a Proyectar".
  * ! v0.46.0 SE DESPLEGO. Franco corrio "1. Ver estado" en la planilla real y el preflight freno
  *   SOLO -- correctamente -- antes de escribir una sola celda:

@@ -9,6 +9,47 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.47.0 - Presupuesto: Guardar Proyeccion, con cotizaciones congeladas (2026-08-25)
+
+Tercera y ultima etapa de la hoja "Presupuesto" (sobre el Modo v0.45.1 y el resumen v0.46.1, ya
+desplegados): `DEVTOOL_PresupuestoGuardar.js` toma "Monto a Proyectar" (`K`/`O`/`S`) del periodo
+de `J2`/`J3` y lo appendea a la BD `Proyeccion`. Cierra el circuito con el Tablero, que hasta
+ahora no tenia contra que medir una proyeccion deliberada de Franco, solo el promedio historico
+automatico de `DEVTOOL_PresupuestoBase.js`.
+
+Cuatro decisiones, todas justificadas contra el codigo real, no asumidas:
+
+1. **Cotizaciones congeladas**: las cuatro tasas (ARS/USD/AUD/EUR) quedan como VALOR NUMERICO en
+   cada fila, nunca formula -- se leen llamando a `TIDETRACK_USD()`/`AUD()`/`EUR()` DIRECTO como
+   funciones de Apps Script (nunca como formula de celda, asi se evita el "Loading..." de la
+   primera recalculacion). Regla Estricta 9: si la API falla, la excepcion sube sin capturar y no
+   se escribe nada.
+2. **Fecha**: el primer dia del mes proyectado -- verificado contra los dos consumidores reales de
+   `Proyeccion` (`_formulaPresupuestoIp`, `_bloqueComunTfp`), que filtran por rango de mes
+   completo, y coincide con la convencion que ya usa `DEVTOOL_PresupuestoBase.js`.
+3. **Marcado**: la Nota lleva `"Presupuesto guardado <clave-de-periodo> <sello>"` -- la clave de
+   periodo habilita idempotencia (guardar el mismo mes dos veces reemplaza, no duplica) y es la
+   busqueda que el ABM futuro va a reusar.
+4. **Convivencia con el presupuesto base**: la proyeccion manual gana. Al guardar un periodo se
+   retiran, solo para ese mes, las filas del base historico y de un guardado manual anterior del
+   mismo periodo; ninguna otra fila se toca.
+
+El invariante va mas alla de lo pedido: verifica cada bloque por separado (Ingresos == `K8`,
+Fijos == `O8`, Variables == `S8`) y recien despues el neto, y antes de escribir confirma que `W8`
+(la etapa 2) cierra contra `K8-O8-S8`. Solo menu Tidetrack Dev, cero botones nuevos en la hoja
+(pedido explicito de Franco).
+
+`devtools/probar_presupuesto_guardar.js` (banco 13) prueba de punta a punta con un mock completo
+de "Registros"/"Proyeccion": aplicar el mismo periodo dos veces no duplica, revertir repone
+exactamente lo que la ultima corrida retiro (con su propio TC, no el de una corrida posterior), y
+un fallo de la API de cotizaciones a mitad de camino no deja nada escrito ni borrado. El banco
+atrapo un bug propio antes del commit: la verificacion post-revert comparaba por prefijo de
+periodo en vez de por Nota exacta, confundiendo las filas restauradas de una corrida anterior con
+sobrantes de la corrida que se estaba revirtiendo. Los trece bancos en verde. Sin deploy posterior
+a este commit: la corrida final la hace Franco.
+
+---
+
 ## v0.46.1 - Presupuesto: V7 es dinamico, W7 dice "Monto a Proyectar" (2026-08-24)
 
 `v0.46.0` se desplego. Franco corrio `"1. Ver estado"` en la planilla real y el preflight freno
