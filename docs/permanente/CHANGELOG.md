@@ -59,6 +59,32 @@ git merge-base --is-ancestor <commit-desplegado> HEAD    # verdadero = el push s
 
 ---
 
+## v0.56.0 - El ABM reintenta el canal en vez de rendirse (2026-08-25)
+
+El ABM de Proyecciones Elaboradas abria bien pero el listado nunca cargaba: `PERMISSION_DENIED`
+al leer "Proyeccion" desde `google.script.run`. Los mismos datos se leen perfecto desde el menu,
+y el camino de lectura no toca `PropertiesService` -- pese a que el mensaje de Google habla de
+"almacenamiento". Esa contradiccion es lo que hizo sospechar del canal y no del permiso.
+
+Lo que acota la sospecha es una medicion de la otra linea de trabajo: el shell llama por el MISMO
+canal, desde el MISMO tipo de modal, sobre la misma planilla y la misma cuenta, y responde en
+537 ms sin fallar nunca. La unica diferencia es CUANDO sale la llamada -- la del shell despues de
+un gesto del usuario, la del ABM en el `DOMContentLoaded`.
+
+El arreglo es tambien el experimento: la carga sigue siendo automatica, reintenta tres veces
+(inmediato, 600 ms, 1800 ms -- el 600 elegido por encima de los 537 medidos), y si los tres fallan
+muestra el error CON un boton "Reintentar", que antes no existia: el usuario quedaba sin salida.
+El pie del modal informa en que intento entro y guarda las ultimas ocho aperturas, para poder
+distinguir una demora fija de negociacion (siempre el mismo intento) de una carrera (el intento
+varia).
+
+NO se movio el disparo a `window.onload`, aunque era la sospecha inicial: el modal carga una
+webfont por `<link>`, y `onload` espera esa descarga. Si el error hubiera desaparecido ahi, no
+habria forma barata de saber si se arreglo el canal o si simplemente se espero a que bajara una
+tipografia. Un arreglo que funciona con la explicacion equivocada no es un arreglo.
+
+---
+
 ## v0.55.1 - El merge dejo dos patch, y tres numeros de version distintos (2026-08-25)
 
 El merge entre las dos lineas de trabajo dejo en `01_Version.js` **dos lineas `patch:` seguidas**
