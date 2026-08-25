@@ -641,11 +641,13 @@ const MENU_CONFIG = {
         },
         {
             // Siembra K/O/S ("Monto a Proyectar") con lo que J/N/R ya muestran para el modo
-            // vivo (Proyeccion o Historico), solo en las cuentas donde esa celda todavia esta
-            // vacia -- nunca pisa un numero que Franco ya cargo a mano. Pedido explicito:
-            // "que te arme los valores de 'Monto a proyectar' que sean iguales a la
-            // 'Proyeccion' del mes seleccionado", disparado por estadoGuardarProyeccion
-            // reportando 53 cuentas con Monto a Proyectar vacio. @see DEVTOOL_PresupuestoSembrar.js
+            // vivo (Proyeccion o Historico), en TODAS las cuentas con fuente valida -- pisa lo
+            // que K/O/S ya tenia, con confirmacion explicita cuando hay algo que pisar (K/O/S
+            // no son por mes: son las mismas celdas para cualquier periodo de J2/J3, decision
+            // Franco 2026-08-25). Pedido explicito original: "que te arme los valores de 'Monto
+            // a proyectar' que sean iguales a la 'Proyeccion' del mes seleccionado", disparado
+            // por estadoGuardarProyeccion reportando 53 cuentas con Monto a Proyectar vacio.
+            // @see DEVTOOL_PresupuestoSembrar.js
             // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
             submenu: 'Presupuesto: sembrar Monto a Proyectar', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoPresupuestoSembrar' },
