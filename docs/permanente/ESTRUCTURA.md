@@ -2,7 +2,7 @@
 
 > Propósito: Fuente de verdad sobre la organización del repositorio. Toda nueva carpeta o archivo debe registrarse aquí antes de crearse. Los agentes de IA usan este documento como referencia canónica.
 
-Versión: v0.47.0 (reconciliación de `src/` contra `ls src/` real: 42 archivos, sin faltantes ni duplicados) | Última actualización: 2026-08-25
+Versión: v0.50.0 (segunda reconciliación de `src/` contra `ls src/` real: 45 archivos, sin faltantes ni duplicados — entraron 3 con el merge de `fix/abm-desplegable-entidad` en `94aaea4`) | Última actualización: 2026-08-25
 
 ---
 
@@ -11,7 +11,7 @@ Versión: v0.47.0 (reconciliación de `src/` contra `ls src/` real: 42 archivos,
 ```
 planilla-finanzas-personales/
 │
-├── src/ # Código fuente (Apps Script) - 42 archivos, verificado contra `ls src/` el 2026-08-25
+├── src/ # Código fuente (Apps Script) - 45 archivos, verificado contra `ls src/` el 2026-08-25
 │ ├── 00_Config.js # Constantes, rangos, enums, monedas, menús (SSOT con resolver de alias de nombres de hoja)
 │ ├── 01_Version.js # Control de versión semántica
 │ ├── 02_Utils.js # Utilidades generales y logging (logError/logInfo/logSuccess)
@@ -23,6 +23,7 @@ planilla-finanzas-personales/
 │ ├── 13_NavigationService.js # Navegación entre hojas con toast
 │ ├── 14_EventHandlers.js # Trigger appOnEdit: protección Plan de Cuentas, autocompletado en Cargas
 │ ├── 15_ExchangeRateApi.js # Motor de cotizaciones (argentinadatos + frankfurter) y custom functions TIDETRACK_USD/EUR/AUD
+│ ├── 16_ShellService.js # Centro de Operaciones (Fase 5 del arnés): un shell modal con N puertas de entrada, catálogo del Plan de Cuentas en un solo round-trip perezoso
 │ ├── 98_DevTools_Scanner.js # Scanner de arquitectura total: exporta el gemelo digital en JSON
 │ ├── 99_MigrationLogic.js # Migración puntual desde la BD Legacy "BD antigua" y recálculo de TCs
 │ ├── DEVTOOL_AltaCuentas.js # Alta en el Plan de Cuentas de las cuentas que el ledger usa y el catálogo no tiene
@@ -31,6 +32,7 @@ planilla-finanzas-personales/
 │ ├── DEVTOOL_Capitalizacion.js # Mantiene Ingresos = Fijos + Variables + Capacidad de Capitalización en el presupuesto
 │ ├── DEVTOOL_CategorizarCuentas.js # Catálogo de categorías por cuenta (Ingresos/Fijos/Variables), eje del motivo
 │ ├── DEVTOOL_ConciliarSaldos.js # Concilia el saldo de cada medio contra el declarado cargando movimientos de "Ajuste"
+│ ├── DEVTOOL_CuentasComodin.js # Crea el bloque oculto de cuentas comodín (Traspaso/Inicio Mes) en el Plan de Cuentas: movimientos permutativos que no son ingreso ni gasto
 │ ├── DEVTOOL_FormatoMedios.js # Pinta cada medio del bloque "Medios Bancarios" con el color de su Tipo
 │ ├── DEVTOOL_FormulerioV0111.js # Repara las fórmulas de Inicio y Tablero rotas por el swap de hojas Fix (v0.11)
 │ ├── DEVTOOL_InicioPresupuesto.js # Llena "Presupuesto del Mes" de Inicio (Presupuesto/Realidad/Consumo/Distribución)
@@ -52,6 +54,7 @@ planilla-finanzas-personales/
 │ ├── MIGRACION_v031_Historico.js # Recupera el histórico de la planilla vieja v03.1 por cruce de ausencia, re-ejecutable
 │ ├── UI_AbmPlanCuentas.html # ABM multi-entidad del Plan de Cuentas (popup HtmlService)
 │ ├── UI_SharedStyles.html # Design System CSS compartido (paleta de variables, tipografía Google Sans)
+│ ├── UI_Shell.html # HTML del Centro de Operaciones: carga real de Google Sans (fonts.googleapis.com) y escala tipográfica de cinco pasos, una sola familia
 │ ├── ZZ_Changelog.js # Historial de versiones in-code, orden descendente
 │ └── appsscript.json # Manifiesto OAuth: timezone, scopes (spreadsheets, ui, external_request, drive)
 │
@@ -203,6 +206,7 @@ El pipeline estándar para cerrar cualquier feature:
 | `13_NavigationService.js` | Activo | v0.4.0 |
 | `14_EventHandlers.js` | Activo - appOnEdit con autocomplete y protección | v0.5.0 |
 | `15_ExchangeRateApi.js` | Activo - cotizaciones + custom functions GAS | v0.6.0 |
+| `16_ShellService.js` | Activo - Centro de Operaciones, primer ítem del menú "Abrir Tidetrack" | v0.47.0 |
 | `98_DevTools_Scanner.js` | Activo - exporta JSON de arquitectura completa | v0.8.0 |
 | `99_MigrationLogic.js` | Activo - migración desde BD antigua (legacy) | v0.5.0 |
 | `DEVTOOL_AltaCuentas.js` | Activo - alta de cuentas faltantes en el catálogo | v0.15.0 |
@@ -211,6 +215,7 @@ El pipeline estándar para cerrar cualquier feature:
 | `DEVTOOL_Capitalizacion.js` | Activo - identidad Ingresos=Fijos+Variables+Capitalización | v0.26.0 |
 | `DEVTOOL_CategorizarCuentas.js` | Activo - cuenta → categoría (eje del motivo) | v0.19.0 |
 | `DEVTOOL_ConciliarSaldos.js` | Activo - concilia saldos por medio vía cuenta 'Ajuste' | v0.17.0 |
+| `DEVTOOL_CuentasComodin.js` | Activo - bloque oculto de cuentas comodín (Traspaso/Inicio Mes) | v0.46.0 |
 | `DEVTOOL_FormatoMedios.js` | Activo - pinta cada medio con el color de su Tipo | v0.30.1 |
 | `DEVTOOL_FormulerioV0111.js` | Activo - repara el formulerío de Inicio/Tablero post-swap | v0.12.0 |
 | `DEVTOOL_InicioPresupuesto.js` | Activo - bloque "Presupuesto del Mes" de Inicio | v0.31.0 |
@@ -232,9 +237,10 @@ El pipeline estándar para cerrar cualquier feature:
 | `MIGRACION_v031_Historico.js` | Activo - cruce por ausencia, re-ejecutable | v0.11.0 |
 | `UI_AbmPlanCuentas.html` | Activo - ABM multi-entidad Plan de Cuentas | v0.4.1 |
 | `UI_SharedStyles.html` | Activo - Design System institucional (neumorphic) | v0.4.3 |
+| `UI_Shell.html` | Activo - HTML del Centro de Operaciones, carga real de Google Sans | v0.47.0 |
 | `ZZ_Changelog.js` | Activo | v0.4.0 |
 | `appsscript.json` | Activo | v0.1.0 |
 
 ---
 
-*Tidetrack - ESTRUCTURA.md - v0.47.0 - 2026-08-25*
+*Tidetrack - ESTRUCTURA.md - v0.50.0 - 2026-08-25*
