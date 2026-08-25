@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 57,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.57.0 - Proyecciones Elaboradas: ping antes del listado, para aislar canal de respuesta',
+ releaseName: 'v0.57.1 - El modal moria por 90 lineas de comentario antes del DOCTYPE',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

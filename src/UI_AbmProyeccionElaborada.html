@@ -1,98 +1,109 @@
-<!--
-  UI_AbmProyeccionElaborada.html
-  ABM (Listar + Corregir + Borrar) de lo guardado en la hoja-BD "Proyeccion".
-
-  [CONCEPTO DE NEGOCIO]
-  Franco, textual: "en el menu deberiamos poder hacer el ABM de proyecciones elaboradas".
-  "Proyeccion" recibe filas por DOS caminos -- el promedio historico automatico
-  (DEVTOOL_PresupuestoBase.js, marca "Presupuesto base historico") y el guardado deliberado desde
-  la hoja "Presupuesto" (DEVTOOL_PresupuestoGuardar.js, marca "Presupuesto guardado") -- y hasta
-  este modal no habia forma de revisar, corregir ni borrar lo que quedo escrito sin abrir la hoja
-  a mano y leer filas crudas. Este modal es esa pantalla.
-
-  Alcance decidido (no un CRUD completo por simetria, "menos superficie bien pensada"):
-    - Alta: NO EXISTE ACA. Ya existe -- se elabora en la hoja "Presupuesto" y se guarda con
-      "Guardar Proyeccion" (menu tidetrack Dev). Reconstruir esa logica en un modal duplicaria
-      superficie peligrosa sobre una BD de produccion; el banner de arriba del modal redirige ahi.
-    - Modificacion: SOLO el monto, SOLO en filas "guardado a mano". Las filas de presupuesto base
-      son un promedio automatico -- editarlas a mano las dejaria con una Nota que miente sobre su
-      origen. El gate real vive en el servidor (DEVTOOL_ProyeccionAbm.js), esto es una segunda
-      barrera de UX, no la unica.
-    - Baja: por periodo completo (clave+origen), con respaldo y reversion inmediata (una sola
-      accion revertible a la vez, se pierde al hacer otro cambio -- avisado en el propio dialogo
-      de confirmacion).
-
-  [FUNDAMENTO TEORICO / ADMINISTRATIVO]
-  Principios de diseno (docs/permanente/PRINCIPIOS_DISENO.md): multi-moneda siempre rotulada
-  (nunca se suman monedas distintas en un mismo total, ver DEVTOOL_ProyeccionAbm.js), estados
-  explicitos de carga/vacio/error/exito, coherencia con el Design System de UI_SharedStyles.html.
-  El caso "cero proyecciones guardadas a mano" es el estado REAL de produccion hoy (todas las
-  filas de "Proyeccion" son de origen base) y tiene un mensaje propio, nunca una tabla vacia sin
-  explicacion.
-
-  [INCIDENTE 2026-08-25 -- PERMISSION_DENIED al abrir]
-  El listado (unica llamada a `listarPeriodosProyeccion()`, disparada en DOMContentLoaded) fallaba
-  siempre con "Se produjo un error en el servidor al leer desde el almacenamiento. Codigo de error
-  PERMISSION_DENIED" -- mensaje enganoso: la funcion es SpreadsheetApp puro, cero
-  PropertiesService, y los mismos datos se leen bien desde el menu (ver
-  DEVTOOL_DIAG_PermisoProyeccionAbm.js, que descarta dato/funcion rotos). Hipotesis de trabajo: el
-  canal google.script.run (que el iframe de googleusercontent.com negocia contra
-  script.google.com) todavia no esta listo cuando dispara DOMContentLoaded, y Google reporta esa
-  falta de canal como PERMISSION_DENIED en vez de un error de timing. La sostiene un dato medido:
-  el Shell (16_ShellService.js, otra sesion) pide su catalogo por el MISMO canal, MISMA cuenta,
-  MISMA planilla, y responde en ~537ms SIEMPRE que sale DESPUES de un gesto del usuario -- nunca
-  al abrir. Eso descarta que el canal este roto en este contenedor, y en gran medida que sea la
-  cuenta (start.tidetrack@gmail.com vs francodiazpizarro@gmail.com, ver DEVTOOL_DIAG): con la
-  MISMA cuenta, llamando DESPUES de un gesto, anda. Lo que NO se descarta es si es demora fija de
-  negociacion o una carrera contra esa negociacion (la llamada de este modal, a diferencia de la
-  del Shell, compite con la apertura del propio modal) -- por eso el diagnostico de mas abajo
-  guarda el intento ganador de CADA apertura, no solo si hubo reintento.
-  No se movio el disparo a `window.onload`: este modal carga una webfont externa
-  (fonts.googleapis.com, ver <head>) y 'onload' espera tambien a que esa fuente termine de bajar.
-  Si el error desaparece por mudar a 'onload', no se puede distinguir "se arreglo el canal" de "se
-  espero a que bajara una tipografia" sin medir el tiempo de la fuente aparte -- esa medicion no
-  se hizo, asi que se prefirio quedarse en DOMContentLoaded y resolver con reintentos (inmediato,
-  ~600ms, ~1800ms de espera creciente) mas un boton "Reintentar" si los tres fallan. El intento
-  ganador (o el agotamiento de los tres) queda en una linea discreta del pie del modal y en
-  localStorage (ultimas 8 aperturas), para poder ver a ojo si el patron es fijo (siempre el mismo
-  intento -> demora fija) o varia (carrera).
-
-  [CONTINUACION 2026-08-25 -- EXPERIMENTO DECISIVO: PING ANTES DEL LISTADO]
-  Medido en produccion despues de desplegar lo de arriba: LOS TRES INTENTOS DE
-  listarPeriodosProyeccion() FALLARON (10764 ms) -- refuta que fuera una demora fija de
-  negociacion que el reintento alcanzara a cubrir, pero deja abiertas dos hipotesis que ese unico
-  dato no separa: el canal de ESTE modal esta roto para cualquier llamada, o el canal esta bien y
-  lo que falla es especifico de listarPeriodosProyeccion() (su tamanio, algo en su respuesta que
-  no serializa). Confundirlas lleva a arreglar lo que no es.
-  Se agrega pingProyeccionAbm() (DEVTOOL_ProyeccionAbm.js): no lee nada, no toca SpreadsheetApp ni
-  PropertiesService, devuelve siempre el mismo objeto minimo. El modal la llama PRIMERO, con el
-  MISMO backoff de 3 intentos que ya tenia el listado (comparar manzanas con manzanas). Si el ping
-  se agota tambien, el canal esta roto para cualquier llamada y NO tiene sentido intentar
-  listarPeriodosProyeccion() detras de un canal ya demostrado muerto -- cada intento mas son otros
-  ~2.4s de espera para nada, asi que se corta ahi. Si el ping anda, recien entonces se dispara el
-  ciclo de listado (su propio backoff de 3 intentos, sin tocar esa logica). La linea de diagnostico
-  del pie ahora reporta las DOS mediciones ("Canal: ping OK (123 ms) - listado FALLO (10764 ms)"),
-  y el historial de localStorage guarda un codigo compacto por apertura (ver registrarDiagnostico).
-  Dato que acota el sospechoso del tamanio ANTES de escribir este experimento: `armarGrupo()`
-  (DEVTOOL_ProyeccionAbm.js) usa `crudasFilas` solo para calcular `monedas`/`totales` -- el objeto
-  que arma NUNCA incluye `crudasFilas`. Una medicion local con la misma forma que el DIAG midio en
-  produccion (370 filas, 7 grupos base) dio ~5KB / 123 nodos, del mismo orden que el caso exitoso
-  del Shell (1723 bytes / 85 nodos) -- lejos de "cientos de KB". El DIAG (paso 5b,
-  DEVTOOL_DIAG_PermisoProyeccionAbm.js) mide el numero real en produccion antes de asumir nada.
-
-  @see src/DEVTOOL_ProyeccionAbm.js (capa de datos: pingProyeccionAbm, listarPeriodosProyeccion,
-       detalleFilasPeriodoProyeccion, eliminarPeriodoProyeccion, revertirBajaProyeccionAbm,
-       actualizarMontoFilaProyeccion, revertirEdicionMontoProyeccion)
-  @see src/DEVTOOL_DIAG_PermisoProyeccionAbm.js (diagnostico que descarto dato/funcion rotos +
-       paso 5b, tamanio real del payload)
-  @see src/UI_AbmPlanCuentas.html (patron de modal HtmlService que este archivo sigue)
-  @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
-  @version 0.57.0
-  @since 2026-08-25
--->
 <!DOCTYPE html>
 <html>
 <head>
+    <!--
+      decision Franco 2026-08-25: este bloque VIVE ADENTRO DEL <head>, y no antes del DOCTYPE,
+      porque ahi estaba y rompia el modal entero. Un archivo servido por HtmlService que empieza
+      con 90 lineas de comentario deja el <!DOCTYPE html> en la linea 93: el navegador entra en
+      quirks mode y el puente que Apps Script inyecta para google.script.run no queda montado. El
+      sintoma no se parece en nada a la causa -- la pantalla se ve perfecta y CUALQUIER llamada al
+      servidor falla con "PERMISSION_DENIED al leer desde el almacenamiento", que no tiene que ver
+      ni con permisos ni con almacenamiento. Los otros dos modales del repo (UI_AbmPlanCuentas.html
+      y UI_Shell.html) tienen el DOCTYPE en la linea 1 y por eso nunca lo sufrieron.
+      NO mover este comentario arriba del DOCTYPE.
+    -->
+    <!--
+      UI_AbmProyeccionElaborada.html
+      ABM (Listar + Corregir + Borrar) de lo guardado en la hoja-BD "Proyeccion".
+
+      [CONCEPTO DE NEGOCIO]
+      Franco, textual: "en el menu deberiamos poder hacer el ABM de proyecciones elaboradas".
+      "Proyeccion" recibe filas por DOS caminos -- el promedio historico automatico
+      (DEVTOOL_PresupuestoBase.js, marca "Presupuesto base historico") y el guardado deliberado desde
+      la hoja "Presupuesto" (DEVTOOL_PresupuestoGuardar.js, marca "Presupuesto guardado") -- y hasta
+      este modal no habia forma de revisar, corregir ni borrar lo que quedo escrito sin abrir la hoja
+      a mano y leer filas crudas. Este modal es esa pantalla.
+
+      Alcance decidido (no un CRUD completo por simetria, "menos superficie bien pensada"):
+        - Alta: NO EXISTE ACA. Ya existe -- se elabora en la hoja "Presupuesto" y se guarda con
+          "Guardar Proyeccion" (menu tidetrack Dev). Reconstruir esa logica en un modal duplicaria
+          superficie peligrosa sobre una BD de produccion; el banner de arriba del modal redirige ahi.
+        - Modificacion: SOLO el monto, SOLO en filas "guardado a mano". Las filas de presupuesto base
+          son un promedio automatico -- editarlas a mano las dejaria con una Nota que miente sobre su
+          origen. El gate real vive en el servidor (DEVTOOL_ProyeccionAbm.js), esto es una segunda
+          barrera de UX, no la unica.
+        - Baja: por periodo completo (clave+origen), con respaldo y reversion inmediata (una sola
+          accion revertible a la vez, se pierde al hacer otro cambio -- avisado en el propio dialogo
+          de confirmacion).
+
+      [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+      Principios de diseno (docs/permanente/PRINCIPIOS_DISENO.md): multi-moneda siempre rotulada
+      (nunca se suman monedas distintas en un mismo total, ver DEVTOOL_ProyeccionAbm.js), estados
+      explicitos de carga/vacio/error/exito, coherencia con el Design System de UI_SharedStyles.html.
+      El caso "cero proyecciones guardadas a mano" es el estado REAL de produccion hoy (todas las
+      filas de "Proyeccion" son de origen base) y tiene un mensaje propio, nunca una tabla vacia sin
+      explicacion.
+
+      [INCIDENTE 2026-08-25 -- PERMISSION_DENIED al abrir]
+      El listado (unica llamada a `listarPeriodosProyeccion()`, disparada en DOMContentLoaded) fallaba
+      siempre con "Se produjo un error en el servidor al leer desde el almacenamiento. Codigo de error
+      PERMISSION_DENIED" -- mensaje enganoso: la funcion es SpreadsheetApp puro, cero
+      PropertiesService, y los mismos datos se leen bien desde el menu (ver
+      DEVTOOL_DIAG_PermisoProyeccionAbm.js, que descarta dato/funcion rotos). Hipotesis de trabajo: el
+      canal google.script.run (que el iframe de googleusercontent.com negocia contra
+      script.google.com) todavia no esta listo cuando dispara DOMContentLoaded, y Google reporta esa
+      falta de canal como PERMISSION_DENIED en vez de un error de timing. La sostiene un dato medido:
+      el Shell (16_ShellService.js, otra sesion) pide su catalogo por el MISMO canal, MISMA cuenta,
+      MISMA planilla, y responde en ~537ms SIEMPRE que sale DESPUES de un gesto del usuario -- nunca
+      al abrir. Eso descarta que el canal este roto en este contenedor, y en gran medida que sea la
+      cuenta (start.tidetrack@gmail.com vs francodiazpizarro@gmail.com, ver DEVTOOL_DIAG): con la
+      MISMA cuenta, llamando DESPUES de un gesto, anda. Lo que NO se descarta es si es demora fija de
+      negociacion o una carrera contra esa negociacion (la llamada de este modal, a diferencia de la
+      del Shell, compite con la apertura del propio modal) -- por eso el diagnostico de mas abajo
+      guarda el intento ganador de CADA apertura, no solo si hubo reintento.
+      No se movio el disparo a `window.onload`: este modal carga una webfont externa
+      (fonts.googleapis.com, ver <head>) y 'onload' espera tambien a que esa fuente termine de bajar.
+      Si el error desaparece por mudar a 'onload', no se puede distinguir "se arreglo el canal" de "se
+      espero a que bajara una tipografia" sin medir el tiempo de la fuente aparte -- esa medicion no
+      se hizo, asi que se prefirio quedarse en DOMContentLoaded y resolver con reintentos (inmediato,
+      ~600ms, ~1800ms de espera creciente) mas un boton "Reintentar" si los tres fallan. El intento
+      ganador (o el agotamiento de los tres) queda en una linea discreta del pie del modal y en
+      localStorage (ultimas 8 aperturas), para poder ver a ojo si el patron es fijo (siempre el mismo
+      intento -> demora fija) o varia (carrera).
+
+      [CONTINUACION 2026-08-25 -- EXPERIMENTO DECISIVO: PING ANTES DEL LISTADO]
+      Medido en produccion despues de desplegar lo de arriba: LOS TRES INTENTOS DE
+      listarPeriodosProyeccion() FALLARON (10764 ms) -- refuta que fuera una demora fija de
+      negociacion que el reintento alcanzara a cubrir, pero deja abiertas dos hipotesis que ese unico
+      dato no separa: el canal de ESTE modal esta roto para cualquier llamada, o el canal esta bien y
+      lo que falla es especifico de listarPeriodosProyeccion() (su tamanio, algo en su respuesta que
+      no serializa). Confundirlas lleva a arreglar lo que no es.
+      Se agrega pingProyeccionAbm() (DEVTOOL_ProyeccionAbm.js): no lee nada, no toca SpreadsheetApp ni
+      PropertiesService, devuelve siempre el mismo objeto minimo. El modal la llama PRIMERO, con el
+      MISMO backoff de 3 intentos que ya tenia el listado (comparar manzanas con manzanas). Si el ping
+      se agota tambien, el canal esta roto para cualquier llamada y NO tiene sentido intentar
+      listarPeriodosProyeccion() detras de un canal ya demostrado muerto -- cada intento mas son otros
+      ~2.4s de espera para nada, asi que se corta ahi. Si el ping anda, recien entonces se dispara el
+      ciclo de listado (su propio backoff de 3 intentos, sin tocar esa logica). La linea de diagnostico
+      del pie ahora reporta las DOS mediciones ("Canal: ping OK (123 ms) - listado FALLO (10764 ms)"),
+      y el historial de localStorage guarda un codigo compacto por apertura (ver registrarDiagnostico).
+      Dato que acota el sospechoso del tamanio ANTES de escribir este experimento: `armarGrupo()`
+      (DEVTOOL_ProyeccionAbm.js) usa `crudasFilas` solo para calcular `monedas`/`totales` -- el objeto
+      que arma NUNCA incluye `crudasFilas`. Una medicion local con la misma forma que el DIAG midio en
+      produccion (370 filas, 7 grupos base) dio ~5KB / 123 nodos, del mismo orden que el caso exitoso
+      del Shell (1723 bytes / 85 nodos) -- lejos de "cientos de KB". El DIAG (paso 5b,
+      DEVTOOL_DIAG_PermisoProyeccionAbm.js) mide el numero real en produccion antes de asumir nada.
+
+      @see src/DEVTOOL_ProyeccionAbm.js (capa de datos: pingProyeccionAbm, listarPeriodosProyeccion,
+           detalleFilasPeriodoProyeccion, eliminarPeriodoProyeccion, revertirBajaProyeccionAbm,
+           actualizarMontoFilaProyeccion, revertirEdicionMontoProyeccion)
+      @see src/DEVTOOL_DIAG_PermisoProyeccionAbm.js (diagnostico que descarto dato/funcion rotos +
+           paso 5b, tamanio real del payload)
+      @see src/UI_AbmPlanCuentas.html (patron de modal HtmlService que este archivo sigue)
+      @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
+      @version 0.57.0
+      @since 2026-08-25
+    -->
     <base target="_top">
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <?!= include('UI_SharedStyles'); ?>

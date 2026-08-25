@@ -3,6 +3,27 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.57.1 - El modal moria por 90 lineas de comentario antes del DOCTYPE.
+ * ! CAUSA RAIZ, despues de descartar todo lo demas midiendo. UI_AbmProyeccionElaborada.html tenia
+ *   90 lineas de cabecera ANTES del <!DOCTYPE html>, que quedaba en la linea 93. Eso mete al
+ *   navegador en quirks mode y el puente que Apps Script inyecta para google.script.run no queda
+ *   montado. El modal ABRE PERFECTO -- titulo, estilos, banner -- y CUALQUIER llamada al servidor
+ *   muere con "error en el servidor al leer desde el almacenamiento, PERMISSION_DENIED", que no
+ *   tiene que ver ni con permisos ni con almacenamiento.
+ * ! LO QUE SE DESCARTO ANTES, y cada descarte costo un deploy: (1) timing -- tres reintentos con
+ *   espera creciente, 12 s en total, fallan igual; (2) gesto del usuario -- el boton "Reintentar"
+ *   falla igual, y eso tambien mata la hipotesis de activacion; (3) tamanio del payload -- un ping
+ *   que devuelve dos constantes y no lee nada falla igual, y ademas se verifico que armarGrupo()
+ *   NUNCA copia crudasFilas a la respuesta; (4) la funcion y los datos -- invocada directo desde
+ *   el menu devuelve sus 7 grupos sin chistar.
+ * + La cabecera pasa a vivir ADENTRO del <head>, con una nota que dice por que no puede volver.
+ * + GUARD NUEVO devtools/probar_doctype_modales.js: ningun .html servido por HtmlService puede
+ *   tener nada antes del DOCTYPE. Excluye UI_SharedStyles.html porque es un fragmento que se
+ *   incluye dentro de otro documento, no un documento. Probado por mutacion.
+ * ! LECCION: los otros dos modales del repo tienen el DOCTYPE en la linea 1 y por eso nunca lo
+ *   sufrieron. La diferencia entre el que fallaba y los que andaban era UNA LINEA de posicion, y
+ *   ninguna herramienta la miraba.
+ *
  * [2026-08-25] v0.57.0 - Proyecciones Elaboradas: ping antes del listado, para aislar canal de respuesta.
  * - Medido en produccion despues de v0.56.0: los 3 reintentos con espera creciente de
  *   listarPeriodosProyeccion() FALLARON TODOS ("los 3 intentos fallaron (10764 ms)"). Ese dato

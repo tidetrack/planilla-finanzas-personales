@@ -9,6 +9,22 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.57.1 - El modal moria por 90 lineas de comentario antes del DOCTYPE (2026-08-25)
+
+`UI_AbmProyeccionElaborada.html` tenia 90 lineas de cabecera antes del `<!DOCTYPE html>`, que
+quedaba en la linea 93. El navegador entra en quirks mode y el puente que Apps Script inyecta para
+`google.script.run` no queda montado: el modal abre perfecto y cualquier llamada al servidor muere
+con un `PERMISSION_DENIED` que no tiene que ver ni con permisos ni con almacenamiento.
+
+Antes de encontrarlo se descartaron, midiendo: el timing (tres reintentos, 12 s), el gesto del
+usuario (el boton Reintentar falla igual), el tamanio del payload (un ping que devuelve dos
+constantes falla igual) y la funcion (invocada directo devuelve sus 7 grupos). Los otros dos
+modales del repo tienen el DOCTYPE en la linea 1 y por eso nunca lo sufrieron: la diferencia era
+una linea de posicion, y ninguna herramienta la miraba. Ahora la mira
+`devtools/probar_doctype_modales.js`.
+
+---
+
 ## Proyecciones Elaboradas - ping antes del listado, para aislar canal de respuesta (v0.57.0, 2026-08-25)
 
 Continuacion de v0.56.0: los 3 reintentos con espera creciente que ese release le agrego a
