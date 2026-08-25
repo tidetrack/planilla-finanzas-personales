@@ -133,9 +133,14 @@ function _abrirShell(vista) {
     tpl.planilla = _nombrePlanillaShell();
     tpl.version = (typeof VERSION === 'object' && VERSION.toString) ? VERSION.toString() : '';
 
+    // Se cronometra la EVALUACION de la plantilla, que es lo unico caro del camino de
+    // apertura: procesa los scriptlets y resuelve el include del design system. El numero
+    // queda guardado para que diagnosticarShell lo pueda mostrar sin tener que adivinar.
+    const t0 = new Date().getTime();
     const html = tpl.evaluate()
         .setWidth(SHELL_GEOMETRIA.ancho)
         .setHeight(SHELL_GEOMETRIA.alto);
+    _marcarTiempo('shell_evaluar_ms', new Date().getTime() - t0);
     // El titulo se rellena con espacios para blanquear la barra del modal: el protagonismo es
     // de la vista, que trae su propio encabezado. Mismo truco que el ABM y que pymes.
     SpreadsheetApp.getUi().showModalDialog(html, '          ');
@@ -201,10 +206,7 @@ function obtenerCatalogoShell() {
             // gasto, y el formulario tiene que poder ofrecerlas sin mezclarlas.
             // @see DEVTOOL_CuentasComodin.js
             comodines: CUENTAS_NEUTRAS,
-            // Para heredar la fila anterior: el objetivo del arnes es "menos de 3 segundos,
-            // maximo 2 toques", y eso se consigue proponiendo, no preguntando. Es una lectura
-            // de 5 filas, no del ledger.
-            ultimos: _ultimosMovimientos(5)
+            comodinesUsan: 'la cuenta Traspaso la pone sola la pantalla de Traspaso'
         };
     } catch (e) {
         logError('obtenerCatalogoShell', e);
@@ -273,6 +275,20 @@ function diagnosticarShell() {
                     filas + ' filas)' + err);
             });
 
+        // El costo de EVALUAR LA PLANTILLA del shell, medido aparte: es lo unico caro del
+        // camino de apertura que este codigo controla.
+        const tTpl = new Date().getTime();
+        const tpl = HtmlService.createTemplateFromFile('UI_Shell');
+        tpl.vistaInicial = 'home';
+        tpl.ancho = SHELL_GEOMETRIA.ancho;
+        tpl.alto = SHELL_GEOMETRIA.alto;
+        tpl.vistasJson = JSON.stringify(SHELL_VISTAS);
+        tpl.tiposRiquezaJson = JSON.stringify(TIPOS_RIQUEZA);
+        tpl.planilla = ''; tpl.version = '';
+        const salida = tpl.evaluate().getContent();
+        l.push('Evaluar la plantilla del shell: ' + (new Date().getTime() - tTpl) + ' ms  (' +
+            Math.round(salida.length / 1024) + ' KB de HTML)');
+
         const t1 = new Date().getTime();
         const cat = obtenerCatalogoShell();
         l.push('obtenerCatalogoShell() completo: ' + (new Date().getTime() - t1) + ' ms  (ok=' +
@@ -282,6 +298,15 @@ function diagnosticarShell() {
         l.push('');
         l.push('Referencia: el shell abre SIN hacer ninguna de estas llamadas. Este catalogo lo');
         l.push('pide recien la primera pantalla que necesita un desplegable.');
+        l.push('');
+        const ultima = PropertiesService.getDocumentProperties().getProperty('shell_evaluar_ms');
+        if (ultima) l.push('Ultima apertura real del shell, solo la plantilla: ' + ultima + ' ms');
+        l.push('');
+        l.push('LO QUE ESTE NUMERO NO INCLUYE, y suele ser lo que mas se siente: Apps Script');
+        l.push('PARSEA EL PROYECTO ENTERO en cada ejecucion, incluido el onOpen que dibuja el');
+        l.push('menu. Hoy el proyecto pesa ~2 MB en 45 archivos. Si la plantilla y las lecturas');
+        l.push('de arriba dan numeros chicos y aun asi se siente lento, el costo esta ahi y la');
+        l.push('salida es sacar del deploy lo que no tiene entrada de menu.');
 
         const detalle = l.join('\n');
         try {
@@ -299,49 +324,12 @@ function diagnosticarShell() {
 // ESCRITURA
 // ============================================
 
-/**
- * Los ultimos movimientos del ledger, para que el formulario pueda proponer defaults.
- *
- * Es una lectura BARATA a proposito: "Registros" esta ordenado por fecha descendente, asi que
- * los mas recientes son las primeras filas de datos. Se leen N y nada mas -- nunca el ledger
- * entero. El objetivo del arnes para esta fase es "registro en menos de 3 segundos, maximo 2
- * toques", y eso se consigue heredando la fila anterior, no pidiendole todo al usuario.
- *
- * @param {number} n cuantos traer
- * @returns {Array<Object>} vacio si algo falla; nunca lanza
- */
-function _ultimosMovimientos(n) {
-    try {
-        const cfg = RANGES.REGISTROS;
-        const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(cfg.sheet);
-        if (!hoja) return [];
-        const colIni = columnLetterToIndex(cfg.start);
-        const nCols = columnLetterToIndex(cfg.end) - colIni + 1;
-        const disponibles = hoja.getLastRow() - cfg.dataRow + 1;
-        if (disponibles <= 0) return [];
-        const alto = Math.min(n, disponibles);
-        const iMonto = columnLetterToIndex(cfg.columns.monto) - colIni;
-        const iTipo = columnLetterToIndex(cfg.columns.tipo) - colIni;
-        const iCuenta = columnLetterToIndex(cfg.columns.cuenta) - colIni;
-        const iMedio = columnLetterToIndex(cfg.columns.medio) - colIni;
-        const iMoneda = columnLetterToIndex(cfg.columns.moneda) - colIni;
-
-        return hoja.getRange(cfg.dataRow, colIni, alto, nCols).getValues()
-            .map(function (f) {
-                return {
-                    monto: f[iMonto],
-                    tipo: String(f[iTipo] || '').trim(),
-                    cuenta: String(f[iCuenta] || '').trim(),
-                    medio: String(f[iMedio] || '').trim(),
-                    moneda: String(f[iMoneda] || '').trim()
-                };
-            })
-            .filter(function (m) { return m.cuenta !== '' || m.medio !== ''; });
-    } catch (e) {
-        logError('_ultimosMovimientos', e);
-        return [];
-    }
-}
+// decision Franco 2026-08-25: se retiro _ultimosMovimientos y la tarjeta de "usar estos
+// datos". Franco: "la opcion de ultimos registro no me gusta, es al pedo". El arnes pedia
+// "maximo 2 toques" y la respuesta a eso resulto ser la CARGA MULTIPLE, no adivinarle el
+// proximo movimiento: cuando cargas seis gastos de una sentada, lo que ahorra tiempo es no
+// tener que abrir seis veces el formulario. Se va tambien la lectura del ledger que la
+// alimentaba: un viaje menos.
 
 /**
  * Estado de la grilla de Cargas: cuantas filas libres quedan y cuantas ya estan ocupadas.
@@ -478,6 +466,76 @@ function registrarMovimiento(d) {
         let mensaje = 'Listo. Cargaste ' + _plata(d.monto, d.moneda) + ' en ' + d.cuenta + '.';
         if (otras > 0) {
             mensaje += ' Se procesaron tambien ' + otras + ' fila(s) que ya estaban en la grilla.';
+        }
+        return { ok: true, mensaje: mensaje };
+    });
+}
+
+/**
+ * Registra VARIOS movimientos de una sola vez.
+ *
+ * [POR QUE EXISTE, y no es solo comodidad]
+ * Cada llamada a registrarMovimiento dispara un procesarCargas COMPLETO: pega a las APIs de
+ * cotizacion, persiste lo nuevo al Data Lake, reordena el ledger entero por fecha. Cargar seis
+ * gastos de a uno son seis pasadas de eso. En lote es UNA. La carga multiple es, antes que una
+ * comodidad, la forma de que cargar seis cosas no cueste seis veces lo que cuesta una.
+ *
+ * [CONTRATO]
+ * O ENTRAN TODOS O NO ENTRA NINGUNO. Se valida el lote entero ANTES de escribir una sola
+ * celda, y se devuelve el numero de fila de cada problema para que la pantalla pueda marcar
+ * cual esta mal. Un lote a medio escribir en la grilla es peor que un lote rechazado: la mitad
+ * buena se procesa en la corrida siguiente sin que nadie recuerde por que estaba ahi.
+ *
+ * @param {Array<Object>} lista movimientos {monto, tipo, cuenta, medio, moneda, fecha, nota}
+ * @returns {{ok:boolean, mensaje?:string, problemas?:Array<string>, error?:string}}
+ */
+function registrarMovimientos(lista) {
+    return _conLock(function () {
+        if (!Array.isArray(lista) || !lista.length) {
+            return { ok: false, error: 'No llego ningun movimiento para cargar.' };
+        }
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const hojaCargas = ss.getSheetByName(RANGES.CARGAS.sheet);
+        if (!hojaCargas) return { ok: false, error: 'No existe la hoja "' + RANGES.CARGAS.sheet + '".' };
+
+        // El catalogo de medios se lee UNA vez para todo el lote, no una por fila.
+        const medios = _nombresDeMedio();
+
+        const problemas = [];
+        lista.forEach(function (d, i) {
+            _validarMovimiento(d, { medios: medios }).forEach(function (p) {
+                problemas.push('Fila ' + (i + 1) + ': ' + p);
+            });
+        });
+        if (problemas.length) return { ok: false, problemas: problemas };
+
+        const grilla = _estadoGrillaCargas(hojaCargas);
+        if (grilla.libres < lista.length) {
+            return { ok: false, error: 'Son ' + lista.length + ' movimientos y en la grilla de ' +
+                'Cargas quedan ' + grilla.libres + ' filas libres. Procesa lo que hay, o carga de a menos.' };
+        }
+
+        // UNA sola escritura para todo el lote: si se escribiera fila por fila y fallara la
+        // tercera, quedarian dos sueltas en la grilla.
+        const filas = lista.map(_filaDeCarga);
+        const colIni = columnLetterToIndex(RANGES.CARGAS.start);
+        hojaCargas.getRange(grilla.filaHoja, colIni, filas.length, filas[0].length).setValues(filas);
+        SpreadsheetApp.flush();
+
+        // Y UN solo procesarCargas para las N filas, que es todo el punto.
+        procesarCargas();
+
+        const total = lista.reduce(function (a, d) { return a + (Number(d.monto) || 0); }, 0);
+        const monedas = {};
+        lista.forEach(function (d) { monedas[d.moneda] = true; });
+        const unaSolaMoneda = Object.keys(monedas).length === 1;
+
+        let mensaje = lista.length === 1
+            ? 'Listo. Cargaste ' + _plata(lista[0].monto, lista[0].moneda) + ' en ' + lista[0].cuenta + '.'
+            : 'Listo. Cargaste ' + lista.length + ' movimientos' +
+              (unaSolaMoneda ? ', ' + _plata(total, lista[0].moneda) + ' en total' : '') + '.';
+        if (grilla.ocupadas > 0) {
+            mensaje += ' Se procesaron tambien ' + grilla.ocupadas + ' fila(s) que ya estaban en la grilla.';
         }
         return { ok: true, mensaje: mensaje };
     });
@@ -622,6 +680,20 @@ function _plata(monto, moneda) {
     partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     const simbolo = (moneda === 'USD' || moneda === 'AUD') ? 'US$' : (moneda === 'EUR' ? 'EUR ' : '$');
     return simbolo + partes.join(',');
+}
+
+/**
+ * Guarda un tiempo medido para que el diagnostico lo pueda leer despues.
+ *
+ * Existe porque el usuario percibe "tarda mucho" y desde el codigo no hay forma de saber que
+ * tramo tarda: la apertura de un modal mezcla el parseo del proyecto entero, la evaluacion de
+ * la plantilla y el render del iframe. Sin numeros por tramo, cualquier explicacion es una
+ * suposicion -- y en este repo ya se aceptaron dos suposiciones equivocadas seguidas.
+ */
+function _marcarTiempo(clave, ms) {
+    try {
+        PropertiesService.getDocumentProperties().setProperty(clave, String(ms));
+    } catch (e) { /* medir nunca puede romper lo que mide */ }
 }
 
 /** El nombre de la planilla, para el pie del shell. Nunca hace fallar la apertura. */

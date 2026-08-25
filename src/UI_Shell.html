@@ -57,32 +57,24 @@ body { padding: 0; background: var(--bg-secondary); }
 .f.c6 { grid-column: span 6; } .f.c7 { grid-column: span 7; } .f.c8 { grid-column: span 8; }
 .f.c12 { grid-column: span 12; }
 .f label {
-    font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-secondary);
+    font-family: var(--font-sans, inherit); font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary);
 }
 .f .hint { font-size: 12px; color: var(--text-secondary); }
 .f .form-input, .f .form-select { margin-bottom: 0; }
-/* El monto es el unico campo grande: es el que se tipea primero y el unico que Franco
-   realmente escribe -- todo lo demas se hereda o se elige. */
-.monto-grande {
-    font-family: var(--font-mono); font-size: 20px; font-weight: 600;
+/* El monto NO cambia de tamano.
+   decision Franco 2026-08-25 ("hay distorciones de tamanos de letras"): estaba en 20px al
+   lado de dos selects de 14px, en la MISMA fila. Tres controles pegados con tres alturas
+   distintas, que es exactamente la distorsion que se ve. Un campo se destaca por su lugar en
+   la grilla y por el foco, no agrandandole la letra: el tamano de un control es informacion
+   sobre cuanto se escribe adentro, no sobre cuanto importa.
+   Lo unico que conserva es la familia mono y las cifras tabulares, que es lo que hace que los
+   numeros se lean como numeros y no como texto. */
+.campo-monto {
+    font-family: var(--font-mono); font-weight: 600;
     color: var(--primary-color); font-variant-numeric: tabular-nums;
+    text-align: right;
 }
-
-/* --- Sugerencia de "repetir el ultimo": el camino de dos toques del arnes. --- */
-.shell-repetir {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    background: var(--bg-main); border-radius: 12px; padding: 12px 16px;
-    margin-bottom: 20px; max-width: 660px; font-size: 13px; color: var(--text-data);
-}
-.shell-repetir .que { font-weight: 600; color: var(--primary-color); }
-.shell-repetir button {
-    margin-left: auto; font: inherit; font-size: 12px; font-weight: 600;
-    background: var(--bg-secondary); color: var(--primary-color);
-    border: 0; border-radius: 8px; padding: 7px 13px; cursor: pointer;
-}
-.shell-repetir button:hover { background: var(--primary-color); color: var(--text-inverse); }
-.shell-repetir button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 
 .shell-acciones {
     display: flex; gap: 10px; align-items: center; margin-top: 24px; max-width: 660px;
@@ -217,11 +209,10 @@ body { padding: 0; background: var(--bg-secondary); }
          Cada una dice QUE va a hacer y contra que hoja escribe. Una pantalla que solo dijera
          "proximamente" no le sirve a nadie; esta le dice a Franco que esperar. -->
     <div id="vista-movimiento" class="hidden">
-        <div id="movRepetir" class="shell-repetir hidden"></div>
         <div class="shell-form">
             <div class="f c4">
                 <label for="movMonto">Monto</label>
-                <input class="form-input monto-grande" id="movMonto" inputmode="decimal" placeholder="0,00">
+                <input class="form-input campo-monto" id="movMonto" inputmode="decimal" placeholder="0,00">
             </div>
             <div class="f c3">
                 <label for="movTipo">Tipo</label>
@@ -271,12 +262,12 @@ body { padding: 0; background: var(--bg-secondary); }
             </div>
             <div class="f c4">
                 <label for="trasMontoO">Monto que sale</label>
-                <input class="form-input monto-grande" id="trasMontoO" inputmode="decimal" placeholder="0,00">
+                <input class="form-input campo-monto" id="trasMontoO" inputmode="decimal" placeholder="0,00">
                 <span class="hint" id="trasHintO"></span>
             </div>
             <div class="f c4 hidden" id="trasCampoDestino">
                 <label for="trasMontoD">Monto que entra</label>
-                <input class="form-input monto-grande" id="trasMontoD" inputmode="decimal" placeholder="0,00" oninput="trasTipoDeCambio()">
+                <input class="form-input campo-monto" id="trasMontoD" inputmode="decimal" placeholder="0,00" oninput="trasTipoDeCambio()">
                 <span class="hint" id="trasHintD"></span>
             </div>
             <div class="f c4">
@@ -558,7 +549,7 @@ function llenarSelect(id, grupos, seleccionado) {
 
 var movListo = false;
 
-function prepararMovimiento(cat) {
+function prepararMovimiento(cat) {  // cat: lo usa llenarSelect de abajo
     if (!movListo) {
         llenarSelect('movCuenta', [
             { titulo: 'Gastos variables', items: cat.variables },
@@ -572,39 +563,8 @@ function prepararMovimiento(cat) {
     if (!document.getElementById('movFecha').value) {
         document.getElementById('movFecha').value = hoyISO();
     }
-    movSugerirUltimo(cat);
     movMonedaDelMedio();
     document.getElementById('movMonto').focus();
-}
-
-/**
- * La ruta de dos toques del arnes: proponer el ultimo movimiento en vez de preguntar todo.
- * "Registro en menos de 3 segundos, maximo 2 toques" no se consigue con un formulario mas
- * lindo, se consigue con defaults que casi siempre aciertan.
- */
-function movSugerirUltimo(cat) {
-    var caja = document.getElementById('movRepetir');
-    var u = (cat.ultimos || []).filter(function (m) {
-        return m.cuenta && (cat.comodines || []).indexOf(m.cuenta) === -1;
-    })[0];
-    if (!u) { caja.classList.add('hidden'); return; }
-    caja.innerHTML = '';
-    var txt = document.createElement('span');
-    txt.innerHTML = 'Lo ultimo que cargaste: <span class="que"></span>';
-    txt.querySelector('.que').textContent = u.cuenta + ' con ' + u.medio;
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = 'Usar estos datos';
-    btn.onclick = function () {
-        document.getElementById('movCuenta').value = u.cuenta;
-        document.getElementById('movMedio').value = u.medio;
-        document.getElementById('movTipo').value = u.tipo || 'Egreso';
-        movMonedaDelMedio();
-        document.getElementById('movMonto').focus();
-    };
-    caja.appendChild(txt);
-    caja.appendChild(btn);
-    caja.classList.remove('hidden');
 }
 
 /** La moneda la decide el CATALOGO, igual que hace el onEdit de la hoja de Cargas. */
