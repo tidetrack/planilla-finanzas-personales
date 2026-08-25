@@ -3,6 +3,31 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.55.1 - El merge dejo dos patch, y tres numeros de version distintos.
+ * - El merge entre las dos lineas de trabajo (el shell y el ABM de Proyecciones) dejo en
+ *   01_Version.js DOS lineas `patch:` seguidas: `patch: 0` del release nuevo y `patch: 1` que
+ *   venia de la v0.53.1. Git NO marco conflicto -- son lineas distintas, no texto disputado --
+ *   asi que las conservo las dos y el merge se reporto limpio.
+ * - En un literal de objeto JavaScript la clave repetida no es un error: gana la ultima. El
+ *   archivo termino declarando TRES numeros a la vez. toString() devolvia "0.55.1",
+ *   releaseName decia v0.55.0, y el changelog embebido seguia encabezado por v0.54.0 porque el
+ *   merge tampoco le agrego entrada. targets.yaml, una cuarta fuente, declaraba 0.55.0.
+ * - Y esto NO quedo en el repo: se desplego. La planilla estuvo reportando una version que no
+ *   existia en ningun changelog.
+ * - Se resuelve hacia ARRIBA, a v0.55.1, y no bajando el rotulo a v0.55.0: 0.55.1 es lo que el
+ *   codigo realmente reporta y lo que ya esta corriendo. Subir el rotulo a la realidad es mas
+ *   honesto que bajar la realidad al rotulo.
+ * - Lo grave no es el numero, es que NINGUN guard podia agarrarlo. Parsea perfecto:
+ *   verificar_sintaxis.py daba verde con los 44 archivos. Y no hay parser que lo rechace --
+ *   ES6 permite claves duplicadas en literales incluso en modo estricto.
+ * - verificar_sintaxis.py suma la verificacion de COHERENCIA: ninguna clave repetida en el
+ *   bloque VERSION, y major.minor.patch igual en las cuatro fuentes que declaran el numero por
+ *   separado (el propio bloque, releaseName, el changelog embebido y la entrada de arriba de
+ *   este archivo). Importa porque targets.yaml es la referencia del drift-check: si la version
+ *   que la planilla reporta no es la que el repo cree haber desplegado, el mecanismo que evita
+ *   que dos sesiones se pisen queda mintiendo. En su PRIMERA corrida real el chequeo encontro
+ *   una incoherencia que se me habia pasado a mano.
+ *
  * [2026-08-25] v0.55.0 - Merge: el shell v0.53.1 y el ABM conviven, y el menu es tidetrack Dev.
  * + Trae v0.53.0 y v0.53.1 de fix/abm-desplegable-entidad (los seis pedidos de Franco sobre el
  *   shell, y la banda sin subtitulo). Se mergea ANTES de deployar, no despues de pisarlas.
