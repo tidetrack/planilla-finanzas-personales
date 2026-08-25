@@ -862,7 +862,17 @@ const MENU_CONFIG = {
                 { name: '1. Ver estado (no borra nada)', function: 'estadoPurgaRespaldos' },
                 { name: '2. Aplicar (borra, no se puede deshacer)', function: 'aplicarPurgaRespaldos' }
             ]
-        }
+        },
+        // ENTRADA TEMPORAL -- decision Franco 2026-08-25: el modal "Proyecciones Elaboradas"
+        // (v0.54.0) abre bien (titulo, subtitulo y banner correctos) pero su UNICA llamada al
+        // servidor (google.script.run.listarPeriodosProyeccion(), disparada al cargar) tira
+        // "PERMISSION_DENIED... error al leer desde el almacenamiento" -- reproducible, no
+        // transitorio. El mismo codigo/datos funcionan perfecto invocados desde ESTE MISMO menu
+        // (estadoGuardarProyeccion). Correr UNA vez, leer la alerta (y Ejecuciones si hace falta
+        // el stack completo), y despues BORRAR esta entrada junto con
+        // src/DEVTOOL_DIAG_PermisoProyeccionAbm.js entero. @see DEVTOOL_DIAG_PermisoProyeccionAbm.js
+        { separator: true },
+        { name: 'DIAG TEMPORAL: permiso del ABM Proyecciones Elaboradas', function: '_DIAG_diagnosticarPermisoProyeccionAbm' }
     ]
 };
 
