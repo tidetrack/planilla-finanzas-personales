@@ -63,11 +63,12 @@ vm.runInContext(
     '\n;Object.assign(globalThis,{RANGES,SHEETS,MONEDAS_DISPONIBLES,CUENTAS_NEUTRAS,esCuentaNeutra,' +
     'columnLetterToIndex,columnIndexToLetter,getDataRow,IP_MESES,_exclusionNeutrasIp,_colLedger,_refHoja,' +
     '_canonizarFormula,_rotulosCompatibles,_normalizarRotulo,_errorDeCelda,_verificarEscrituraSyf,' +
-    '_revertirEscriturasPm,_entradaEscritaPm,_absPm,_condModoHistoricoPm,_fragmentoMesRefPm,' +
-    '_mesRefDesdeSelectoresPm,PM_ALPHA,PM_ALPHA_FRACCION,PM_MESES_HISTORICO,PM_MODO,PM_SELECTORES,' +
-    'PM_BLOQUES,PM_CLAVES_BLOQUE,PM_FILA_INI,PM_FILA_FIN,PM_FILA_TOTAL,PM_UMBRAL_IDENTIDAD,' +
-    'PC_COL_CATEGORIA,PC_COL_MODO_AGRUPADO,PC_COL_PROYECTAR_AGRUPADO,PC_TITULO_MODO_AGRUPADO,' +
-    'PC_TITULO_PROYECTAR_AGRUPADO,PC_TITULO_PROYECTAR,PC_ROTULO_CATEGORIAS,PC_ROTULO_NOMBRE,' +
+    '_revertirEscriturasPm,_entradaEscritaPm,_absPm,_condModoHistoricoPm,_esModoHistoricoPm,' +
+    '_fragmentoMesRefPm,_formulaTituloMontoPm,_mesRefDesdeSelectoresPm,PM_ALPHA,PM_ALPHA_FRACCION,' +
+    'PM_MESES_HISTORICO,PM_MODO,PM_TITULO_PALABRA,PM_SELECTORES,PM_BLOQUES,PM_CLAVES_BLOQUE,' +
+    'PM_FILA_INI,PM_FILA_FIN,PM_FILA_TOTAL,PM_UMBRAL_IDENTIDAD,' +
+    'PC_COL_CATEGORIA,PC_COL_MODO_AGRUPADO,PC_COL_PROYECTAR_AGRUPADO,' +
+    'PC_TITULO_PROYECTAR,PC_ROTULO_CATEGORIAS,PC_ROTULO_NOMBRE,' +
     'PC_CELDA_TITULO_TABLA1,PC_TITULO_TABLA1,PC_FILAS_TABLA2,PC_TOKEN_ROTO,PC_TOKEN_CORRECTO,' +
     'PC_BLOQUES,PC_CLAVES_BLOQUE,_formulaAgrupadoPc,_formulaRotuloMesRefPc,_repararReferenciaTabla2Pc,' +
     '_recalcularAgrupadoPc,_leerMapaCategoriaPc,_verificarInvariantesPc,_preflightPc,_planPc});',
@@ -131,6 +132,16 @@ console.log('=== 1. ESTRUCTURA DE LAS FORMULAS ===');
     });
     ok(ctx._repararReferenciaTabla2Pc('=IFERROR(E19/$E$18;0)') === '=IFERROR(E19/$E$18;0)',
        'idempotente: una formula ya reparada no cambia');
+
+    // EL FIX DE v0.46.1: V7 es DINAMICO (sigue al modo, igual que J7/N7/R7) y se escribe con
+    // _formulaTituloMontoPm() REUSADA de DEVTOOL_PresupuestoModo.js -- nunca una segunda
+    // implementacion del mismo titulo. Esto prueba la reutilizacion BYTE A BYTE: si algun dia el
+    // plan de este modulo construyera su propia copia del titulo en vez de llamar a la funcion
+    // real, este chequeo lo detecta (ver seccion 4 de DEVTOOL_PresupuestoModo.js, mismo patron).
+    ok(typeof ctx._formulaTituloMontoPm === 'function', '_formulaTituloMontoPm existe y es reusable desde DEVTOOL_PresupuestoModo.js');
+    ok(revisar('titulo de V7 (_formulaTituloMontoPm)', ctx._formulaTituloMontoPm()), 'la formula de V7: estructura OK');
+    ok(ctx._formulaTituloMontoPm().indexOf(ctx._condModoHistoricoPm()) !== -1,
+       'el titulo de V7 usa la MISMA condicion de modo que J/N/R');
 }
 
 console.log('\n=== 2. EL CABLEADO ===');
@@ -145,8 +156,12 @@ console.log('\n=== 2. EL CABLEADO ===');
         set('C7', 'Modo'); set('E7', 'Proyección');
         set(ctx.PC_ROTULO_CATEGORIAS.celda, ctx.PC_ROTULO_CATEGORIAS.esperado);
         set(ctx.PC_ROTULO_NOMBRE.celda, ctx.PC_ROTULO_NOMBRE.esperado);
-        set(ctx.PC_COL_MODO_AGRUPADO + '7', ctx.PC_TITULO_MODO_AGRUPADO);
-        set(ctx.PC_COL_PROYECTAR_AGRUPADO + '7', ctx.PC_TITULO_PROYECTAR_AGRUPADO);
+        // V7 es DINAMICO (este modulo SI lo escribe, ver v0.46.1): en la hoja real arranca como
+        // texto ESTATICO ("Monto Historico" en modo Historico), igual que J7/N7/R7 antes de que
+        // DEVTOOL_PresupuestoModo.js las cableara. W7 es ESTATICO y este modulo NUNCA lo toca:
+        // dice EXACTAMENTE lo mismo que K7/O7/S7 ("Monto a Proyectar").
+        set(ctx.PC_COL_MODO_AGRUPADO + '7', 'Monto \nHistórico');
+        set(ctx.PC_COL_PROYECTAR_AGRUPADO + '7', ctx.PC_TITULO_PROYECTAR);
         Object.keys(ctx.PC_BLOQUES).forEach(k => set(ctx.PC_BLOQUES[k].colProyectar + '7', ctx.PC_TITULO_PROYECTAR));
 
         for (let f = ctx.PM_FILA_INI; f <= ctx.PM_FILA_FIN; f++) {
@@ -183,10 +198,10 @@ console.log('\n=== 2. EL CABLEADO ===');
     const pre = { hoja: hojaBase(), nombre: 'Presupuesto' };
     const plan = ctx._planPc(pre);
 
-    ok(plan.cambios.length === 64, 'el plan propone EXACTAMENTE 64 celdas (30 V + 30 W + C9 + F19:F21), propuso ' + plan.cambios.length);
+    ok(plan.cambios.length === 65, 'el plan propone EXACTAMENTE 65 celdas (V7 + 30 V + 30 W + C9 + F19:F21), propuso ' + plan.cambios.length);
 
     const celdasPlan = plan.cambios.map(c => c.celda).sort();
-    const esperadas = [];
+    const esperadas = ['V7'];
     for (let f = ctx.PM_FILA_INI; f <= ctx.PM_FILA_FIN; f++) {
         esperadas.push(ctx.PC_COL_MODO_AGRUPADO + f, ctx.PC_COL_PROYECTAR_AGRUPADO + f);
     }
@@ -197,6 +212,14 @@ console.log('\n=== 2. EL CABLEADO ===');
     ['J9', 'N9', 'R9', 'K9', 'O9', 'S9', 'J7', 'E7'].forEach(c => {
         ok(celdasPlan.indexOf(c) === -1, 'el plan NUNCA propone ' + c + ' (es de DEVTOOL_PresupuestoModo.js u otro encargo)');
     });
+    // EL BUG QUE FRENO EL DEPLOY REAL: W7 es estatico y este modulo NUNCA lo escribe (solo lo
+    // lee, igual que K7/O7/S7). Si algun dia el plan empezara a proponerlo, seria una regresion.
+    ok(celdasPlan.indexOf('W7') === -1, 'el plan NUNCA propone W7 (estatico, ya dice "Monto a Proyectar", este modulo solo lo lee)');
+    // Y EL OTRO LADO: el plan SI tiene que proponer V7 (es dinamico, sigue al modo).
+    ok(celdasPlan.indexOf('V7') !== -1, 'el plan SI propone V7 (dinamico, sigue al modo igual que J7/N7/R7)');
+    const cambioV7 = plan.cambios.find(c => c.celda === 'V7');
+    ok(cambioV7.formulaNueva === ctx._formulaTituloMontoPm(),
+       'V7 se escribe con _formulaTituloMontoPm() -- byte a byte la MISMA formula que J7/N7/R7, no una copia');
 
     // Idempotencia: aplicar el plan (simulado) y volver a planificar no debe proponer nada.
     const pre2 = { hoja: hojaBase(), nombre: 'Presupuesto' };
@@ -264,6 +287,84 @@ console.log('\n=== 3. LA MATEMATICA (_recalcularAgrupadoPc, espejo puro del agru
        'sin cuentas huerfanas, gapMonto da exactamente 0 en V y W');
 }
 
+console.log('\n=== 3b. EL INVARIANTE EN VIVO: V7 tiene que seguir al modo (_verificarInvariantesPc) ===');
+// El pedido explicito de Franco tras el freno real: "que V7 deje de seguir al modo tambien" lo
+// tiene que matar el banco. _verificarInvariantesPc es la funcion que correria DESPUES de
+// escribir; esta seccion la ejecuta contra un mock COMPLETO de hoja (a diferencia de la seccion
+// 3, que prueba _recalcularAgrupadoPc en aislamiento con datos sinteticos).
+{
+    function hojaInvariante(textoV7) {
+        // Un solo escenario feliz: una cuenta ("Cuenta1", Ingreso) con categoria "Cat",
+        // J9=100/K9=90, agrupada correctamente en V9=100/W9=90. V8=100=J8-N8-R8,
+        // W8=90=K8-O8-S8 -- todo cierra, asi que la UNICA falla posible es la de V7.
+        const colIni = ctx.columnLetterToIndex('I');
+        const nCols = ctx.columnLetterToIndex('W') - colIni + 1;
+        const nFilas = ctx.PM_FILA_FIN - ctx.PM_FILA_INI + 1;
+        const fila0 = new Array(nCols).fill('');
+        fila0[ctx.columnLetterToIndex('I') - colIni] = 'Cuenta1';
+        fila0[ctx.columnLetterToIndex('J') - colIni] = 100;
+        fila0[ctx.columnLetterToIndex('K') - colIni] = 90;
+        fila0[ctx.columnLetterToIndex('U') - colIni] = 'Cat';
+        fila0[ctx.columnLetterToIndex('V') - colIni] = 100;
+        fila0[ctx.columnLetterToIndex('W') - colIni] = 90;
+        const grid = [fila0];
+        for (let i = 1; i < nFilas; i++) grid.push(new Array(nCols).fill(''));
+
+        const celdas = {
+            'E7': 'Proyección',
+            'J2': 'Mes Invalido', 'J3': 2026,   // mesRef da null a proposito: se salta el chequeo de C9, no hace falta simularlo
+            'V7': textoV7,
+            'J8': 100, 'N8': 0, 'R8': 0, 'K8': 90, 'O8': 0, 'S8': 0,
+            'V8': 100, 'W8': 90
+        };
+        const hoja = {
+            getRange(a, b, c, d) {
+                if (typeof a === 'number') {
+                    // getRange(fila, col, nFilas, nCols) -- solo el rango I..W 9-38 lo usa
+                    return { getValues: () => grid.map(f => f.slice()) };
+                }
+                const a1 = a;
+                return {
+                    getValue: () => (a1 in celdas ? celdas[a1] : ''),
+                    getDisplayValue: () => String(a1 in celdas ? celdas[a1] : ''),
+                    getFormula: () => (a1[0] === 'F' ? '=IFERROR(E' + a1.slice(1) + '/$E$18;0)' : '')
+                };
+            }
+        };
+        // Plan de Cuentas minimo: "Cuenta1" categoriza como "Cat" SOLO en el bloque Ingresos
+        // (C:D) -- Fijos (F:G) y Variables (I:J) devuelven la misma hoja vacia. Esto hace que
+        // _recalcularAgrupadoPc cierre EXACTO (esperadoV=100=J9, esperadoW=90=K9, sin gap):
+        // el escenario queda "sano" en todo excepto en lo que cada test muta a proposito.
+        const cIdx = ctx.columnLetterToIndex('C');
+        const planHoja = {
+            getLastRow: () => 8,   // exactamente 1 fila de datos, ctx.DATA_START_ROW=8
+            getRange(row, col) {
+                const filaDatos = (col === cIdx) ? [['Cuenta1', 'Cat']] : [['', '']];
+                return { getValues: () => filaDatos };
+            }
+        };
+        const ss = { getSheetByName: (nombre) => (nombre === ctx.RANGES.INGRESOS.sheet ? planHoja : null) };
+        return { ss, hoja };
+    }
+
+    // CASO SANO: V7 muestra "Proyectado" (E7="Proyección") -- ok, no hay falla de titulo.
+    {
+        const { ss, hoja } = hojaInvariante('Monto \nProyectado');
+        const r = ctx._verificarInvariantesPc(ss, hoja);
+        const fallasV7 = r.fallas.filter(f => f.indexOf('V7') === 0);
+        ok(fallasV7.length === 0, 'CASO SANO: V7="Monto Proyectado" con E7="Proyección" -- ninguna falla de titulo. Fallas: ' + JSON.stringify(r.fallas));
+    }
+
+    // MUTACION: V7 se quedo mostrando "Historico" aunque E7 diga "Proyección" -- exactamente lo
+    // que pasaria si V7 fuera un rotulo ESTATICO (el bug real) en vez de seguir a _formulaTituloMontoPm().
+    {
+        const { ss, hoja } = hojaInvariante('Monto \nHistórico');
+        const r = ctx._verificarInvariantesPc(ss, hoja);
+        const fallasV7 = r.fallas.filter(f => f.indexOf('V7') === 0);
+        ok(fallasV7.length === 1, 'MUTACION: V7 no sigue al modo (muestra "Historico" con E7="Proyección") -- el invariante lo mata. Fallas V7: ' + JSON.stringify(fallasV7));
+    }
+}
+
 console.log('\n=== 4. EL PREFLIGHT (con mock de hoja y mutaciones dirigidas) ===');
 {
     function hojaBase() {
@@ -273,8 +374,10 @@ console.log('\n=== 4. EL PREFLIGHT (con mock de hoja y mutaciones dirigidas) ===
         set('C9', ctx.PC_TITULO_TABLA1);
         set(ctx.PC_ROTULO_CATEGORIAS.celda, ctx.PC_ROTULO_CATEGORIAS.esperado);
         set(ctx.PC_ROTULO_NOMBRE.celda, ctx.PC_ROTULO_NOMBRE.esperado);
-        set(ctx.PC_COL_MODO_AGRUPADO + '7', ctx.PC_TITULO_MODO_AGRUPADO);
-        set(ctx.PC_COL_PROYECTAR_AGRUPADO + '7', ctx.PC_TITULO_PROYECTAR_AGRUPADO);
+        // V7 DINAMICO (arranca como texto estatico, el preflight NO lo rotulo-chequea -- lo
+        // escribe). W7 ESTATICO, mismo texto que K7/O7/S7.
+        set(ctx.PC_COL_MODO_AGRUPADO + '7', 'Monto \nHistórico');
+        set(ctx.PC_COL_PROYECTAR_AGRUPADO + '7', ctx.PC_TITULO_PROYECTAR);
         Object.keys(ctx.PC_BLOQUES).forEach(k => set(ctx.PC_BLOQUES[k].colProyectar + '7', ctx.PC_TITULO_PROYECTAR));
 
         for (let f = ctx.PM_FILA_INI; f <= ctx.PM_FILA_FIN; f++) {
@@ -341,6 +444,27 @@ console.log('\n=== 4. EL PREFLIGHT (con mock de hoja y mutaciones dirigidas) ===
     abortaCon(h => { h.celdas['W8'].formula = ''; }, 'MUTACION total: W8 sin formula');
     abortaCon(h => { h.celdas['F19'].formula = '=IFERROR(E19/$E$99;0)'; }, 'MUTACION F19: no referencia ni $E$11 ni $E$18 (patron desconocido)');
     abortaCon(h => { h.celdas['F20'].formula = ''; }, 'MUTACION F20: sin formula');
+    // EL BUG EXACTO QUE FRENO EL DEPLOY REAL (v0.46.0): el preflight esperaba "Monto Proyectado"
+    // en W7 y la hoja real dice "Monto a Proyectar". Esta mutacion reproduce ese desvio -- con el
+    // fix, el preflight tiene que abortar apenas W7 deja de decir EXACTAMENTE lo mismo que K7/O7/S7.
+    abortaCon(h => { h.celdas['W7'].valor = 'Monto Proyectado'; }, 'MUTACION (el bug real de v0.46.0): W7="Monto Proyectado" en vez de "Monto a Proyectar"');
+    abortaCon(h => { h.merges['V7'] = 'U7'; }, 'MUTACION combinada: V7 mitad muda de U7 (V7 es DINAMICO, este modulo lo escribe)');
+
+    // --- V7 NO se rotulo-chequea (es dinamico, se escribe sin importar el contenido previo) ---
+    {
+        const h = hojaBase();
+        h.celdas['V7'].valor = 'cualquier cosa que haya quedado ahi';
+        const pre = ctx._preflightPc(ssCon(h));
+        ok(pre.nombre === 'Presupuesto', 'V7 con contenido arbitrario NO aborta el preflight -- es dinamico, se sobreescribe siempre');
+    }
+
+    // --- W7 NUNCA se escribe, aunque el preflight lo acepte ---
+    {
+        const h = hojaBase();
+        const pre = ctx._preflightPc(ssCon(h));
+        const plan = ctx._planPc(pre);
+        ok(!plan.cambios.some(c => c.celda === 'W7'), 'el plan nunca propone escribir W7 (solo se lee)');
+    }
 
     // --- F19:F21 ya reparado: no aborta, y el plan no lo vuelve a proponer ---
     {

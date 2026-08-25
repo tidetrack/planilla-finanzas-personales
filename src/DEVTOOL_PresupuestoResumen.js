@@ -127,7 +127,51 @@
  * Reusa de DEVTOOL_StockYFlujo.js: _refHoja, _canonizarFormula, _verificarEscrituraSyf. Reusa de
  * DEVTOOL_FormulerioV0111.js: _errorDeCelda, _rotulosCompatibles, _leerRespaldoFormulerio.
  *
- * @version 0.46.0
+ * ============================================================================
+ * EL FRENO DE v0.46.0 EN LA PLANILLA REAL, Y LA CORRECCION (v0.46.1)
+ * ============================================================================
+ * Franco desplego v0.46.0 y corrio "1. Ver estado": el preflight freno solo, sin escribir nada
+ * ("W7 dice 'Monto a Proyectar' y se esperaba 'Monto Proyectado'"). Correcto: mejor abortar que
+ * escribir sobre una hoja que el modulo no entendia bien.
+ *
+ * Medido en vivo por Franco (con el modo en "Historico"), el patron es uniforme en los CUATRO
+ * bloques -- Ingresos, Gastos Fijos, Gastos Variables Y Categorias -- de tres columnas: nombre,
+ * una columna que SIGUE AL MODO, y una columna FIJA:
+ *
+ *   Ingresos:          I7 "Ingresos."           J7 "Monto Historico" (sigue al modo)   K7 "Monto a Proyectar" (fijo)
+ *   Gastos Fijos:       M7 "Gastos Fijos."       N7 "Monto Historico" (sigue al modo)   O7 "Monto a Proyectar" (fijo)
+ *   Gastos Variables:   Q7 "Gastos Variables."   R7 "Monto Historico" (sigue al modo)   S7 "Monto a Proyectar" (fijo)
+ *   Categorias:         U7 "Categorias."         V7 "Monto Historico" (sigue al modo)   W7 "Monto a Proyectar" (fijo)
+ *
+ * DOS ERRORES, NO UNO. El preflight solo reporto el segundo (el primero no llego a evaluarse
+ * porque el chequeo de W7 aborto antes):
+ *   1. V7 se trataba como un rotulo ESTATICO ('Monto Histórico', comparado por preflight, nunca
+ *      escrito). Es DINAMICO -- sigue al modo exactamente igual que J7/N7/R7. La v0.46.0 nunca
+ *      lo hubiera actualizado si Franco cambiaba E7 despues de aplicar.
+ *   2. W7 se esperaba como 'Monto Proyectado'. El texto real es 'Monto a Proyectar' -- EL MISMO
+ *      texto exacto que K7/O7/S7, no una variante.
+ *
+ * LA CAUSA DE LOS DOS: se midio contra docs/permanente/celdas.tsv, un snapshot commiteado del
+ * 2026-08-18 que quedo viejo -- la cicatriz numero uno de este repo ("no fiarse de una geometria
+ * memorizada"). Para un rotulo que OTRO modulo hace dinamico (V7, que sigue a J7/N7/R7 via
+ * DEVTOOL_PresupuestoModo.js), un snapshot es especialmente traicionero: captura el texto de un
+ * modo puntual (aca, "Historico") y lo hace pasar por una constante fija.
+ *
+ * EL FIX: V7 pasa a ESCRIBIRSE con _formulaTituloMontoPm() de DEVTOOL_PresupuestoModo.js,
+ * REUSADA VERBATIM (nunca una segunda implementacion del mismo titulo) -- ver _planPc. Ya no
+ * tiene una constante de texto esperado en el preflight (mismo criterio que J7/N7/R7 en
+ * DEVTOOL_PresupuestoModo.js: la idempotencia la resuelve la comparacion de formulas de _planPc,
+ * no un rotulo-chequeo). W7 pasa a compararse contra PC_TITULO_PROYECTAR -- LA MISMA constante
+ * que ya usa el chequeo de K7/O7/S7 -- en vez de una segunda constante con un valor "parecido"
+ * pero distinto: es el mismo texto en cuatro celdas, y una segunda constante para el mismo dato
+ * es exactamente el patron que produjo este bug.
+ *
+ * CONFIRMADO ANTES DE APLICAR: este modulo sigue sin escribir K/O/S en ningun punto -- Franco ya
+ * empezo a cargar "Monto a Proyectar" a mano (K8 muestra $1.000.000,00 en la planilla real) y el
+ * plan de este modulo no toca esa columna.
+ *
+ * @see DEVTOOL_PresupuestoModo.js
+ * @version 0.46.1
  * @since 2026-08-24
  * @lastModified 2026-08-24
  */
@@ -141,11 +185,19 @@ const PC_COL_CATEGORIA = 'U';
 const PC_ROTULO_CATEGORIAS = { celda: 'U7', esperado: 'Categorías.' };
 const PC_ROTULO_NOMBRE = { celda: 'U8', esperado: 'Nombre' };
 
-const PC_COL_MODO_AGRUPADO = 'V';        // agrupa J/N/R (el "modo" -- referencia o ponderado)
-const PC_TITULO_MODO_AGRUPADO = 'Monto Histórico';
-const PC_COL_PROYECTAR_AGRUPADO = 'W';   // agrupa K/O/S ("Monto a Proyectar", fijo, sin modo)
-const PC_TITULO_PROYECTAR_AGRUPADO = 'Monto Proyectado';
-const PC_TITULO_PROYECTAR = 'Monto a Proyectar';   // K7/O7/S7 -- este modulo los LEE, no los escribe
+// decision 2026-08-24 (correccion post-deploy, medida en vivo por Franco): V7 es DINAMICO --
+// sigue al modo exactamente igual que J7/N7/R7 -- no un rotulo fijo. Por eso NO tiene una
+// constante de texto esperado: este modulo lo ESCRIBE con _formulaTituloMontoPm(), la MISMA
+// formula que ya usa DEVTOOL_PresupuestoModo.js para J7/N7/R7 (reusada verbatim, nunca una
+// segunda implementacion). W7 en cambio es estatico, y dice EXACTAMENTE lo mismo que K7/O7/S7
+// ("Monto a Proyectar") -- comparte la constante PC_TITULO_PROYECTAR de abajo, a proposito: son
+// el mismo texto en cuatro celdas, y una segunda constante con un valor "parecido" fue
+// exactamente el bug que freno el preflight en la corrida real (esperaba "Monto Proyectado",
+// la hoja decia "Monto a Proyectar" -- medido contra celdas.tsv, un snapshot que quedo viejo
+// para un rotulo que en realidad es SIEMPRE el mismo texto de "Monto a Proyectar").
+const PC_COL_MODO_AGRUPADO = 'V';        // agrupa J/N/R (el "modo" -- referencia o ponderado); titulo DINAMICO, ver arriba
+const PC_COL_PROYECTAR_AGRUPADO = 'W';   // agrupa K/O/S ("Monto a Proyectar", fijo, sin modo); titulo ESTATICO, PC_TITULO_PROYECTAR
+const PC_TITULO_PROYECTAR = 'Monto a Proyectar';   // K7/O7/S7 Y W7 -- este modulo solo LEE las cuatro, ninguna la escribe (las cuatro ya son estaticas y correctas)
 
 const PC_CELDA_TITULO_TABLA1 = 'C9';
 const PC_TITULO_TABLA1 = 'Movimientos Promedio históricos.';
@@ -425,6 +477,15 @@ function _verificarInvariantesPc(ss, hoja) {
             ': se omite el chequeo del rotulo de ' + PC_CELDA_TITULO_TABLA1 + '.');
     }
 
+    // V7: titulo DINAMICO que este modulo escribe -- tiene que mostrar la MISMA palabra que
+    // J7/N7/R7 para el modo vivo (mismo chequeo que _verificarInvariantesPm hace sobre esas tres).
+    const modoVivo = String(hoja.getRange(PM_MODO.celda).getValue() || '').trim();
+    const tituloEsperadoV7 = _esModoHistoricoPm(modoVivo) ? PM_TITULO_PALABRA.historico : PM_TITULO_PALABRA.proyectado;
+    const textoV7 = String(hoja.getRange(PC_COL_MODO_AGRUPADO + '7').getDisplayValue() || '');
+    if (textoV7.indexOf(tituloEsperadoV7) === -1) {
+        fallas.push(PC_COL_MODO_AGRUPADO + '7 muestra "' + textoV7 + '" y se esperaba que contuviera "' + tituloEsperadoV7 + '"');
+    }
+
     // F19:F21 no puede seguir referenciando el token roto
     PC_FILAS_TABLA2.forEach(function (f) {
         const celda = 'F' + f;
@@ -469,9 +530,13 @@ function _preflightPc(ss) {
         chequear(PC_BLOQUES[k].colProyectar + '7', PC_TITULO_PROYECTAR);
     });
 
-    // --- 3. Los titulos estaticos de V7/W7 -- tampoco los toca este modulo ---
-    chequear(PC_COL_MODO_AGRUPADO + '7', PC_TITULO_MODO_AGRUPADO);
-    chequear(PC_COL_PROYECTAR_AGRUPADO + '7', PC_TITULO_PROYECTAR_AGRUPADO);
+    // --- 3. W7 dice EXACTAMENTE lo mismo que K7/O7/S7 ("Monto a Proyectar") -- este modulo lo
+    // LEE, no lo escribe. V7 NO se rotulo-chequea aca a proposito: es DINAMICO (este modulo SI
+    // lo escribe, con la MISMA formula que J7/N7/R7 -- ver _planPc) y su contenido previo no
+    // importa, igual que DEVTOOL_PresupuestoModo.js no rotulo-chequea J7/N7/R7 antes de
+    // escribirlos: la idempotencia la resuelve _planPc comparando formulas, no un chequeo de
+    // texto aca.
+    chequear(PC_COL_PROYECTAR_AGRUPADO + '7', PC_TITULO_PROYECTAR);
 
     // --- 4. El titulo de la Tabla 1 (C9), que este modulo SI reescribe ---
     const c9Vivo = String(vivoDe(PC_CELDA_TITULO_TABLA1) || '');
@@ -491,6 +556,19 @@ function _preflightPc(ss) {
         if (ancla.getA1Notation() !== PC_CELDA_TITULO_TABLA1) {
             throw new Error(PC_CELDA_TITULO_TABLA1 + ' es la mitad muda de una celda combinada (ancla ' +
                 ancla.getA1Notation() + '): escribir aca no haria nada. No se toco nada.');
+        }
+    }
+
+    // --- 5b. V7 (el titulo dinamico que este modulo SI escribe, igual que J7/N7/R7) tampoco ---
+    // --- puede ser la mitad muda de una combinada -- mismo guard que DEVTOOL_PresupuestoModo.js ---
+    // --- aplica sobre J7/N7/R7 (su paso 8). ---
+    const celdaV7 = PC_COL_MODO_AGRUPADO + '7';
+    const rangoV7 = hoja.getRange(celdaV7);
+    if (rangoV7.isPartOfMerge()) {
+        const anclaV7 = rangoV7.getMergedRanges()[0].getCell(1, 1);
+        if (anclaV7.getA1Notation() !== celdaV7) {
+            throw new Error(celdaV7 + ' es la mitad muda de una celda combinada (ancla ' +
+                anclaV7.getA1Notation() + '): escribir aca no haria nada. No se toco nada.');
         }
     }
 
@@ -561,6 +639,12 @@ function _planPc(pre) {
             valorActual: actual ? '' : rango.getValue(), resumen: resumen
         });
     };
+
+    // V7: titulo DINAMICO, sigue al modo -- la MISMA formula que J7/N7/R7 (DEVTOOL_PresupuestoModo.js),
+    // reusada verbatim (nunca una segunda implementacion). W7 NO se toca: es estatico y ya dice
+    // "Monto a Proyectar" (verificado en preflight, paso 3).
+    proponer(PC_COL_MODO_AGRUPADO + '7', 'Titulo V7: sigue al modo, igual que J7/N7/R7', _formulaTituloMontoPm(),
+        '"Monto Historico" o "Monto Proyectado" segun ' + PM_MODO.celda + ' -- misma formula que J7/N7/R7');
 
     for (let f = PM_FILA_INI; f <= PM_FILA_FIN; f++) {
         proponer(PC_COL_MODO_AGRUPADO + f, 'Categorias (modo): fila ' + f, _formulaAgrupadoPc('modo', f),
