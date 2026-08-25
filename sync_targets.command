@@ -22,6 +22,17 @@
 # El flag --dry-run corre todo el analisis sin pushear (exit 0 sin drift,
 # exit 3 con drift o verificacion fallida: apto para CI y prueba en seco).
 #
+# El flag --verificado (2026-08-25) atiende un caso concreto: "pisar" existe para
+# que una persona conteste UNA pregunta -- estoy sobreescribiendo trabajo que el
+# repo no tiene? -- y esa pregunta es MECANICA. devtools/verificar_remoto.py la
+# contesta comparando los hashes de blob del remoto contra el src/ de cada commit
+# alcanzable: si el remoto ES un commit nuestro, nadie edito por afuera y pisarlo
+# es simplemente desplegar. Con --verificado el script deploya sin preguntar SOLO
+# si TODOS los targets quedaron en "sin drift" o en "local adelante"; si alguno
+# tiene contenido que el repo nunca vio, o si la verificacion falla, ABORTA en vez
+# de preguntar. Es deliberado: en modo no interactivo no hay nadie para contestar,
+# y un flag que ante la duda sigue de largo seria peor que no tenerlo.
+#
 # @see docs/permanente/ARNES_TIDETRACK.md (seccion 3 Fase 1, seccion 9, seccion 12)
 #
 # decision Franco 2026-08-12: deploy solo por script con drift-check, portado de pymes sync_clients.command (Fase 1 arnes)
@@ -30,16 +41,21 @@ set -u
 
 # --- Flags ---
 DRY_RUN=0
+VERIFICADO=0
 for arg in "$@"; do
     case "$arg" in
         --dry-run) DRY_RUN=1 ;;
-        *) echo "AVISO: argumento desconocido '$arg' (solo se acepta --dry-run). Se ignora." ;;
+        --verificado) VERIFICADO=1 ;;
+        *) echo "AVISO: argumento desconocido '$arg' (se aceptan --dry-run y --verificado). Se ignora." ;;
     esac
 done
 
 echo "Iniciando despliegue con red de seguridad de Tidetrack (finanzas personales)..."
 if [ "$DRY_RUN" -eq 1 ]; then
     echo "Modo DRY RUN: se analiza todo pero no se pushea nada."
+fi
+if [ "$VERIFICADO" -eq 1 ]; then
+    echo "Modo VERIFICADO: sin preguntas, y solo si el remoto resulta ser un commit del repo."
 fi
 
 # Navegar al directorio del propio script (vive en la RAIZ del repo).
@@ -197,10 +213,27 @@ for i in "${!TARGET_NAMES[@]}"; do
             echo "  sin drift: el remoto coincide con src/ local."
             DRIFT_STATUS+=("ok")
         elif [ "$diff_rc" -eq 1 ]; then
-            echo "  DRIFT DETECTADO: remoto y src/ local difieren (un push sobreescribe el remoto)."
-            echo "  Archivos que difieren:"
-            sed 's/^/    /' "$tmp_dir/diff.log"
-            DRIFT_STATUS+=("drift")
+            # Hay diferencia, pero eso NO dice en que direccion. La pregunta que importa --
+            # el remoto tiene algo que el repo nunca vio? -- la contesta el verificador
+            # comparando hashes de blob contra el src/ de cada commit alcanzable.
+            commit_remoto="$(python3 "$REPO_DIR/devtools/verificar_remoto.py" "$pulled_dir" 2>/dev/null)"
+            ver_rc=$?
+            if [ "$ver_rc" -eq 0 ]; then
+                echo "  LOCAL ADELANTE: el remoto es exactamente un commit de este repo."
+                echo "    remoto = $commit_remoto"
+                echo "    Nadie edito en el editor de Apps Script. Pushear solo lo actualiza."
+                DRIFT_STATUS+=("adelante")
+            else
+                echo "  DRIFT DETECTADO: remoto y src/ local difieren (un push sobreescribe el remoto)."
+                if [ "$ver_rc" -eq 1 ]; then
+                    echo "    El remoto NO coincide con ningun commit del repo: tiene contenido propio."
+                else
+                    echo "    Ademas, no se pudo verificar contra la historia del repo."
+                fi
+                echo "  Archivos que difieren:"
+                sed 's/^/    /' "$tmp_dir/diff.log"
+                DRIFT_STATUS+=("drift")
+            fi
         else
             echo "  ERROR al comparar (diff fallo):"
             sed 's/^/    /' "$tmp_dir/diff.log"
@@ -218,7 +251,8 @@ done
 echo "Targets a desplegar (${#TARGET_NAMES[@]}):"
 for i in "${!TARGET_NAMES[@]}"; do
     case "${DRIFT_STATUS[$i]}" in
-        ok)    marca="sin drift" ;;
+        ok)       marca="sin drift" ;;
+        adelante) marca="local adelante: el remoto es un commit del repo" ;;
         drift) marca="CON DRIFT: pedira confirmacion 'pisar'" ;;
         *)     marca="DRIFT NO VERIFICADO: pedira confirmacion 'pisar'" ;;
     esac
@@ -234,6 +268,8 @@ if [ "$DRY_RUN" -eq 1 ]; then
     echo "DRY RUN: no se pusheo nada"
     for st in "${DRIFT_STATUS[@]}"; do
         if [ "$st" != "ok" ]; then
+            # 'adelante' tambien sale 3: no es peligroso, pero sigue habiendo algo que
+            # desplegar y un pipeline que pregunta "esta la produccion al dia?" quiere saberlo.
             echo "DRY RUN: hay drift o verificacion fallida en al menos un target (exit 3)."
             exit 3
         fi
@@ -242,10 +278,32 @@ if [ "$DRY_RUN" -eq 1 ]; then
 fi
 
 # --- Confirmacion explicita: esto empuja codigo a la planilla productiva ---
-read -r -p "Confirmas el push a estos ${#TARGET_NAMES[@]} target/s productivos? (s/n): " respuesta
-if [ "$respuesta" != "s" ] && [ "$respuesta" != "S" ]; then
-    echo "Despliegue cancelado por el usuario."
-    exit 0
+if [ "$VERIFICADO" -eq 1 ]; then
+    # En modo verificado no se pregunta, pero TAMPOCO se sigue de largo ante la duda:
+    # si algun target no quedo en 'ok' o 'adelante', se aborta. No hay nadie del otro
+    # lado para contestar, y un flag que ante la duda avanza no es una automatizacion,
+    # es un guard desactivado.
+    NO_VERIFICADOS=()
+    for i in "${!TARGET_NAMES[@]}"; do
+        st="${DRIFT_STATUS[$i]}"
+        if [ "$st" != "ok" ] && [ "$st" != "adelante" ]; then
+            NO_VERIFICADOS+=("${TARGET_NAMES[$i]} [$st]")
+        fi
+    done
+    if [ ${#NO_VERIFICADOS[@]} -gt 0 ]; then
+        echo "ABORTADO. --verificado exige que TODOS los targets esten verificados, y estos no lo estan:"
+        for n in "${NO_VERIFICADOS[@]}"; do echo "  - $n"; done
+        echo "El remoto tiene contenido que este repo no conoce, o no se pudo comprobar."
+        echo "Corre el script SIN --verificado y decidilo a mano."
+        exit 4
+    fi
+    echo "Todos los targets verificados. Se deploya sin preguntar."
+else
+    read -r -p "Confirmas el push a estos ${#TARGET_NAMES[@]} target/s productivos? (s/n): " respuesta
+    if [ "$respuesta" != "s" ] && [ "$respuesta" != "S" ]; then
+        echo "Despliegue cancelado por el usuario."
+        exit 0
+    fi
 fi
 
 # --- Backup de .clasp.json con restauracion garantizada por el trap ---
@@ -263,7 +321,9 @@ for i in "${!TARGET_NAMES[@]}"; do
 
     # Confirmacion adicional para targets con drift (o drift no verificable):
     # solo la palabra exacta "pisar" autoriza sobrescribir el remoto.
-    if [ "${DRIFT_STATUS[$i]}" != "ok" ]; then
+    # 'adelante' NO pregunta: ya se comprobo que el remoto es un commit de este repo, que es
+    # exactamente lo que "pisar" existia para que una persona confirmara mirando un diff.
+    if [ "${DRIFT_STATUS[$i]}" != "ok" ] && [ "${DRIFT_STATUS[$i]}" != "adelante" ]; then
         echo "ATENCION: '$name' difiere del remoto (o no se pudo verificar). El push sobreescribe el estado remoto."
         read -r -p "Escribi 'pisar' para continuar con '$name' (cualquier otra cosa lo saltea): " resp_drift
         if [ "$resp_drift" != "pisar" ]; then

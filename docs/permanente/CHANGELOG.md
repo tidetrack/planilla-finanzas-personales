@@ -9,6 +9,42 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## Herramienta - deploy verificado: "pisar" deja de ser una pregunta (2026-08-25)
+
+*Cambio de herramienta y gobernanza; no toca `src/`, asi que no mueve la version desplegada.*
+
+`sync_targets.command` pedia escribir **"pisar"** cuando el remoto difiere de `src/`. Esa palabra
+existe para que una persona conteste **una** pregunta: *estoy sobreescribiendo trabajo que el repo
+no tiene?* Es la pregunta correcta —este repo descubrio de la peor manera que la produccion puede
+ir adelante— pero se contestaba mirando un diff a ojo, y un guard que depende de que alguien mire
+bien a las once de la noche es un guard debil.
+
+**Esa pregunta es mecanica.** `devtools/verificar_remoto.py` la contesta comparando los **hashes de
+blob** de lo que bajo del remoto contra el `src/` de cada commit alcanzable del repo. Si el remoto
+es exactamente un commit nuestro, nadie edito en el editor de Apps Script y no hay nada que
+adjudicar. Si no coincide con ninguno, hay contenido que el repo nunca vio y ahi si decide una
+persona.
+
+Estado nuevo en el drift-check: **`adelante`** —hay diferencia, pero el remoto es un commit
+conocido y el local va adelante—. Ese caso ya no pide `pisar`.
+
+**Flag `--verificado`**: deploya sin preguntar, pero **solo** si todos los targets quedaron en
+`ok` o `adelante`. Si alguno no verifica, **aborta con exit 4** en vez de preguntar. Es
+deliberado: en modo no interactivo no hay nadie para contestar, y un flag que ante la duda sigue
+de largo no es una automatizacion, es un guard apagado.
+
+**Por que no se copio la solucion de pymes.** Alla el agente puede deployar porque
+`npm run legacy:sync` corre `clasp push -w` —push a ciegas, en watch, sin drift-check— y hay un
+`Bash(npm run:*)` que lo habilita. Su camino gobernado (`sync_clients.command`) tiene **cero**
+menciones de drift contra 37 de este script. pymes no resolvio este problema: nunca construyo el
+rail. Copiarlo hubiera sido desarmar lo que descubrio que `main` estaba 22 versiones atras.
+
+Banco 14: `devtools/probar_verificar_remoto.py`, contra la historia real del repo. Insiste en el
+unico modo de falla inaceptable —el falso positivo— por las tres vias posibles: archivo
+modificado, de mas y de menos. Y en que cualquier problema devuelva 2, jamas 0.
+
+---
+
 ## v0.47.1 - El shell abre instantaneo: cero viajes al servidor (2026-08-24)
 
 **Sintoma**, reportado por Franco con captura: el Centro de Operaciones abria, mostraba el Home en
