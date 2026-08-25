@@ -3,6 +3,20 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.53.1 - La banda pierde el subtitulo.
+ * - Franco senalo el span de la banda: "este span es irrelevante". Lo era. "Que queres hacer"
+ *   al lado del wordmark no decia nada que la pantalla no dijera ya -- las tarjetas del home
+ *   tienen su propia descripcion, mas larga y mas concreta ("Plata de una caja a otra. Escribe
+ *   las dos patas juntas."). El subtitulo repetia en corto lo que ya estaba en largo.
+ * - Con el span se va el campo `subtitulo` de SHELL_VISTAS: era su UNICO consumidor. Un campo
+ *   muerto ahi no es inocuo -- SHELL_VISTAS se inyecta ENTERA por template en cada apertura.
+ * - Y se va el wrapper .titulos, que existia solo para alinear h1 y sub por baseline. Con un
+ *   solo hijo no alineaba nada: el h1 pasa a ser hijo directo de la banda.
+ * - Efecto lateral que casi pasa desapercibido: regenerar_servidor_shell.py parsea SHELL_VISTAS
+ *   por REGEX y el patron EXIGIA el campo subtitulo. Sin ajustarlo, el regenerador dejaba de
+ *   encontrar las vistas y escribia una lista vacia -- en silencio, porque no hay assert. El
+ *   servidor de pruebas quedaba con el shell sin ninguna vista y sin decir por que.
+ *
  * [2026-08-25] v0.53.0 - Seis pedidos de Franco sobre el shell.
  * - "EL BOTON DE GESTIONAR CUENTAS DEBE TENER EL MISMO PESO QUE EL RESTO." Era un chip de
  *   36 px sin descripcion, al lado de tarjetas de 116. Un chip comunica "accion secundaria", y

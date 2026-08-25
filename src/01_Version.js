@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 53,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -23,7 +23,7 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseName: 'v0.53.0 - Seis pedidos de Franco sobre el shell',
+ releaseName: 'v0.53.1 - La banda pierde el subtitulo',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -35,6 +35,11 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.53.1 (2026-08-25) - La banda pierde el subtitulo
+- Franco senalo el span de la banda: "este span es irrelevante". Lo era. "Que queres hacer" al lado del wordmark no decia nada que la pantalla no dijera ya: las tarjetas del home tienen su propia descripcion, mas larga y mas concreta.
+- Con el span se va tambien el campo subtitulo de SHELL_VISTAS. Era su UNICO consumidor, y un campo muerto ahi no es inocuo: SHELL_VISTAS se inyecta ENTERA por template en cada apertura del shell.
+- regenerar_servidor_shell.py parseaba SHELL_VISTAS por regex EXIGIENDO el campo; sin el ajuste el regenerador dejaba de encontrar las vistas y escribia una lista vacia, en silencio.
+
 v0.53.0 (2026-08-25) - Seis pedidos de Franco sobre el shell
 + "El boton de gestionar cuentas debe tener el mismo peso que el resto": era un chip de 36px sin descripcion al lado de tarjetas de 116. Un chip comunica "accion secundaria", y administrar el Plan de Cuentas es la estructura sobre la que se apoya todo. Pasa a tarjeta, misma grilla y mismo peso. El CSS de .shell-chip se retira entero por quedar sin uso.
 + "Deberia dejar cargar muchos mas movimientos, no solo 15": el tope era la ALTURA DE LA GRILLA, que es una restriccion de la hoja y no del acto de cargar. Ahora se procesa en TANDAS -- se siembra lo que entra, se procesa, se repite -- y el cliente avisa cuantas van a ser antes de apretar Cargar. Lo mismo para traspasos, con la salvedad de que una tanda nunca parte un traspaso al medio: se divide por pares.

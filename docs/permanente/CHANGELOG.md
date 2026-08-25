@@ -10,6 +10,26 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## v0.53.1 - La banda pierde el subtitulo (2026-08-25)
+
+Franco senalo el span de la banda: *"este span es irrelevante"*. Lo era. **"Que queres hacer"**
+al lado del wordmark no decia nada que la pantalla no dijera ya — las tarjetas del home tienen
+su propia descripcion, mas larga y mas concreta. El subtitulo repetia en corto lo que ya estaba
+en largo.
+
+Con el span se va tambien el campo `subtitulo` de `SHELL_VISTAS`: era su **unico** consumidor, y
+un campo muerto ahi no es inocuo, porque `SHELL_VISTAS` se inyecta entera por template en cada
+apertura del shell. Y se va el wrapper `.titulos`, que existia solo para alinear el `h1` y el
+`sub` por baseline: con un solo hijo no alineaba nada.
+
+**El efecto lateral casi pasa desapercibido.** `regenerar_servidor_shell.py` parsea `SHELL_VISTAS`
+por regex, y el patron **exigia** el campo. Sin ajustarlo, el regenerador dejaba de encontrar las
+vistas y escribia una lista vacia — en silencio, porque no hay assert: el servidor de pruebas
+habria quedado con el shell sin ninguna vista y sin decir por que.
+
 ---
 
 ## v0.53.0 - Seis pedidos de Franco sobre el shell (2026-08-25)

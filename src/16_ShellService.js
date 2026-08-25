@@ -56,6 +56,12 @@
 const SHELL_GEOMETRIA = { ancho: 900, alto: 700 };
 
 /**
+ * decision Franco 2026-08-25: la banda no lleva subtitulo. "Que queres hacer" al lado del
+ * wordmark no decia nada que la pantalla no dijera ya -- las tarjetas del home tienen su
+ * propia descripcion, mas larga y mas concreta. Con el span se va el campo `subtitulo`:
+ * era su UNICO consumidor, y un campo muerto en esta lista viaja igual en cada apertura
+ * del shell, porque SHELL_VISTAS se inyecta ENTERA por template.
+ *
  * Las vistas del shell. UNICA lista: el backend valida contra ella y se la inyecta al
  * cliente, que arma su router desde esto. Agregar una vista es agregar una linea aca.
  *
@@ -63,12 +69,12 @@ const SHELL_GEOMETRIA = { ancho: 900, alto: 700 };
  * que no hace es peor que una que dice cuando va a estar: el shell muestra el estado real.
  */
 const SHELL_VISTAS = [
-    { id: 'home', titulo: 'tidetrack', subtitulo: 'Que queres hacer', listo: true },
-    { id: 'movimiento', titulo: 'Movimiento nuevo', subtitulo: 'Un gasto o un ingreso', listo: true },
-    { id: 'traspaso', titulo: 'Traspaso nuevo', subtitulo: 'Plata de una caja a otra', listo: true },
-    { id: 'proyeccion', titulo: 'Proyeccion nueva', subtitulo: 'Lo que pensas gastar', listo: false },
-    { id: 'recurrentes', titulo: 'Gastos recurrentes', subtitulo: 'Lo que se repite todos los meses', listo: false },
-    { id: 'conciliacion', titulo: 'Conciliacion', subtitulo: 'Lo que dice el sistema contra lo que hay', listo: false }
+    { id: 'home', titulo: 'tidetrack', listo: true },
+    { id: 'movimiento', titulo: 'Movimiento nuevo', listo: true },
+    { id: 'traspaso', titulo: 'Traspaso nuevo', listo: true },
+    { id: 'proyeccion', titulo: 'Proyeccion nueva', listo: false },
+    { id: 'recurrentes', titulo: 'Gastos recurrentes', listo: false },
+    { id: 'conciliacion', titulo: 'Conciliacion', listo: false }
 ];
 
 /** La vista a la que se cae si alguien pide una que no existe. */
