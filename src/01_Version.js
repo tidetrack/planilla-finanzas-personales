@@ -3,7 +3,7 @@
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
  *
- * @version 0.11.4
+ * @version 0.11.5
  * @since 0.1.0
  * @lastModified 2026-08-25
  */
@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 51,
- patch: 2,
+ minor: 53,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.51.2 - Presupuesto: sembrar Monto a Proyectar ahora pisa, con confirmacion',
+ releaseName: 'v0.53.0 - Merge de recuperacion: --verificado piso v0.52.1, las dos ramas se reconcilian',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,35 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.53.0 (2026-08-25) - Merge de recuperacion: --verificado piso v0.52.1, las dos ramas se reconcilian
+NOTA DE CONCURRENCIA (segunda vez que las ramas se pisan mutuamente): a las 16:44 el deploy de
+  v0.51.2 (esta rama, fix/tablero-pendientes) uso sync_targets.command --verificado. Ese modo
+  empuja sin preguntar "solo si el remoto es un commit CONOCIDO del repo" -- y lo era (la punta
+  de fix/abm-desplegable-entidad, mas nueva que la propia), pero el chequeo no exigia que fuera
+  ANCESTRO de lo que se estaba por pushear. Resultado: la planilla perdio v0.50.0 (rediseno del
+  Centro de Operaciones) y v0.52.1 (el fix de la animacion que rebotaba). Nada se perdio de git
+  -- todo seguia en origin/fix/abm-desplegable-entidad, punta a0b3c18 -- pero la planilla
+  productiva SI corrio con menos codigo del que tenia una hora antes.
+! ES LA MISMA CICATRIZ, AL REVES: cfbb173 ("merge: fix/tablero-pendientes -> restaurar el
+  Presupuesto que el deploy piso", v0.52.0) fue la respuesta a que un deploy anterior de ESTA
+  rama pisara el trabajo de fix/abm-desplegable-entidad. c1f5931 ("el verificador exige que el
+  remoto sea ANCESTRO, no solo conocido") ya arreglo devtools/verificar_remoto.py para que esto
+  no vuelva a pasar -- ese fix entra al repo con este mismo merge.
+! targets.yaml.version_desplegada queda en "0.51.2": es lo que HAY en la planilla ahora mismo
+  (el deploy que la piso), no lo que el repo declara. El campo describe el estado real; el
+  proximo sync_targets.command corrige la planilla y recien ahi ese numero sube.
++ DEVTOOL_PresupuestoSembrar.js: gana la version de esta rama (v0.51.2, la que pisa con
+  confirmacion) sobre la copia vieja (v0.51.0, solo llenaba celdas vacias) que
+  fix/abm-desplegable-entidad todavia tenia por haber mergeado esta rama en un punto anterior a
+  cfbb173. Git lo resolvio automaticamente, sin conflicto: el otro lado no habia tocado el
+  archivo desde el ancestro comun.
+
+v0.52.1 (2026-08-25) - El bloque que entra desacelera, no rebota
+- La animacion de entrada de un bloque de carga multiple usaba cubic-bezier(.34, 1.56, .64, 1). El 1.56 pasa de largo el valor final y vuelve: el bloque se pasa de posicion y de escala antes de asentarse.
+- POR QUE IMPORTA ACA Y NO EN CUALQUIER LADO: en esa pantalla se agregan hasta QUINCE bloques, asi que el rebote se ve quince veces seguidas en una sola carga. Y es una herramienta de cargar plata, cuya voz de marca "traduce, no impresiona". Un objeto real desacelera; no rebota.
++ Pasa a cubic-bezier(.22, 1, .36, 1) -- easeOutQuint: entra rapido y se frena sin pasarse. Queda alineado con las otras dos curvas del sistema, que ya eran desaceleraciones puras.
+* El token se llamaba --mov-rebote y ahora es --mov-entra: un nombre que promete un rebote invita a reponerlo.
+
 v0.51.2 (2026-08-25) - Presupuesto: sembrar Monto a Proyectar ahora pisa, con confirmacion
 ! Fix de diseno sobre v0.51.0/v0.51.1 (sin desplegar): K/O/S no son por mes -- son las mismas
   celdas para cualquier periodo de J2/J3. La regla vieja ("nunca pisar") volvia la funcion util
@@ -220,8 +249,29 @@ v0.49.0 (2026-08-25) - La tipografia nunca cargaba, y carga multiple de movimien
   pedo") junto con la lectura del ledger que la alimentaba. La respuesta a "maximo 2 toques"
   resulto ser la carga multiple, no adivinarle el proximo movimiento.
 - Banco del shell: 17 secciones. Los catorce bancos y los tres modales en verde.
-
-
+v0.50.0 (2026-08-25) - Rediseno del Centro de Operaciones
++ Franco: "necesito un equipo agentico que se ocupe de que el menu tenga un frontend mucho mas bonito". Se armo: cuatro agentes de benchmark (webapp de pymes, contrato de diseno del handoff, centro de operaciones, critica del estado actual), dos direcciones independientes y un director de arte que eligio, injerto y entrego el CSS.
+! EL DIRECTOR ENCONTRO QUE LA DIRECCION "MAS SOBRIA" YA HABIA FALLADO DOS VECES, citando el changelog de la v0.48.0: sacar los bordes y definir la superficie por fondo es exactamente lo que se hizo antes de que Franco dijera "sigue feo". La observacion de fondo: una celda de Sheets no necesita borde porque LA GRILLA YA ES EL BORDE; un input flotando en un modal no tiene grilla. Se invierte el plano: lienzo del color de la hoja, tarjetas blancas elevadas.
+! Y midio que el Home ANTERIOR armaba ~738px de flujo dentro de un modal de 700: no entraba en si mismo. El nuevo suma 580 con 120 de sobra, contado componente por componente.
++ HOME CON UNA SOLA RESPUESTA OBVIA: card hero para "Movimiento nuevo" -- que es a lo que Franco entra -- y el resto en tarjetas normales y chips. Antes eran siete tarjetas identicas de 116px en tres grillas iguales: cada apertura cobraba una decision.
++ ACORDEON EN LA CARGA MULTIPLE: un solo bloque abierto a la vez. Quince bloques abiertos de 194px son 2.910px en un modal de 700; colapsados son 48px cada uno y el cupo real entra con el boton de Cargar siempre a la vista.
++ Segmentado Egreso/Ingreso en vez de un select de dos opciones, y prefijo de moneda con el select transparente encima: saca una columna entera de la grilla y baja el bloque de tres filas a dos.
++ Total del lote en vivo, y solo si todo comparte moneda: sumar monedas distintas seria mentir.
+* CONTRASTE MEDIDO PAR POR PAR. El rojo #c93232 sobre su riel daba 4.47:1 -- abajo de AA -- y pasa a #ad2727 (5.76). El placeholder daba 2.56 y pasa a 3.89.
+* El ABM se alinea al mismo sistema: comparte plano con el shell y se le sacan los !important, que peleaban contra el sistema compartido en vez de usarlo. "Gestionar cuentas" reemplaza el modal, asi que tocarla cambiaba de piel.
++ 56 tokens, CERO hex sueltos fuera de :root, 323 usos de var(). Sin build, sin Tailwind, sin JS de terceros.
+v0.49.0 (2026-08-25) - La tipografia nunca cargaba, y carga multiple
+! LA CAUSA RAIZ DE "HAY DISTORCIONES DE TAMANOS DE LETRAS" NO ERA LA ESCALA, ERA LA FAMILIA. UI_SharedStyles declara 'Google Sans' pero el shell no tenia el <link> a Google Fonts: la fuente NUNCA se descargaba. Y peor: los cinco rotulos mas chicos usaban var(--font-mono), que declara JetBrains Mono y Fira Code -- ninguna instalada -- asi que caian en COURIER NEW. La altura de x de Courier es ~0.42em contra ~0.53em de una grotesca: a 10.5px las minusculas median 4,4 px al lado de un select de 14px sans. Habia DOS cosas declaradas en 20px que no se parecian en nada, porque una era sans y la otra Courier.
++ Se carga la webfont de verdad. Se retira el token --font-mono del design system: un token que resuelve a algo que nadie eligio es una trampa. UNA SOLA FAMILIA en todo el shell, como pymes.
++ Escala de cinco pasos enteros: 22 / 16 / 14 / 13 / 11. Se van los 10.5px, que Chrome redondea distinto segun donde caiga la caja.
++ ALTURA FIJA en todos los controles (42px). Un select ignora line-height y calcula su alto con su metrica interna; un input[type=date] trae su propio shadow DOM. Con el mismo font-size y el mismo padding daban 43 y 47 px, y el Monto a 20px daba 56: TRES ALTURAS EN LA MISMA FILA. Nunca se iguala un input con un select por padding.
++ CARGA MULTIPLE, portada de pymes: bloques repetibles con agregar, quitar y renumerado. Hereda medio y fecha del bloque anterior, nunca monto, cuenta ni nota -- heredar lo que cambia obliga a borrarlo. El tope sale de las filas LIBRES que informa el backend: la grilla de personales es de 15 filas contra las 50 de pymes, asi que dejar agregar sin limite seria hacer tipear diez bloques para que el backend diga que no entran.
++ Los cortes del grid se COMPARTEN entre filas. Antes la fila 1 cortaba en 4 y 7 y la fila 2 en 5 y 8: corridos exactamente una columna, la peor distancia posible.
++ Home de tres columnas: con dos, la septima tarjeta quedaba huerfana con 430px de blanco al lado.
++ Pie FIJO al piso. Antes era estatico y saltaba de lugar al navegar.
++ Los inputs pierden borde y sombra: la doctrina de este shell es que la superficie se define por fondo, y estaba aplicada solo a las tarjetas -- Home y formulario parecian dos productos.
+* --text-secondary pasa de #6e7f8d a #5f6368: el anterior daba 3.69:1 sobre el fondo de bloque, por debajo del minimo AA. Y el foco de los inputs deja de ser un halo gris sobre gris (invisible) para usar el mismo outline que los botones.
++ Banco del shell: 17 secciones. Los catorce bancos en verde.
 v0.48.1 (2026-08-25) - El shell reacciona: el scriptlet escapaba el JSON
 - SINTOMA, reportado por Franco: el shell abria pero NO REACCIONABA. Ningun click hacia
   nada. "Recargo la pagina y no ocurre nada."

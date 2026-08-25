@@ -2,13 +2,18 @@
 <html>
 <head>
     <base target="_top">
-    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <?!= include('UI_SharedStyles'); ?>
 
     <style>
-        /* ── Base: color invertido ── */
+        /* ── Base ──
+           decision Franco 2026-08-25: el ABM se alinea al Centro de Operaciones. Antes tenia
+           el plano invertido -- lienzo blanco con paneles grises y borde de 1px -- y como
+           "Gestionar cuentas" REEMPLAZA el modal del shell, tocarla te cambiaba de piel. Ahora
+           comparte plano: lienzo del color de la hoja, tarjetas blancas elevadas.
+           Se van los !important: peleaban contra el sistema compartido en vez de usarlo. */
         body {
-            background-color: #FFFFFF !important;
+            background-color: #eff2f9;
             margin: 0;
             padding: 0;
         }
@@ -21,7 +26,7 @@
         }
 
         .intro-header h1 {
-            color: var(--primary-dark);
+            color: var(--primary-color);
             font-size: 22px;
             font-weight: 700;
             margin: 0 0 4px;
@@ -37,24 +42,32 @@
 
 
         /* ── Paneles y Cajas (Color invertido: fondo #eff2f9) ── */
+        /* La tarjeta se levanta del lienzo con elevacion y un filo de 1px al 6%, no con un
+           borde gris pleno: el borde pleno dibuja una caja, el filo define un canto. */
         .panel {
-            background-color: #eff2f9 !important;
-            border: 1px solid #d4dbe8;
-            border-radius: var(--border-radius-md);
+            background-color: #ffffff;
+            border: 0;
+            border-radius: 12px;
             padding: 16px;
             margin-bottom: 16px;
+            box-shadow: 0 1px 2px rgba(52,71,93,.06), 0 0 0 1px rgba(52,71,93,.06);
         }
 
         .btn-secondary {
-            background-color: #eff2f9 !important;
-            color: var(--primary-color) !important;
-            border: 1px solid #d4dbe8 !important;
+            background-color: #eff2f9;
+            color: var(--primary-color);
+            border: 0;
+            box-shadow: inset 0 0 0 1px rgba(52,71,93,.10);
         }
 
+        /* Los controles se hunden en la tarjeta -- fondo del lienzo, sin borde -- igual que
+           en el shell. Antes eran blancos sobre panel gris, o sea el plano al reves. */
         .panel .form-input, .panel .form-select,
         #dynamicFields .form-input, #dynamicFields .form-select,
         #accountSelectorWrapper .form-input {
-            background-color: #FFFFFF !important;
+            background-color: #eff2f9;
+            border: 0;
+            box-shadow: none;
         }
 
         /* ── Animaciones ── */
@@ -168,7 +181,7 @@
                 <button type="button" id="btnModeUpdate" class="btn btn-secondary" style="flex:1;" onclick="setMode('UPDATE')">Modificar / Eliminar</button>
             </div>
 
-            <!-- Alertas - (Sin class="panel" para que el CSS !important no pise sus colores) -->
+            <!-- Alertas: van sin class="panel" para conservar sus propios colores de estado. -->
             <div id="errorAlert" class="hidden" style="background:#FEE2E2; color:#DC2626; border-color:#F87171; padding:16px; border-radius:8px; border-width:1px; border-style:solid; margin-bottom:16px;">
                 <span id="errorMessageText"></span>
             </div>

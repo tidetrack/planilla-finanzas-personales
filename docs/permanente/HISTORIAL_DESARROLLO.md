@@ -6,6 +6,47 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-25 - Merge de recuperacion: --verificado piso v0.52.1, las dos ramas se reconcilian (v0.53.0)
+
+### Que paso
+
+A las 16:44 el deploy de v0.51.2 (rama `fix/tablero-pendientes`) uso
+`sync_targets.command --verificado`. Ese modo empuja sin preguntar "solo si el remoto resulta ser
+un commit conocido del repo" -- y lo era: el remoto en la planilla era la punta de
+`fix/abm-desplegable-entidad`, una rama real de este mismo repo. Pero el chequeo de ese momento
+solo exigia "conocido", no "ancestro" del commit que se estaba por pushear. El commit remoto era
+mas nuevo que el que se pusheaba, asi que el deploy lo piso igual. Resultado: la planilla perdio
+v0.50.0 (rediseno del Centro de Operaciones) y v0.52.1 (el ajuste de la animacion de entrada).
+Nada se perdio de git -- todo seguia intacto en `origin/fix/abm-desplegable-entidad`, punta
+`a0b3c18` -- pero la planilla productiva si corrio, durante un rato, con menos codigo del que
+tenia una hora antes.
+
+### La misma cicatriz, al reves
+
+`cfbb173` ("merge: fix/tablero-pendientes -> restaurar el Presupuesto que el deploy piso",
+v0.52.0) fue la respuesta a que un deploy anterior de esta misma rama pisara el trabajo de
+`fix/abm-desplegable-entidad`. Como parte de esa respuesta, `c1f5931` ("fix(arnes): el
+verificador exige que el remoto sea ANCESTRO, no solo conocido") corrigio
+`devtools/verificar_remoto.py` para que el modo `--verificado` deje de aceptar "cualquier commit
+conocido" y pase a exigir que el remoto sea ancestro directo de lo que se va a pushear. Ese fix
+entra al repo con este mismo merge -- llega tarde para este incidente, pero cierra la puerta a un
+tercero.
+
+### Resolucion del merge
+
+Tres conflictos, los tres de contabilidad (`src/01_Version.js`, `src/ZZ_Changelog.js`,
+`targets.yaml`), ningun conflicto de codigo real. `src/DEVTOOL_PresupuestoSembrar.js` (la version
+v0.51.2, la que pisa con confirmacion) se resolvio solo via merge de tres vias: el lado
+`fix/abm-desplegable-entidad` no habia tocado ese archivo desde el ancestro comun, asi que gano la
+version de esta rama sin necesidad de decidir nada a mano. La prueba de regresion de Franco
+(`devtools/probar_presupuesto_sembrar.js`, seccion 10: sembrar el mes A, cambiar el selector al
+mes B, sembrar de nuevo) se corrio despues del merge y sigue en verde.
+
+`targets.yaml` (`version_desplegada`) queda en `"0.51.2"`: es lo que HAY en la planilla ahora
+mismo (el deploy que la piso), no lo que el repo declara ni lo que se quiere. El campo describe el
+estado real; el proximo `sync_targets.command` corrige la planilla y recien ahi ese numero sube a
+lo que el repo trae.
+
 ## 2026-08-25 - Presupuesto: sembrar "Monto a Proyectar" ahora PISA, con confirmacion (v0.51.2)
 
 ### El sintoma, en palabras de Franco

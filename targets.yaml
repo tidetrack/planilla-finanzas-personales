@@ -20,4 +20,17 @@ targets:
     # conocido del repo). Drift-check posterior: "sin drift". Este numero se escribe DESPUES
     # del deploy y verificado contra el remoto, nunca antes: escribirlo por adelantado fue
     # lo que dejo el campo stale en "0.23.5" mientras la planilla corria 0.38.3.
+    # 2026-08-25: deploy v0.52.0 -- el merge que restaura los tres modulos de Presupuesto
+    # que el deploy de v0.50.0 habia sacado de produccion, mas el rediseno del shell.
+    # 2026-08-25 16:44: deploy v0.51.2 con --verificado desde fix/tablero-pendientes. El
+    # remoto era un commit conocido del repo (v0.52.1, punta de fix/abm-desplegable-entidad)
+    # pero NO ancestro del commit que se pusheaba: --verificado en ese momento solo exigia
+    # "conocido", no "ancestro", asi que empujo por encima y la planilla perdio v0.50.0
+    # (rediseno del Centro de Operaciones) y v0.52.1 (ajuste de animacion). Nada se perdio de
+    # git -- todo seguia en origin/fix/abm-desplegable-entidad -- pero la planilla SI quedo en
+    # 0.51.2. Este campo declara lo que HAY, no lo que se quiere: por eso queda en "0.51.2" y
+    # no en "0.52.1", aunque el merge de este mismo commit ya trae v0.52.1 al repo. La proxima
+    # corrida de sync_targets.command corrige la planilla y recien ahi este campo sube.
+    # El fix real de esta cicatriz es devtools/verificar_remoto.py exigiendo ancestria, no solo
+    # "commit conocido" (ver c1f5931, incorporado en este mismo merge).
     version_desplegada: "0.51.2"

@@ -2,321 +2,1243 @@
 <html>
 <head>
 <base target="_top">
-<!-- LA FUENTE SE CARGA DE VERDAD.
-     UI_SharedStyles declara 'Google Sans' pero sin este link no se descarga nunca: Google Sans
-     no es una fuente del sistema, asi que caia a Roboto (que no esta en macOS) y de ahi al
-     sistema. El shell y la planilla decian usar la misma tipografia y no la estaban usando.
-     pymes SI lo carga (07_UI_Shell.html:25) y por eso los dos productos no se parecian. -->
+<!-- LA FUENTE SE CARGA DE VERDAD. UI_SharedStyles declara la familia pero sin este link no se
+     descarga nunca. Verificado contra la API de Google Fonts: responde 200 y sirve los cuatro
+     pesos en subset latin. -->
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <?!= include('UI_SharedStyles'); ?>
 <style>
-/* Estilos PROPIOS del shell. La base viene de UI_SharedStyles: contrato de fragmentos de la
-   Fase 5, un solo design system y no dos. */
+/* ============================================================
+   SHELL -- Centro de Operaciones. 900x700 (16_ShellService.js:61).
+   La base viene de UI_SharedStyles (include en :11); esto redefine lo que el
+   shell necesita y NADA mas. Un solo design system, no dos (regla del arnes).
+
+   Dos capas de tokens: primitivos de marca (--tt-*) y alias semanticos. Los
+   componentes SOLO tocan la capa semantica. Metodo portado de la webapp PyME.
+   ============================================================ */
+
+:root {
+    /* ---- PRIMITIVOS ------------------------------------------------
+       El navy es el MEDIDO de la planilla (#34475d, UI_SharedStyles.html:9),
+       el de la banda de cada pestania. NO se importa el #182040 del brandbook
+       v3: ese es el navy de la webapp PyME, y usarlo aca rompe la unica
+       continuidad visual que el modal tiene con la hoja. De la webapp se
+       importa el METODO y el acento, no su navy. */
+    --tt-navy:       #34475d;   /* = --primary-color */
+    --tt-navy-dark:  #2b3a4d;   /* = --primary-dark (UI_SharedStyles.html:10) */
+
+    /* Teal editorial, brandbook v3. El unico croma del producto.
+       6.00:1 sobre blanco, 5.35:1 sobre el lienzo: sirve como TINTA, no solo
+       como adorno. Hue 192 contra el hue 212 del navy: 20 grados, misma
+       temperatura -- da vida sin pelear con la marca. */
+    --tt-teal:       #2E6B7A;
+    --tt-teal-mid:   #25596b;   /* 7.72:1 sobre blanco. Hover de superficie teal */
+    --tt-teal-soft:  #cfe2e7;   /* borde decorativo de hover */
+    --tt-teal-rgb:   46, 107, 122;   /* var() no entra adentro de un hex */
+    --tt-sand-rgb:   232, 227, 213;  /* la mitad "mas calido" del contrato de segmento */
+
+    /* ---- SUPERFICIES: tres planos, y se INVIERTE la relacion de hoy -------
+       Hoy la pagina es blanca (UI_Shell.html:43, --bg-secondary) y las cards
+       son #eff2f9 (:87, --bg-main): una card GRIS con sombra se lee como un
+       pozo. Card blanca sobre lienzo templado con sombra se lee como objeto
+       que levanta. El lienzo es el gris de bloque MEDIDO de la hoja: cero
+       colores inventados en esta capa. */
+    --sup-page:  #eff2f9;   /* lienzo. El gris de bloque de la planilla */
+    --sup-card:  #FFFFFF;   /* papel: card, bloque, panel, barra */
+    --sup-hueco: #eff2f9;   /* campo hundido DENTRO del papel. 1.12:1 vs card */
+    --sup-hover: #e2e8f0;   /* el mismo campo bajo el cursor (= --bg-tertiary) */
+
+    /* ---- FILO -------------------------------------------------------
+       Vuelve el hairline, y es la ruptura deliberada con la doctrina escrita
+       en UI_Shell.html:132-134 ("la superficie se define por fondo, porque la
+       hoja no tiene un solo setBorder"). Es un mal transplante: una celda de
+       Sheets no necesita borde porque LA GRILLA YA ES EL BORDE. Un input
+       flotando en un modal no tiene grilla. Va como inset box-shadow y no como
+       border: no ocupa layout, asi que no puede desalinear una fila del grid
+       de 12. #d4dbe8 ya existe en el repo (UI_AbmPlanCuentas.html:42). */
+    --linea:        #d4dbe8;   /* 1.39:1 sobre papel: hairline, no cerco */
+    --linea-fuerte: #c3cddf;
+    --filo:  inset 0 0 0 1px var(--linea);
+
+    /* ---- ELEVACION: tres niveles, dos capas, TINTE NAVY --------------
+       Nunca negro puro. Una sombra negra sobre superficie fria se ve sucia;
+       con rgb(52,71,93) -- el propio navy -- el papel parece levantar del
+       mismo material. --shadow-md/lg de UI_SharedStyles.html:62-63 son negras
+       y el shell nunca las uso: quedan para el ABM hasta su segundo pase. */
+    --elev-1: 0 1px 2px rgba(52,71,93,0.06), 0 1px 3px rgba(52,71,93,0.05);
+    --elev-2: 0 4px 10px rgba(52,71,93,0.10), 0 2px 4px rgba(52,71,93,0.06);
+    --elev-3: 0 12px 28px rgba(52,71,93,0.15), 0 4px 8px rgba(52,71,93,0.07);
+
+    /* ---- TINTA: tres roles, con su piso de contraste medido ---------- */
+    --ink-1:  #34475d;   /* titulos y chrome.  9.52:1 papel / 8.50:1 lienzo */
+    --ink-2:  #39444d;   /* CUERPO Y NUMEROS.  9.96:1 papel / 8.89:1 hueco.
+                            El color del cuerpo de datos de la hoja: 4.136
+                            celdas y NO es negro puro (UI_SharedStyles.html:27) */
+    --ink-3:  #5f6368;   /* rotulos. NO texto de lectura. 6.05:1 papel */
+    --ink-inv:   #FFFFFF;
+    --ink-band:  #c9d5e2;   /* sobre banda. 6.39:1 sobre navy pleno, 4.75:1 en
+                               el punto MAS claro de la aurora: AA en todo el
+                               recorrido, medido */
+    --ink-ph:    #6f7a88;   /* placeholder. 3.89:1 sobre el hueco. Sube del
+                               #94A3B8 de UI_SharedStyles.html:168, que da 2.56 */
+
+    /* ---- SEMAFORO: los MEDIDOS de la hoja. Fondos y puntos NO se tocan --
+       Viven literales en las formulas SPARKLINE de Inicio!F19:F22.
+       @see DEVTOOL_InicioPresupuesto.js (IP_COLOR_VERDE / NARANJA / ROJO)
+       Lo unico que se separa es la TINTA del error: #c93232 sobre #fce8e6 da
+       4.47:1, un pelo abajo del AA -- y es el texto que MAS importa leer. En
+       la hoja ese par es barra-sobre-riel, no texto-sobre-riel, asi que
+       oscurecer la tinta no contradice nada medido. */
+    --est-verde:      #356854;   /* punto y barra. Medido. 6.44:1 sobre papel */
+    --est-verde-bg:   #e6f4ea;   /* riel. Medido */
+    --est-verde-ink:  #2a5544;   /* 7.45:1 sobre su riel */
+    --est-rojo:       #c93232;   /* punto y barra. Medido */
+    --est-rojo-bg:    #fce8e6;   /* riel. Medido */
+    --est-rojo-ink:   #ad2727;   /* 5.76:1 sobre su riel (contra 4.47 del medido) */
+    --est-ambar:      #ffb300;   /* punto y barra. Medido */
+    --est-ambar-bg:   #fef7e0;   /* riel. Medido */
+    --est-ambar-ink:  #6d4d00;   /* 7.23:1. Ya existia en UI_SharedStyles.html:282 */
+
+    /* ---- TIPOGRAFIA -------------------------------------------------
+       DM Sans, familia unica, tambien para los numeros: contrato de marca
+       vigente (brandbook v3). Verificado contra la API: variable 400..700,
+       subset latin, un solo woff2. Google Sans queda de fallback y TAMBIEN
+       resuelve (v70, verificado): si la red se cae, no cae a Arial.
+       Los digitos se alinean con font-variant-numeric, NUNCA con una segunda
+       familia -- esa es la causa raiz de la v0.49.0 (01_Version.js:39-41).
+       Se redefine --font-family, que es el token que consume el `*` de
+       UI_SharedStyles.html:89: un solo punto de cambio propaga a todo. */
+    --font-family: 'DM Sans', 'Google Sans', -apple-system, BlinkMacSystemFont,
+                   'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+    /* SEIS pasos, TODOS ENTEROS. Se van los fraccionarios por la misma razon
+       que se fueron los 10.5px: Chrome los redondea a subpixel distinto segun
+       donde caiga la caja (UI_Shell.html:30-32). */
+    --fs-monto:  19px;   /* NUEVO. El dato que la herramienta existe para capturar */
+    --fs-band:   18px;   /* titulo de la banda */
+    --fs-hero:   16px;   /* titulo de la card hero */
+    --fs-vista:  14px;   /* titulo de card compacta y de bloque */
+    --fs-body:   14px;   /* inputs, selects, parrafos, botones */
+    --fs-aux:    12px;   /* descripcion, hint, alerta, pie */
+    --fs-rotulo: 11px;   /* versalitas: seccion, label */
+
+    /* ---- GEOMETRIA. Base 4 estricta -------------------------------
+       Hoy conviven 6, 7, 10, 11, 12, 14, 16, 18, 22, 24 y 26 px. Nada cae en
+       grilla, y el desalineado inconsciente es la mitad de "se ve feo". */
+    --e1: 4px;  --e2: 8px;  --e3: 12px; --e4: 16px;
+    --e5: 20px; --e6: 24px; --e8: 32px;
+
+    --r-xs:   6px;    /* pastilla, badge */
+    --r-sm:  10px;    /* input, select, boton, segmentado */
+    --r-md:  14px;    /* card, bloque, panel, barra */
+    --r-lg:  18px;    /* card hero */
+    --r-full: 999px;
+
+    --alto-control: 40px;   /* baja de 42 (UI_Shell.html:40): seis campos por
+                               bloque, cada px cuenta */
+    --alto-cta:     42px;
+    --h-banda:      60px;
+    --h-pie:        32px;
+
+    /* ---- MOVIMIENTO. Tres curvas, tres duraciones, nunca transition: all -- */
+    --mov-out:    cubic-bezier(.33, 1, .68, 1);      /* easeOutCubic: hover-lift */
+    --mov-std:    cubic-bezier(.4, 0, .2, 1);        /* color, fondo, colapso */
+    /* El bloque que entra. Era un rebote (.34, 1.56, .64, 1): el 1.56 pasa de largo el
+       valor final y vuelve, o sea que el bloque se pasa de posicion y de escala. En una
+       pantalla donde se agregan hasta QUINCE bloques, ese rebote se ve quince veces
+       seguidas -- y esto es una herramienta de cargar plata, no una app de juego. Un objeto
+       real desacelera, no rebota. easeOutQuint: entra rapido y se frena, sin pasarse. */
+    --mov-entra:  cubic-bezier(.22, 1, .36, 1);
+    --t1: 120ms;  --t2: 200ms;  --t3: 280ms;
+
+    /* Chevron propio para los select. Data-URI porque el CSP del iframe de
+       HtmlService no deja traer un asset externo, y porque hoy no hay un solo
+       appearance:none en los dos archivos: cada bloque muestra cuatro
+       flechitas nativas de Chrome, los unicos "iconos" del formulario y
+       ninguno es nuestro. */
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%232E6B7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5'/%3E%3C/svg%3E");
+}
+
 
 /* ============================================================
-   ESCALA TIPOGRAFICA -- cinco pasos, enteros, UNA SOLA FAMILIA.
-
-   decision Franco 2026-08-25 ("hay distorciones de tamanos de letras"): el problema NO era la
-   escala, era la FAMILIA. Los cinco rotulos mas chicos usaban var(--font-mono), que declara
-   JetBrains Mono y Fira Code -- ninguna instalada -- asi que caian en Courier New. La altura
-   de x de Courier es ~0.42em contra ~0.53em de una grotesca: a 10.5px las minusculas median
-   4,4px reales al lado de un select de 14px. Eso no se lee como jerarquia, se lee como texto
-   roto. Y habia DOS cosas declaradas en 20px que no se parecian en nada, porque una era sans
-   y la otra Courier.
-
-   La regla que se estaba violando no es "usa pocos tamanos". Es: dos textos de tamano parecido
-   tienen que ser de la MISMA familia, o el lector lee la diferencia de familia como diferencia
-   de tamano. Cero mono en todo el shell, igual que pymes.
-
-   Tambien se van los 10.5px: Chrome los redondea a subpixel distinto segun donde caiga la
-   caja, asi que dos rotulos declarados igual no median igual. 11px es el piso practico.
+   1. ESQUELETO -- columna de altura fija: banda, scroll, pie.
+   Reemplaza el `position: fixed` del pie (UI_Shell.html:196-197) y el
+   `padding: 0 0 44px` del body (:43). Con esto el pie NO PUEDE solaparse con
+   la ultima tarjeta -- que hoy pasa, porque el pie y la card son literalmente
+   el mismo color (--bg-main en :87 y en :200).
    ============================================================ */
-:root {
-    --fs-band: 22px;    /* titulo de la banda */
-    --fs-vista: 16px;   /* titulo de tarjeta y de bloque */
-    --fs-body: 14px;    /* inputs, selects, parrafos, botones */
-    --fs-aux: 13px;     /* descripcion de tarjeta, hint, alerta */
-    --fs-rotulo: 11px;  /* versalita: seccion, label, pie, Volver */
-    --alto-control: 42px;
+html { height: 100%; }
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--sup-page);
+    color: var(--ink-2);
+    font-size: var(--fs-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
-body { padding: 0 0 44px; background: var(--bg-secondary); }
+.shell-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;   /* que el scroll no se escape a la planilla */
+    padding: var(--e5) var(--e6) 22px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--linea-fuerte) transparent;
+}
+/* La de 8px de UI_SharedStyles.html:290-293 se lee como cromo de navegador viejo. */
+.shell-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.shell-scroll::-webkit-scrollbar-track { background: transparent; }
+.shell-scroll::-webkit-scrollbar-thumb {
+    background: var(--linea-fuerte); border-radius: var(--r-full);
+}
+.shell-scroll::-webkit-scrollbar-thumb:hover { background: #a9b6cb; }
 
-/* --- La banda navy: la hoja abre TODAS sus pestanias con una, y el shell tiene que leerse
-       como una continuacion de la planilla. --- */
+/* Ancho POR NATURALEZA DE CONTENIDO. Se conserva la decision de
+   UI_Shell.html:65-71, que es correcta; solo se baja 852 -> 840 para dejar
+   lugar a la barra de scroll de 6px sin que el Home se corra. */
+.vista-ancha { max-width: 840px; margin: 0 auto; }
+.vista-form  { max-width: 660px; margin: 0 auto; }
+.hidden { display: none !important; }
+
+
+/* ============================================================
+   2. LA BANDA -- sigue siendo la continuacion de la hoja, pero deja de ser
+   un rectangulo plano. Dos auroras radiales sobre un degrade navy: cero DOM,
+   cero animacion, y es donde el contrato del segmento pide lo organico. El
+   lado derecho, que hoy son ~700px de navy vacio (UI_Shell.html:224-229), es
+   justo donde florece la aurora.
+   Medido: en el punto MAS claro del recorrido, blanco da 7.08:1 y --ink-band
+   4.75:1. AA en toda la banda, no solo en el navy pleno.
+   ============================================================ */
 .shell-band {
-    background: var(--primary-color); color: var(--text-inverse);
-    padding: 16px 24px; display: flex; align-items: center; gap: 12px;
+    flex: 0 0 auto;
+    position: relative;
+    height: var(--h-banda);
+    padding: 0 var(--e6) 0 var(--e5);
+    display: flex;
+    align-items: center;
+    gap: var(--e3);
+    color: var(--ink-inv);
+    background:
+        radial-gradient(115% 190% at 92% 6%,
+            rgba(var(--tt-teal-rgb), 0.30) 0%, rgba(var(--tt-teal-rgb), 0) 60%),
+        radial-gradient(80% 150% at 62% 118%,
+            rgba(var(--tt-sand-rgb), 0.07) 0%, rgba(var(--tt-sand-rgb), 0) 64%),
+        linear-gradient(102deg, var(--tt-navy-dark) 0%, var(--tt-navy) 58%);
+    box-shadow: 0 1px 0 rgba(52,71,93,0.18), 0 4px 14px rgba(52,71,93,0.10);
+    z-index: 20;
+}
+/* Filo inferior: 1px de luz. Separa la banda del lienzo sin dibujar un borde. */
+.shell-band::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+    background: linear-gradient(90deg,
+        rgba(255,255,255,0.05), rgba(var(--tt-teal-rgb),0.55) 66%, rgba(255,255,255,0.07));
+}
+
+/* Monograma: la marca que NO desaparece al navegar. Hoy el h1 se reemplaza
+   por el titulo de la vista (UI_Shell.html:396) y "Tidetrack" se va del
+   producto entero apenas entras a un formulario. */
+.shell-mono {
+    flex: 0 0 auto;
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.12);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16);
+    font-size: 13px; font-weight: 700; letter-spacing: -0.02em;
+    color: var(--ink-inv);
+}
+.shell-band .titulos {
+    display: flex; align-items: baseline; gap: 9px; min-width: 0;
 }
 .shell-band h1 {
-    font-size: var(--fs-band); font-weight: 600; margin: 0; letter-spacing: -0.3px;
+    margin: 0;
+    font-size: var(--fs-band); font-weight: 700; letter-spacing: -0.3px;
+    line-height: 1.15; white-space: nowrap;
 }
-.shell-band .sub { color: var(--bg-main); font-size: var(--fs-aux); }
-.shell-band .spacer { flex: 1; }
-.shell-band .volver {
-    font-size: var(--fs-rotulo); font-weight: 600; letter-spacing: 0.05em;
-    text-transform: uppercase; color: var(--bg-main);
-    background: rgba(255,255,255,0.14); border: 0;
-    padding: 7px 12px; border-radius: var(--border-radius-sm); cursor: pointer;
+.shell-band .sub {
+    font-size: var(--fs-aux); font-weight: 400; color: var(--ink-band);
+    line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.shell-band .volver:hover { background: rgba(255,255,255,0.26); }
-.shell-band .volver:focus-visible { outline: 2px solid var(--bg-main); outline-offset: 2px; }
+.shell-band .sub::before {
+    content: ""; display: inline-block;
+    width: 3px; height: 3px; border-radius: 50%;
+    background: var(--ink-band); opacity: 0.7;
+    vertical-align: middle; margin-right: 9px;
+}
+.shell-band .spacer { flex: 1 1 auto; }
 
-/* --- Ancho POR TIPO DE PANTALLA, y siempre centrado.
-       El Home usa el ancho del modal; los formularios viven en columna angosta, que es donde
-       se lee mejor. Antes el formulario de 660px vivia contra el margen izquierdo con 240px de
-       blanco muerto a la derecha. --- */
-.shell-body { padding: 24px; }
-.vista-ancha { max-width: 852px; margin: 0 auto; }
-.vista-form { max-width: 640px; margin: 0 auto; }
+/* Volver a la IZQUIERDA. A la derecha (UI_Shell.html:228) choca con la "x"
+   propia del dialogo de Google, que esta a ~16px, y ademas es
+   contra-convencion en toda interfaz de navegacion. */
+.shell-volver {
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 30px; padding: 0 12px 0 9px;
+    border: 0; border-radius: var(--r-full);
+    background: rgba(255,255,255,0.13);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+    color: var(--ink-inv);
+    font: inherit;
+    font-size: var(--fs-rotulo); font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color var(--t1) var(--mov-std),
+                transform var(--t1) var(--mov-std);
+}
+.shell-volver:hover  { background: rgba(255,255,255,0.24); transform: translateX(-1px); }
+.shell-volver:active { transform: translateX(0); }
+.shell-volver:focus-visible { outline: 2px solid var(--ink-inv); outline-offset: 2px; }
+.shell-volver svg { width: 13px; height: 13px; flex: 0 0 auto; }
 
-/* --- Rotulo de seccion, con la regla que se estira: separa sin ocupar una fila entera. --- */
+
+/* ============================================================
+   3. ROTULO DE SECCION -- registro tipografico 1 de 3, y el hilo teal.
+   Hoy .shell-sec (:74-77), .bloque-num (:157-159) y .f label (:121-124) son
+   EL MISMO estilo exacto: 11px / 700 / uppercase / --text-secondary. Tres
+   jerarquias semanticas renderizadas identicas es cero jerarquia.
+   Teal sobre lienzo: 5.35:1, AA.
+   ============================================================ */
 .shell-sec {
+    display: flex; align-items: center; gap: 10px;
+    min-height: 14px;
+    margin: 22px 0 10px;
     font-size: var(--fs-rotulo); font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary);
-    display: flex; align-items: center; gap: 10px; margin: 26px 0 12px;
+    text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--tt-teal);
 }
 .shell-sec:first-of-type { margin-top: 0; }
-.shell-sec::after { content: ""; flex: 1; height: 1px; background: var(--border-color); }
+/* La regla se estira y se apaga. La actual usa --border-color #E2E8F0, que
+   sobre papel da 1.23:1 y directamente no se ve: se pierde el recurso entero. */
+.shell-sec::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--linea), rgba(212,219,232,0));
+}
 
-/* --- Tarjetas del Home. Tres columnas: con dos, la septima tarjeta quedaba huerfana y con
-       430px de blanco al lado, que era lo primero que se veia al abrir. --- */
-.shell-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+/* ============================================================
+   4. TARJETAS DEL HOME -- una anatomia, tres escalas.
+   Horizontal y no vertical: una card ancha HORIZONTAL se lee deliberada, una
+   card ancha VERTICAL se lee vacia -- que es el bug de "Estructura" en
+   UI_Shell.html:268-274, una tarjeta con 564px de blanco al lado.
+   auto-fit + minmax hace el huerfano estructuralmente imposible: con un item
+   ocupa el ancho entero y sigue leyendose bien. La grilla fija de :84 fue el
+   "fix" del problema que su propio comentario declara arreglar (:82-83) y no
+   lo arreglo: con dos columnas el hueco era 430px, con tres es 564.
+   ============================================================ */
+.shell-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--e3);
+}
 .shell-card {
-    display: flex; flex-direction: column; gap: 10px; text-align: left; width: 100%;
-    background: var(--bg-main); border: 0; border-radius: 12px;
-    padding: 18px; min-height: 116px;
-    font: inherit; color: inherit; cursor: pointer;
-    transition: background-color var(--transition-fast), transform var(--transition-fast);
+    position: relative; overflow: hidden;
+    display: flex; align-items: flex-start; gap: var(--e3);
+    width: 100%; min-height: 78px;
+    padding: 14px var(--e4);
+    text-align: left; font: inherit; color: inherit; cursor: pointer;
+    background: var(--sup-card);
+    border: 0; border-radius: var(--r-md);
+    box-shadow: var(--elev-1), var(--filo);
+    transition: box-shadow var(--t2) var(--mov-out),
+                transform var(--t2) var(--mov-out);
 }
-.shell-card:hover { background: var(--bg-tertiary); transform: translateY(-1px); }
-.shell-card:active { transform: translateY(0); }
-.shell-card:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+/* Shimmer de 2px arriba. En reposo es casi invisible y le da a la card un
+   TOPE en vez de un borde plano; en hover se tinie de teal. Acento sin gritar. */
+.shell-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg,
+        rgba(212,219,232,0), var(--linea) 50%, rgba(212,219,232,0));
+    transition: background var(--t2) var(--mov-std);
+}
+.shell-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
+}
+.shell-card:hover::before {
+    background: linear-gradient(90deg,
+        rgba(var(--tt-teal-rgb),0), rgba(var(--tt-teal-rgb),0.55) 50%, rgba(var(--tt-teal-rgb),0));
+}
+/* :active vuelve a una sombra MENOR, no al reposo. Es "se apoyo", no "se apago". */
+.shell-card:active { transform: translateY(0); box-shadow: var(--elev-1), var(--filo); }
+.shell-card:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
+
 .shell-card .ico {
-    width: 38px; height: 38px; border-radius: 10px;
-    background: var(--bg-secondary); display: grid; place-items: center;
-    color: var(--primary-color); flex: 0 0 auto;
+    flex: 0 0 auto;
+    width: 36px; height: 36px; margin-top: 1px;   /* alineacion optica con la
+                                mediana de la mayuscula del titulo, no con el
+                                tope de su caja */
+    display: grid; place-items: center;
+    border-radius: 11px;
+    background: var(--sup-page);
+    box-shadow: inset 0 0 0 1px var(--linea);
+    color: var(--tt-navy);
+    transition: background-color var(--t2) var(--mov-std),
+                color var(--t2) var(--mov-std),
+                box-shadow var(--t2) var(--mov-std);
 }
-.shell-card:hover .ico { background: var(--primary-color); color: var(--text-inverse); }
+/* El unico cambio de color de toda la interaccion, y es lo que hace que la
+   card se sienta un objeto y no un rectangulo con hover. */
+.shell-card:hover .ico {
+    background: var(--tt-teal); color: var(--ink-inv);
+    box-shadow: inset 0 0 0 1px rgba(var(--tt-teal-rgb), 0.9);
+}
+.shell-card .txt { display: block; min-width: 0; }
+/* Registro tipografico 2 de 3: caja alta y baja, peso 600, tinta fuerte. */
 .shell-card .t {
-    font-weight: 600; color: var(--primary-color);
-    font-size: var(--fs-vista); letter-spacing: -0.2px; display: block;
+    display: block;
+    font-size: var(--fs-vista); font-weight: 600; letter-spacing: -0.15px;
+    line-height: 1.25; color: var(--ink-1);
 }
-/* Contraste: la descripcion estaba en --text-secondary (#6e7f8d), que sobre el fondo de la
-   tarjeta da 3.69:1 -- por debajo del minimo AA de 4.5:1, y se veia lavada. */
 .shell-card .d {
-    color: var(--text-data); font-size: var(--fs-aux); line-height: 1.45;
-    margin-top: 2px; display: block;
+    display: block; margin-top: 3px;
+    font-size: var(--fs-aux); line-height: 1.45; color: var(--ink-3);
 }
-
-/* --- Formularios.
-       Los cortes de columna se COMPARTEN entre filas. Antes la fila 1 cortaba en 4 y 7 y la
-       fila 2 en 5 y 8: corridos exactamente una columna, que es la peor distancia posible --
-       no es alineacion ni es contraste, es error. --- */
-.shell-form { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px 12px; }
-.f { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.f.c3 { grid-column: span 3; } .f.c4 { grid-column: span 4; }
-.f.c5 { grid-column: span 5; } .f.c6 { grid-column: span 6; }
-.f.c8 { grid-column: span 8; } .f.c12 { grid-column: span 12; }
-.f label {
-    font-size: var(--fs-rotulo); font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary);
+/* Chevron que aparece en hover: el hint de "esto se clickea". */
+.shell-card .chev {
+    flex: 0 0 auto; margin-left: auto; align-self: center;
+    color: var(--tt-teal);
+    opacity: 0; transform: translateX(-4px);
+    transition: opacity var(--t2) var(--mov-std), transform var(--t2) var(--mov-out);
 }
-.f .hint { font-size: var(--fs-aux); color: var(--text-data); }
+.shell-card:hover .chev { opacity: 1; transform: translateX(0); }
 
-/* ALTURA FIJA en todos los controles.
-   Un select ignora line-height en Chrome y calcula su alto con su metrica interna; un
-   input[type=date] agrega su propio shadow DOM. Con el mismo font-size y el mismo padding
-   daban 43 y 47 px, y el Monto a 20px daba 56: tres alturas en la misma fila. Nunca se iguala
-   un input con un select por padding -- se fija height.
-   Y sin borde, porque la doctrina de este shell es que la superficie se define por fondo. La
-   version anterior la aplicaba solo a las tarjetas y dejaba siete cajas con contorno y sombra
-   en el formulario: Home y formulario parecian dos productos. */
+/* Punto de estado. SHELL_VISTAS ya trae `listo` (16_ShellService.js:65-71) y
+   el HTML nunca lo uso: una tarjeta que promete lo que no hace es peor que
+   una que dice a que atenerse -- lo dice el propio comentario del backend.
+   Sin el atributo no se muestra nada: si el loop no corre, degrada limpio. */
+.shell-card .pend { display: none; }
+.shell-card[data-listo="0"] .pend {
+    display: block;
+    position: absolute; top: 13px; right: 13px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--est-ambar);
+    box-shadow: 0 0 0 3px var(--est-ambar-bg);
+}
+.shell-card[data-listo="0"] .chev { display: none; }
+
+/* --- Card HERO: la accion del dia. La unica grande y la unica con acento. --- */
+.shell-card--hero {
+    align-items: center;
+    gap: var(--e4);
+    min-height: 80px;
+    padding: 18px var(--e5);
+    border-radius: var(--r-lg);
+    background:
+        radial-gradient(140% 220% at 96% 0%,
+            rgba(var(--tt-teal-rgb),0.07) 0%, rgba(var(--tt-teal-rgb),0) 58%),
+        var(--sup-card);
+    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
+}
+.shell-card--hero::before {
+    height: 3px;
+    background: linear-gradient(90deg,
+        var(--tt-teal), rgba(var(--tt-teal-rgb),0.45) 62%, rgba(var(--tt-teal-rgb),0));
+}
+.shell-card--hero:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--elev-3), inset 0 0 0 1px var(--tt-teal);
+}
+.shell-card--hero .ico {
+    width: 44px; height: 44px; margin-top: 0; border-radius: 14px;
+    background: linear-gradient(140deg, var(--tt-teal), var(--tt-teal-mid));
+    color: var(--ink-inv);
+    box-shadow: 0 3px 8px rgba(var(--tt-teal-rgb), 0.30),
+                inset 0 0 0 1px rgba(255,255,255,0.18);
+}
+.shell-card--hero:hover .ico {
+    box-shadow: 0 5px 14px rgba(var(--tt-teal-rgb), 0.38),
+                inset 0 0 0 1px rgba(255,255,255,0.26);
+}
+.shell-card--hero .t { font-size: var(--fs-hero); }
+
+/* --- Chips: lo que no merece una tarjeta. Es la tercera escala. --- */
+.shell-chips { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.shell-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 15px 0 12px;
+    border: 0; border-radius: var(--r-full);
+    background: var(--sup-card);
+    box-shadow: var(--elev-1), var(--filo);
+    color: var(--ink-1); font: inherit; font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    transition: box-shadow var(--t1) var(--mov-std),
+                transform var(--t1) var(--mov-out),
+                color var(--t1) var(--mov-std);
+}
+.shell-chip:hover {
+    transform: translateY(-1px); color: var(--tt-teal);
+    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
+}
+.shell-chip:active { transform: translateY(0); }
+.shell-chip:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
+.shell-chip svg { color: var(--tt-teal); flex: 0 0 auto; }
+
+
+/* ============================================================
+   5. FORMULARIO -- se conserva la grilla de 12 con cortes COMPARTIDOS entre
+   filas (UI_Shell.html:112-120): es la mejor decision del archivo y no se toca.
+   ============================================================ */
+.shell-form { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--e3); }
+.f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.f.c3 { grid-column: span 3; }  .f.c4 { grid-column: span 4; }
+.f.c5 { grid-column: span 5; }  .f.c6 { grid-column: span 6; }
+.f.c7 { grid-column: span 7; }  .f.c8 { grid-column: span 8; }
+.f.c12 { grid-column: span 12; }
+
+/* Registro tipografico 3 de 3: caja normal, peso 500, gris.
+   Catorce rotulos uppercase en pantalla es la firma de un panel de admin de
+   2015, y ademas hoy son IDENTICOS al rotulo de seccion y al numero de bloque.
+   Aca el label es lo mas callado de la pantalla, que es lo que corresponde:
+   el protagonista es el valor. */
+.f > .rot {
+    font-size: var(--fs-aux); font-weight: 500; letter-spacing: 0;
+    text-transform: none; color: var(--ink-3); line-height: 1.2;
+}
+/* min-height RESERVADO SIEMPRE. Sin esto la fila con hint es 16px mas alta
+   que sus vecinas y el borde inferior del bloque queda dentado: hoy solo
+   Moneda lleva hint (UI_Shell.html:561) y por eso la esquina del bloque queda
+   con un hueco asimetrico. */
+.f .hint {
+    min-height: 16px;
+    font-size: var(--fs-aux); line-height: 1.35; color: var(--ink-3);
+}
+.f .hint.fuerte { color: var(--ink-2); font-weight: 500; }
+.f .hint.alerta { color: var(--est-ambar-ink); }
+
+/* ALTURA FIJA en todos los controles. Se conserva el fix de UI_Shell.html:127-140:
+   un select ignora line-height y calcula su alto con su metrica interna, y un
+   input[type=date] trae su propio shadow DOM. Nunca se iguala un input con un
+   select por padding -- se fija height.
+   Lo que SI cambia: el control ahora EXISTE. Hoy es #eff2f9 dentro de un
+   bloque #eff2f9 (:161), o blanco dentro de #eff2f9: 1.12:1 en los dos casos
+   y sin sombra. Hay texto flotando, no cajas. */
 .f .form-input, .f .form-select {
-    height: var(--alto-control); padding: 0 12px; line-height: normal;
-    margin-bottom: 0; font-size: var(--fs-body);
-    background: var(--bg-main); border: 0; box-shadow: none;
-    border-radius: var(--border-radius-sm); color: var(--text-data);
+    width: 100%;
+    height: var(--alto-control);
+    padding: 0 12px;
+    margin: 0;
+    line-height: normal;
+    font-size: var(--fs-body);
+    color: var(--ink-2);
+    background: var(--sup-hueco);
+    border: 0;
+    border-radius: var(--r-sm);
+    box-shadow: var(--filo);
+    transition: background-color var(--t1) var(--mov-std),
+                box-shadow var(--t1) var(--mov-std);
 }
+.f .form-input:hover, .f .form-select:hover {
+    background: var(--sup-hover);
+    box-shadow: inset 0 0 0 1px var(--linea-fuerte);
+}
+.f .form-input::placeholder { color: var(--ink-ph); }
+/* Foco: anillo teal de 3px + filo teal, sin outline. Un outline de 2px con
+   offset sobre un control de 40px en una grilla de 12 se pisa con el vecino. */
 .f .form-input:focus, .f .form-select:focus {
-    outline: 2px solid var(--primary-color); outline-offset: 1px; box-shadow: none;
+    outline: none;
+    background: var(--sup-card);
+    box-shadow: inset 0 0 0 1.5px var(--tt-teal),
+                0 0 0 3px rgba(var(--tt-teal-rgb), 0.18);
 }
-/* El monto conserva las cifras tabulares -- que es lo que hace que un numero se lea como
-   numero -- pero NO cambia de tamano ni de familia. */
-.campo-monto { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 
-/* --- Bloques repetibles: la carga multiple.
-       Portado de pymes. El contenedor arranca vacio y el boton de agregar vive AFUERA. --- */
+.f .form-select {
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    padding-right: 34px;
+    background-image: var(--chevron);
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 11px 7px;
+    background-color: var(--sup-hueco);
+}
+.f .form-select:hover { background-color: var(--sup-hover); }
+.f .form-select:focus { background-color: var(--sup-card); }
+
+.f .form-input[type="date"] { padding-right: var(--e2); }
+.f .form-input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.5; cursor: pointer;
+    filter: invert(35%) sepia(24%) saturate(760%) hue-rotate(150deg);
+    transition: opacity var(--t1) var(--mov-std);
+}
+.f .form-input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 0.9; }
+.f .form-input[type="date"]::-webkit-inner-spin-button { display: none; }
+
+
+/* ------------------------------------------------------------
+   EL MONTO. Unico campo con tamanio propio y el unico con adorno de moneda.
+   Hoy .campo-monto (UI_Shell.html:146) tiene el mismo 14px que la Nota: el
+   dato mas importante del producto pesa lo mismo que un campo opcional.
+   La altura la sigue mandando --alto-control: el font-size NUNCA maneja la
+   altura de un control.
+
+   El <select> de moneda vive ENCIMA del prefijo, transparente. Asi Moneda
+   deja de ocupar cuatro doceavos de la grilla (UI_Shell.html:559-561) sin
+   dejar de ser editable, y es lo que baja el bloque de tres filas a dos.
+   El <input> va PRIMERO en el DOM y se reordena por CSS: asi el <label> que
+   envuelve el campo asocia al monto y no al select.
+   ------------------------------------------------------------ */
+.f .campo-monto {
+    position: relative;
+    display: flex; align-items: stretch;
+    height: var(--alto-control);
+    background: var(--sup-hueco);
+    border-radius: var(--r-sm);
+    box-shadow: var(--filo);
+    transition: background-color var(--t1) var(--mov-std),
+                box-shadow var(--t1) var(--mov-std);
+}
+.f .campo-monto:hover { background: var(--sup-hover); }
+.f .campo-monto:focus-within {
+    background: var(--sup-card);
+    box-shadow: inset 0 0 0 1.5px var(--tt-teal),
+                0 0 0 3px rgba(var(--tt-teal-rgb), 0.18);
+}
+.f .campo-monto .pref {
+    order: 1; flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 0 10px 0 12px;
+    font-size: var(--fs-aux); font-weight: 700; letter-spacing: 0.06em;
+    color: var(--ink-3); pointer-events: none;
+    box-shadow: inset -1px 0 0 rgba(52,71,93,0.12);   /* riel, no borde */
+    transition: color var(--t1) var(--mov-std);
+}
+.f .campo-monto:focus-within .pref { color: var(--tt-teal); }
+.f .campo-monto .pref::after {
+    content: ""; display: inline-block;
+    border-left: 3px solid transparent; border-right: 3px solid transparent;
+    border-top: 3.5px solid currentColor; opacity: 0.65;
+}
+.f .campo-monto .moneda {
+    position: absolute; left: 0; top: 0; height: 100%; width: 74px;
+    opacity: 0; cursor: pointer;
+    border: 0; background: transparent; font: inherit; font-size: var(--fs-body);
+    border-radius: var(--r-sm) 0 0 var(--r-sm);
+}
+/* Un control invisible tiene que poder recibir foco de teclado Y verse. Al
+   enfocarlo con teclado se materializa: cero dependencias, cero :has(). */
+.f .campo-monto .moneda:focus-visible {
+    opacity: 1;
+    background: var(--sup-card); color: var(--ink-1);
+    font-size: var(--fs-aux); font-weight: 700;
+    outline: 2px solid var(--tt-teal); outline-offset: -2px;
+}
+.f .campo-monto .monto {
+    order: 2; flex: 1 1 auto; min-width: 0; height: 100%;
+    padding: 0 12px 0 10px; margin: 0;
+    border: 0; background: transparent; box-shadow: none; outline: none;
+    font-size: var(--fs-monto); font-weight: 600; letter-spacing: -0.35px;
+    text-align: right; color: var(--ink-1);
+    font-variant-numeric: tabular-nums;
+}
+.f .campo-monto .monto::placeholder {
+    font-weight: 500; font-size: var(--fs-body); color: var(--ink-ph);
+}
+/* La tinta del monto la decide el TIPO, con el semaforo MEDIDO de la hoja.
+   Es color funcional, no decoracion: el mismo criterio con el que la hoja
+   pinta una celda. El Egreso queda navy y NO rojo: en una herramienta cuya
+   promesa es "paz financiera, todos los dias", pintar de rojo cada gasto
+   normal castiga el habito que se quiere construir. El rojo se reserva para
+   el error de validacion. */
+.bloque[data-tipo="Ingreso"] .campo-monto .monto { color: var(--est-verde); }
+
+
+/* ------------------------------------------------------------
+   SEGMENTADO Egreso / Ingreso. Un <select> de dos opciones
+   (UI_Shell.html:549-550) son dos clicks y una lista contra un click.
+   ------------------------------------------------------------ */
+.seg {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3px;
+    height: var(--alto-control); padding: 3px;
+    background: var(--sup-hueco);
+    border-radius: var(--r-sm);
+    box-shadow: var(--filo);
+}
+.seg button {
+    border: 0; border-radius: 7px; cursor: pointer;
+    font: inherit; font-size: var(--fs-aux); font-weight: 600; letter-spacing: 0.02em;
+    background: transparent; color: var(--ink-3);
+    transition: background-color var(--t1) var(--mov-std),
+                color var(--t1) var(--mov-std),
+                box-shadow var(--t1) var(--mov-std);
+}
+.seg button:hover { color: var(--ink-1); background: rgba(52,71,93,0.05); }
+.seg button[aria-pressed="true"] {
+    background: var(--sup-card); color: var(--ink-1);
+    box-shadow: 0 1px 2px rgba(52,71,93,0.12), inset 0 0 0 1px var(--linea);
+}
+.seg button[aria-pressed="true"][data-v="Ingreso"] { color: var(--est-verde); }
+.seg button:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 1px; }
+
+
+/* ============================================================
+   6. BLOQUES REPETIBLES -- dos estados: EDICION (formulario) y RESUMEN (una
+   fila de 48px). Es lo que hace que quince movimientos entren en 700px.
+   El default es EDICION: si el JS del acordeon no corre, todos los bloques
+   quedan abiertos y el formulario sigue siendo usable. Falla en seguro.
+   ============================================================ */
 .bloque {
-    background: var(--bg-main); border-radius: 12px;
-    padding: 16px 18px; margin-bottom: 12px;
+    background: var(--sup-card);
+    border-radius: var(--r-md);
+    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
+    margin-bottom: 10px;
+    transition: box-shadow var(--t2) var(--mov-std);
 }
+.bloque[data-estado="resumen"] { box-shadow: var(--elev-1), var(--filo); }
+/* Entrada del bloque nuevo: 8px y un rebote chico. Unico rebote del sistema. */
+.bloque--nuevo { animation: bloqueEntra var(--t3) var(--mov-entra) both; }
+@keyframes bloqueEntra {
+    from { opacity: 0; transform: translateY(8px) scale(0.985); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --- Fila de resumen --- */
+.bloque-resumen {
+    display: none;
+    align-items: center; gap: 10px;
+    width: 100%; height: 48px; padding: 0 10px 0 14px;
+    border: 0; background: transparent; border-radius: var(--r-md);
+    text-align: left; font: inherit; cursor: pointer;
+    transition: background-color var(--t1) var(--mov-std);
+}
+.bloque[data-estado="resumen"] .bloque-resumen { display: flex; }
+.bloque[data-estado="resumen"] .bloque-head { display: none; }
+.bloque-resumen:hover { background: var(--sup-hueco); }
+.bloque-resumen:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: -2px; }
+
+.bloque-punto {
+    flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--tt-navy);
+    box-shadow: 0 0 0 3px rgba(52,71,93,0.13);
+}
+.bloque-punto[data-tipo="Ingreso"] {
+    background: var(--est-verde);
+    box-shadow: 0 0 0 3px rgba(53,104,84,0.16);
+}
+.bloque-cuenta {
+    flex: 0 1 auto; min-width: 0;
+    font-size: 13px; font-weight: 600; color: var(--ink-1);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* El eco de lo HEREDADO (medio + fecha). Con seis bloques cargados es lo que
+   deja verificar de un scroll que el medio y el dia son los que corresponden,
+   sin abrir seis selects. Es justo el dato que la herencia hace invisible
+   (UI_Shell.html:526-536). */
+.bloque-meta {
+    flex: 1 1 auto; min-width: 0;
+    font-size: var(--fs-aux); color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bloque-monto {
+    flex: 0 0 auto; margin-left: auto;
+    font-size: 15px; font-weight: 600; letter-spacing: -0.2px;
+    color: var(--ink-1); font-variant-numeric: tabular-nums;
+}
+.bloque-monto .u {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--ink-3); margin-left: 5px;
+}
+/* Sin dato es un guion largo, NUNCA un cero: no se inventa un parcial. */
+.bloque-monto[data-vacio="1"] { color: var(--ink-ph); font-weight: 500; }
+.bloque-resumen .chev-abrir { flex: 0 0 auto; color: var(--ink-3); }
+.bloque-resumen:hover .chev-abrir { color: var(--tt-teal); }
+
+/* --- Cuerpo de edicion. Colapso con grid-template-rows 0fr -> 1fr: altura
+       real animable sin medir con JS y sin max-height inventado. --- */
+.bloque-cuerpo {
+    display: grid; grid-template-rows: 1fr;
+    transition: grid-template-rows var(--t3) var(--mov-std);
+}
+.bloque[data-estado="resumen"] .bloque-cuerpo { grid-template-rows: 0fr; }
+.bloque-cuerpo > .inner { overflow: hidden; min-height: 0; }
+.bloque-cuerpo .pad { padding: 10px var(--e4) var(--e4); }
+
 .bloque-head {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+    min-height: 26px; padding: 12px 10px 0 var(--e4);
 }
+/* El titulo de bloque NO es una versalita: es un titulo, mismo registro que
+   el titulo de card. Antes era 11/700/uppercase/gris, o sea identico al label
+   de campo que tiene tres pixeles mas abajo. */
 .bloque-num {
-    font-size: var(--fs-rotulo); font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--text-secondary); flex: 1;
+    flex: 1 1 auto;
+    font-size: 13px; font-weight: 600; letter-spacing: -0.1px;
+    text-transform: none; color: var(--ink-1);
 }
-.bloque .form-input, .bloque .form-select { background: var(--bg-secondary); }
+/* El indice como pastilla: un ancla circular repetida en la columna izquierda
+   que el ojo cuenta sin leer. Es la pregunta real del que carga en lote. */
+.bloque-num .n {
+    display: inline-grid; place-items: center;
+    width: 19px; height: 19px; margin-right: 8px; vertical-align: -3px;
+    border-radius: var(--r-xs);
+    background: var(--tt-teal); color: var(--ink-inv);
+    font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
 .btn-quitar {
-    width: 28px; height: 28px; border: 0; border-radius: 50%;
-    background: var(--bg-secondary); color: var(--text-secondary);
-    font-size: var(--fs-body); line-height: 1; cursor: pointer;
+    flex: 0 0 auto;
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    border: 0; border-radius: 9px;
+    background: transparent; color: var(--ink-3);
+    font: inherit; font-size: 16px; line-height: 1; cursor: pointer;
+    transition: background-color var(--t1) var(--mov-std), color var(--t1) var(--mov-std);
 }
-.btn-quitar:hover { background: var(--danger-bg); color: var(--danger); }
-.btn-quitar:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.btn-quitar:hover { background: var(--est-rojo-bg); color: var(--est-rojo-ink); }
+.btn-quitar:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 1px; }
+
+/* Agregar: FILL, no borde punteado. El `1px dashed --border-color` de
+   UI_Shell.html:170 da 1.23:1 sobre papel: se ve el texto, no se ve la caja. */
 .btn-agregar {
-    width: 100%; padding: 12px; border: 1px dashed var(--border-color);
-    border-radius: 12px; background: transparent; color: var(--primary-color);
-    font: inherit; font-size: var(--fs-body); font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; height: 44px; margin-top: 2px;
+    border: 0; border-radius: var(--r-md);
+    background: var(--sup-card);
+    box-shadow: inset 0 0 0 1px var(--linea);
+    color: var(--tt-teal);
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: box-shadow var(--t1) var(--mov-std);
 }
-.btn-agregar:hover { border-color: var(--primary-color); background: var(--bg-main); }
-.btn-agregar:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn-agregar:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.btn-agregar:hover { box-shadow: inset 0 0 0 1.5px var(--tt-teal-soft), var(--elev-1); }
+.btn-agregar:disabled {
+    opacity: 0.45; cursor: not-allowed; box-shadow: inset 0 0 0 1px var(--linea);
+}
+.btn-agregar:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
 
+
+/* ============================================================
+   7. BOTONES
+   ============================================================ */
+.btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: var(--alto-cta); padding: 0 var(--e5);
+    border: 0; border-radius: var(--r-sm);
+    font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background-color var(--t1) var(--mov-std),
+                box-shadow var(--t1) var(--mov-std),
+                transform var(--t1) var(--mov-out);
+}
+.btn:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-primary {
+    background: linear-gradient(140deg, var(--tt-navy) 0%, var(--tt-navy-dark) 100%);
+    color: var(--ink-inv);
+    box-shadow: 0 1px 2px rgba(52,71,93,0.24), inset 0 1px 0 rgba(255,255,255,0.10);
+}
+.btn-primary:hover:not(:disabled) {
+    background: var(--tt-navy-dark);
+    box-shadow: 0 4px 12px rgba(52,71,93,0.28), inset 0 1px 0 rgba(255,255,255,0.14);
+    transform: translateY(-1px);
+}
+.btn-primary:active:not(:disabled) {
+    transform: translateY(0); box-shadow: 0 1px 2px rgba(52,71,93,0.24);
+}
+
+/* Fill, no borde. El `1px solid --border-color` de UI_SharedStyles.html:208
+   sobre papel blanco da 1.23:1: "Cancelar" era texto navy suelto al lado de
+   un boton lleno, no un boton. */
+.btn-secondary {
+    background: var(--sup-page); color: var(--ink-1); box-shadow: var(--filo);
+}
+.btn-secondary:hover:not(:disabled) {
+    background: var(--sup-hover); box-shadow: inset 0 0 0 1px var(--linea-fuerte);
+}
+.btn-secondary:active:not(:disabled) { transform: translateY(1px); }
+
+
+/* ============================================================
+   8. BARRA DE ACCIONES -- sticky al piso, de vidrio.
+   Hoy .shell-acciones (UI_Shell.html:178-180) es ESTATICA: con dos bloques
+   cargados el boton "Cargar" queda ~230px por debajo de la vista. El pliegue
+   se rompe exactamente al usar la funcion que la vista existe para ofrecer.
+   Los margenes negativos sangran a los bordes del scroll (padding 24 / 22).
+   ============================================================ */
 .shell-acciones {
-    display: flex; gap: 10px; align-items: center; margin-top: 22px;
+    position: sticky; bottom: -22px; z-index: 10;
+    display: flex; align-items: center; gap: 10px;
+    height: 60px;
+    margin: 14px calc(-1 * var(--e6)) -22px;
+    padding: 0 var(--e6);
+    background: rgba(239, 242, 249, 0.84);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
+    box-shadow: 0 -1px 0 var(--linea), 0 -8px 20px rgba(52,71,93,0.06);
 }
-.shell-acciones .crece { margin-right: auto; font-size: var(--fs-aux); color: var(--text-data); }
+/* Piso: sin backdrop-filter la barra queda opaca y sigue siendo legible. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .shell-acciones { background: var(--sup-page); }
+}
+/* Este es el hueco de #movCupo (UI_Shell.html:284, :605-612). Hoy dice
+   "2 de hasta 15. Se cargan todos juntos..." y la barra se lee como una
+   oracion con dos botones al final. */
+.shell-acciones .crece {
+    margin-right: auto; min-width: 0;
+    font-size: var(--fs-aux); line-height: 1.35; color: var(--ink-3);
+}
+/* El total del lote. Es la diferencia entre "formulario de carga" y "producto
+   de finanzas": con seis movimientos cargados hoy no hay un solo lugar que
+   diga cuanto suman. Si el lote mezcla monedas muestra el conteo, no un total
+   falso: sumar monedas distintas es peor que no sumar. */
+.shell-acciones .total {
+    display: flex; flex-direction: column; align-items: flex-end;
+    margin-right: var(--e3);
+}
+.shell-acciones .total .rot {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);
+}
+.shell-acciones .total .val {
+    font-size: 15px; font-weight: 700; letter-spacing: -0.2px; line-height: 1.2;
+    color: var(--ink-1); font-variant-numeric: tabular-nums;
+}
 
-/* --- Vista en construccion: dice QUE va a hacer, no "proximamente". --- */
+
+/* ============================================================
+   9. ALERTAS -- se conserva la decision de UI_SharedStyles.html:266-271
+   (fondo tenido y tinta, sin franja lateral). Lo que cambia: la tinta del
+   error sube de 4.47:1 a 5.76:1, y el punto de 7px reemplaza a la franja --
+   senial redundante sin ser cromo.
+   ============================================================ */
+.alert {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 11px 14px; margin-bottom: var(--e4);
+    border-radius: var(--r-sm);
+    font-size: 13px; line-height: 1.45;
+    animation: alertaEntra 180ms var(--mov-out) both;
+}
+@keyframes alertaEntra { from { opacity: 0; transform: translateY(-4px); } }
+.alert::before {
+    content: ""; flex: 0 0 auto;
+    width: 7px; height: 7px; margin-top: 6px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.7);
+}
+.alert-error   { background: var(--est-rojo-bg);  color: var(--est-rojo-ink); }
+.alert-ok      { background: var(--est-verde-bg); color: var(--est-verde-ink); }
+.alert-warning { background: var(--est-ambar-bg); color: var(--est-ambar-ink); }
+.alert-info    { background: var(--sup-card); color: var(--ink-2); box-shadow: var(--filo); }
+.alert-info::before { background: var(--tt-teal); box-shadow: none; }
+
+
+/* ============================================================
+   10. VISTA EN CONSTRUCCION -- el copy ya esta a nivel producto
+   (UI_Shell.html:331-358); lo que le falta es un contenedor.
+   ============================================================ */
+.shell-pendiente {
+    padding: var(--e5) var(--e5) var(--e4);
+    background: var(--sup-card);
+    border-radius: var(--r-md);
+    box-shadow: var(--elev-1), var(--filo);
+}
+.shell-pendiente .marca {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 24px; padding: 0 11px; margin-bottom: 12px;
+    border-radius: var(--r-full);
+    background: var(--est-ambar-bg); color: var(--est-ambar-ink);
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+}
 .shell-pendiente h2 {
-    font-size: var(--fs-vista); color: var(--primary-color); margin: 0 0 10px;
+    margin: 0 0 8px;
+    font-size: var(--fs-hero); font-weight: 600; letter-spacing: -0.15px;
+    color: var(--ink-1);
 }
 .shell-pendiente p {
-    font-size: var(--fs-body); color: var(--text-data); line-height: 1.55; margin: 0 0 10px;
+    margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--ink-2);
 }
-.shell-pendiente ul {
-    margin: 0 0 14px; padding-left: 1.15em; font-size: var(--fs-body); color: var(--text-data);
+.shell-pendiente ul { margin: 0; padding-left: 0; list-style: none; }
+.shell-pendiente li {
+    position: relative; padding-left: 18px; margin: 7px 0;
+    font-size: 13px; line-height: 1.5; color: var(--ink-2);
 }
-.shell-pendiente li { margin: 4px 0; }
+.shell-pendiente li::before {
+    content: ""; position: absolute; left: 2px; top: 8px;
+    width: 5px; height: 5px; border-radius: 50%; background: var(--tt-teal-soft);
+}
 
-/* --- Pie FIJO al piso. Antes era estatico y quedaba a 500px del borde en el Home y a 260 en
-       otra vista: un cromo que salta de lugar al navegar hace que la UI se sienta amateur
-       aunque cada pantalla por separado este bien. --- */
+
+/* ============================================================
+   11. PIE -- se conserva que sea fijo (el argumento de UI_Shell.html:195-197
+   es correcto: un cromo que salta de lugar al navegar hace que la UI se
+   sienta amateur). Lo que le falta es separacion: hoy el pie y la card son
+   EL MISMO #eff2f9 (--bg-main en :87 y en :200), asi que la ultima tarjeta
+   se funde con el pie.
+   ============================================================ */
 .shell-foot {
-    position: fixed; left: 0; right: 0; bottom: 0;
-    background: var(--bg-main); padding: 11px 24px;
-    font-size: var(--fs-rotulo); letter-spacing: 0.03em; color: var(--text-secondary);
-    display: flex; gap: 16px; align-items: center;
+    flex: 0 0 auto;
+    height: var(--h-pie);
+    display: flex; align-items: center; gap: var(--e4);
+    padding: 0 var(--e6);
+    background: var(--sup-card);
+    box-shadow: 0 -1px 0 var(--linea);
+    font-size: var(--fs-rotulo); letter-spacing: 0.02em; color: var(--ink-3);
 }
 .shell-foot .spacer { flex: 1; }
-
-/* --- Overlay. El loader SIEMPRE tiene que poder apagarse. --- */
-.shell-overlay {
-    position: fixed; inset: 0; background: rgba(255,255,255,0.9);
-    display: grid; place-items: center; z-index: 2000;
+.shell-foot .vivo {
+    display: inline-flex; align-items: center; gap: 7px; min-width: 0;
+    color: var(--ink-2); font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Dice "conectado a ESTA planilla" sin una palabra de mas. */
+.shell-foot .vivo::before {
+    content: ""; flex: 0 0 auto;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--est-verde);
+    box-shadow: 0 0 0 3px rgba(53,104,84,0.16);
+}
+.shell-foot .ver {
+    font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--ink-ph);
+}
+
+
+/* ============================================================
+   12. OVERLAY -- el loader SIEMPRE tiene que poder apagarse
+   (cicatriz v0.45.2 y v0.47.1). Esto es solo su ropa.
+   ============================================================ */
+.shell-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    display: grid; place-items: center; align-content: center; gap: 14px;
+    background: rgba(239, 242, 249, 0.74);
+    -webkit-backdrop-filter: blur(6px) saturate(130%);
+    backdrop-filter: blur(6px) saturate(130%);
+    animation: overlayEntra 160ms var(--mov-std) both;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .shell-overlay { background: rgba(239, 242, 249, 0.96); }
+}
+@keyframes overlayEntra { from { opacity: 0; } }
 .shell-spinner {
-    width: 30px; height: 30px; border: 3px solid var(--bg-tertiary);
-    border-top-color: var(--primary-color); border-radius: 50%;
-    animation: shell-spin 1s linear infinite;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2.5px solid rgba(52,71,93,0.14);
+    border-top-color: var(--tt-teal);
+    animation: shell-spin 800ms linear infinite;
 }
 @keyframes shell-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .shell-spinner { animation: none; } }
+.shell-overlay .leyenda {
+    font-size: var(--fs-rotulo); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-3);
+}
 
-/* Las alertas viven en UI_SharedStyles: son componente de base y las seis pantallas las usan. */
+
+/* ============================================================
+   13. ENTRADA -- una sola animacion en todo el sistema, 8px y 200ms.
+   Suficiente para leerse como movimiento, no tanto como para notar el reflow.
+   ============================================================ */
+@keyframes vistaEntra { from { opacity: 0; transform: translateY(8px); } }
+#vista-home .shell-card, #vista-home .shell-chips {
+    animation: vistaEntra 300ms var(--mov-out) both;
+}
+#vista-home .shell-cards:nth-of-type(1) .shell-card { animation-delay: 0.02s; }
+#vista-home .shell-cards:nth-of-type(2) .shell-card:nth-child(1) { animation-delay: 0.06s; }
+#vista-home .shell-cards:nth-of-type(2) .shell-card:nth-child(2) { animation-delay: 0.09s; }
+#vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(1) { animation-delay: 0.12s; }
+#vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(2) { animation-delay: 0.15s; }
+#vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(3) { animation-delay: 0.18s; }
+#vista-home .shell-chips { animation-delay: 0.21s; }
+
+
+/* ============================================================
+   14. MOVIMIENTO REDUCIDO -- hoy cubre solo el spinner (UI_Shell.html:217).
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    /* El spinner es la unica excepcion: si no gira, no informa nada. */
+    .shell-spinner { animation: shell-spin 900ms linear infinite !important; }
+}
+
+
+/* ============================================================
+   15. MODAL ANGOSTO -- Sheets recorta el dialogo si la ventana del navegador
+   es mas chica que el setWidth pedido (16_ShellService.js:141). Un solo
+   breakpoint. auto-fit ya cubre las tarjetas; esto ordena el resto.
+   ============================================================ */
+@media (max-width: 700px) {
+    .shell-scroll { padding: var(--e4) var(--e4) 18px; }
+    .shell-acciones { margin-left: calc(-1 * var(--e4)); margin-right: calc(-1 * var(--e4)); padding: 0 var(--e4); }
+    .shell-band .sub { display: none; }
+    .f.c3, .f.c4, .f.c5 { grid-column: span 6; }
+}
 </style>
 </head>
 <body>
 
-<div class="shell-band">
-    <h1 id="shellTitulo">Tidetrack</h1>
-    <span class="sub" id="shellSubtitulo">Que queres hacer</span>
+<header class="shell-band">
+    <button class="shell-volver hidden" id="shellVolver" onclick="salirDeVista()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        Volver
+    </button>
+    <span class="shell-mono" aria-hidden="true">tt.</span>
+    <div class="titulos">
+        <h1 id="shellTitulo">Tidetrack</h1>
+        <span class="sub" id="shellSubtitulo">Que queres hacer</span>
+    </div>
     <span class="spacer"></span>
-    <button class="volver hidden" id="shellVolver" onclick="salirDeVista()">Volver</button>
-</div>
+</header>
 
-<div class="shell-body">
+<main class="shell-scroll">
     <div id="shellAviso" class="vista-ancha"></div>
 
     <!-- ================= HOME ================= -->
     <div id="vista-home" class="vista-ancha">
+
+        <div class="shell-sec">Hoy</div>
+        <div class="shell-cards">
+            <button class="shell-card shell-card--hero" data-vista="movimiento"
+                    onclick="irAVista('movimiento')">
+                <span class="ico" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+                <span class="txt">
+                    <span class="t">Movimiento nuevo</span>
+                    <span class="d">Uno o varios gastos e ingresos, de una sentada.</span>
+                </span>
+                <span class="pend" title="Todavia no esta construida"></span>
+                <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+        </div>
+
         <div class="shell-sec">Registrar</div>
         <div class="shell-cards">
-            <button class="shell-card" onclick="irAVista('movimiento')">
-                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
-                <span><span class="t">Movimiento nuevo</span><span class="d">Uno o varios gastos e ingresos, de una sentada.</span></span>
+            <button class="shell-card" data-vista="traspaso" onclick="irAVista('traspaso')">
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M16 3l4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg></span>
+                <span class="txt">
+                    <span class="t">Traspaso nuevo</span>
+                    <span class="d">Plata de una caja a otra. Escribe las dos patas juntas.</span>
+                </span>
+                <span class="pend" title="Todavia no esta construida"></span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
-            <button class="shell-card" onclick="irAVista('traspaso')">
-                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg></span>
-                <span><span class="t">Traspaso nuevo</span><span class="d">Plata de una caja a otra. Escribe las dos patas juntas.</span></span>
-            </button>
-            <button class="shell-card" onclick="irAVista('proyeccion')">
-                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-7M14 7h6v6"/></svg></span>
-                <span><span class="t">Proyeccion nueva</span><span class="d">Lo que pensas gastar el mes que viene.</span></span>
+            <button class="shell-card" data-vista="proyeccion" onclick="irAVista('proyeccion')">
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-7M14 7h6v6"/></svg></span>
+                <span class="txt">
+                    <span class="t">Proyeccion nueva</span>
+                    <span class="d">Lo que pensas gastar el mes que viene.</span>
+                </span>
+                <span class="pend" title="Todavia no esta construida"></span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
         </div>
 
         <div class="shell-sec">Revisar</div>
         <div class="shell-cards">
-            <button class="shell-card" onclick="irAVista('conciliacion')">
-                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
-                <span><span class="t">Conciliacion</span><span class="d">Emparejar cada caja con lo que dice el banco.</span></span>
+            <button class="shell-card" data-listo="1" onclick="procesarLote()">
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span>
+                <span class="txt">
+                    <span class="t">Procesar Cargas</span>
+                    <span class="d">Manda al ledger lo que tipeaste en la grilla.</span>
+                </span>
+                <span class="pend"></span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
-            <button class="shell-card" onclick="procesarLote()">
-                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span>
-                <span><span class="t">Procesar la hoja de Cargas</span><span class="d">Manda al ledger lo que tipeaste a mano en la grilla.</span></span>
+            <button class="shell-card" data-vista="conciliacion" onclick="irAVista('conciliacion')">
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                <span class="txt">
+                    <span class="t">Conciliacion</span>
+                    <span class="d">Emparejar cada caja con lo que dice el banco.</span>
+                </span>
+                <span class="pend" title="Todavia no esta construida"></span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
-            <button class="shell-card" onclick="irAVista('recurrentes')">
-                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></span>
-                <span><span class="t">Gastos recurrentes</span><span class="d">Lo que se repite todos los meses.</span></span>
+            <button class="shell-card" data-vista="recurrentes" onclick="irAVista('recurrentes')">
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></span>
+                <span class="txt">
+                    <span class="t">Gastos recurrentes</span>
+                    <span class="d">Lo que se repite todos los meses.</span>
+                </span>
+                <span class="pend" title="Todavia no esta construida"></span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
         </div>
 
         <div class="shell-sec">Estructura</div>
-        <div class="shell-cards">
-            <button class="shell-card" onclick="abrirAbm()">
-                <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h11"/></svg></span>
-                <span><span class="t">Gestionar cuentas</span><span class="d">Alta, baja y cambio de nombre del Plan de Cuentas.</span></span>
+        <div class="shell-chips">
+            <button class="shell-chip" onclick="abrirAbm()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h11"/></svg>
+                Gestionar cuentas
             </button>
         </div>
     </div>
 
-    <!-- ================= MOVIMIENTO (carga multiple) ================= -->
-    <div id="vista-movimiento" class="vista-form hidden">
-        <div id="movLista"></div>
-        <button type="button" class="btn-agregar" id="movAgregar" onclick="agregarBloqueMovimiento()">
-            Agregar otro movimiento
-        </button>
-        <div class="shell-acciones">
-            <span class="crece" id="movCupo"></span>
-            <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
-            <button class="btn btn-primary" id="movBtnGuardar" onclick="guardarMovimientos()">Cargar</button>
-        </div>
+<div id="vista-movimiento" class="vista-form hidden">
+    <div id="movLista"></div>
+    <button type="button" class="btn-agregar" id="movAgregar" onclick="agregarBloqueMovimiento()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Agregar otro movimiento
+    </button>
+    <div class="shell-acciones">
+        <span class="crece" id="movCupo"></span>
+        <span class="total">
+            <span class="rot">Lote</span>
+            <span class="val" id="movTotal">&mdash;</span>
+        </span>
+        <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
+        <button class="btn btn-primary" id="movBtnGuardar" onclick="guardarMovimientos()">Cargar</button>
     </div>
+</div>
 
-    <!-- ================= TRASPASO ================= -->
     <div id="vista-traspaso" class="vista-form hidden">
         <div class="shell-form">
-            <div class="f c6">
-                <label for="trasOrigen">Sale de</label>
-                <select class="form-select" id="trasOrigen" onchange="trasMonedas()"></select>
-            </div>
-            <div class="f c6">
-                <label for="trasDestino">Entra a</label>
-                <select class="form-select" id="trasDestino" onchange="trasMonedas()"></select>
-            </div>
-            <div class="f c4">
-                <label for="trasMontoO">Monto que sale</label>
-                <input class="form-input campo-monto" id="trasMontoO" inputmode="decimal" placeholder="0,00" oninput="trasTipoDeCambio()">
-                <span class="hint" id="trasHintO"></span>
-            </div>
-            <div class="f c4 hidden" id="trasCampoDestino">
-                <label for="trasMontoD">Monto que entra</label>
-                <input class="form-input campo-monto" id="trasMontoD" inputmode="decimal" placeholder="0,00" oninput="trasTipoDeCambio()">
-                <span class="hint" id="trasHintD"></span>
-            </div>
-            <div class="f c4">
-                <label for="trasFecha">Fecha</label>
-                <input class="form-input" id="trasFecha" type="date">
-            </div>
-            <div class="f c12">
-                <label for="trasNota">Nota</label>
-                <input class="form-input" id="trasNota" placeholder="Opcional">
-                <span class="hint" id="trasAviso"></span>
-            </div>
+            <label class="f c6"><span class="rot">Sale de</span>
+                <select class="form-select" id="trasOrigen" onchange="trasMonedas()"></select></label>
+            <label class="f c6"><span class="rot">Entra a</span>
+                <select class="form-select" id="trasDestino" onchange="trasMonedas()"></select></label>
+            <label class="f c4"><span class="rot">Monto que sale</span>
+                <span class="campo-monto">
+                    <input class="monto" id="trasMontoO" inputmode="decimal" placeholder="0,00"
+                           autocomplete="off" oninput="trasTipoDeCambio()">
+                    <span class="pref" id="trasPrefO" aria-hidden="true"></span>
+                </span>
+                <span class="hint" id="trasHintO"></span></label>
+            <label class="f c4 hidden" id="trasCampoDestino"><span class="rot">Monto que entra</span>
+                <span class="campo-monto">
+                    <input class="monto" id="trasMontoD" inputmode="decimal" placeholder="0,00"
+                           autocomplete="off" oninput="trasTipoDeCambio()">
+                    <span class="pref" id="trasPrefD" aria-hidden="true"></span>
+                </span>
+                <span class="hint" id="trasHintD"></span></label>
+            <label class="f c4"><span class="rot">Fecha</span>
+                <input class="form-input" id="trasFecha" type="date"></label>
+            <label class="f c12"><span class="rot">Nota</span>
+                <input class="form-input" id="trasNota" placeholder="Opcional" autocomplete="off">
+                <span class="hint" id="trasAviso"></span></label>
         </div>
         <div class="shell-acciones">
             <span class="crece">Las dos patas se escriben juntas o no se escribe ninguna.</span>
@@ -325,7 +1247,6 @@ body { padding: 0 0 44px; background: var(--bg-secondary); }
         </div>
     </div>
 
-    <!-- ============ VISTAS EN CONSTRUCCION ============ -->
     <div id="vista-proyeccion" class="vista-form hidden">
         <div class="shell-pendiente">
             <h2>Todavia no esta construida</h2>
@@ -351,30 +1272,31 @@ body { padding: 0 0 44px; background: var(--bg-secondary); }
     <div id="vista-conciliacion" class="vista-form hidden">
         <div class="shell-pendiente">
             <h2>Todavia no esta construida</h2>
-            <p>Va a poner lado a lado, por cada caja, lo que dice la planilla y lo que hay de verdad, y cargar la diferencia como un movimiento con la cuenta <b>Ajuste</b>, que es la que ya usas.</p>
+            <p>Va a poner lado a lado, por cada caja, lo que dice la planilla y lo que hay de verdad, y cargar la diferencia con la cuenta <b>Ajuste</b>, que es la que ya usas.</p>
             <ul>
                 <li>El saldo lo calcula con la regla que ya cierra al centavo: el ultimo <b>Inicio Mes</b> de cada caja mas todo lo posterior.</li>
                 <li>Una caja que no declares conserva su saldo. Nunca se asume cero.</li>
             </ul>
         </div>
     </div>
-</div>
 
-<div class="shell-foot">
-    <span><?= planilla ?></span>
+</main>
+
+<footer class="shell-foot">
+    <span class="vivo"><?= planilla ?></span>
     <span class="spacer"></span>
-    <span>v<?= version ?></span>
+    <span class="ver">v<?= version ?></span>
+</footer>
+
+<div class="shell-overlay hidden" id="shellLoader">
+    <div class="shell-spinner"></div>
+    <span class="leyenda" id="shellLoaderTxt">Leyendo el Plan de Cuentas</span>
 </div>
-
-<div class="shell-overlay hidden" id="shellLoader"><div class="shell-spinner"></div></div>
-
 <script>
 // OJO CON EL SCRIPTLET: para inyectar JSON va la forma con signo de admiracion, la que NO
-// escapa. La otra hace escapado contextual de HTML y convierte cada comilla en &quot;, que
+// escapa. La otra hace escapado contextual de HTML y convierte cada comilla en su entidad, que
 // adentro de un script es un error de sintaxis -- y un error de sintaxis mata el archivo
 // entero. La forma que escapa SI es la correcta para texto que va al HTML, como el pie.
-// No se escriben los delimitadores literales ni en un comentario: la plantilla se procesa
-// ANTES que el JS, asi que un scriptlet dentro de un comentario tambien se evalua.
 var VISTAS = <?!= vistasJson ?>;
 var VISTA_INICIAL = '<?= vistaInicial ?>';
 var TIPOS_RIQUEZA_CLIENTE = <?!= tiposRiquezaJson ?>;
@@ -396,8 +1318,8 @@ function irAVista(id) {
     document.getElementById('shellTitulo').textContent = vista.titulo;
     document.getElementById('shellSubtitulo').textContent = vista.subtitulo;
     document.getElementById('shellVolver').classList.toggle('hidden', id === 'home');
+    document.querySelector('.shell-scroll').scrollTop = 0;
     limpiarAviso();
-
     var preparar = VISTAS_CON_CATALOGO[id];
     if (preparar) { asegurarCatalogo(preparar); }
 }
@@ -423,7 +1345,10 @@ function escapar(t) {
     d.textContent = String(t == null ? '' : t);
     return d.innerHTML;
 }
-function loader(v) { document.getElementById('shellLoader').classList.toggle('hidden', !v); }
+function loader(v, txt) {
+    document.getElementById('shellLoader').classList.toggle('hidden', !v);
+    if (txt) document.getElementById('shellLoaderTxt').textContent = txt;
+}
 
 // ============================================
 // CATALOGO PEREZOSO
@@ -431,7 +1356,7 @@ function loader(v) { document.getElementById('shellLoader').classList.toggle('hi
 
 function asegurarCatalogo(cuando) {
     if (catalogo) { cuando(catalogo); return; }
-    loader(true);
+    loader(true, 'Leyendo el Plan de Cuentas');
     var contesto = false;
     var tope = window.setTimeout(function () {
         if (contesto) return;
@@ -503,10 +1428,50 @@ function llenarSelect(sel, grupos, seleccionado) {
 }
 
 // ============================================
-// MOVIMIENTO -- carga multiple
+// MOVIMIENTO -- carga multiple con acordeon
 // ============================================
 
-var movN = 0;
+/**
+ * UN SOLO BLOQUE ABIERTO A LA VEZ.
+ * El cupo son 15 filas de la grilla de Cargas. Quince bloques abiertos de 194px son 2.910px
+ * dentro de un modal de 700: el acordeon es la unica forma de que la carga multiple escale
+ * hasta el tope real. Colapsado, un bloque son 48px, y quince entran con scroll corto mientras
+ * el boton de Cargar queda pegado abajo y nunca sale de pantalla.
+ */
+function abrirBloque(el) {
+    var b = el.closest('.bloque');
+    document.querySelectorAll('#movLista .bloque').forEach(function (o) {
+        if (o !== b) { resumirBloque(o); o.dataset.estado = 'resumen'; }
+    });
+    b.dataset.estado = 'edicion';
+    b.querySelector('.b-monto').focus();
+}
+
+/** El resumen se arma con lo que ya hay en los campos: no guarda un segundo estado. */
+function resumirBloque(b) {
+    var v = function (s) { var e = b.querySelector(s); return e ? e.value : ''; };
+    var monto = aNumero(v('.b-monto'));
+    var f = v('.b-fecha');
+    b.querySelector('.bloque-punto').dataset.tipo = v('.b-tipo');
+    b.querySelector('.bloque-cuenta').textContent = v('.b-cuenta') || 'Sin cuenta';
+    b.querySelector('.bloque-meta').textContent =
+        [v('.b-medio'), f ? f.slice(8) + '/' + f.slice(5, 7) : ''].filter(Boolean).join(' \u00b7 ');
+    var caja = b.querySelector('.bloque-monto');
+    caja.dataset.vacio = monto ? '0' : '1';
+    caja.innerHTML = (monto ? escapar(monto.toFixed(2).replace('.', ','))
+                            : '\u2014') + '<span class="u">' + escapar(v('.b-moneda')) + '</span>';
+}
+
+/** Segmentado -> input oculto. guardarMovimientos() no cambia una linea. */
+function segTipo(btn) {
+    var b = btn.closest('.bloque');
+    b.querySelectorAll('.seg button').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x === btn));
+    });
+    b.querySelector('.b-tipo').value = btn.dataset.v;
+    b.dataset.tipo = btn.dataset.v;
+    actualizarTotal();
+}
 
 function prepararMovimiento() {
     if (!document.querySelectorAll('#movLista .bloque').length) {
@@ -515,12 +1480,67 @@ function prepararMovimiento() {
     actualizarCupo();
 }
 
+var PLANTILLA_BLOQUE =
+        '<div class="bloque bloque--nuevo" data-estado="edicion" data-tipo="Egreso">' +
+        '<button type="button" class="bloque-resumen" onclick="abrirBloque(this)">' +
+        '<span class="bloque-punto" data-tipo="Egreso" aria-hidden="true"></span>' +
+        '<span class="bloque-cuenta">Sin cuenta</span>' +
+        '<span class="bloque-meta"></span>' +
+        '<span class="bloque-monto" data-vacio="1">&mdash;<span class="u">ARS</span></span>' +
+        '<svg class="chev-abrir" width="15" height="15" viewBox="0 0 24 24" fill="none"' +
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round"' +
+        'stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+        '</button>' +
+        '<div class="bloque-head">' +
+        '<span class="bloque-num"><span class="n">1</span>Movimiento</span>' +
+        '<button type="button" class="btn-quitar" title="Quitar este movimiento"' +
+        'onclick="quitarBloqueMovimiento(this)">&times;</button>' +
+        '</div>' +
+        '<div class="bloque-cuerpo"><div class="inner"><div class="pad">' +
+        '<div class="shell-form">' +
+        '<!-- El <input> va PRIMERO en el DOM y se reordena por CSS: asi el <label>' +
+        'que envuelve asocia al monto y no al <select> de moneda. -->' +
+        '<label class="f c4">' +
+        '<span class="rot">Monto</span>' +
+        '<span class="campo-monto">' +
+        '<input class="monto b-monto" inputmode="decimal" placeholder="0,00" autocomplete="off">' +
+        '<span class="pref b-pref" aria-hidden="true">ARS</span>' +
+        '<select class="moneda b-moneda" aria-label="Moneda de este movimiento"></select>' +
+        '</span>' +
+        '</label>' +
+        '<div class="f c3">' +
+        '<span class="rot">Tipo</span>' +
+        '<div class="seg" role="group" aria-label="Tipo de movimiento">' +
+        '<button type="button" data-v="Egreso" aria-pressed="true" onclick="segTipo(this)">Egreso</button>' +
+        '<button type="button" data-v="Ingreso" aria-pressed="false" onclick="segTipo(this)">Ingreso</button>' +
+        '</div>' +
+        '<input type="hidden" class="b-tipo" value="Egreso">' +
+        '</div>' +
+        '<label class="f c5">' +
+        '<span class="rot">Cuenta</span>' +
+        '<select class="form-select b-cuenta"></select>' +
+        '</label>' +
+        '<label class="f c4">' +
+        '<span class="rot">Medio</span>' +
+        '<select class="form-select b-medio"></select>' +
+        '</label>' +
+        '<label class="f c3">' +
+        '<span class="rot">Fecha</span>' +
+        '<input class="form-input b-fecha" type="date">' +
+        '</label>' +
+        '<label class="f c5">' +
+        '<span class="rot">Nota</span>' +
+        '<input class="form-input b-nota" placeholder="Opcional" autocomplete="off">' +
+        '</label>' +
+        '</div>' +
+        '</div></div></div>' +
+        '</div>';
+
 /**
- * Agrega un bloque, heredando del anterior lo que casi siempre se repite.
- *
- * Se hereda MEDIO y FECHA, nunca monto, cuenta ni nota. Cuando se cargan seis gastos de una
- * sentada, el medio y el dia son los mismos y el resto cambia siempre: heredar lo que cambia
- * obliga a borrarlo, que es peor que tipearlo.
+ * Agrega un bloque heredando del anterior lo que casi siempre se repite.
+ * Se hereda MEDIO, FECHA y TIPO; nunca monto, cuenta ni nota. Cuando se cargan seis gastos de
+ * una sentada el medio y el dia son los mismos y el resto cambia siempre: heredar lo que
+ * cambia obliga a borrarlo, que es peor que tipearlo.
  */
 function agregarBloqueMovimiento() {
     var lista = document.getElementById('movLista');
@@ -533,37 +1553,17 @@ function agregarBloqueMovimiento() {
         heredaMedio = ult.querySelector('.b-medio').value;
         heredaFecha = ult.querySelector('.b-fecha').value;
         heredaTipo = ult.querySelector('.b-tipo').value;
+        resumirBloque(ult);
+        ult.dataset.estado = 'resumen';
     }
 
-    movN++;
-    var div = document.createElement('div');
-    div.className = 'bloque';
-    div.innerHTML =
-        '<div class="bloque-head">' +
-            '<span class="bloque-num"></span>' +
-            '<button type="button" class="btn-quitar" title="Quitar" onclick="quitarBloqueMovimiento(this)">&times;</button>' +
-        '</div>' +
-        '<div class="shell-form">' +
-            '<div class="f c4"><label>Monto</label>' +
-                '<input class="form-input campo-monto b-monto" inputmode="decimal" placeholder="0,00"></div>' +
-            '<div class="f c4"><label>Tipo</label>' +
-                '<select class="form-select b-tipo"><option>Egreso</option><option>Ingreso</option></select></div>' +
-            '<div class="f c4"><label>Fecha</label>' +
-                '<input class="form-input b-fecha" type="date"></div>' +
-            '<div class="f c6"><label>Cuenta</label>' +
-                '<select class="form-select b-cuenta"></select></div>' +
-            '<div class="f c6"><label>Medio</label>' +
-                '<select class="form-select b-medio"></select></div>' +
-            '<div class="f c8"><label>Nota</label>' +
-                '<input class="form-input b-nota" placeholder="Opcional"></div>' +
-            '<div class="f c4"><label>Moneda</label>' +
-                '<select class="form-select b-moneda"></select>' +
-                '<span class="hint">La hereda del medio</span></div>' +
-        '</div>';
+    var envoltorio = document.createElement('div');
+    envoltorio.innerHTML = PLANTILLA_BLOQUE;
+    var div = envoltorio.firstElementChild;
     lista.appendChild(div);
 
-    // Los select se pueblan DESPUES del appendChild: un value interpolado en el HTML de un
-    // select no selecciona nada.
+    // Los select se pueblan DESPUES de insertar: un value interpolado en el HTML de un select
+    // no selecciona nada.
     llenarSelect(div.querySelector('.b-cuenta'), [
         { titulo: 'Gastos variables', items: catalogo.variables },
         { titulo: 'Gastos fijos', items: catalogo.fijos },
@@ -574,11 +1574,21 @@ function agregarBloqueMovimiento() {
     llenarSelect(div.querySelector('.b-moneda'), [{ items: catalogo.monedas }]);
     div.querySelector('.b-fecha').value = heredaFecha;
     div.querySelector('.b-tipo').value = heredaTipo;
+    div.dataset.tipo = heredaTipo;
+    div.querySelectorAll('.seg button').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x.dataset.v === heredaTipo));
+    });
     div.querySelector('.b-medio').onchange = function () { monedaDelMedio(div); };
+    div.querySelector('.b-monto').oninput = actualizarTotal;
+    div.querySelector('.b-moneda').onchange = function () {
+        div.querySelector('.b-pref').textContent = div.querySelector('.b-moneda').value;
+        actualizarTotal();
+    };
     monedaDelMedio(div);
 
     renumerarBloques();
     actualizarCupo();
+    actualizarTotal();
     div.querySelector('.b-monto').focus();
 }
 
@@ -588,13 +1598,15 @@ function quitarBloqueMovimiento(btn) {
     btn.closest('.bloque').remove();
     renumerarBloques();
     actualizarCupo();
+    actualizarTotal();
 }
 
+/** El numero va DENTRO de la pastilla, y el boton de quitar desaparece si hay uno solo. */
 function renumerarBloques() {
-    var bloques = document.querySelectorAll('#movLista .bloque');
-    bloques.forEach(function (b, i) {
-        b.querySelector('.bloque-num').textContent = 'Movimiento ' + (i + 1);
-        b.querySelector('.btn-quitar').style.visibility = bloques.length > 1 ? 'visible' : 'hidden';
+    var bs = document.querySelectorAll('#movLista .bloque');
+    bs.forEach(function (b, i) {
+        b.querySelector('.bloque-num .n').textContent = (i + 1);
+        b.querySelector('.btn-quitar').style.visibility = bs.length > 1 ? 'visible' : 'hidden';
     });
 }
 
@@ -608,8 +1620,27 @@ function actualizarCupo() {
     var max = cupoMaximo();
     document.getElementById('movAgregar').disabled = n >= max;
     document.getElementById('movCupo').textContent = n >= max
-        ? 'Llegaste al tope: en la grilla de Cargas quedan ' + max + ' filas libres.'
+        ? 'Llegaste al tope: quedan ' + max + ' filas libres en la grilla de Cargas.'
         : n + ' de hasta ' + max + '. Se cargan todos juntos, en una sola pasada.';
+}
+
+/** El total del lote, solo si todo comparte moneda: sumar monedas distintas seria mentir. */
+function actualizarTotal() {
+    var total = 0, monedas = {}, hay = false;
+    document.querySelectorAll('#movLista .bloque').forEach(function (b) {
+        var m = aNumero(b.querySelector('.b-monto').value);
+        if (m === '' || !m) return;
+        hay = true;
+        total += (b.querySelector('.b-tipo').value === 'Ingreso' ? m : -m);
+        monedas[b.querySelector('.b-moneda').value] = true;
+    });
+    var caja = document.getElementById('movTotal');
+    if (!hay) { caja.textContent = '\u2014'; caja.dataset.signo = ''; return; }
+    var claves = Object.keys(monedas);
+    if (claves.length > 1) { caja.textContent = 'varias monedas'; caja.dataset.signo = ''; return; }
+    caja.dataset.signo = total < 0 ? 'neg' : 'pos';
+    caja.textContent = (total < 0 ? '-' : '+') +
+        Math.abs(total).toFixed(2).replace('.', ',') + ' ' + claves[0];
 }
 
 /** La moneda la decide el CATALOGO, igual que hace el onEdit de la hoja de Cargas. */
@@ -617,6 +1648,8 @@ function monedaDelMedio(div) {
     var medio = div.querySelector('.b-medio').value;
     var m = (catalogo.medios || []).filter(function (x) { return x.nombre === medio; })[0];
     if (m && m.moneda) div.querySelector('.b-moneda').value = m.moneda;
+    div.querySelector('.b-pref').textContent = div.querySelector('.b-moneda').value;
+    actualizarTotal();
 }
 
 function guardarMovimientos() {
@@ -678,6 +1711,8 @@ function trasMonedas() {
     var o = document.getElementById('trasOrigen').value;
     var d = document.getElementById('trasDestino').value;
     var mo = monedaDe(o), md = monedaDe(d);
+    document.getElementById('trasPrefO').textContent = mo;
+    document.getElementById('trasPrefD').textContent = md;
     document.getElementById('trasHintO').textContent = mo ? mo + ', del catalogo' : '';
     var cruza = mo && md && mo !== md;
     document.getElementById('trasCampoDestino').classList.toggle('hidden', !cruza);
@@ -729,7 +1764,7 @@ function guardarTraspaso() {
 // ============================================
 
 function abrirAbm() {
-    loader(true);
+    loader(true, 'Abriendo el Plan de Cuentas');
     google.script.run
         .withSuccessHandler(function () { /* el modal se reemplaza solo */ })
         .withFailureHandler(function (err) {
@@ -740,7 +1775,7 @@ function abrirAbm() {
 }
 
 function procesarLote() {
-    loader(true);
+    loader(true, 'Procesando la hoja de Cargas');
     google.script.run
         .withSuccessHandler(function (r) {
             loader(false);
@@ -770,7 +1805,7 @@ function enviar(fn, datos, botones, alSalirBien) {
             if (b) b.disabled = v;
         });
     };
-    deshabilitar(true); loader(true); limpiarAviso();
+    deshabilitar(true); loader(true, 'Guardando'); limpiarAviso();
 
     var contesto = false;
     var tope = window.setTimeout(function () {
@@ -797,6 +1832,12 @@ function enviar(fn, datos, botones, alSalirBien) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    // El punto de estado de cada tarjeta sale de SHELL_VISTAS, que lo declara el backend: no se
+    // retipea aca cual esta lista y cual no.
+    document.querySelectorAll('#vista-home .shell-card[data-vista]').forEach(function (c) {
+        var v = VISTAS.filter(function (x) { return x.id === c.dataset.vista; })[0];
+        c.dataset.listo = (v && v.listo) ? '1' : '0';
+    });
     // Cero llamadas al servidor: el shell se ve completo apenas abre.
     irAVista(VISTA_INICIAL);
 });

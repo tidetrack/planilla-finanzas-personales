@@ -7,6 +7,52 @@ Historial de versiones y cambios significativos del proyecto.
 > Nota: el historial canonico y completo vive en `src/ZZ_Changelog.js`.
 > Este archivo refleja los releases principales para lectura humana rapida.
 
+
+---
+
+## v0.53.0 - Merge de recuperacion: --verificado piso v0.52.1, las dos ramas se reconcilian (2026-08-25)
+
+> **NOTA DE CONCURRENCIA** (segunda vez que las ramas se pisan mutuamente): a las 16:44 el deploy
+> de v0.51.2 (rama `fix/tablero-pendientes`) uso `sync_targets.command --verificado`. Ese modo
+> empuja sin preguntar "solo si el remoto es un commit **conocido** del repo" -- y lo era (la
+> punta de `fix/abm-desplegable-entidad`, mas nueva que la propia), pero el chequeo no exigia que
+> fuera **ancestro** de lo que se estaba por pushear. Resultado: la planilla perdio v0.50.0
+> (rediseno del Centro de Operaciones) y v0.52.1 (el fix de la animacion que rebotaba). Nada se
+> perdio de git -- todo seguia en `origin/fix/abm-desplegable-entidad`, punta `a0b3c18` -- pero
+> la planilla productiva si corrio con menos codigo del que tenia una hora antes.
+
+Es la misma cicatriz, al reves: `cfbb173` ("merge: fix/tablero-pendientes -> restaurar el
+Presupuesto que el deploy piso", v0.52.0) fue la respuesta a que un deploy anterior de esta misma
+rama pisara el trabajo de `fix/abm-desplegable-entidad`. `c1f5931` ("el verificador exige que el
+remoto sea ANCESTRO, no solo conocido") ya arreglo `devtools/verificar_remoto.py` para que esto no
+vuelva a pasar -- ese fix entra al repo con este mismo merge.
+
+`targets.yaml` (`version_desplegada`) queda en `"0.51.2"`: es lo que HAY en la planilla ahora
+mismo (el deploy que la piso), no lo que el repo declara. El campo describe el estado real; el
+proximo `sync_targets.command` corrige la planilla y recien ahi ese numero sube.
+
+`DEVTOOL_PresupuestoSembrar.js`: gana la version de `fix/tablero-pendientes` (v0.51.2, la que pisa
+con confirmacion) sobre la copia vieja (v0.51.0, solo llenaba celdas vacias) que
+`fix/abm-desplegable-entidad` todavia tenia por haber mergeado esta rama en un punto anterior a
+`cfbb173`. Git lo resolvio automaticamente, sin conflicto: el otro lado no habia tocado el archivo
+desde el ancestro comun.
+
+---
+
+## v0.52.1 - El bloque que entra desacelera, no rebota (2026-08-25)
+
+La animacion de entrada de un bloque de carga multiple usaba
+`cubic-bezier(.34, 1.56, .64, 1)`. Ese `1.56` pasa de largo el valor final y vuelve: el bloque se
+pasa de posicion y de escala antes de asentarse.
+
+Importa aca y no en cualquier pantalla: **en la carga multiple se agregan hasta quince bloques**,
+asi que el rebote se ve quince veces seguidas en un solo lote. Y esto es una herramienta de cargar
+plata, cuya voz de marca esta escrita: *"traduce, no impresiona"*. Un objeto real desacelera.
+
+Pasa a `cubic-bezier(.22, 1, .36, 1)` —easeOutQuint—, alineado con las otras dos curvas del
+sistema, que ya eran desaceleraciones puras. El token se llamaba `--mov-rebote` y pasa a
+`--mov-entra`: un nombre que promete un rebote invita a reponerlo.
+
 ---
 
 ## v0.51.2 - Presupuesto: sembrar Monto a Proyectar ahora pisa, con confirmacion (2026-08-25)
@@ -172,6 +218,48 @@ inmediatamente antes de commitear). Guardar Proyeccion en si nunca se desplego b
 que renumerar no reescribe historial real desplegado. No toca ningun archivo de la otra sesion
 (`16_ShellService.js`, `UI_Shell.html`, `UI_SharedStyles.html`, `DEVTOOL_CuentasComodin.js`,
 `DEVTOOL_DIAG_Desplegables.js`, `DEVTOOL_DIAG_PresupuestoTitulos.js`).
+## v0.50.0 - Rediseno del Centro de Operaciones (2026-08-25)
+
+Pedido de Franco: *"necesito un equipo agentico que se ocupe de que el menu tenga un frontend
+mucho mas bonito [...] hace benchmarking del diseno del dashboard de planilla-pymes tanto del menu
+del centro de operaciones y de la webapp"*.
+
+**Como se hizo.** Cuatro agentes de benchmark en paralelo —el lenguaje visual de la webapp, el
+contrato de diseno de `handoff/design.md`, que hace que el centro de operaciones de pymes se vea
+terminado, y una critica sin piedad del shell actual—, dos direcciones de diseno independientes
+con angulos opuestos, y un director de arte que eligio una, injerto de la otra y entrego el CSS
+completo con chequeo de realidad.
+
+**El hallazgo que ordeno todo.** El director encontro, citando el changelog de la v0.48.0 de este
+mismo repo, que la direccion "mas sobria" **ya habia fallado dos veces**: sacar los bordes y
+definir la superficie por fondo es exactamente lo que se hizo antes de que Franco dijera "sigue
+feo". Su observacion de fondo: *una celda de Sheets no necesita borde porque la grilla ya es el
+borde; un input flotando en un modal no tiene grilla*. Por eso se **invierte el plano**: lienzo del
+color de la hoja y tarjetas blancas elevadas, en vez de lienzo blanco con tarjetas grises que se
+leian como pozos.
+
+Y midio algo que nadie habia contado: **el Home anterior armaba ~738px de flujo dentro de un modal
+de 700**. No entraba en si mismo. El nuevo suma 580, contado componente por componente.
+
+**Lo que cambia.** Home con una sola respuesta obvia (card hero para Movimiento, el resto en
+tarjetas y chips) en vez de siete tarjetas identicas donde cada apertura cobraba una decision.
+Acordeon en la carga multiple, que es la unica respuesta al tope real: quince bloques abiertos son
+2.910px en un modal de 700, colapsados son 48px cada uno. Segmentado Egreso/Ingreso y prefijo de
+moneda con el select transparente encima, que saca una columna entera de la grilla. Total del lote
+en vivo, y solo si todo comparte moneda.
+
+**Contraste medido par por par**, no estimado: el rojo `#c93232` sobre su riel daba 4.47:1 —abajo
+de AA— y pasa a `#ad2727` (5.76).
+
+**El ABM se alinea al mismo sistema.** `abrirAbm()` reemplaza el modal, asi que tocar "Gestionar
+cuentas" cambiaba de piel.
+
+**Lo que se conserva de la hoja, deliberadamente:** el navy medido `#34475d` como voz —no se
+importa el `#182040` de la webapp— y el `#eff2f9` como lienzo. El teal entra solo en rotulos de
+seccion, foco y un unico objeto: la card hero.
+
+56 tokens, cero hex sueltos fuera de `:root`, 323 usos de `var()`. Sin build, sin Tailwind, sin JS
+de terceros.
 
 ---
 
