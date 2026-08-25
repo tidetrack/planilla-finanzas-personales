@@ -6,6 +6,119 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-24 - Presupuesto: V7 es dinamico, W7 dice "Monto a Proyectar" (v0.46.1)
+
+### Lo que reporto Franco
+
+Desplego v0.46.0 y corrio "1. Ver estado" en la planilla real. El preflight freno SOLO, sin
+escribir nada:
+
+    No se pudo medir: La hoja "Presupuesto" no es la que este modulo espera:
+    W7 dice "Monto a Proyectar" y se esperaba "Monto Proyectado".
+    Hay que volver a medir antes de escribir. No se toco nada.
+
+Bien ahi: preferir abortar antes que escribir sobre una hoja que el modulo no entendia bien es
+exactamente el comportamiento que el arnes pide.
+
+### Lo que Franco midio en vivo
+
+Con el modo en "Historico", verificado celda por celda: el patron es uniforme en los CUATRO
+bloques de la hoja, no solo en los tres que ya cablea DEVTOOL_PresupuestoModo.js. Cada bloque
+tiene TRES columnas -- nombre, una que SIGUE AL MODO, y una FIJA:
+
+| Bloque | col 1 (nombre) | col 2 -- sigue al modo | col 3 -- fija |
+|---|---|---|---|
+| Ingresos | `I7` "Ingresos." | `J7` "Monto Historico" | `K7` "Monto a Proyectar" |
+| Gastos Fijos | `M7` "Gastos Fijos." | `N7` "Monto Historico" | `O7` "Monto a Proyectar" |
+| Gastos Variables | `Q7` "Gastos Variables." | `R7` "Monto Historico" | `S7` "Monto a Proyectar" |
+| Categorias | `U7` "Categorias." | `V7` "Monto Historico" | `W7` "Monto a Proyectar" |
+
+`V7` sigue al modo -- igual que `J7`/`N7`/`R7`, que la etapa 1 (DEVTOOL_PresupuestoModo.js) ya
+hace dinamicos. `W7` es fijo y dice EXACTAMENTE lo mismo que `K7`/`O7`/`S7`.
+
+### Dos errores, no uno
+
+El preflight solo reporto el segundo, porque abortaba ahi antes de llegar a evaluar el primero:
+
+1. **`V7` se trataba como un rotulo ESTATICO** (`PC_TITULO_MODO_AGRUPADO = 'Monto Histórico'`,
+   comparado por el preflight, nunca escrito por el modulo). Es DINAMICO: tiene que seguir al
+   modo exactamente igual que `J7`/`N7`/`R7`. La v0.46.0, tal como estaba, nunca lo hubiera
+   actualizado si Franco cambiaba `E7` despues de correr "2. Aplicar" -- se hubiera quedado
+   congelado en el texto del momento en que se escribio.
+2. **`W7` se esperaba como "Monto Proyectado"**. El texto real es "Monto a Proyectar" -- el MISMO
+   texto exacto que `K7`/`O7`/`S7`, no una variante con una palabra de menos.
+
+### La causa raiz, otra vez la misma cicatriz
+
+Se midio contra `docs/permanente/celdas.tsv`, un snapshot commiteado del 2026-08-18 que quedo
+viejo -- "no fiarse de una geometria memorizada" es la cicatriz numero uno de este repo (CLAUDE.md,
+memoria del proyecto), y esta vez se repitio en un lugar todavia mas resbaladizo: un rotulo que
+OTRO modulo (DEVTOOL_PresupuestoModo.js) hace dinamico. Un snapshot de ese rotulo no es "el texto
+de esa celda" -- es "el texto que esa celda mostraba en el momento puntual en que se tomo la foto,
+con el modo que estuviera activo entonces". Tratarlo como una constante fija fue el error.
+
+### El fix
+
+`V7` pasa a escribirse con `_formulaTituloMontoPm()`, la MISMA funcion de
+DEVTOOL_PresupuestoModo.js que ya construye el titulo de `J7`/`N7`/`R7` -- reusada VERBATIM, sin
+ninguna segunda implementacion del mismo texto (el pedido explicito de Franco: "no escribas una
+segunda implementacion"). El plan de `_planPc` pasa de 64 a 65 celdas. El preflight deja de
+rotulo-chequear `V7` contra un texto esperado -- mismo criterio que `DEVTOOL_PresupuestoModo.js`
+ya aplica sobre `J7`/`N7`/`R7`: la idempotencia la resuelve la comparacion de formulas dentro de
+`_planPc`, no un chequeo de texto en el preflight. `V7` si gana un guard nuevo: no puede ser la
+mitad muda de una celda combinada (paso 5b, el mismo patron que el paso 8 de
+`DEVTOOL_PresupuestoModo.js` ya aplica sobre `J7`/`N7`/`R7`).
+
+`W7` pasa a compararse contra `PC_TITULO_PROYECTAR` -- la MISMA constante que ya usa el chequeo de
+`K7`/`O7`/`S7` -- en vez de una segunda constante (`PC_TITULO_PROYECTAR_AGRUPADO`) con un valor
+"parecido" pero distinto. Es el mismo texto en cuatro celdas del mismo bloque conceptual, y tener
+una segunda constante para el mismo dato es EXACTAMENTE el patron que produjo este bug: dos
+fuentes de verdad para una sola cosa, y una de las dos quedo vieja. Se retiro la constante
+redundante.
+
+Se agrego ademas un chequeo nuevo en `_verificarInvariantesPc`: despues de escribir, `V7` tiene
+que mostrar la MISMA palabra que `J7`/`N7`/`R7` para el modo vivo -- mismo criterio que
+`_verificarInvariantesPm` ya aplica sobre esas tres celdas en DEVTOOL_PresupuestoModo.js.
+
+### Lo que se confirmo antes de tocar nada
+
+Franco pidio explicitamente confirmar que el modulo sigue sin escribir `K`/`O`/`S` en ningun
+punto, porque ya empezo a cargar "Monto a Proyectar" a mano (`K8` mostraba $1.000.000,00 en la
+planilla real al momento del freno). Revisado: `_planPc` solo propone `V7`, `V9:V38`, `W9:W38`,
+`C9` y `F19:F21` -- nunca `K`/`O`/`S`. La hoja en uso real no corre ningun riesgo de que este
+modulo pise datos que Franco ya esta cargando.
+
+### El banco, extendido
+
+`devtools/probar_presupuesto_resumen.js` suma una mutacion que reproduce el bug real EXACTO
+(`W7`="Monto Proyectado" en vez de "Monto a Proyectar") contra el preflight real -- aborta con el
+mismo mensaje que reporto Franco. Una seccion nueva (3b) construye, por primera vez en este banco,
+un mock COMPLETO de hoja (a diferencia de la seccion 3, que prueba `_recalcularAgrupadoPc` en
+aislamiento con datos sinteticos, sin pasar por `SpreadsheetApp`) para poder correr
+`_verificarInvariantesPc` de punta a punta: un escenario "sano" (una cuenta, una categoria, todo
+cierra exacto) da CERO fallas, y la MISMA hoja con solo `V7` mutado (muestra "Historico" cuando
+`E7` dice "Proyección") da EXACTAMENTE una falla, la de `V7` -- prueba que el chequeo nuevo esta
+aislado y no se dispara por casualidad de otras partes del invariante. El cableado exacto de la
+seccion 2 se actualizo a 65 celdas (antes 64) e incluye `V7`; se agrego una aserción explícita de
+que `W7` nunca aparece en el plan. Los doce bancos en verde.
+
+### Que no se toco
+
+El descubrimiento de v0.46.0 (dos columnas de agrupado, V y W, no una) y la convencion de signo
+verificada contra Tablero!AA10 quedan sin cambios -- esta correccion es puramente sobre el modelo
+de los TITULOS de fila 7, no sobre el agrupado por categoria de las filas 9-38 ni sobre el
+invariante de totales.
+
+### Pendiente
+
+Franco vuelve a correr "Presupuesto: categorias y resumen > 1. Ver estado" con esta version antes
+de "2. Aplicar". `docs/permanente/DISENO_HOJA_PRESUPUESTO.md` lo actualiza Franco con la tabla de
+los cuatro bloques (comunicado explicitamente en el mismo mensaje que reporto el freno).
+
+Version: v0.46.1.
+
+---
+
 ## 2026-08-24 - Presupuesto: categorias (V/W), mes de referencia y el bug de Tabla 2 (v0.46.0)
 
 ### El pedido

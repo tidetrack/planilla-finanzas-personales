@@ -9,6 +9,38 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.46.1 - Presupuesto: V7 es dinamico, W7 dice "Monto a Proyectar" (2026-08-24)
+
+`v0.46.0` se desplego. Franco corrio `"1. Ver estado"` en la planilla real y el preflight freno
+SOLO -- correctamente -- antes de escribir nada: `"W7 dice 'Monto a Proyectar' y se esperaba
+'Monto Proyectado'"`.
+
+Medido en vivo por Franco (con el modo en "Historico"): el patron es uniforme en los CUATRO
+bloques de la hoja -- Ingresos, Gastos Fijos, Gastos Variables y Categorias -- de TRES columnas
+cada uno: nombre, una columna que SIGUE AL MODO (`J`/`N`/`R`/`V`) y una columna FIJA, siempre
+"Monto a Proyectar" (`K`/`O`/`S`/`W`).
+
+Dos errores, no uno -- el preflight solo reporto el segundo porque abortaba ahi antes de llegar
+al primero: (1) `V7` se trataba como rotulo ESTATICO cuando es DINAMICO, igual que `J7`/`N7`/`R7`;
+(2) `W7` se esperaba como "Monto Proyectado", cuando el texto real es "Monto a Proyectar" -- el
+MISMO texto exacto que `K7`/`O7`/`S7`. Causa raiz: se midio contra `celdas.tsv`, un snapshot
+commiteado que quedo viejo -- especialmente traicionero para un rotulo que otro modulo hace
+dinamico.
+
+El fix: `V7` pasa a escribirse con `_formulaTituloMontoPm()`, reusada VERBATIM de
+`DEVTOOL_PresupuestoModo.js` (nunca una segunda implementacion del mismo titulo) -- el plan pasa
+de 64 a 65 celdas. `W7` pasa a compararse contra la MISMA constante que ya usa el chequeo de
+`K7`/`O7`/`S7`, en vez de una segunda constante con un valor "parecido". Confirmado antes de
+aplicar: el modulo sigue sin escribir `K`/`O`/`S` en ningun punto -- Franco ya esta cargando esa
+columna a mano (`K8` = $1.000.000,00 en la planilla real).
+
+`devtools/probar_presupuesto_resumen.js`: nueva mutacion reproduce el bug real contra el
+preflight (mismo mensaje que reporto Franco); nueva seccion 3b prueba con un mock completo de
+hoja, y un caso sano de cero fallas, que el invariante atrapa a `V7` si dejara de seguir al modo.
+Los doce bancos en verde.
+
+---
+
 ## v0.46.0 - Presupuesto: categorias (V/W), mes de referencia y el bug de Tabla 2 (2026-08-24)
 
 Segunda etapa de la hoja "Presupuesto", sobre el selector de Modo ya desplegado (`v0.45.1`).

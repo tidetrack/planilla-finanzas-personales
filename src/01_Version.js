@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 46,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.46.0 - Presupuesto: categorias (V/W), mes de referencia y el bug de Tabla 2',
+ releaseName: 'v0.46.1 - Presupuesto: V7 es dinamico, W7 dice "Monto a Proyectar"',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,18 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.46.1 (2026-08-24) - Presupuesto: V7 es dinamico, W7 dice "Monto a Proyectar"
+! v0.46.0 SE DESPLEGO. Franco corrio "1. Ver estado" y el preflight freno SOLO -- correctamente -- antes de escribir nada: "W7 dice 'Monto a Proyectar' y se esperaba 'Monto Proyectado'".
++ MEDIDO EN VIVO POR FRANCO (modo "Historico"): el patron es uniforme en los CUATRO bloques de la hoja (Ingresos, Gastos Fijos, Gastos Variables, Categorias), cada uno de TRES columnas -- nombre, una columna que SIGUE AL MODO (J/N/R/V, "Monto Historico" o "Monto Proyectado" segun E7) y una columna FIJA ("Monto a Proyectar": K/O/S/W, siempre el mismo texto).
+- DOS ERRORES, no uno (el preflight solo reporto el segundo, el primero no llegaba a evaluarse): (1) V7 se trataba como rotulo ESTATICO cuando es DINAMICO -- sigue al modo igual que J7/N7/R7; nunca se hubiera actualizado si Franco cambiaba E7 despues de aplicar. (2) W7 se esperaba "Monto Proyectado"; el texto real es "Monto a Proyectar" -- EL MISMO texto exacto que K7/O7/S7, no una variante.
+- CAUSA RAIZ (la misma de siempre, en un lugar nuevo): se midio contra docs/permanente/celdas.tsv, un snapshot commiteado del 2026-08-18 que quedo viejo. Para un rotulo que OTRO modulo hace dinamico, un snapshot es especialmente traicionero: captura el texto de un modo puntual y lo hace pasar por constante.
++ V7 pasa a escribirse con _formulaTituloMontoPm(), REUSADA VERBATIM de DEVTOOL_PresupuestoModo.js -- nunca una segunda implementacion del mismo titulo. El plan pasa de 64 a 65 celdas. El preflight ya NO rotulo-chequea V7 (mismo criterio que J7/N7/R7 en PresupuestoModo: la idempotencia la resuelve la comparacion de formulas de _planPc, no un chequeo de texto), pero gana el guard de "no puede ser la mitad muda de una combinada" (paso 5b, mismo patron que el paso 8 de PresupuestoModo).
+* W7 pasa a compararse contra PC_TITULO_PROYECTAR -- LA MISMA constante que ya usa el chequeo de K7/O7/S7 -- en vez de una segunda constante ("PC_TITULO_PROYECTAR_AGRUPADO") con un valor "parecido" pero distinto: es el mismo texto en cuatro celdas, y una segunda constante para el mismo dato fue exactamente el patron que produjo el bug. Se retira esa constante.
++ Nuevo chequeo en _verificarInvariantesPc: V7 tiene que mostrar la MISMA palabra que J7/N7/R7 para el modo vivo (mismo criterio que ya usa _verificarInvariantesPm sobre esas tres celdas).
++ CONFIRMADO ANTES DE APLICAR: el modulo sigue sin escribir K/O/S en ningun punto -- Franco ya esta cargando "Monto a Proyectar" a mano (K8 muestra $1.000.000,00 en la planilla real).
++ devtools/probar_presupuesto_resumen.js: nueva mutacion reproduce EXACTO el bug real (W7="Monto Proyectado" en vez de "Monto a Proyectar") contra el preflight real; nueva seccion 3b construye un mock COMPLETO de hoja para _verificarInvariantesPc y prueba, aislado de cualquier otra falla (caso sano con cero fallas), que el chequeo de V7 atrapa el titulo si dejara de seguir al modo. Cableado exacto actualizado a 65 celdas (antes 64), incluye V7.
+! Los doce bancos en verde. SIN DEPLOY POSTERIOR A ESTE COMMIT: la corrida final ("1. Ver estado" antes de "2. Aplicar") la hace Franco.
+
 v0.46.0 (2026-08-24) - Presupuesto: categorias (V/W), mes de referencia y el bug de Tabla 2
 + Segunda etapa de "Presupuesto", sobre el selector de Modo ya desplegado (v0.45.1). DEVTOOL_PresupuestoResumen.js (nuevo) construye el agrupado por categoria, el rotulo del mes de referencia de la Tabla 1 y corrige el bug de copiar-pegar de la Tabla 2.
 ! DESCUBIERTO ANTES DE CONSTRUIR (medido contra celdas.tsv, no asumido): el encargo hablaba de "la columna V" como si fuera una sola columna que cambia de fuente segun el modo. La geometria real tiene DOS columnas de agrupado ya tituladas y con SUM() esperando contenido -- V7="Monto Historico"/V8=SUM(V9:V) agrupa J/N/R (la columna "modo"); W7="Monto Proyectado"/W8=SUM(W9:W) agrupa K/O/S ("Monto a Proyectar", fijo, sin modo). Las dos tablas resumen ya apuntaban cada una a SU propio total: Tabla 1 (E14=V8), Tabla 2 (E21=W8) -- ninguna mezcla fuentes. El invariante que proponia el encargo ("V8 = K8-O8-S8 en modo Proyeccion") es el de W8, no el de V8; el par correcto y mas fuerte es V8=J8-N8-R8 y W8=K8-O8-S8, y vale en LOS DOS MODOS (V/W no miran el modo: solo re-parten lo que J/N/R/K/O/S ya calcularon).

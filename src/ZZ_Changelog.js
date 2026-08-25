@@ -3,6 +3,57 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-24] v0.46.1 - Presupuesto: V7 es dinamico, W7 dice "Monto a Proyectar".
+ * ! v0.46.0 SE DESPLEGO. Franco corrio "1. Ver estado" en la planilla real y el preflight freno
+ *   SOLO -- correctamente -- antes de escribir una sola celda:
+ *
+ *       No se pudo medir: La hoja "Presupuesto" no es la que este modulo espera:
+ *       W7 dice "Monto a Proyectar" y se esperaba "Monto Proyectado".
+ *       Hay que volver a medir antes de escribir. No se toco nada.
+ *
+ * + MEDIDO EN VIVO POR FRANCO (con el modo en "Historico"): el patron es uniforme en los CUATRO
+ *   bloques de la hoja -- Ingresos, Gastos Fijos, Gastos Variables Y Categorias -- de TRES
+ *   columnas cada uno: nombre, una columna que SIGUE AL MODO ("Monto Historico" / "Monto
+ *   Proyectado" segun E7: J/N/R/V) y una columna FIJA ("Monto a Proyectar", siempre el mismo
+ *   texto: K/O/S/W).
+ * - DOS ERRORES, no uno -- el preflight solo reporto el segundo porque abortaba ahi antes de
+ *   llegar al primero:
+ *   1. V7 se trataba como un ROTULO ESTATICO ('Monto Histórico', comparado por preflight, nunca
+ *      escrito por este modulo). Es DINAMICO -- sigue al modo exactamente igual que J7/N7/R7. La
+ *      v0.46.0 nunca lo hubiera actualizado si Franco cambiaba E7 despues de aplicar.
+ *   2. W7 se esperaba como 'Monto Proyectado'. El texto real es 'Monto a Proyectar' -- EL MISMO
+ *      texto exacto que K7/O7/S7, no una variante "parecida".
+ * - CAUSA RAIZ, la misma de siempre en un lugar nuevo: se midio contra docs/permanente/celdas.tsv,
+ *   un snapshot commiteado del 2026-08-18 que quedo viejo -- la cicatriz numero uno de este repo
+ *   ("no fiarse de una geometria memorizada"). Para un rotulo que OTRO modulo hace dinamico (V7,
+ *   que sigue a J7/N7/R7 via DEVTOOL_PresupuestoModo.js), un snapshot es especialmente
+ *   traicionero: captura el texto de un modo puntual y lo hace pasar por una constante fija.
+ * + EL FIX: V7 pasa a ESCRIBIRSE con _formulaTituloMontoPm() de DEVTOOL_PresupuestoModo.js,
+ *   REUSADA VERBATIM -- nunca una segunda implementacion del mismo titulo (ver _planPc). Ya no
+ *   tiene una constante de texto esperado en el preflight (mismo criterio que J7/N7/R7 en
+ *   DEVTOOL_PresupuestoModo.js: la idempotencia la resuelve la comparacion de formulas de
+ *   _planPc, no un rotulo-chequeo), pero gana el guard de "no puede ser la mitad muda de una
+ *   combinada" (paso 5b, mismo patron que el paso 8 de DEVTOOL_PresupuestoModo.js). El plan pasa
+ *   de 64 a 65 celdas.
+ * - W7 pasa a compararse contra PC_TITULO_PROYECTAR -- LA MISMA constante que ya usa el chequeo
+ *   de K7/O7/S7 -- en vez de una segunda constante (PC_TITULO_PROYECTAR_AGRUPADO) con un valor
+ *   "parecido" pero distinto: es el mismo texto en cuatro celdas, y una segunda constante para
+ *   el mismo dato es exactamente el patron que produjo este bug. Se retira esa constante.
+ * + Nuevo chequeo en _verificarInvariantesPc: V7 tiene que mostrar la MISMA palabra que J7/N7/R7
+ *   para el modo vivo (mismo criterio que ya usa _verificarInvariantesPm sobre esas tres celdas).
+ * + CONFIRMADO ANTES DE APLICAR: el modulo sigue sin escribir K/O/S en ningun punto -- Franco ya
+ *   empezo a cargar "Monto a Proyectar" a mano (K8 muestra $1.000.000,00 en la planilla real) y
+ *   el plan de este modulo no toca esa columna.
+ * + devtools/probar_presupuesto_resumen.js: nueva mutacion reproduce EXACTO el bug real
+ *   (W7="Monto Proyectado" en vez de "Monto a Proyectar") contra el preflight real -- aborta con
+ *   el mismo mensaje que reporto Franco. Nueva seccion 3b construye un mock COMPLETO de hoja para
+ *   _verificarInvariantesPc (a diferencia de la seccion 3, que prueba _recalcularAgrupadoPc en
+ *   aislamiento) y prueba, con un caso sano de CERO fallas, que el chequeo de V7 atrapa el titulo
+ *   si dejara de seguir al modo -- aislado de cualquier otra falla posible. Cableado exacto
+ *   actualizado a 65 celdas (antes 64), incluye V7; W7 confirmado como NUNCA propuesto.
+ * ! Los doce bancos en verde. SIN DEPLOY POSTERIOR A ESTE COMMIT: la corrida final ("1. Ver
+ *   estado" antes de "2. Aplicar") la hace Franco.
+ *
  * [2026-08-24] v0.46.0 - Presupuesto: categorias (V/W), mes de referencia y el bug de Tabla 2.
  * + Segunda etapa de la hoja "Presupuesto", sobre el selector de Modo ya desplegado (v0.45.1).
  *   DEVTOOL_PresupuestoResumen.js (nuevo) construye el agrupado por categoria, el rotulo del mes
