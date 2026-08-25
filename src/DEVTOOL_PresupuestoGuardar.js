@@ -116,7 +116,7 @@
  *
  * SE EVALUO usar una columna nueva en vez de Nota (por ejemplo, IMPORTRANGE-visible o una columna
  * oculta con JSON): se descarta porque "Proyeccion" es un espejo EXACTO de "Registros" (columnas
- * B:M, verificado por `_preflightPb` antes de escribir), agregar una columna rompería ese espejo
+ * B:M, verificado por `_preflightPb` antes de escribir), agregar una columna romperia ese espejo
  * y forzaria a re-versionar TODOS los consumidores existentes (incluido `procesarCargas`, que
  * jamas deberia enterarse de que "Proyeccion" existe). Nota ya es texto libre, ya la usa
  * PresupuestoBase con el mismo patron (`marca + ' ' + sello`), y ya demostro alcanzar en
