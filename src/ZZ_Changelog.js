@@ -3,6 +3,22 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.55.0 - Merge: el shell v0.53.1 y el ABM conviven, y el menu es tidetrack Dev.
+ * + Trae v0.53.0 y v0.53.1 de fix/abm-desplegable-entidad (los seis pedidos de Franco sobre el
+ *   shell, y la banda sin subtitulo). Se mergea ANTES de deployar, no despues de pisarlas.
+ * ! ROTULO DE MENU: esa rama renombro DEV_MENU a "tidetrack Dev" (minuscula). Este release
+ *   corrige las 18 menciones que quedaban escritas "tidetrack Dev" en textos que le dicen al
+ *   usuario donde hacer clic: un rotulo viejo en una instruccion manda a un menu que ya no se
+ *   llama asi, y el usuario no tiene como saber cual de los dos es el correcto.
+ * + DEVTOOL_PresupuestoSembrar.js: gana la version de esta rama (v0.51.2, la que pisa con
+ *   confirmacion). El otro lado solo habia cambiado tres rotulos en ese archivo, que se
+ *   reaplican aca -- no habia logica en disputa.
+ * ! LAS DOS SESIONES SE COORDINAN DESDE AHORA. Reglas acordadas: (a) nadie deploya sin commitear
+ *   y pushear primero, para que el remoto sea siempre un commit identificable; (b) antes de cada
+ *   deploy, git fetch + merge de la rama de la otra. El guard de ancestria
+ *   (devtools/verificar_remoto.py) cubre (a); para (b) el chequeo es
+ *   "git log HEAD..origin/<otra-rama> -- src/" y tiene que dar vacio.
+ *
  * [2026-08-25] v0.54.1 - Merge de recuperacion: el fix de moneda del shell vuelve a la planilla.
  * ! SEGUNDA VUELTA DE LA MISMA CICATRIZ, y por eso queda escrita. A las 16:44 un deploy con
  *   --verificado desde esta rama piso v0.52.1 de fix/abm-desplegable-entidad: ese modo exigia
@@ -62,7 +78,7 @@
  *   Septiembre" no dice lo mismo que "23 filas por $2.847.000".
  * ! ALCANCE DEL ABM, deliberado (documentado en la cabecera de los dos archivos nuevos):
  *   - ALTA: no existe en este ABM. Ya existe -- se elabora en la hoja "Presupuesto" y se guarda
- *     con "Guardar Proyeccion" (menu Tidetrack Dev). El modal tiene un banner que redirige ahi.
+ *     con "Guardar Proyeccion" (menu tidetrack Dev). El modal tiene un banner que redirige ahi.
  *     Reconstruir esa logica en un modal hubiera sido duplicar superficie peligrosa sobre una BD
  *     de produccion.
  *   - MODIFICACION: solo el monto, solo en filas "guardado a mano". Las filas de presupuesto
@@ -100,6 +116,68 @@
  *   fix/abm-desplegable-entidad todavia tenia por haber mergeado esta rama en un punto anterior a
  *   cfbb173. Git lo resolvio automaticamente, sin conflicto: el otro lado no habia tocado el
  *   archivo desde el ancestro comun.
+ * [2026-08-25] v0.53.1 - La banda pierde el subtitulo.
+ * - Franco senalo el span de la banda: "este span es irrelevante". Lo era. "Que queres hacer"
+ *   al lado del wordmark no decia nada que la pantalla no dijera ya -- las tarjetas del home
+ *   tienen su propia descripcion, mas larga y mas concreta ("Plata de una caja a otra. Escribe
+ *   las dos patas juntas."). El subtitulo repetia en corto lo que ya estaba en largo.
+ * - Con el span se va el campo `subtitulo` de SHELL_VISTAS: era su UNICO consumidor. Un campo
+ *   muerto ahi no es inocuo -- SHELL_VISTAS se inyecta ENTERA por template en cada apertura.
+ * - Y se va el wrapper .titulos, que existia solo para alinear h1 y sub por baseline. Con un
+ *   solo hijo no alineaba nada: el h1 pasa a ser hijo directo de la banda.
+ * - Efecto lateral que casi pasa desapercibido: regenerar_servidor_shell.py parsea SHELL_VISTAS
+ *   por REGEX y el patron EXIGIA el campo subtitulo. Sin ajustarlo, el regenerador dejaba de
+ *   encontrar las vistas y escribia una lista vacia -- en silencio, porque no hay assert. El
+ *   servidor de pruebas quedaba con el shell sin ninguna vista y sin decir por que.
+ *
+ * [2026-08-25] v0.53.0 - Seis pedidos de Franco sobre el shell.
+ * - "EL BOTON DE GESTIONAR CUENTAS DEBE TENER EL MISMO PESO QUE EL RESTO." Era un chip de
+ *   36 px sin descripcion, al lado de tarjetas de 116. Un chip comunica "accion secundaria", y
+ *   administrar el Plan de Cuentas no lo es: es la estructura sobre la que se apoya todo lo
+ *   demas. Pasa a tarjeta, con la misma grilla y el mismo peso. El CSS de .shell-chip se
+ *   retira entero por quedar sin uso.
+ * - "DEBERIA DEJAR CARGAR MUCHOS MAS MOVIMIENTOS, NO SOLO 15." El tope era la ALTURA DE LA
+ *   GRILLA de Cargas, que es una restriccion de la hoja y no del acto de cargar. Ahora se
+ *   procesa en TANDAS: se siembra lo que entra, se procesa, se repite con lo que queda. Cada
+ *   tanda es un procesarCargas con su pasada de cotizaciones, asi que el cliente avisa cuantas
+ *   van a ser ANTES de apretar Cargar. Lo mismo para traspasos, con una salvedad: una tanda
+ *   nunca parte un traspaso al medio, asi que se divide por PARES.
+ * - "EN EL TIPO SERIA GENIAL QUE SE PONGA ROJO/VERDE SEGUN EL TIPO." El estado elegido se tine
+ *   con el semaforo MEDIDO de la hoja, y el riel tambien: sin fondo, el color solo en la letra
+ *   a 13 px no se lee de un vistazo. Los tonos son los -ink verificados contra AA sobre su
+ *   propio riel -- el #c93232 medido daba 4.47:1 sobre #fce8e6, por debajo del minimo.
+ * - "EN TODOS LOS DESPLEGABLES DEBERIAS PODER ACORTAR TIPEANDO." Los select pasan a input con
+ *   datalist. Un select nativo salta por PREFIJO y solo con la lista abierta; un datalist
+ *   filtra por SUBCADENA mientras se tipea, asi que "naran" trae "Frascos Naranja X" y "Dolar
+ *   NaranjaX" -- que un select por prefijo no encuentra nunca. Los datalist son COMPARTIDOS
+ *   por todos los bloques y se pueblan una sola vez: eso es lo que hace barato clonar un
+ *   bloque, porque no arrastra el catalogo adentro. El valor libre NO se bloquea, porque la
+ *   hoja misma acepta valores fuera de lista (setAllowInvalid) y el ledger tiene cuentas que
+ *   el catalogo nunca tuvo; lo que si se hace es AVISAR cuando lo tipeado no esta en el Plan,
+ *   en vez de dejarlo pasar mudo.
+ * - "LOS TRASPASOS NO TIENEN INTERFAZ DISENADA COMO LA DE MOVIMIENTOS." Era un formulario
+ *   suelto de UNA operacion mientras al lado habia bloques repetibles con acordeon: dos
+ *   gramaticas distintas para el mismo acto de cargar. Ahora comparten la misma, y se pueden
+ *   cargar varios traspasos de una sentada. registrarTraspaso queda como una linea que delega
+ *   en registrarTraspasos, y la validacion y el armado de las dos patas salieron a
+ *   _prepararTraspaso para que los use tanto el de a uno como el lote.
+ * - "EL NOMBRE ES TIDETRACK, TODO EN MINUSCULAS." El wordmark baja a minusculas en el shell,
+ *   en la barra de menu de Sheets y en los mensajes que nombran el menu. NO se toca la CUENTA
+ *   "Tidetrack" del Plan de Cuentas: es un nombre de cuenta, no la marca, y cambiarlo la
+ *   desconectaria del historico.
+ * - LO MAS GRAVE DE ESTA VUELTA, y lo encontro el banco: el changelog de la v0.52.2 tenia
+ *   BACKTICKS adentro, y el campo changelog ES un template literal delimitado por backticks.
+ *   Cerraba el literal a la mitad, 01_Version.js no parseaba, y asi se commiteo Y PUSHEO sin
+ *   que nada avisara. Apps Script parsea el proyecto ENTERO en cada ejecucion: de haberse
+ *   desplegado, la planilla quedaba sin menu, sin triggers y sin custom functions. Es el mismo
+ *   modo de falla que la v0.50.1. Solo no llego a produccion porque el deploy habia abortado
+ *   por otro motivo.
+ * - devtools/verificar_sintaxis.py (NUEVO) y su gate en sync_targets.command, ANTES del
+ *   drift-check: ningun deploy sale con un archivo que no parsea. Va antes a proposito -- no
+ *   tiene sentido preguntar si el remoto cambio cuando lo que se va a subir no arranca.
+ *   Probado en las dos direcciones: verde con src/ sano, rojo nombrando el archivo con uno
+ *   roto inyectado.
+ *
  * [2026-08-25] v0.52.2 - El movimiento nuevo ya no arranca en dolares.
  * - ENCONTRADO PROBANDO EL SHELL EN UN NAVEGADOR DE VERDAD, no leyendo codigo. El primer
  *   bloque de "Movimiento nuevo" nacia con el medio "Dolar Cash" y el prefijo del monto decia
@@ -238,7 +316,7 @@
  *   verificacion post-escritura falla en una sola celda. Cada mutacion se probo a mano
  *   rompiendo el modulo real y confirmando que el banco la mata, antes de dejarlo en verde.
  * + MENU_CONFIG (00_Config.js): submenu nuevo "Presupuesto: sembrar Monto a Proyectar" en
- *   Tidetrack Dev, mismo trio "1. Ver estado / 2. Aplicar / 3. Revertir" que sus hermanos.
+ *   tidetrack Dev, mismo trio "1. Ver estado / 2. Aplicar / 3. Revertir" que sus hermanos.
  *
  * [2026-08-25] v0.50.1 - El proyecto no cargaba: un const leia otro archivo.
  * ! HOTFIX. v0.50.0 dejo la planilla sin funciones personalizadas: la hoja "Inicio" mostraba
@@ -313,7 +391,7 @@
  *   (PC_TITULO_PROYECTAR, la MISMA constante de DEVTOOL_PresupuestoResumen.js -- nunca una
  *   segunda con un valor "parecido", la leccion de v0.46.0), sin celdas en error en la banda de
  *   datos, y que K8/O8/S8/W8 tengan formula.
- * + Solo menu Tidetrack Dev ("Presupuesto: guardar proyeccion": estado/aplicar/revertir), CERO
+ * + Solo menu tidetrack Dev ("Presupuesto: guardar proyeccion": estado/aplicar/revertir), CERO
  *   botones en la hoja "Presupuesto" -- pedido explicito de Franco: "por ahora... luego va a
  *   tener su boton".
  * + devtools/probar_presupuesto_guardar.js (nuevo, banco 13): siete secciones. La mas importante
@@ -632,7 +710,7 @@
  *
  * [2026-08-24] v0.46.1 - Tres botones cargados salen del menu Dev.
  * - SALIO DE REVISAR CON QUE CONVIVE EL MENU NUEVO, no de un bug reportado. Tres entradas del
- *   menu "Tidetrack Dev" apuntan a modulos que YA CORRIERON y cuyas constantes describen el
+ *   menu "tidetrack Dev" apuntan a modulos que YA CORRIERON y cuyas constantes describen el
  *   estado de la planilla ANTES de que corrieran. No son modulos rotos: son modulos que
  *   cumplieron su trabajo y se quedaron en el menu apuntando a un estado que ya no existe.
  * - 'Conciliar saldos', EL MAS GRAVE y medido: CONC_OBJETIVOS (DEVTOOL_ConciliarSaldos.js:50)
@@ -1781,7 +1859,7 @@
  *   dentro de si misma -- el banco demuestra el crecimiento concreto (de 3 a 6 referencias a
  *   "tabla_real" al envolver dos veces) que esa deteccion evita.
  * - DEVTOOL_TableroFaltanteProyectado.js: trio estado/aplicar/revertir, cableado en el menu
- *   Tidetrack Dev como "Faltante proyectado (Tablero)". El banco (probar_tablero_faltante.js)
+ *   tidetrack Dev como "Faltante proyectado (Tablero)". El banco (probar_tablero_faltante.js)
  *   prueba, con mutaciones dirigidas: el total real convertido en SUM ciego, el separador coma
  *   en la regla gris, la formula gris en el rango de otro bloque, el faltante dando negativo, y
  *   una cuenta real perdida en el derrame.
@@ -3067,14 +3145,14 @@
  *
  * ---
  *
- * [2026-08-13] v0.9.6 - Menus separados: "Tidetrack" (uso diario) y "Tidetrack Dev" (desarrollo):
+ * [2026-08-13] v0.9.6 - Menus separados: "Tidetrack" (uso diario) y "tidetrack Dev" (desarrollo):
  * - Calcado del patron de planilla-pymes. El menu unico mezclaba la operacion cotidiana con
  *   herramientas que escriben estructura, y "Procesar Cargas" -- la funcion que mas se usa --
  *   estaba rotulada "[Dev]" como si fuera peligrosa.
  * - "Tidetrack": REGISTRAR (Procesar Cargas) + ADMINISTRAR (Plan de Cuentas) + submenu "Ir a
  *   la hoja" (solo hojas confirmadas por el escaneo: Inicio, Tablero, Cargas; quedaron fuera
  *   'Espacio blanco 1' y 'Espacio blanco 3', que ya no existen).
- * - "Tidetrack Dev": migracion v0.9.5, Mirada Interanual, Tipos de cambio, BD Antigua y
+ * - "tidetrack Dev": migracion v0.9.5, Mirada Interanual, Tipos de cambio, BD Antigua y
  *   mantenimiento, agrupados en submenus por dominio y numerados donde el orden importa.
  * - 00_Config.js: MENU_CONFIG soporta ahora secciones ({seccion}) y submenus ({submenu, items}),
  *   ademas de items y separadores. 12_MenuService.js los arma recursivamente.

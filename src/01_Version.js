@@ -12,7 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 54,
+ minor: 55,
+ patch: 0,
  patch: 1,
 
  /**
@@ -24,7 +25,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.54.1 - Merge de recuperacion: el fix de moneda del shell vuelve a la planilla',
+ releaseName: 'v0.55.0 - Merge: el shell v0.53.1 y el ABM conviven, y el menu es tidetrack Dev',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -77,7 +78,7 @@ v0.54.0 (2026-08-25) - Presupuesto: ABM de Proyecciones Elaboradas (ver, corregi
   Septiembre" no dice lo mismo que "23 filas por $2.847.000".
 ! ALCANCE DEL ABM, deliberado (documentado en la cabecera de los dos archivos nuevos):
   - ALTA: no existe en este ABM. Ya existe -- se elabora en la hoja "Presupuesto" y se guarda
-    con "Guardar Proyeccion" (menu Tidetrack Dev). El modal tiene un banner que redirige ahi.
+    con "Guardar Proyeccion" (menu tidetrack Dev). El modal tiene un banner que redirige ahi.
     Reconstruir esa logica en un modal hubiera sido duplicar superficie peligrosa sobre una BD
     de produccion.
   - MODIFICACION: solo el monto, solo en filas "guardado a mano". Las filas de presupuesto base
@@ -116,6 +117,20 @@ NOTA DE CONCURRENCIA (segunda vez que las ramas se pisan mutuamente): a las 16:4
   cfbb173. Git lo resolvio automaticamente, sin conflicto: el otro lado no habia tocado el
   archivo desde el ancestro comun.
 
+v0.53.1 (2026-08-25) - La banda pierde el subtitulo
+- Franco senalo el span de la banda: "este span es irrelevante". Lo era. "Que queres hacer" al lado del wordmark no decia nada que la pantalla no dijera ya: las tarjetas del home tienen su propia descripcion, mas larga y mas concreta.
+- Con el span se va tambien el campo subtitulo de SHELL_VISTAS. Era su UNICO consumidor, y un campo muerto ahi no es inocuo: SHELL_VISTAS se inyecta ENTERA por template en cada apertura del shell.
+- regenerar_servidor_shell.py parseaba SHELL_VISTAS por regex EXIGIENDO el campo; sin el ajuste el regenerador dejaba de encontrar las vistas y escribia una lista vacia, en silencio.
+
+v0.53.0 (2026-08-25) - Seis pedidos de Franco sobre el shell
++ "El boton de gestionar cuentas debe tener el mismo peso que el resto": era un chip de 36px sin descripcion al lado de tarjetas de 116. Un chip comunica "accion secundaria", y administrar el Plan de Cuentas es la estructura sobre la que se apoya todo. Pasa a tarjeta, misma grilla y mismo peso. El CSS de .shell-chip se retira entero por quedar sin uso.
++ "Deberia dejar cargar muchos mas movimientos, no solo 15": el tope era la ALTURA DE LA GRILLA, que es una restriccion de la hoja y no del acto de cargar. Ahora se procesa en TANDAS -- se siembra lo que entra, se procesa, se repite -- y el cliente avisa cuantas van a ser antes de apretar Cargar. Lo mismo para traspasos, con la salvedad de que una tanda nunca parte un traspaso al medio: se divide por pares.
++ "En el Tipo seria genial que se ponga rojo/verde segun el tipo": el estado elegido se tine con el semaforo MEDIDO de la hoja, riel incluido -- el color solo en la letra a 13px no alcanza. Los tonos son los verificados contra AA sobre su propio riel.
++ "En TODOS los desplegables deberias poder acortar tipeando": los select pasan a input con datalist. Un select nativo salta por PREFIJO; un datalist filtra por SUBCADENA, asi que "naran" trae "Frascos Naranja X" y "Dolar NaranjaX", que un select no encuentra nunca. Los datalist son COMPARTIDOS y se pueblan una vez: es lo que hace barato clonar un bloque. El valor libre no se bloquea -- la hoja acepta valores fuera de lista -- pero se AVISA cuando no esta en el Plan.
++ "Los traspasos no tienen interfaz disenada como la de movimientos": era un formulario suelto de una operacion mientras al lado habia bloques con acordeon. Dos gramaticas para el mismo acto de cargar. Ahora comparten la misma, y se pueden cargar varios.
++ "El nombre es tidetrack, todo en minusculas": el wordmark baja a minusculas en el shell, en la barra de menu de Sheets y en los mensajes que nombran el menu. NO se toca la CUENTA "Tidetrack" del Plan de Cuentas, que es un nombre de cuenta y no la marca.
+! ENCONTRADO POR EL BANCO, y es lo mas grave de esta vuelta: el changelog de la v0.52.2 tenia BACKTICKS adentro, y ese campo ES un template literal delimitado por backticks. Cerraba el literal a la mitad y 01_Version.js no parseaba -- commiteado y pusheado asi. Apps Script parsea el proyecto ENTERO en cada ejecucion: de haberse desplegado, la planilla quedaba sin menu, sin triggers y sin custom functions. Es el mismo modo de falla que la v0.50.1.
++ devtools/verificar_sintaxis.py (nuevo) + gate en sync_targets.command ANTES del drift-check: ningun deploy sale con un archivo que no parsea. No tiene sentido preguntar si el remoto cambio cuando lo que se va a subir no arranca. Probado en las dos direcciones.
 v0.52.2 (2026-08-25) - El movimiento nuevo ya no arranca en dolares
 - ENCONTRADO PROBANDO EL SHELL EN UN NAVEGADOR, no leyendo codigo: el primer bloque de Movimiento nuevo nacia con el medio "Dolar Cash" y el prefijo del monto decia USD. No era una eleccion: era el PRIMERO DEL CATALOGO, que esta ordenado alfabeticamente.
 ! Diez de los quince medios son ARS, y todos los cotidianos tambien. Un default que casi siempre esta mal es peor que no tener default: obliga a corregirlo todas las veces, y el dia que no se corrige entra un gasto en la moneda equivocada.
@@ -219,7 +234,7 @@ DECISION 4 -- convivencia con el presupuesto base historico (DEVTOOL_Presupuesto
   (PC_TITULO_PROYECTAR, la MISMA constante de DEVTOOL_PresupuestoResumen.js -- nunca una
   segunda con un valor "parecido", la leccion de v0.46.0), sin celdas en error en la banda de
   datos, y que K8/O8/S8/W8 tengan formula.
-+ Solo menu Tidetrack Dev ("Presupuesto: guardar proyeccion": estado/aplicar/revertir), CERO
++ Solo menu tidetrack Dev ("Presupuesto: guardar proyeccion": estado/aplicar/revertir), CERO
   botones en la hoja "Presupuesto" -- pedido explicito de Franco: "por ahora... luego va a
   tener su boton".
 + devtools/probar_presupuesto_guardar.js (nuevo, banco 13): siete secciones. La mas importante
@@ -517,7 +532,7 @@ v0.47.0 (2026-08-24) - Centro de Operaciones: el shell y su Home
 
 v0.46.1 (2026-08-24) - Tres botones cargados salen del menu Dev
 - SALIO DE REVISAR CON QUE CONVIVE EL MENU NUEVO, no de un bug reportado. Tres entradas del
-  menu "Tidetrack Dev" apuntan a modulos que YA CORRIERON y cuyas constantes describen el
+  menu "tidetrack Dev" apuntan a modulos que YA CORRIERON y cuyas constantes describen el
   estado de la planilla ANTES de que corrieran. No son modulos rotos: son modulos que
   cumplieron su trabajo y se quedaron en el menu apuntando a un estado que ya no existe.
 - 'Conciliar saldos', EL MAS GRAVE y medido: CONC_OBJETIVOS (DEVTOOL_ConciliarSaldos.js:50)

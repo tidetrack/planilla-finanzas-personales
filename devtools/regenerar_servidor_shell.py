@@ -26,9 +26,9 @@ def main():
     # Las vistas salen del backend real: no se retipean.
     svc = leer('src/16_ShellService.js')
     bloque = re.search(r'const SHELL_VISTAS = \[(.*?)\];', svc, re.S).group(1)
-    vistas = [{'id': m[0], 'titulo': m[1], 'subtitulo': m[2], 'listo': m[3] == 'true'}
+    vistas = [{'id': m[0], 'titulo': m[1], 'listo': m[2] == 'true'}
               for m in re.findall(
-                  r"id:\s*'([^']+)',\s*titulo:\s*'([^']+)',\s*subtitulo:\s*'([^']+)',\s*listo:\s*(\w+)",
+                  r"id:\s*'([^']+)',\s*titulo:\s*'([^']+)',\s*listo:\s*(\w+)",
                   bloque)]
     if not vistas:
         sys.stderr.write('No se pudieron leer las vistas de SHELL_VISTAS\n')

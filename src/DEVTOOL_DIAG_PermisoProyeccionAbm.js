@@ -24,7 +24,7 @@
  *     solo se dispara al abrir una tarjeta de periodo, y `abiertos` arranca vacio). No hay una
  *     segunda llamada escondida que sea la que realmente falla.
  *   - Los MISMOS datos (misma hoja "Proyeccion") se leen bien desde el menu: `estadoGuardarProyeccion`
- *     (Tidetrack Dev) corrio hace un rato y reporto periodo, filas y cotizaciones sin problema.
+ *     (tidetrack Dev) corrio hace un rato y reporto periodo, filas y cotizaciones sin problema.
  *   - La planilla es propiedad de start.tidetrack@gmail.com pero Franco la usa logueado como
  *     francodiazpizarro@gmail.com; abrir el proyecto de Apps Script como ese usuario da "No se
  *     pudo abrir el archivo en este momento" con `authuser=3` -- evidencia de que el navegador

@@ -56,6 +56,12 @@
 const SHELL_GEOMETRIA = { ancho: 900, alto: 700 };
 
 /**
+ * decision Franco 2026-08-25: la banda no lleva subtitulo. "Que queres hacer" al lado del
+ * wordmark no decia nada que la pantalla no dijera ya -- las tarjetas del home tienen su
+ * propia descripcion, mas larga y mas concreta. Con el span se va el campo `subtitulo`:
+ * era su UNICO consumidor, y un campo muerto en esta lista viaja igual en cada apertura
+ * del shell, porque SHELL_VISTAS se inyecta ENTERA por template.
+ *
  * Las vistas del shell. UNICA lista: el backend valida contra ella y se la inyecta al
  * cliente, que arma su router desde esto. Agregar una vista es agregar una linea aca.
  *
@@ -63,12 +69,12 @@ const SHELL_GEOMETRIA = { ancho: 900, alto: 700 };
  * que no hace es peor que una que dice cuando va a estar: el shell muestra el estado real.
  */
 const SHELL_VISTAS = [
-    { id: 'home', titulo: 'Tidetrack', subtitulo: 'Que queres hacer', listo: true },
-    { id: 'movimiento', titulo: 'Movimiento nuevo', subtitulo: 'Un gasto o un ingreso', listo: true },
-    { id: 'traspaso', titulo: 'Traspaso nuevo', subtitulo: 'Plata de una caja a otra', listo: true },
-    { id: 'proyeccion', titulo: 'Proyeccion nueva', subtitulo: 'Lo que pensas gastar', listo: false },
-    { id: 'recurrentes', titulo: 'Gastos recurrentes', subtitulo: 'Lo que se repite todos los meses', listo: false },
-    { id: 'conciliacion', titulo: 'Conciliacion', subtitulo: 'Lo que dice el sistema contra lo que hay', listo: false }
+    { id: 'home', titulo: 'tidetrack', listo: true },
+    { id: 'movimiento', titulo: 'Movimiento nuevo', listo: true },
+    { id: 'traspaso', titulo: 'Traspaso nuevo', listo: true },
+    { id: 'proyeccion', titulo: 'Proyeccion nueva', listo: false },
+    { id: 'recurrentes', titulo: 'Gastos recurrentes', listo: false },
+    { id: 'conciliacion', titulo: 'Conciliacion', listo: false }
 ];
 
 /** La vista a la que se cae si alguien pide una que no existe. */
@@ -210,7 +216,11 @@ function obtenerCatalogoShell() {
             // cortar el boton "Agregar otro" en el tope REAL: la grilla de personales es de
             // altura fija (15 filas), a diferencia de las 50 de pymes. Sin esto, el operador
             // tipea diez bloques para que el backend le diga que no entran.
-            libres: _filasLibresCargas()
+            libres: _filasLibresCargas(),
+            // La ALTURA de la grilla, para que el cliente pueda decir en cuantas tandas se va
+            // a procesar un lote grande. El tope de la grilla ya no corta la carga, pero el
+            // usuario tiene derecho a saber que su lote de 40 son tres pasadas.
+            filasGrilla: RANGES.CARGAS.filas
         };
     } catch (e) {
         logError('obtenerCatalogoShell', e);
@@ -525,21 +535,37 @@ function registrarMovimientos(lista) {
         });
         if (problemas.length) return { ok: false, problemas: problemas };
 
-        const grilla = _estadoGrillaCargas(hojaCargas);
-        if (grilla.libres < lista.length) {
-            return { ok: false, error: 'Son ' + lista.length + ' movimientos y en la grilla de ' +
-                'Cargas quedan ' + grilla.libres + ' filas libres. Procesa lo que hay, o carga de a menos.' };
-        }
-
-        // UNA sola escritura para todo el lote: si se escribiera fila por fila y fallara la
-        // tercera, quedarian dos sueltas en la grilla.
-        const filas = lista.map(_filaDeCarga);
+        // EL TOPE DE LA GRILLA NO ES EL TOPE DE LA CARGA.
+        //
+        // decision Franco 2026-08-25: "deberia dejar cargar muchos mas movimientos, no solo
+        // 15". La grilla de Cargas es de altura fija (RANGES.CARGAS.filas) y esa es una
+        // restriccion de LA HOJA, no del acto de cargar. Se procesa en TANDAS: se siembra lo
+        // que entra, se procesa, y se repite con lo que queda. Cada tanda es un procesarCargas
+        // -- con su pasada de cotizaciones -- asi que se avisa cuantas van a ser, pero ya no
+        // hay un numero que corte la carga.
         const colIni = columnLetterToIndex(RANGES.CARGAS.start);
-        hojaCargas.getRange(grilla.filaHoja, colIni, filas.length, filas[0].length).setValues(filas);
-        SpreadsheetApp.flush();
+        let entraron = 0;
+        let tandas = 0;
 
-        // Y UN solo procesarCargas para las N filas, que es todo el punto.
-        procesarCargas();
+        while (entraron < lista.length) {
+            const grilla = _estadoGrillaCargas(hojaCargas);
+            if (grilla.libres <= 0) {
+                return { ok: false, error: 'La grilla de Cargas quedo sin filas libres despues ' +
+                    'de ' + tandas + ' tanda(s). Entraron ' + entraron + ' de ' + lista.length +
+                    ' movimientos; revisa la hoja antes de reintentar el resto.' };
+            }
+            const tanda = lista.slice(entraron, entraron + grilla.libres);
+            const filas = tanda.map(_filaDeCarga);
+
+            // UNA sola escritura por tanda: si se escribiera fila por fila y fallara la
+            // tercera, quedarian dos sueltas en la grilla.
+            hojaCargas.getRange(grilla.filaHoja, colIni, filas.length, filas[0].length).setValues(filas);
+            SpreadsheetApp.flush();
+            procesarCargas();
+
+            entraron += tanda.length;
+            tandas++;
+        }
 
         const total = lista.reduce(function (a, d) { return a + (Number(d.monto) || 0); }, 0);
         const monedas = {};
@@ -550,9 +576,7 @@ function registrarMovimientos(lista) {
             ? 'Listo. Cargaste ' + _plata(lista[0].monto, lista[0].moneda) + ' en ' + lista[0].cuenta + '.'
             : 'Listo. Cargaste ' + lista.length + ' movimientos' +
               (unaSolaMoneda ? ', ' + _plata(total, lista[0].moneda) + ' en total' : '') + '.';
-        if (grilla.ocupadas > 0) {
-            mensaje += ' Se procesaron tambien ' + grilla.ocupadas + ' fila(s) que ya estaban en la grilla.';
-        }
+        if (tandas > 1) mensaje += ' Se procesaron en ' + tandas + ' tandas.';
         return { ok: true, mensaje: mensaje };
     });
 }
@@ -574,21 +598,24 @@ function registrarMovimientos(lista) {
  * @returns {{ok:boolean, mensaje?:string, problemas?:Array<string>, error?:string}}
  */
 function registrarTraspaso(d) {
-    return _conLock(function () {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const hojaCargas = ss.getSheetByName(RANGES.CARGAS.sheet);
-        if (!hojaCargas) return { ok: false, error: 'No existe la hoja "' + RANGES.CARGAS.sheet + '".' };
+    return registrarTraspasos([d]);
+}
 
-        const medios = {};
-        try {
-            getTableData('MEDIOS_PAGO').forEach(function (f) {
-                const n = String(f[0] || '').trim();
-                if (n) medios[n] = { moneda: String(f[1] || '').trim(), tipo: String(f[2] || '').trim() };
-            });
-        } catch (e) {
-            return { ok: false, error: 'No se pudo leer el catalogo de medios: ' + e.message };
-        }
+/** El catalogo de medios como mapa nombre -> {moneda, tipo}. Una sola lectura por lote. */
+function _mapaDeMedios() {
+    const medios = {};
+    getTableData('MEDIOS_PAGO').forEach(function (f) {
+        const n = String(f[0] || '').trim();
+        if (n) medios[n] = { moneda: String(f[1] || '').trim(), tipo: String(f[2] || '').trim() };
+    });
+    return medios;
+}
 
+/**
+ * Valida UN traspaso y devuelve sus dos patas listas para sembrar.
+ * @returns {{problemas:Array<string>, filas?:Array, resumen?:Object}}
+ */
+function _prepararTraspaso(d, medios) {
         const problemas = [];
         if (!d.origen) problemas.push('Falta la caja de origen.');
         if (!d.destino) problemas.push('Falta la caja de destino.');
@@ -619,13 +646,7 @@ function registrarTraspaso(d) {
             if (isNaN(f.getTime())) problemas.push('La fecha no se entiende.');
             else if (f > _finDeHoy()) problemas.push('La fecha es futura.');
         }
-        if (problemas.length) return { ok: false, problemas: problemas };
-
-        const grilla = _estadoGrillaCargas(hojaCargas);
-        if (grilla.libres < 2) {
-            return { ok: false, error: 'Un traspaso ocupa DOS filas de la grilla de Cargas y quedan ' +
-                grilla.libres + '. Procesa lo que hay antes.' };
-        }
+        if (problemas.length) return { problemas: problemas };
 
         // La nota es la MISMA en las dos patas: es lo unico que permite reconstruir el par
         // despues, porque el ledger no tiene un campo que las vincule.
@@ -641,20 +662,85 @@ function registrarTraspaso(d) {
         const entra = _filaDeCarga(Object.assign({}, base,
             { monto: montoD, tipo: 'Ingreso', medio: d.destino, moneda: mDestino }));
 
-        // LAS DOS JUNTAS, en una sola escritura. Si se escribieran por separado y la segunda
-        // fallara, quedaria media operacion en la grilla.
+        return {
+            problemas: [],
+            filas: [sale, entra],
+            resumen: { origen: d.origen, destino: d.destino, montoO: montoO, montoD: montoD,
+                       mOrigen: mOrigen, mDestino: mDestino, cruza: cruzaMoneda,
+                       tipoDestino: medios[d.destino] ? medios[d.destino].tipo : '' }
+        };
+}
+
+/**
+ * Registra VARIOS traspasos de una vez.
+ *
+ * Cada traspaso son DOS filas de la grilla -- una que sale y una que entra -- y las dos se
+ * escriben juntas o no se escribe ninguna: media operacion hace desaparecer plata del sistema.
+ * Igual que los movimientos, el tope de la grilla no corta la carga: se procesa en tandas, y
+ * una tanda nunca parte un traspaso al medio.
+ *
+ * @param {Array<Object>} lista {origen, destino, montoOrigen, montoDestino, fecha, nota}
+ * @returns {{ok:boolean, mensaje?:string, problemas?:Array<string>, error?:string}}
+ */
+function registrarTraspasos(lista) {
+    return _conLock(function () {
+        if (!Array.isArray(lista) || !lista.length) {
+            return { ok: false, error: 'No llego ningun traspaso para cargar.' };
+        }
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const hojaCargas = ss.getSheetByName(RANGES.CARGAS.sheet);
+        if (!hojaCargas) return { ok: false, error: 'No existe la hoja "' + RANGES.CARGAS.sheet + '".' };
+
+        let medios;
+        try { medios = _mapaDeMedios(); }
+        catch (e) { return { ok: false, error: 'No se pudo leer el catalogo de medios: ' + e.message }; }
+
+        // Se valida el lote ENTERO antes de escribir una sola celda.
+        const problemas = [];
+        const preparados = [];
+        lista.forEach(function (d, i) {
+            const r = _prepararTraspaso(d, medios);
+            r.problemas.forEach(function (p) { problemas.push('Traspaso ' + (i + 1) + ': ' + p); });
+            if (!r.problemas.length) preparados.push(r);
+        });
+        if (problemas.length) return { ok: false, problemas: problemas };
+
         const colIni = columnLetterToIndex(RANGES.CARGAS.start);
-        hojaCargas.getRange(grilla.filaHoja, colIni, 2, sale.length).setValues([sale, entra]);
-        SpreadsheetApp.flush();
+        let hechos = 0, tandas = 0;
+        while (hechos < preparados.length) {
+            const grilla = _estadoGrillaCargas(hojaCargas);
+            // Se divide por PARES: una tanda nunca parte un traspaso al medio.
+            const caben = Math.floor(grilla.libres / 2);
+            if (caben <= 0) {
+                return { ok: false, error: 'La grilla de Cargas quedo sin lugar para otro par ' +
+                    'despues de ' + tandas + ' tanda(s). Entraron ' + hechos + ' de ' +
+                    preparados.length + ' traspasos.' };
+            }
+            const tanda = preparados.slice(hechos, hechos + caben);
+            const filas = [];
+            tanda.forEach(function (t) { filas.push(t.filas[0], t.filas[1]); });
+            hojaCargas.getRange(grilla.filaHoja, colIni, filas.length, filas[0].length).setValues(filas);
+            SpreadsheetApp.flush();
+            procesarCargas();
+            hechos += tanda.length;
+            tandas++;
+        }
 
-        procesarCargas();
-
-        let mensaje = 'Listo. Pasaste ' + _plata(montoO, mOrigen) + ' de ' + d.origen + ' a ' + d.destino;
-        if (cruzaMoneda) mensaje += ' (' + _plata(montoD, mDestino) + ')';
-        mensaje += '.';
-        const tipoDestino = medios[d.destino] ? medios[d.destino].tipo : '';
-        if (TIPOS_RIQUEZA.indexOf(tipoDestino) !== -1) {
-            mensaje += ' Eso capitaliza: la plata paso a una caja de ' + tipoDestino + '.';
+        let mensaje;
+        if (preparados.length === 1) {
+            const r = preparados[0].resumen;
+            mensaje = 'Listo. Pasaste ' + _plata(r.montoO, r.mOrigen) + ' de ' + r.origen +
+                ' a ' + r.destino + (r.cruza ? ' (' + _plata(r.montoD, r.mDestino) + ')' : '') + '.';
+            if (TIPOS_RIQUEZA.indexOf(r.tipoDestino) !== -1) {
+                mensaje += ' Eso capitaliza: la plata paso a una caja de ' + r.tipoDestino + '.';
+            }
+        } else {
+            mensaje = 'Listo. Registraste ' + preparados.length + ' traspasos.';
+            const capitalizan = preparados.filter(function (t) {
+                return TIPOS_RIQUEZA.indexOf(t.resumen.tipoDestino) !== -1;
+            }).length;
+            if (capitalizan) mensaje += ' ' + capitalizan + ' de ellos capitalizan.';
+            if (tandas > 1) mensaje += ' Se procesaron en ' + tandas + ' tandas.';
         }
         return { ok: true, mensaje: mensaje };
     });

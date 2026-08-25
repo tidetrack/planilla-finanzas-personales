@@ -22,7 +22,7 @@ function onOpen() {
 function _menuSeccion() {
     try {
         SpreadsheetApp.getActiveSpreadsheet()
-            .toast('Es un titulo de seccion del menu, no una accion.', 'Tidetrack', 3);
+            .toast('Es un titulo de seccion del menu, no una accion.', 'tidetrack', 3);
     } catch (e) { /* sin planilla activa: silenciado a proposito */ }
 }
 
@@ -61,7 +61,7 @@ function createCustomMenu() {
     const ui = SpreadsheetApp.getUi();
 
     try {
-        const menu = ui.createMenu(MENU_CONFIG.MAIN_MENU || 'Tidetrack');
+        const menu = ui.createMenu(MENU_CONFIG.MAIN_MENU || 'tidetrack');
         if (MENU_CONFIG.ITEMS && Array.isArray(MENU_CONFIG.ITEMS)) {
             _agregarItemsMenu(ui, menu, MENU_CONFIG.ITEMS);
         } else {
@@ -74,7 +74,7 @@ function createCustomMenu() {
 
     try {
         if (MENU_CONFIG.DEV_ITEMS && Array.isArray(MENU_CONFIG.DEV_ITEMS)) {
-            const menuDev = ui.createMenu(MENU_CONFIG.DEV_MENU || 'Tidetrack Dev');
+            const menuDev = ui.createMenu(MENU_CONFIG.DEV_MENU || 'tidetrack Dev');
             _agregarItemsMenu(ui, menuDev, MENU_CONFIG.DEV_ITEMS);
             menuDev.addToUi();
         }

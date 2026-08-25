@@ -122,7 +122,7 @@ function estadoProyeccion() {
 function aplicarProyeccion() {
     let ui = null;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarProyeccion necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarProyeccion necesita UI (menu tidetrack Dev).' }; }
 
     const escritas = [];
     let ss = null, hojaCreada = '';

@@ -206,7 +206,7 @@ function estadoCategorizar() {
 function aplicarCategorizar() {
     let ui = null, ss = null, foto = null;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarCategorizar necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarCategorizar necesita UI (menu tidetrack Dev).' }; }
 
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();

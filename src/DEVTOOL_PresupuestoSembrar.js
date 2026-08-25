@@ -446,7 +446,7 @@ function estadoPresupuestoSembrar() {
 function aplicarPresupuestoSembrar() {
     let ui = null, ss = null, hoja = null, escritas = [];
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarPresupuestoSembrar necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarPresupuestoSembrar necesita UI (menu tidetrack Dev).' }; }
 
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -458,7 +458,7 @@ function aplicarPresupuestoSembrar() {
             throw new Error(plan.fuenteInvalida.length + ' cuenta(s) tienen una celda de origen (J/N/R) ' +
                 'que no es un numero valido, por ejemplo ' + plan.fuenteInvalida[0].celda + ' = ' +
                 JSON.stringify(plan.fuenteInvalida[0].crudo) + '. No deberia pasar mientras la cuenta ' +
-                'exista (revisar "Presupuesto: selector de Modo" en Tidetrack Dev). No se escribio nada.');
+                'exista (revisar "Presupuesto: selector de Modo" en tidetrack Dev). No se escribio nada.');
         }
 
         if (!plan.aSembrar.length) {
@@ -552,7 +552,7 @@ function aplicarPresupuestoSembrar() {
         l.push('  vacias que se llenaron: ' + (escritas.length - aPisar.length));
         l.push('  con valor previo que SE PISARON: ' + aPisar.length);
         l.push('');
-        l.push('Para deshacer: "3. Revertir" (Tidetrack Dev). Repone EXACTAMENTE el estado previo a');
+        l.push('Para deshacer: "3. Revertir" (tidetrack Dev). Repone EXACTAMENTE el estado previo a');
         l.push('esta corrida (vacia, o el valor que tenia antes) en cada celda que TODAVIA tenga el');
         l.push('numero que esta corrida escribio -- si corregiste alguna a mano despues, revertir la');
         l.push('deja como la dejaste, no la pisa.');

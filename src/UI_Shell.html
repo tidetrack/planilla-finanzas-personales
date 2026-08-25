@@ -255,24 +255,10 @@ body {
     font-size: 13px; font-weight: 700; letter-spacing: -0.02em;
     color: var(--ink-inv);
 }
-.shell-band .titulos {
-    display: flex; align-items: baseline; gap: 9px; min-width: 0;
-}
 .shell-band h1 {
     margin: 0;
     font-size: var(--fs-band); font-weight: 700; letter-spacing: -0.3px;
     line-height: 1.15; white-space: nowrap;
-}
-.shell-band .sub {
-    font-size: var(--fs-aux); font-weight: 400; color: var(--ink-band);
-    line-height: 1.3;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.shell-band .sub::before {
-    content: ""; display: inline-block;
-    width: 3px; height: 3px; border-radius: 50%;
-    background: var(--ink-band); opacity: 0.7;
-    vertical-align: middle; margin-right: 9px;
 }
 .shell-band .spacer { flex: 1 1 auto; }
 
@@ -461,26 +447,11 @@ body {
 .shell-card--hero .t { font-size: var(--fs-hero); }
 
 /* --- Chips: lo que no merece una tarjeta. Es la tercera escala. --- */
-.shell-chips { display: flex; flex-wrap: wrap; gap: var(--e2); }
-.shell-chip {
-    display: inline-flex; align-items: center; gap: 8px;
-    height: 36px; padding: 0 15px 0 12px;
-    border: 0; border-radius: var(--r-full);
-    background: var(--sup-card);
-    box-shadow: var(--elev-1), var(--filo);
-    color: var(--ink-1); font: inherit; font-size: 13px; font-weight: 500;
-    cursor: pointer;
-    transition: box-shadow var(--t1) var(--mov-std),
-                transform var(--t1) var(--mov-out),
-                color var(--t1) var(--mov-std);
-}
-.shell-chip:hover {
-    transform: translateY(-1px); color: var(--tt-teal);
-    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
-}
-.shell-chip:active { transform: translateY(0); }
-.shell-chip:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
-.shell-chip svg { color: var(--tt-teal); flex: 0 0 auto; }
+/* decision Franco 2026-08-25: "el boton de gestionar cuentas debe tener el mismo peso que el
+   resto de acciones". Era un chip -- pastilla de 36px, sin descripcion -- al lado de tarjetas
+   de 116. Un chip comunica "accion secundaria", y administrar el Plan de Cuentas no lo es: es
+   la estructura sobre la que se apoya todo lo demas. Pasa a ser una tarjeta mas, con la misma
+   grilla y el mismo peso, y el CSS de .shell-chip se retira entero por quedar sin uso. */
 
 
 /* ============================================================
@@ -670,11 +641,23 @@ body {
                 box-shadow var(--t1) var(--mov-std);
 }
 .seg button:hover { color: var(--ink-1); background: rgba(52,71,93,0.05); }
+/* decision Franco 2026-08-25: "en el Tipo seria genial que se ponga rojo/verde segun el
+   tipo". El estado elegido se tine con el semaforo MEDIDO de la hoja, y el riel tambien:
+   sin el fondo, el color solo en la letra a 13px no alcanza para leerse de un vistazo.
+   Los tonos -ink son los verificados contra AA sobre su propio riel -- el #c93232 medido
+   daba 4.47:1 sobre #fce8e6, por debajo del minimo. */
 .seg button[aria-pressed="true"] {
     background: var(--sup-card); color: var(--ink-1);
     box-shadow: 0 1px 2px rgba(52,71,93,0.12), inset 0 0 0 1px var(--linea);
 }
-.seg button[aria-pressed="true"][data-v="Ingreso"] { color: var(--est-verde); }
+.seg button[aria-pressed="true"][data-v="Egreso"] {
+    background: var(--est-rojo-bg); color: var(--est-rojo-ink);
+    box-shadow: inset 0 0 0 1px rgba(173,39,39,0.22);
+}
+.seg button[aria-pressed="true"][data-v="Ingreso"] {
+    background: var(--est-verde-bg); color: var(--est-verde-ink);
+    box-shadow: inset 0 0 0 1px rgba(53,104,84,0.22);
+}
 .seg button:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 1px; }
 
 
@@ -697,6 +680,34 @@ body {
 @keyframes bloqueEntra {
     from { opacity: 0; transform: translateY(8px) scale(0.985); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ============================================================
+   DESPLEGABLES FILTRABLES.
+   decision Franco 2026-08-25: "en TODOS los desplegables deberias tener la opcion de acortar
+   las opciones tipeando caracteres". Un <select> nativo solo salta por PREFIJO y solo con la
+   lista abierta: con 60 cuentas hay que scrollear. Un <input list> con <datalist> filtra por
+   SUBCADENA mientras se tipea -- escribir "naran" trae "Frascos Naranja X" y "Dolar NaranjaX",
+   que un select por prefijo no encuentra nunca.
+   Es ademas lo que hace pymes: los datalist son COMPARTIDOS por todos los bloques y se
+   pueblan una sola vez; cada bloque los referencia por su id. Eso es lo que hace barato
+   clonar un bloque -- no arrastra el catalogo adentro.
+   El valor libre no se bloquea: la hoja misma acepta valores fuera de lista
+   (setAllowInvalid(true)), y el backend valida el medio contra el catalogo. Lo que si se hace
+   es AVISAR cuando lo tipeado no esta en la lista, en vez de dejarlo pasar mudo.
+   ============================================================ */
+.f .combo { position: relative; display: block; }
+.f .combo input { padding-right: 30px; }
+.f .combo::after {
+    content: ""; position: absolute; right: 11px; top: 50%; width: 10px; height: 10px;
+    margin-top: -5px; pointer-events: none;
+    background: var(--chevron) center/10px 10px no-repeat; opacity: .55;
+}
+.f input[data-fuera="1"] {
+    box-shadow: inset 0 0 0 1px var(--est-ambar);
+}
+.f .aviso-fuera {
+    font-size: var(--fs-rotulo); color: var(--est-ambar-ink); margin-top: 2px;
 }
 
 /* --- Fila de resumen --- */
@@ -1033,16 +1044,14 @@ body {
    Suficiente para leerse como movimiento, no tanto como para notar el reflow.
    ============================================================ */
 @keyframes vistaEntra { from { opacity: 0; transform: translateY(8px); } }
-#vista-home .shell-card, #vista-home .shell-chips {
-    animation: vistaEntra 300ms var(--mov-out) both;
-}
+#vista-home .shell-card { animation: vistaEntra 300ms var(--mov-out) both; }
 #vista-home .shell-cards:nth-of-type(1) .shell-card { animation-delay: 0.02s; }
 #vista-home .shell-cards:nth-of-type(2) .shell-card:nth-child(1) { animation-delay: 0.06s; }
 #vista-home .shell-cards:nth-of-type(2) .shell-card:nth-child(2) { animation-delay: 0.09s; }
 #vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(1) { animation-delay: 0.12s; }
 #vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(2) { animation-delay: 0.15s; }
 #vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(3) { animation-delay: 0.18s; }
-#vista-home .shell-chips { animation-delay: 0.21s; }
+#vista-home .shell-cards:nth-of-type(4) .shell-card { animation-delay: 0.21s; }
 
 
 /* ============================================================
@@ -1068,7 +1077,6 @@ body {
 @media (max-width: 700px) {
     .shell-scroll { padding: var(--e4) var(--e4) 18px; }
     .shell-acciones { margin-left: calc(-1 * var(--e4)); margin-right: calc(-1 * var(--e4)); padding: 0 var(--e4); }
-    .shell-band .sub { display: none; }
     .f.c3, .f.c4, .f.c5 { grid-column: span 6; }
 }
 </style>
@@ -1082,10 +1090,7 @@ body {
         Volver
     </button>
     <span class="shell-mono" aria-hidden="true">tt.</span>
-    <div class="titulos">
-        <h1 id="shellTitulo">Tidetrack</h1>
-        <span class="sub" id="shellSubtitulo">Que queres hacer</span>
-    </div>
+    <h1 id="shellTitulo">tidetrack</h1>
     <span class="spacer"></span>
 </header>
 
@@ -1186,12 +1191,14 @@ body {
         </div>
 
         <div class="shell-sec">Estructura</div>
-        <div class="shell-chips">
-            <button class="shell-chip" onclick="abrirAbm()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                     aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h11"/></svg>
-                Gestionar cuentas
+        <div class="shell-cards">
+            <button class="shell-card" data-listo="1" onclick="abrirAbm()">
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h11"/></svg></span>
+                <span class="txt">
+                    <span class="t">Gestionar cuentas</span>
+                    <span class="d">Alta, baja y cambio de nombre del Plan de Cuentas.</span>
+                </span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
         </div>
     </div>
@@ -1215,35 +1222,16 @@ body {
 </div>
 
     <div id="vista-traspaso" class="vista-form hidden">
-        <div class="shell-form">
-            <label class="f c6"><span class="rot">Sale de</span>
-                <select class="form-select" id="trasOrigen" onchange="trasMonedas()"></select></label>
-            <label class="f c6"><span class="rot">Entra a</span>
-                <select class="form-select" id="trasDestino" onchange="trasMonedas()"></select></label>
-            <label class="f c4"><span class="rot">Monto que sale</span>
-                <span class="campo-monto">
-                    <input class="monto" id="trasMontoO" inputmode="decimal" placeholder="0,00"
-                           autocomplete="off" oninput="trasTipoDeCambio()">
-                    <span class="pref" id="trasPrefO" aria-hidden="true"></span>
-                </span>
-                <span class="hint" id="trasHintO"></span></label>
-            <label class="f c4 hidden" id="trasCampoDestino"><span class="rot">Monto que entra</span>
-                <span class="campo-monto">
-                    <input class="monto" id="trasMontoD" inputmode="decimal" placeholder="0,00"
-                           autocomplete="off" oninput="trasTipoDeCambio()">
-                    <span class="pref" id="trasPrefD" aria-hidden="true"></span>
-                </span>
-                <span class="hint" id="trasHintD"></span></label>
-            <label class="f c4"><span class="rot">Fecha</span>
-                <input class="form-input" id="trasFecha" type="date"></label>
-            <label class="f c12"><span class="rot">Nota</span>
-                <input class="form-input" id="trasNota" placeholder="Opcional" autocomplete="off">
-                <span class="hint" id="trasAviso"></span></label>
-        </div>
+        <div id="trasLista"></div>
+        <button type="button" class="btn-agregar" id="trasAgregar" onclick="agregarBloqueTraspaso()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Agregar otro traspaso
+        </button>
         <div class="shell-acciones">
-            <span class="crece">Las dos patas se escriben juntas o no se escribe ninguna.</span>
+            <span class="crece" id="trasCupo"></span>
             <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
-            <button class="btn btn-primary" id="trasBtnGuardar" onclick="guardarTraspaso()">Registrar</button>
+            <button class="btn btn-primary" id="trasBtnGuardar" onclick="guardarTraspasos()">Registrar</button>
         </div>
     </div>
 
@@ -1288,6 +1276,11 @@ body {
     <span class="ver">v<?= version ?></span>
 </footer>
 
+<!-- Los datalist son COMPARTIDOS por todos los bloques y se pueblan una sola vez: es lo que
+     hace barato clonar un bloque, porque no arrastra el catalogo adentro. -->
+<datalist id="dlCuentas"></datalist>
+<datalist id="dlMedios"></datalist>
+
 <div class="shell-overlay hidden" id="shellLoader">
     <div class="shell-spinner"></div>
     <span class="leyenda" id="shellLoaderTxt">Leyendo el Plan de Cuentas</span>
@@ -1316,7 +1309,6 @@ function irAVista(id) {
     });
     var vista = VISTAS.filter(function (v) { return v.id === id; })[0];
     document.getElementById('shellTitulo').textContent = vista.titulo;
-    document.getElementById('shellSubtitulo').textContent = vista.subtitulo;
     document.getElementById('shellVolver').classList.toggle('hidden', id === 'home');
     document.querySelector('.shell-scroll').scrollTop = 0;
     limpiarAviso();
@@ -1362,7 +1354,7 @@ function asegurarCatalogo(cuando) {
         if (contesto) return;
         contesto = true; loader(false);
         mostrarError('El Plan de Cuentas esta tardando mas de la cuenta. Proba de nuevo, y si ' +
-            'sigue igual corre Tidetrack Dev > Shell > Diagnosticar tiempos.');
+            'sigue igual corre tidetrack Dev > Shell > Diagnosticar tiempos.');
     }, 15000);
     var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); };
 
@@ -1375,6 +1367,12 @@ function asegurarCatalogo(cuando) {
                 return;
             }
             catalogo = data;
+            llenarDatalist('dlCuentas', [
+                { titulo: 'Gasto variable', items: catalogo.variables },
+                { titulo: 'Gasto fijo', items: catalogo.fijos },
+                { titulo: 'Ingreso', items: catalogo.ingresos }
+            ]);
+            llenarDatalist('dlMedios', [{ items: nombresDeMedio() }]);
             cuando(catalogo);
         })
         .withFailureHandler(function (err) {
@@ -1425,6 +1423,66 @@ function llenarSelect(sel, grupos, seleccionado) {
         }
     });
     if (seleccionado) sel.value = seleccionado;
+}
+
+// ============================================
+// DESPLEGABLES FILTRABLES
+// ============================================
+
+/**
+ * Llena un datalist COMPARTIDO. Se llama una sola vez por catalogo, no por bloque.
+ *
+ * El `label` de cada option es lo que Chrome muestra en gris al costado del valor: sirve para
+ * decir de que bloque del Plan viene la cuenta sin meterla en el texto que despues se escribe.
+ */
+function llenarDatalist(id, grupos) {
+    var dl = document.getElementById(id);
+    dl.innerHTML = '';
+    grupos.forEach(function (g) {
+        (g.items || []).forEach(function (it) {
+            var o = document.createElement('option');
+            o.value = it;
+            if (g.titulo) o.label = g.titulo;
+            dl.appendChild(o);
+        });
+    });
+}
+
+function todasLasCuentas() {
+    if (!catalogo) return [];
+    return [].concat(catalogo.variables || [], catalogo.fijos || [], catalogo.ingresos || []);
+}
+function nombresDeMedio() {
+    if (!catalogo) return [];
+    return (catalogo.medios || []).map(function (m) { return m.nombre; });
+}
+
+/**
+ * Avisa cuando lo tipeado no esta en la lista, sin bloquearlo.
+ *
+ * No se bloquea porque la hoja misma acepta valores fuera de lista -- el desplegable de Cargas
+ * usa setAllowInvalid(true) -- y el ledger tiene cuentas que el catalogo nunca tuvo. Pero
+ * dejarlo pasar mudo es como se cuela un gasto en una cuenta que no existe y despues no
+ * aparece en ningun agregado: se avisa.
+ */
+function vigilarCombo(input, opciones) {
+    var revisar = function () {
+        var v = input.value.trim();
+        var fuera = v !== '' && opciones.indexOf(v) === -1;
+        input.dataset.fuera = fuera ? '1' : '0';
+        var aviso = input.closest('.f').querySelector('.aviso-fuera');
+        if (fuera && !aviso) {
+            aviso = document.createElement('span');
+            aviso.className = 'aviso-fuera';
+            aviso.textContent = 'No esta en el Plan de Cuentas';
+            input.closest('.f').appendChild(aviso);
+        } else if (!fuera && aviso) {
+            aviso.remove();
+        }
+    };
+    input.addEventListener('input', revisar);
+    input.addEventListener('change', revisar);
+    revisar();
 }
 
 // ============================================
@@ -1518,11 +1576,13 @@ var PLANTILLA_BLOQUE =
         '</div>' +
         '<label class="f c5">' +
         '<span class="rot">Cuenta</span>' +
-        '<select class="form-select b-cuenta"></select>' +
+        '<span class="combo"><input class="form-input b-cuenta" list="dlCuentas" ' +
+        'autocomplete="off" placeholder="Buscar cuenta"></span>' +
         '</label>' +
         '<label class="f c4">' +
         '<span class="rot">Medio</span>' +
-        '<select class="form-select b-medio"></select>' +
+        '<span class="combo"><input class="form-input b-medio" list="dlMedios" ' +
+        'autocomplete="off" placeholder="Buscar medio"></span>' +
         '</label>' +
         '<label class="f c3">' +
         '<span class="rot">Fecha</span>' +
@@ -1564,13 +1624,10 @@ function agregarBloqueMovimiento() {
 
     // Los select se pueblan DESPUES de insertar: un value interpolado en el HTML de un select
     // no selecciona nada.
-    llenarSelect(div.querySelector('.b-cuenta'), [
-        { titulo: 'Gastos variables', items: catalogo.variables },
-        { titulo: 'Gastos fijos', items: catalogo.fijos },
-        { titulo: 'Ingresos', items: catalogo.ingresos }
-    ]);
-    llenarSelect(div.querySelector('.b-medio'),
-        [{ items: catalogo.medios.map(function (m) { return m.nombre; }) }], heredaMedio);
+    // Los datalist ya estan poblados y son compartidos: el bloque solo los referencia.
+    div.querySelector('.b-medio').value = heredaMedio;
+    vigilarCombo(div.querySelector('.b-cuenta'), todasLasCuentas());
+    vigilarCombo(div.querySelector('.b-medio'), nombresDeMedio());
     llenarSelect(div.querySelector('.b-moneda'), [{ items: catalogo.monedas }]);
     div.querySelector('.b-fecha').value = heredaFecha;
     div.querySelector('.b-tipo').value = heredaTipo;
@@ -1629,18 +1686,31 @@ function medioPorDefecto() {
     return (enBase || catalogo.medios[0]).nombre;
 }
 
-/** El tope REAL: las filas libres de la grilla, que el backend informa al abrir la vista. */
-function cupoMaximo() {
-    return (catalogo && typeof catalogo.libres === 'number') ? catalogo.libres : 15;
+/** La altura de la grilla de Cargas, que es lo que define el tamano de cada tanda. */
+function filasDeGrilla() {
+    return (catalogo && typeof catalogo.filasGrilla === 'number') ? catalogo.filasGrilla : 15;
 }
+
+/**
+ * El tope de bloques.
+ *
+ * decision Franco 2026-08-25: "deberia dejar cargar muchos mas movimientos, no solo 15". Ya no
+ * corta la grilla: el backend procesa en TANDAS. Lo que queda como limite es el tiempo -- cada
+ * tanda es un procesarCargas con su pasada de cotizaciones, y Apps Script mata a los 6
+ * minutos. CUPO_BLOQUES es un techo de seguridad holgado, no la altura de la grilla; el
+ * usuario ve cuantas tandas va a costar antes de apretar Cargar.
+ */
+var CUPO_BLOQUES = 60;
+function cupoMaximo() { return CUPO_BLOQUES; }
 
 function actualizarCupo() {
     var n = document.querySelectorAll('#movLista .bloque').length;
-    var max = cupoMaximo();
-    document.getElementById('movAgregar').disabled = n >= max;
-    document.getElementById('movCupo').textContent = n >= max
-        ? 'Llegaste al tope: quedan ' + max + ' filas libres en la grilla de Cargas.'
-        : n + ' de hasta ' + max + '. Se cargan todos juntos, en una sola pasada.';
+    var tandas = Math.ceil(n / filasDeGrilla());
+    document.getElementById('movAgregar').disabled = n >= CUPO_BLOQUES;
+    document.getElementById('movCupo').textContent = n >= CUPO_BLOQUES
+        ? 'Llegaste al tope de ' + CUPO_BLOQUES + ' por carga. Guarda estos y segui.'
+        : n + ' movimiento' + (n === 1 ? '' : 's') +
+          (tandas > 1 ? '. Se procesan en ' + tandas + ' tandas.' : '. Se cargan todos juntos.');
 }
 
 /** El total del lote, solo si todo comparte moneda: sumar monedas distintas seria mentir. */
@@ -1692,24 +1762,144 @@ function guardarMovimientos() {
 }
 
 // ============================================
-// TRASPASO
+// TRASPASO -- carga multiple, igual que Movimiento
 // ============================================
+//
+// decision Franco 2026-08-25: "los traspasos no tienen interfaz disenada como la de
+// movimientos. Debe ser una tarjeta y se deberian poder cargar varios". Era un formulario
+// suelto de una sola operacion mientras al lado habia bloques repetibles con acordeon: dos
+// gramaticas distintas para el mismo acto de cargar. Ahora comparten la misma.
 
-var trasListo = false;
+var PLANTILLA_TRASPASO =
+        '<div class="bloque bloque--nuevo" data-estado="edicion">' +
+        '<button type="button" class="bloque-resumen" onclick="abrirBloqueTraspaso(this)">' +
+        '<span class="bloque-punto" data-tipo="Traspaso" aria-hidden="true"></span>' +
+        '<span class="bloque-cuenta">Sin definir</span>' +
+        '<span class="bloque-meta"></span>' +
+        '<span class="bloque-monto" data-vacio="1">&mdash;<span class="u"></span></span>' +
+        '<svg class="chev-abrir" width="15" height="15" viewBox="0 0 24 24" fill="none" ' +
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ' +
+        'aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+        '</button>' +
+        '<div class="bloque-head">' +
+        '<span class="bloque-num"><span class="n">1</span>Traspaso</span>' +
+        '<button type="button" class="btn-quitar" title="Quitar este traspaso" ' +
+        'onclick="quitarBloqueTraspaso(this)">&times;</button>' +
+        '</div>' +
+        '<div class="bloque-cuerpo"><div class="inner"><div class="pad">' +
+        '<div class="shell-form">' +
+        '<label class="f c6"><span class="rot">Sale de</span>' +
+        '<span class="combo"><input class="form-input t-origen" list="dlMedios" ' +
+        'autocomplete="off" placeholder="Buscar caja"></span></label>' +
+        '<label class="f c6"><span class="rot">Entra a</span>' +
+        '<span class="combo"><input class="form-input t-destino" list="dlMedios" ' +
+        'autocomplete="off" placeholder="Buscar caja"></span></label>' +
+        '<label class="f c4"><span class="rot">Monto que sale</span>' +
+        '<span class="campo-monto"><input class="monto t-montoO" inputmode="decimal" ' +
+        'placeholder="0,00" autocomplete="off"><span class="pref t-prefO" aria-hidden="true"></span>' +
+        '</span></label>' +
+        '<label class="f c4 hidden t-campoD"><span class="rot">Monto que entra</span>' +
+        '<span class="campo-monto"><input class="monto t-montoD" inputmode="decimal" ' +
+        'placeholder="0,00" autocomplete="off"><span class="pref t-prefD" aria-hidden="true"></span>' +
+        '</span><span class="hint t-hintD"></span></label>' +
+        '<label class="f c4"><span class="rot">Fecha</span>' +
+        '<input class="form-input t-fecha" type="date"></label>' +
+        '<label class="f c12"><span class="rot">Nota</span>' +
+        '<input class="form-input t-nota" placeholder="Opcional" autocomplete="off">' +
+        '<span class="hint t-aviso"></span></label>' +
+        '</div></div></div></div>' +
+        '</div>';
 
-function prepararTraspaso(cat) {
-    if (!trasListo) {
-        var nombres = cat.medios.map(function (m) { return m.nombre; });
-        llenarSelect(document.getElementById('trasOrigen'), [{ items: nombres }]);
-        llenarSelect(document.getElementById('trasDestino'), [{ items: nombres }]);
-        if (nombres.length > 1) document.getElementById('trasDestino').value = nombres[1];
-        trasListo = true;
+function prepararTraspaso() {
+    if (!document.querySelectorAll('#trasLista .bloque').length) {
+        agregarBloqueTraspaso();
     }
-    if (!document.getElementById('trasFecha').value) {
-        document.getElementById('trasFecha').value = hoyISO();
+    actualizarCupoTraspaso();
+}
+
+function agregarBloqueTraspaso() {
+    var lista = document.getElementById('trasLista');
+    var previos = lista.querySelectorAll('.bloque');
+    var medios = nombresDeMedio();
+
+    var heredaFecha = hoyISO();
+    if (previos.length) {
+        var ult = previos[previos.length - 1];
+        heredaFecha = ult.querySelector('.t-fecha').value;
+        resumirTraspaso(ult);
+        ult.dataset.estado = 'resumen';
     }
-    trasMonedas();
-    document.getElementById('trasMontoO').focus();
+
+    var env = document.createElement('div');
+    env.innerHTML = PLANTILLA_TRASPASO;
+    var div = env.firstElementChild;
+    lista.appendChild(div);
+
+    // Se propone origen y destino distintos, no el mismo dos veces: el mismo origen y destino
+    // es el unico traspaso que nunca es valido.
+    div.querySelector('.t-origen').value = medioPorDefecto();
+    var otro = medios.filter(function (m) { return m !== medioPorDefecto(); })[0] || '';
+    div.querySelector('.t-destino').value = otro;
+    div.querySelector('.t-fecha').value = heredaFecha;
+
+    vigilarCombo(div.querySelector('.t-origen'), medios);
+    vigilarCombo(div.querySelector('.t-destino'), medios);
+    ['.t-origen', '.t-destino'].forEach(function (sel) {
+        div.querySelector(sel).addEventListener('change', function () { monedasTraspaso(div); });
+    });
+    ['.t-montoO', '.t-montoD'].forEach(function (sel) {
+        div.querySelector(sel).addEventListener('input', function () { tipoDeCambio(div); });
+    });
+    monedasTraspaso(div);
+
+    renumerarTraspasos();
+    actualizarCupoTraspaso();
+    div.querySelector('.t-montoO').focus();
+}
+
+function quitarBloqueTraspaso(btn) {
+    var lista = document.getElementById('trasLista');
+    if (lista.querySelectorAll('.bloque').length <= 1) return;
+    btn.closest('.bloque').remove();
+    renumerarTraspasos();
+    actualizarCupoTraspaso();
+}
+
+function abrirBloqueTraspaso(el) {
+    var b = el.closest('.bloque');
+    document.querySelectorAll('#trasLista .bloque').forEach(function (o) {
+        if (o !== b) { resumirTraspaso(o); o.dataset.estado = 'resumen'; }
+    });
+    b.dataset.estado = 'edicion';
+    b.querySelector('.t-montoO').focus();
+}
+
+function resumirTraspaso(b) {
+    var v = function (s) { var e = b.querySelector(s); return e ? e.value : ''; };
+    var o = v('.t-origen'), d = v('.t-destino');
+    var monto = aNumero(v('.t-montoO'));
+    var f = v('.t-fecha');
+    b.querySelector('.bloque-cuenta').textContent = (o && d) ? (o + ' a ' + d) : 'Sin definir';
+    b.querySelector('.bloque-meta').textContent = f ? f.slice(8) + '/' + f.slice(5, 7) : '';
+    var caja = b.querySelector('.bloque-monto');
+    caja.dataset.vacio = monto ? '0' : '1';
+    caja.innerHTML = (monto ? escapar(monto.toFixed(2).replace('.', ','))
+                            : '\u2014') + '<span class="u">' + escapar(monedaDe(o)) + '</span>';
+}
+
+function renumerarTraspasos() {
+    var bs = document.querySelectorAll('#trasLista .bloque');
+    bs.forEach(function (b, i) {
+        b.querySelector('.bloque-num .n').textContent = (i + 1);
+        b.querySelector('.btn-quitar').style.visibility = bs.length > 1 ? 'visible' : 'hidden';
+    });
+}
+
+function actualizarCupoTraspaso() {
+    var n = document.querySelectorAll('#trasLista .bloque').length;
+    var tandas = Math.ceil((n * 2) / filasDeGrilla());
+    document.getElementById('trasCupo').textContent = n + ' traspaso' + (n === 1 ? '' : 's') +
+        '. Cada uno son dos filas' + (tandas > 1 ? ', y se procesan en ' + tandas + ' tandas.' : '.');
 }
 
 function monedaDe(n) {
@@ -1726,33 +1916,32 @@ function tipoDe(n) {
  * seria pedir un dato que ya se sabe, y dejar que se tipee distinto es dejar que un traspaso
  * invente o destruya plata.
  */
-function trasMonedas() {
-    var o = document.getElementById('trasOrigen').value;
-    var d = document.getElementById('trasDestino').value;
+function monedasTraspaso(div) {
+    var o = div.querySelector('.t-origen').value;
+    var d = div.querySelector('.t-destino').value;
     var mo = monedaDe(o), md = monedaDe(d);
-    document.getElementById('trasPrefO').textContent = mo;
-    document.getElementById('trasPrefD').textContent = md;
-    document.getElementById('trasHintO').textContent = mo ? mo + ', del catalogo' : '';
+    div.querySelector('.t-prefO').textContent = mo;
+    div.querySelector('.t-prefD').textContent = md;
     var cruza = mo && md && mo !== md;
-    document.getElementById('trasCampoDestino').classList.toggle('hidden', !cruza);
-    document.getElementById('trasHintD').textContent = cruza ? md + ', porque cruza moneda' : '';
+    div.querySelector('.t-campoD').classList.toggle('hidden', !cruza);
+    div.querySelector('.t-hintD').textContent = cruza ? md + ', porque cruza moneda' : '';
 
     var aviso = 'Se escriben dos filas con la cuenta Traspaso: una que sale y una que entra.';
     if (o && d && o === d) aviso = 'El origen y el destino son la misma caja.';
     else if (TIPOS_RIQUEZA_CLIENTE.indexOf(tipoDe(d)) !== -1) {
-        aviso += ' Este traspaso capitaliza: la plata pasa a una caja de ' + tipoDe(d) + '.';
+        aviso += ' Este capitaliza: la plata pasa a una caja de ' + tipoDe(d) + '.';
     }
-    document.getElementById('trasAviso').textContent = aviso;
-    trasTipoDeCambio();
+    div.querySelector('.t-aviso').textContent = aviso;
+    tipoDeCambio(div);
 }
 
 /** Muestra el TC implicito mientras se tipea: es el dato que el ledger no va a guardar. */
-function trasTipoDeCambio() {
-    if (document.getElementById('trasCampoDestino').classList.contains('hidden')) return;
-    var a = aNumero(document.getElementById('trasMontoO').value);
-    var b = aNumero(document.getElementById('trasMontoD').value);
-    var md = monedaDe(document.getElementById('trasDestino').value);
-    var hint = document.getElementById('trasHintD');
+function tipoDeCambio(div) {
+    if (div.querySelector('.t-campoD').classList.contains('hidden')) return;
+    var a = aNumero(div.querySelector('.t-montoO').value);
+    var b = aNumero(div.querySelector('.t-montoD').value);
+    var md = monedaDe(div.querySelector('.t-destino').value);
+    var hint = div.querySelector('.t-hintD');
     if (a && b) {
         hint.textContent = md + '. Tipo de cambio de la operacion: ' +
             (Math.round((a / b) * 100) / 100).toString().replace('.', ',');
@@ -1761,18 +1950,20 @@ function trasTipoDeCambio() {
     }
 }
 
-function guardarTraspaso() {
-    enviar('registrarTraspaso', {
-        origen: document.getElementById('trasOrigen').value,
-        destino: document.getElementById('trasDestino').value,
-        montoOrigen: aNumero(document.getElementById('trasMontoO').value),
-        montoDestino: aNumero(document.getElementById('trasMontoD').value),
-        fecha: document.getElementById('trasFecha').value,
-        nota: document.getElementById('trasNota').value
-    }, ['trasBtnGuardar'], function () {
-        document.getElementById('trasMontoO').value = '';
-        document.getElementById('trasMontoD').value = '';
-        document.getElementById('trasNota').value = '';
+function guardarTraspasos() {
+    var lista = [];
+    document.querySelectorAll('#trasLista .bloque').forEach(function (b) {
+        lista.push({
+            origen: b.querySelector('.t-origen').value,
+            destino: b.querySelector('.t-destino').value,
+            montoOrigen: aNumero(b.querySelector('.t-montoO').value),
+            montoDestino: aNumero(b.querySelector('.t-montoD').value),
+            fecha: b.querySelector('.t-fecha').value,
+            nota: b.querySelector('.t-nota').value
+        });
+    });
+    enviar('registrarTraspasos', lista, ['trasBtnGuardar'], function () {
+        document.getElementById('trasLista').innerHTML = '';
         catalogo = null;
         irAVista('home');
     });

@@ -2465,7 +2465,7 @@ function _cuerpoAplicarPRE(progreso, conducida) {
         return {
             ok: false,
             error: 'Sin UI para confirmar una operacion que escribe sobre produccion. ' +
-                   'Ejecutar desde el menu Tidetrack Dev. No se escribio nada.'
+                   'Ejecutar desde el menu tidetrack Dev. No se escribio nada.'
         };
     } else {
         logInfo('aplicarPresupuesto: sin UI, ejecutado por un llamador que ya tiene el lock.');
@@ -2739,7 +2739,7 @@ function _cuerpoRevertirPRE(progreso, conducida, opciones) {
         );
         if (resp !== ui.Button.YES) return { ok: false, error: 'Cancelado por el usuario. No se borro nada.' };
     } else if (conducida !== true) {
-        return { ok: false, error: 'Sin UI para confirmar. Ejecutar desde el menu Tidetrack Dev. No se borro nada.' };
+        return { ok: false, error: 'Sin UI para confirmar. Ejecutar desde el menu tidetrack Dev. No se borro nada.' };
     } else if (sinFirma && opciones.recuperarSinFirma !== true) {
         // Sin UI, la excepcion no se toma sola: el llamador headless la pide por escrito.
         return {

@@ -197,7 +197,7 @@ function migrarBdAntigua() {
                 'Faltan cotizaciones: no se escribio nada',
                 'Hay ' + fallbackCounter + ' fecha(s) sin cotizacion en la hoja de tipos de cambio.\n\n' +
                 'Primeras:\n  ' + detalle + '\n\n' +
-                'No se modifico ninguna celda. Corre primero "Tidetrack Dev > Tipos de cambio > ' +
+                'No se modifico ninguna celda. Corre primero "tidetrack Dev > Tipos de cambio > ' +
                 'Forzar carga historica" para completar el Data Lake, y volve a intentarlo.\n\n' +
                 'Antes esta funcion rellenaba los faltantes con valores fijos (1050/650/1100). Esos ' +
                 'numeros quedaban congelados en el registro y no se pueden recalcular despues.',
@@ -359,7 +359,7 @@ function recalcularTcRegistros() {
             'Faltan cotizaciones: no se escribio nada',
             'Hay ' + fallbackCounter + ' fecha(s) sin cotizacion en la hoja de tipos de cambio.\n\n' +
             'Primeras:\n  ' + detalle + '\n\n' +
-            'No se modifico ninguna celda. Corre primero "Tidetrack Dev > Tipos de cambio > ' +
+            'No se modifico ninguna celda. Corre primero "tidetrack Dev > Tipos de cambio > ' +
             'Forzar carga historica" para completar el Data Lake, y volve a intentarlo.\n\n' +
             'Antes esta funcion rellenaba los faltantes con valores fijos (1050/650/1100). Esos ' +
             'numeros quedaban congelados en el registro y no se pueden recalcular despues.',

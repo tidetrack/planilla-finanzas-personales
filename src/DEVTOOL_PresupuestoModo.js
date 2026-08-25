@@ -916,7 +916,7 @@ function estadoPresupuestoModo() {
 function aplicarPresupuestoModo() {
     let ui = null, ss = null, escritas = [], yaRevertido = false, validacionAgregada = false;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarPresupuestoModo necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarPresupuestoModo necesita UI (menu tidetrack Dev).' }; }
 
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1002,7 +1002,7 @@ function aplicarPresupuestoModo() {
             '  1. Cambiar ' + PM_MODO.celda + ' entre "' + PM_MODO.proyeccion + '" y "' + PM_MODO.historico +
             '" tiene que mover J/N/R y sus titulos, sin volver a correr este menu.\n' +
             '  2. Una fila sin cuenta mirror (I/M/Q vacia) queda en blanco, no en $0,00.\n\n' +
-            'Si algo quedo peor: revertirPresupuestoModo (menu Tidetrack Dev).';
+            'Si algo quedo peor: revertirPresupuestoModo (menu tidetrack Dev).';
 
         logSuccess('aplicarPresupuestoModo: ' + escritas.length + ' celda(s).');
         _mostrarPm('Presupuesto: selector de Modo - aplicado', detalle);

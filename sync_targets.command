@@ -177,6 +177,18 @@ clasp_pull_en() {
 # drift por prudencia — un pull fallido jamas se reporta como "sin drift").
 DRIFT_STATUS=()
 
+# --- Gate de sintaxis: ningun deploy sale con un archivo que no parsea ---
+# Apps Script parsea el proyecto ENTERO en cada ejecucion: un solo archivo roto deja la
+# planilla sin menu, sin triggers y sin custom functions. Ya paso dos veces, y la segunda se
+# commiteo y pusheo sin que nada avisara. Va ANTES del drift-check: no tiene sentido preguntar
+# si el remoto cambio cuando lo que se va a subir no arranca.
+if ! python3 "$REPO_DIR/devtools/verificar_sintaxis.py"; then
+    echo "----------------------------------------------"
+    echo "Despliegue cancelado: hay archivos que no parsean."
+    exit 5
+fi
+echo "----------------------------------------------"
+
 echo "Verificando drift contra el remoto (${#TARGET_NAMES[@]} target/s)..."
 echo "----------------------------------------------"
 

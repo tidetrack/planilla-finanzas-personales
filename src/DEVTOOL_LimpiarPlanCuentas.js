@@ -130,7 +130,7 @@ function estadoLimpiarPlan() {
 function aplicarLimpiarPlan() {
     let ui = null, ss = null, foto = null;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarLimpiarPlan necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarLimpiarPlan necesita UI (menu tidetrack Dev).' }; }
 
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();

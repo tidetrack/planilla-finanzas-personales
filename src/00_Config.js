@@ -459,7 +459,7 @@ const ERROR_MESSAGES = {
 // El menu unico mezclaba la operacion cotidiana con herramientas de desarrollo, y la funcion
 // que mas se usa -- Procesar Cargas -- estaba rotulada "[Dev]" como si fuera peligrosa.
 //   - "Tidetrack": lo que el usuario hace todos los dias. Nada que pueda romper la planilla.
-//   - "Tidetrack Dev": migraciones, fixes, diagnosticos y devtools. Todo lo que escribe
+//   - "tidetrack Dev": migraciones, fixes, diagnosticos y devtools. Todo lo que escribe
 //     estructura o formulas vive aca, agrupado por dominio y con el orden de ejecucion
 //     explicito en el nombre cuando importa (las migraciones se corren 1 -> 2 -> 3).
 //
@@ -469,8 +469,12 @@ const ERROR_MESSAGES = {
 //   { seccion: 'TEXTO' }          rotulo inerte (Apps Script no tiene encabezados de menu)
 //   { submenu: 'Nombre', items }  submenu anidado
 const MENU_CONFIG = {
-    MAIN_MENU: 'Tidetrack',
-    DEV_MENU: 'Tidetrack Dev',
+    // decision Franco 2026-08-25: "el nombre es tidetrack. todo en minusculas". Es el
+    // wordmark de la marca -- la webapp ya lo escribe asi -- y va en minuscula tambien en la
+    // barra de menu de Sheets, aunque los menus nativos esten capitalizados: justamente por
+    // eso se distingue de "Archivo" y "Editar" como algo que no es de Google.
+    MAIN_MENU: 'tidetrack',
+    DEV_MENU: 'tidetrack Dev',
 
     // --- Menu de uso diario ---
     ITEMS: [
@@ -480,7 +484,7 @@ const MENU_CONFIG = {
         // unica pantalla de estructura que funciona hoy. El shell los absorbe cuando cada vista
         // este construida, no antes: un menu que promete lo que todavia no hace es peor que uno
         // corto. @see 16_ShellService.js
-        { name: 'Abrir Tidetrack', function: 'abrirTidetrack' },
+        { name: 'Abrir tidetrack', function: 'abrirTidetrack' },
         { separator: true },
         { seccion: 'REGISTRAR' },
         { name: 'Procesar Cargas', function: 'procesarCargas' },
@@ -491,7 +495,7 @@ const MENU_CONFIG = {
         // elaboradas". Listar/corregir/borrar lo guardado en la hoja-BD "Proyeccion" (el
         // promedio historico automatico de DEVTOOL_PresupuestoBase.js y lo guardado a mano
         // desde "Presupuesto" via DEVTOOL_PresupuestoGuardar.js). Sin Alta: eso ya existe en
-        // la hoja Presupuesto + "Guardar Proyeccion" (Tidetrack Dev), y el modal lo dice.
+        // la hoja Presupuesto + "Guardar Proyeccion" (tidetrack Dev), y el modal lo dice.
         // @see DEVTOOL_ProyeccionAbm.js @see UI_AbmProyeccionElaborada.html
         { name: 'Proyecciones Elaboradas', function: 'showAbmProyeccionElaborada' },
         { separator: true },

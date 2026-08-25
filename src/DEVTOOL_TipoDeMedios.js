@@ -140,7 +140,7 @@ function aplicarTipoDeMedios() {
     const escritas = [];
     let ss = null, ui = null, fotoCatalogo = null, yaRevertido = false;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarTipoDeMedios necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarTipoDeMedios necesita UI (menu tidetrack Dev).' }; }
 
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();

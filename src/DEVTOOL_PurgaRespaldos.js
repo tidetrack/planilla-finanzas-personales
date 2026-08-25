@@ -313,7 +313,7 @@ function aplicarPurgaRespaldos() {
     try {
         ui = SpreadsheetApp.getUi();
     } catch (e) {
-        return { ok: false, error: 'aplicarPurgaRespaldos necesita UI (correr desde el menu Tidetrack Dev).' };
+        return { ok: false, error: 'aplicarPurgaRespaldos necesita UI (correr desde el menu tidetrack Dev).' };
     }
 
     try {

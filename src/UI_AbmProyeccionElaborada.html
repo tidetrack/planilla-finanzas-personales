@@ -12,7 +12,7 @@
 
   Alcance decidido (no un CRUD completo por simetria, "menos superficie bien pensada"):
     - Alta: NO EXISTE ACA. Ya existe -- se elabora en la hoja "Presupuesto" y se guarda con
-      "Guardar Proyeccion" (menu Tidetrack Dev). Reconstruir esa logica en un modal duplicaria
+      "Guardar Proyeccion" (menu tidetrack Dev). Reconstruir esa logica en un modal duplicaria
       superficie peligrosa sobre una BD de produccion; el banner de arriba del modal redirige ahi.
     - Modificacion: SOLO el monto, SOLO en filas "guardado a mano". Las filas de presupuesto base
       son un promedio automatico -- editarlas a mano las dejaria con una Nota que miente sobre su
@@ -197,7 +197,7 @@
 
     <div class="alert-info-static">
         Para cargar una proyeccion nueva usa la hoja <b>Presupuesto</b> y "Guardar Proyeccion"
-        (menu Tidetrack Dev). Esta pantalla es para lo que ya quedo escrito.
+        (menu tidetrack Dev). Esta pantalla es para lo que ya quedo escrito.
     </div>
 
     <div id="undoBanner" class="hidden">
@@ -308,7 +308,7 @@
         renderSeccion('listaGuardado', data.grupos.guardado, 'guardado', data.vacioGuardado,
             'Todavia no guardaste ninguna proyeccion a mano. Cuando uses "Guardar Proyeccion" desde la hoja Presupuesto, va a aparecer aca.');
         renderSeccion('listaBase', data.grupos.base, 'base', data.vacioBase,
-            'No hay presupuesto base cargado. Se genera desde Tidetrack Dev > Presupuesto base (desde el historial).');
+            'No hay presupuesto base cargado. Se genera desde tidetrack Dev > Presupuesto base (desde el historial).');
 
         Object.keys(abiertos).forEach(function (key) {
             var idx = key.indexOf(':');

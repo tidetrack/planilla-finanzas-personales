@@ -314,17 +314,35 @@ ok(porId.movimiento.listo === true, 'movimiento: listo');
 ok(porId.traspaso.listo === true, 'traspaso: listo');
 ok(porId.proyeccion.listo === false && porId.recurrentes.listo === false &&
    porId.conciliacion.listo === false, 'las otras tres siguen declaradas como NO listas');
-ok(/class="[^"]*b-monto/.test(HTML) && HTML.indexOf('id="trasMontoO"') !== -1,
-    'los formularios existen en el HTML');
-ok(/enviar\('registrarMovimientos'/.test(HTML) && /enviar\('registrarTraspaso'/.test(HTML),
-    'el cliente llama a los endpoints de escritura');
+ok(/class="[^"]*b-monto/.test(HTML) && /class="[^"]*t-montoO/.test(HTML),
+    'los dos formularios existen y los dos son bloques repetibles');
+ok(/enviar\('registrarMovimientos'/.test(HTML) && /enviar\('registrarTraspasos'/.test(HTML),
+    'el cliente llama a los endpoints de LOTE, no a los de a uno');
 
 seccion('16. Carga multiple: bloques repetibles con tope real');
 ok(/function agregarBloqueMovimiento/.test(HTML), 'se pueden agregar bloques');
 ok(/function quitarBloqueMovimiento/.test(HTML), 'y quitarlos');
 ok(/function renumerarBloques/.test(HTML), 'los bloques se renumeran al agregar o quitar');
-ok(/function cupoMaximo/.test(HTML) && /catalogo\.libres/.test(HTML),
-    'el tope sale de las filas LIBRES que informa el backend, no de un numero inventado');
+// El tope YA NO es la grilla: el backend procesa en tandas. Lo que queda como limite es el
+// tiempo de ejecucion, y el usuario ve cuantas tandas va a costar antes de apretar Cargar.
+ok(/function cupoMaximo/.test(HTML) && /CUPO_BLOQUES/.test(HTML),
+    'el tope es un techo de tiempo, no la altura de la grilla');
+ok(/catalogo\.filasGrilla/.test(HTML),
+    'el tamano de tanda sale del backend, no se retipea 15 en el cliente');
+ok(/tandas/.test(HTML), 'el cliente avisa en cuantas tandas se va a procesar');
+ok(typeof ctx.registrarTraspasos === 'function', 'existe el endpoint de traspasos en lote');
+ok(ctx.registrarTraspasos([]).ok === false, 'un lote de traspasos vacio se rechaza');
+ok(/function agregarBloqueTraspaso/.test(HTML) && /function quitarBloqueTraspaso/.test(HTML),
+    'los traspasos tambien se agregan y se quitan como bloques');
+ok(/list="dlCuentas"/.test(HTML) && /list="dlMedios"/.test(HTML),
+    'los desplegables son filtrables: input con datalist, no select');
+ok(/<datalist id="dlCuentas">/.test(HTML) && /<datalist id="dlMedios">/.test(HTML),
+    'los datalist son COMPARTIDOS, se pueblan una vez y cada bloque los referencia');
+ok(/aria-pressed="true"\]\[data-v="Egreso"\]/.test(HTML) &&
+   /aria-pressed="true"\]\[data-v="Ingreso"\]/.test(HTML),
+    'el Tipo elegido se pinta con el semaforo, rojo o verde');
+ok(/<h1 id="shellTitulo">tidetrack<\/h1>/.test(HTML),
+    'la marca va en minusculas');
 ok(typeof ctx._filasLibresCargas === 'function', 'el backend sabe cuantas filas quedan libres');
 ok(/heredaMedio|heredaFecha/.test(HTML),
     'un bloque nuevo hereda medio y fecha del anterior');

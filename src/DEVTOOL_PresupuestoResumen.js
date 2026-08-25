@@ -726,7 +726,7 @@ function estadoPresupuestoResumen() {
 function aplicarPresupuestoResumen() {
     let ui = null, ss = null, escritas = [], yaRevertido = false;
     try { ui = SpreadsheetApp.getUi(); }
-    catch (e) { return { ok: false, error: 'aplicarPresupuestoResumen necesita UI (menu Tidetrack Dev).' }; }
+    catch (e) { return { ok: false, error: 'aplicarPresupuestoResumen necesita UI (menu tidetrack Dev).' }; }
 
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -794,7 +794,7 @@ function aplicarPresupuestoResumen() {
             '- Invariante verificado (independiente, en JS): ' + PC_COL_MODO_AGRUPADO + PM_FILA_TOTAL + '=J' + PM_FILA_TOTAL +
             '-N' + PM_FILA_TOTAL + '-R' + PM_FILA_TOTAL + ', ' + PC_COL_PROYECTAR_AGRUPADO + PM_FILA_TOTAL + '=K' + PM_FILA_TOTAL +
             '-O' + PM_FILA_TOTAL + '-S' + PM_FILA_TOTAL + '\n\n' +
-            'Si algo quedo peor: revertirPresupuestoResumen (menu Tidetrack Dev).';
+            'Si algo quedo peor: revertirPresupuestoResumen (menu tidetrack Dev).';
 
         logSuccess('aplicarPresupuestoResumen: ' + escritas.length + ' celda(s).');
         _mostrarPc('Presupuesto: categorias y resumen - aplicado', detalle);

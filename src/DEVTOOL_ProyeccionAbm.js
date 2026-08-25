@@ -1,7 +1,7 @@
 /**
  * DEVTOOL_ProyeccionAbm.js
  * Capa de datos del ABM de "proyecciones elaboradas": ver, corregir y borrar lo que ya esta
- * guardado en la hoja-BD "Proyeccion", desde un modal del menu Tidetrack (no desde Tidetrack Dev).
+ * guardado en la hoja-BD "Proyeccion", desde un modal del menu Tidetrack (no desde tidetrack Dev).
  *
  * [CONCEPTO DE NEGOCIO]
  * Franco, textual (encargo relayado por appscript-ui, coordinando la feature completa UI+backend):
@@ -26,7 +26,7 @@
  * DECISION 1 -- ALTA: NO EXISTE EN ESTE ABM.
  * El alta ya existe: se elabora en la hoja "Presupuesto" (tres etapas, DEVTOOL_PresupuestoModo.js
  * / DEVTOOL_PresupuestoResumen.js / DEVTOOL_PresupuestoGuardar.js) y se guarda con
- * `aplicarGuardarProyeccion()` (hoy en el menu Tidetrack Dev; Franco: "luego va a tener su
+ * `aplicarGuardarProyeccion()` (hoy en el menu tidetrack Dev; Franco: "luego va a tener su
  * boton"). Reconstruir esa logica en un modal -- leer K/O/S, congelar cotizaciones via las custom
  * functions, verificar el invariante contra W8 -- duplicaria superficie peligrosa de escritura
  * sobre una BD de produccion, con dos caminos que podrian divergir con el tiempo. Este ABM asume
