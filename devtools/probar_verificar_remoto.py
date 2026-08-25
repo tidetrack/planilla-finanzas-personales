@@ -48,6 +48,13 @@ def correr(dir_pull):
     return r.returncode, r.stdout.strip()
 
 
+def correr_con_error(dir_pull):
+    """Devuelve (exit_code, stderr). El diagnostico del verificador va a stderr."""
+    r = subprocess.run([sys.executable, VERIF, dir_pull],
+                       capture_output=True, text=True, cwd=RAIZ)
+    return r.returncode, r.stderr.strip()
+
+
 def arbol_de(commit):
     """Materializa el src/ de un commit real en un directorio temporal."""
     d = tempfile.mkdtemp()
@@ -149,6 +156,45 @@ ok('--verificado' in sync, 'existe el flag --verificado')
 ok('exit 4' in sync,
    '--verificado ABORTA (exit 4) si algun target no verifica, en vez de seguir de largo')
 
-print('\n' + ('TODO EN VERDE (7 secciones)' if fallas == 0
+seccion('8. Si el mismo src/ vive en varios commits, gana el que ESTA en mi historia')
+# Un commit que solo toca devtools/ o docs/ deja el src/ IDENTICO al anterior, asi que
+# varios commits comparten arbol -- y algunos son de la otra rama. Quedarse con el primero
+# que coincida y preguntarle si es ancestro declara "la produccion va adelante" cuando el
+# mismo contenido tambien esta en la propia historia, y bloquea un deploy legitimo. Paso de
+# verdad el 2026-08-25: el src/ del HEAD propio no se reconocia porque un commit ajeno con
+# el mismo arbol aparecia antes en `git log --all`.
+d = arbol_de('HEAD')
+try:
+    rc, salida = correr(d)
+    ok(rc == 0, 'el src/ del propio HEAD se reconoce (exit 0), no importa cuantos commits '
+                'compartan ese arbol')
+    if rc == 0 and salida:
+        sha = salida.split()[0]
+        es_ancestro = subprocess.run(['git', 'merge-base', '--is-ancestor', sha, 'HEAD'],
+                                     cwd=RAIZ, capture_output=True).returncode == 0
+        ok(es_ancestro, '  y el commit que devuelve ES ancestro del HEAD ("%s")' % salida[:60])
+    else:
+        ok(False, '  y el commit que devuelve ES ancestro del HEAD')
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+seccion('9. Cuando NADA coincide, el diagnostico dice a que se parece y que comando corre')
+# Bloquear sin decir que hacer manda a resolverlo a ojo, que es justo lo que este script
+# existe para evitar. El mensaje generico "tiene contenido propio" fue un callejon sin
+# salida el 2026-08-25, cuando la produccion era un commit de la otra rama con UN archivo
+# de diferencia y no habia forma de saberlo sin comparar a mano.
+d = arbol_de('HEAD')
+try:
+    with open(os.path.join(d, '01_Version.js'), 'a', encoding='utf-8') as f:
+        f.write('\n// editado a mano en el editor de Apps Script\n')
+    rc, err = correr_con_error(d)
+    ok(rc == 1, 'un remoto que no coincide con nada da 1')
+    ok('difiere en 1 archivo' in err, '  y dice EN CUANTOS archivos difiere')
+    ok('01_Version.js' in err, '  y nombra el archivo que difiere')
+    ok('git merge' in err, '  y da el comando exacto que destraba')
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+print('\n' + ('TODO EN VERDE (9 secciones)' if fallas == 0
               else '%d PRUEBA(S) FALLARON' % fallas))
 sys.exit(0 if fallas == 0 else 1)

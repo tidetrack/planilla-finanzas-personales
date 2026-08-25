@@ -12,6 +12,51 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## Herramientas - el drift-check deja de ser un callejon sin salida (2026-08-25)
+
+Sin cambio en `src/`: la version desplegada sigue siendo v0.55.1. Toca `verificar_remoto.py`,
+su banco y `sync_targets.command`.
+
+**Un guard que bloquea sin decir que hacer manda a resolverlo a ojo**, que es justo lo que el
+drift-check existe para evitar. Cuando el remoto no era reconocido, el mensaje era *"tiene
+contenido propio"* y ahi terminaba. Hoy eso fue un callejon real: la produccion era exactamente
+un commit de la otra rama con **un** archivo de diferencia, y no habia forma de saberlo sin
+bajar el remoto a mano y comparar archivo por archivo.
+
+Ahora, cuando no hay coincidencia exacta, el verificador busca el commit **mas parecido**, dice
+en cuantos archivos difiere y cuales, en que ramas vive, y escribe el comando que destraba
+(`git fetch --all && git merge <rama>`). Lo mismo cuando el commit se reconoce pero va adelante.
+
+**Un defecto que encontro el propio banco.** Varios commits comparten el mismo `src/` — uno que
+solo toca `devtools/` o `docs/` no cambia el arbol que se despliega. El verificador se quedaba
+con el primero que coincidiera y le preguntaba si era ancestro; si ese primero resultaba ser de
+la otra rama, declaraba *"la produccion va adelante"* aunque el mismo contenido estuviera
+tambien en la propia historia — **bloqueando un deploy legitimo**. La pregunta correcta es si
+ese contenido esta en algun lugar de mi historia, no si el primer commit que aparecio lo esta.
+
+**Y el diagnostico se perdia igual**, porque `sync_targets.command` mandaba el stderr del
+verificador a `/dev/null`: el mensaje mas util se descartaba justo cuando mas falta hacia.
+
+Dos secciones nuevas en el banco (8 y 9), que cubren exactamente estas dos conductas.
+
+### Coordinacion entre las dos sesiones
+
+Dos sesiones de Claude trabajan sobre el mismo repo y la misma planilla productiva, y ya se
+habian pisado. Quedaron acordadas dos reglas, mas un gate concreto que aporto la otra sesion:
+
+1. Nadie deploya sin commitear y pushear primero, para que lo desplegado sea siempre un commit
+   identificable y el otro pueda mergearlo mecanicamente.
+2. Antes de cada deploy, `git fetch` y merge de la rama del otro. Nunca `--force`, nunca saltear
+   el guard.
+
+```bash
+git log --oneline HEAD..origin/<rama-del-otro> -- src/   # vacio = no le debo nada
+git merge-base --is-ancestor <commit-desplegado> HEAD    # verdadero = el push solo agrega
+```
+
 ---
 
 ## v0.55.1 - El merge dejo dos patch, y tres numeros de version distintos (2026-08-25)
