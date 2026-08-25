@@ -3,6 +3,49 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.57.0 - Proyecciones Elaboradas: ping antes del listado, para aislar canal de respuesta.
+ * - Medido en produccion despues de v0.56.0: los 3 reintentos con espera creciente de
+ *   listarPeriodosProyeccion() FALLARON TODOS ("los 3 intentos fallaron (10764 ms)"). Ese dato
+ *   refuta que fuera una demora fija de negociacion del canal que un reintento alcanzara a cubrir,
+ *   pero deja abiertas DOS hipotesis que un solo dato no separa: (a) el canal google.script.run de
+ *   este modal esta roto para CUALQUIER llamada, o (b) el canal esta bien y lo que falla es
+ *   especifico de listarPeriodosProyeccion() -- su tamanio, algo en su respuesta que no serializa.
+ *   Confundirlas lleva a arreglar lo que no es: reintentar mas no arregla (a), y tocar el canal
+ *   (mover el disparo, esperar un gesto) no arregla (b).
+ * + pingProyeccionAbm() (DEVTOOL_ProyeccionAbm.js, nueva): NO lee nada -- no toca SpreadsheetApp
+ *   ni PropertiesService, devuelve siempre el mismo objeto minimo (un string y un numero). El
+ *   modal la llama PRIMERO, con el MISMO backoff de 3 intentos (0/600/1800ms) que ya tenia el
+ *   listado, para comparar manzanas con manzanas. Si el ping TAMBIEN se agota, el canal esta roto
+ *   para cualquier llamada y NO se intenta el listado -- se ahorran otros ~10s de espera al pedo,
+ *   porque el diagnostico ya es concluyente. Si el ping anda, recien ahi arranca el ciclo de
+ *   listarPeriodosProyeccion(), sin tocar su logica de reintentos existente.
+ * + La linea de diagnostico del pie ahora reporta las DOS mediciones -- ejemplos reales:
+ *   "Canal: ping OK (123 ms) - listado OK, intento 1/3 (89 ms)",
+ *   "Canal: ping OK (140 ms) - listado FALLO (10764 ms)",
+ *   "Canal: ping FALLO (10764 ms)". El historial de localStorage (ultimas 8 aperturas) guarda un
+ *   codigo compacto por apertura -- PX (ping agotado), P<n>L<n> (ambos ok), P<n>LX (ping ok,
+ *   listado agotado) -- y LS_KEY_DIAG sube a "tt_diagAbmProyeccion_v2" porque la forma de la
+ *   entrada cambio (antes {intento,ms,error} suelto, ahora {ping,listado}).
+ * + DEVTOOL_DIAG_PermisoProyeccionAbm.js suma el paso 5b: loguea
+ *   JSON.stringify(listarPeriodosProyeccion()).length invocada DIRECTO (el mismo objeto que
+ *   google.script.run tendria que serializar si viajara por el canal, medido gratis porque
+ *   invocada directo nunca cruza ese canal). Motivo del paso: revisando armarGrupo() (la funcion
+ *   interna que arma cada grupo del listado) se confirmo que `crudasFilas` -- el array de filas
+ *   crudas con fecha/monto de cada mes, el sospechoso textual del encargo -- se usa SOLO para
+ *   calcular `monedas` y `totales`, pero NUNCA se copia al objeto `grupo` que la funcion retorna.
+ *   Una medicion local (mock con la MISMA forma que el DIAG midio en produccion: 370 filas
+ *   repartidas en 7 grupos base, 0 guardado) dio un payload de ~5KB / 123 nodos -- del mismo orden
+ *   que el caso exitoso que midio el Shell en otra sesion (1723 bytes / 85 nodos, factor x3), muy
+ *   lejos de los "cientos de KB" o "dos-tres ordenes de magnitud" que sugeria la hipotesis del
+ *   tamanio. El bisect sugerido ("la misma estructura pero sin crudasFilas") no aplica: el campo
+ *   ya no estaba en la respuesta, asi que dio el MISMO payload byte por byte.
+ * ! Con este hallazgo la hipotesis "la respuesta es demasiado grande" queda debilitada
+ *   especificamente para listarPeriodosProyeccion() (no hay crudasFilas que trimear ahi). El
+ *   paso 5b mide el numero REAL en produccion antes de descartar nada del todo -- la medicion
+ *   local es fuerte pero no reemplaza medir sobre los datos reales. El ping sigue siendo la forma
+ *   correcta de separar "canal roto entero" de "problema de contenido, no de tamanio" si el
+ *   numero real tambien resulta chico.
+ *
  * [2026-08-25] v0.56.0 - Proyecciones Elaboradas: reintentos ante el PERMISSION_DENIED fantasma al abrir.
  * - El listado del ABM "Proyecciones Elaboradas" (UI_AbmProyeccionElaborada.html) fallaba SIEMPRE
  *   al abrir con "Se produjo un error en el servidor al leer desde el almacenamiento. Codigo de

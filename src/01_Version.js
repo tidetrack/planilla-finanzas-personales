@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 56,
+ minor: 57,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.56.0 - Proyecciones Elaboradas: reintentos ante el PERMISSION_DENIED fantasma al abrir',
+ releaseName: 'v0.57.0 - Proyecciones Elaboradas: ping antes del listado, para aislar canal de respuesta',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.57.0 (2026-08-25) - Proyecciones Elaboradas: ping antes del listado, para aislar canal de respuesta
++ Medido en produccion despues de v0.56.0: los 3 reintentos con espera creciente de listarPeriodosProyeccion() FALLARON TODOS (10764 ms) -- refuta que fuera una demora fija de negociacion del canal, pero deja abiertas dos hipotesis sin separar: el canal de este modal esta roto para cualquier llamada, o el canal esta bien y el problema es especifico de esa funcion/su respuesta.
++ pingProyeccionAbm() (DEVTOOL_ProyeccionAbm.js, nueva): no lee nada, no toca SpreadsheetApp ni PropertiesService, devuelve siempre el mismo objeto minimo (string + numero). El modal la llama PRIMERO, con el mismo backoff de 3 intentos. Si se agota, el canal esta roto para cualquier llamada y no se intenta el listado (ahorra ~10s de espera al pedo); si anda, recien ahi se dispara el ciclo de listarPeriodosProyeccion(), sin tocar su logica de reintentos.
++ La linea de diagnostico del pie ahora reporta las DOS mediciones ("Canal: ping OK (123 ms) - listado FALLO (10764 ms)" / "Canal: ping FALLO (10764 ms)"), y el historial de localStorage guarda un codigo compacto por apertura (PX / P<n>L<n> / P<n>LX). LS_KEY_DIAG sube a v2 por el cambio de forma de la entrada.
++ DEVTOOL_DIAG_PermisoProyeccionAbm.js suma el paso 5b: loguea JSON.stringify(listarPeriodosProyeccion()).length invocada directo (el mismo objeto que google.script.run tendria que serializar, sin cruzar el canal). Motivo: revisando armarGrupo() se confirmo que crudasFilas NUNCA sale de la funcion -- se usa solo para calcular monedas/totales, el grupo retornado no la incluye. Una medicion local con la misma forma real (370 filas, 7 grupos base, 0 guardado) dio ~5KB / 123 nodos, del mismo orden que el caso exitoso del Shell (1723 bytes / 85 nodos) -- lejos de los "cientos de KB" que la hipotesis del tamanio sugeria. El paso 5b mide el numero REAL en produccion antes de descartar nada.
+! Con ese hallazgo, la hipotesis de "la respuesta es demasiado grande" queda debilitada para listarPeriodosProyeccion() especificamente (no hay crudasFilas que trimear: el bisect "misma forma sin crudasFilas" da exactamente el mismo payload, porque el campo ya no estaba). El ping sigue siendo la forma correcta de confirmar si el canal esta roto entero o si el problema esta en el contenido de la respuesta (no en su tamanio).
+
 v0.56.0 (2026-08-25) - Proyecciones Elaboradas: reintentos ante el PERMISSION_DENIED fantasma al abrir
 - El listado de "Proyecciones Elaboradas" (UI_AbmProyeccionElaborada.html) fallaba SIEMPRE al abrir con "Se produjo un error en el servidor al leer desde el almacenamiento. Codigo de error PERMISSION_DENIED", pese a que el camino de lectura es SpreadsheetApp puro (cero PropertiesService) y los mismos datos se leen bien desde el menu (DEVTOOL_DIAG_PermisoProyeccionAbm.js ya habia descartado dato/funcion rotos). Se corrige con 3 reintentos de listarPeriodosProyeccion() con espera creciente (inmediato, ~600ms, ~1800ms) antes de mostrar error -- la carga sigue siendo automatica, no se movio detras de un boton.
 + Boton "Reintentar" en el banner de error para cuando los 3 intentos fallan: antes el usuario quedaba en un callejon sin salida (solo recargar el modal entero cerrandolo y abriendolo de nuevo).

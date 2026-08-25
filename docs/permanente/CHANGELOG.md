@@ -7,9 +7,37 @@ Historial de versiones y cambios significativos del proyecto.
 > Nota: el historial canonico y completo vive en `src/ZZ_Changelog.js`.
 > Este archivo refleja los releases principales para lectura humana rapida.
 
+---
 
+## Proyecciones Elaboradas - ping antes del listado, para aislar canal de respuesta (v0.57.0, 2026-08-25)
 
+Continuacion de v0.56.0: los 3 reintentos con espera creciente que ese release le agrego a
+`listarPeriodosProyeccion()` **fallaron los tres, medido en produccion** ("los 3 intentos
+fallaron (10764 ms)"). Ese dato refuta que fuera una demora fija de negociacion del canal, pero
+deja abiertas dos hipotesis sin separar: el canal `google.script.run` de este modal esta roto
+para cualquier llamada, o el canal esta bien y el problema es especifico de esa funcion o de su
+respuesta. Confundirlas lleva a arreglar lo que no es.
 
+**El experimento decisivo.** `pingProyeccionAbm()` (`DEVTOOL_ProyeccionAbm.js`, nueva) no lee
+nada -- no toca `SpreadsheetApp` ni `PropertiesService`, siempre devuelve el mismo objeto minimo
+(un string y un numero). El modal la llama PRIMERO, con el mismo backoff de 3 intentos que ya
+tenia el listado. Si el ping tambien se agota, el canal esta roto para cualquier llamada y no se
+intenta el listado (se ahorran otros ~10s de espera al pedo, porque el diagnostico ya es
+concluyente). Si el ping anda, recien ahi arranca el ciclo de `listarPeriodosProyeccion()`. La
+linea de diagnostico del pie del modal ahora muestra las dos mediciones (`Canal: ping OK (123 ms)
+- listado FALLO (10764 ms)` / `Canal: ping FALLO (10764 ms)`), y el historial de `localStorage`
+(ultimas 8 aperturas) guarda un codigo compacto por apertura.
+
+**Un hallazgo que cambia el peso de la hipotesis del tamanio.** `DEVTOOL_DIAG_PermisoProyeccionAbm.js`
+suma un paso que loguea `JSON.stringify(listarPeriodosProyeccion()).length` invocada directo (el
+mismo objeto que viajaria por el canal, medido gratis). Revisando el codigo se confirmo que
+`crudasFilas` -- el array de filas con fecha y montos que era el sospechoso textual del encargo --
+se usa solo para calcular `monedas`/`totales` dentro de la funcion, pero **nunca sale** en el
+objeto `grupo` que `listarPeriodosProyeccion()` retorna. Una medicion local con la misma forma que
+midio el DIAG en produccion (370 filas, 7 grupos base, 0 guardado) dio un payload de ~5KB / 123
+nodos -- del mismo orden que el caso exitoso que otra sesion midio para el Shell (1723 bytes / 85
+nodos), lejos de los "cientos de KB" que la hipotesis del tamanio sugeria. El paso nuevo del DIAG
+mide el numero REAL en produccion antes de dar esto por cerrado.
 
 
 
