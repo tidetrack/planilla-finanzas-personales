@@ -3,6 +3,39 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.48.1 - El shell reacciona: el scriptlet escapaba el JSON.
+ * - SINTOMA, reportado por Franco: el shell abria pero NO REACCIONABA. Ningun click hacia
+ *   nada. "Recargo la pagina y no ocurre nada."
+ * - CAUSA: el JSON de las vistas se inyectaba con el scriptlet que hace ESCAPADO CONTEXTUAL
+ *   de HTML, el que convierte cada comilla en &quot;. Adentro de un <script>, en posicion de
+ *   valor, eso es un error de sintaxis -- y un error de sintaxis MATA EL ARCHIVO ENTERO: no se
+ *   define el router, no se define ningun onclick, no se apaga ningun loader. Para inyectar un
+ *   valor en JS va la otra forma, la que no escapa.
+ * - POR QUE PYMES NUNCA LO PISO: su shell solo inyecta un string simple ENTRE COMILLAS
+ *   (VISTA_INICIAL). Ahi el escapado es inofensivo. El problema aparece recien cuando se
+ *   inyecta un objeto crudo, que es lo que hace falta para tener UNA sola lista de vistas.
+ * - ESTE RELEASE CORRIGE EL DIAGNOSTICO DE LA v0.47.1. Ahi se afirmo que los 30 segundos con
+ *   el spinner girando eran porque el DOMContentLoaded pedia el catalogo detras de un overlay.
+ *   ERA FALSO. El script nunca corria, y el loader de esa version nacia visible: no tenia
+ *   quien lo apagara. El sintoma se parecia tanto a una llamada lenta que se acepto la
+ *   explicacion sin probarla, que es exactamente lo que este repo tiene prohibido hacer.
+ *   LO QUE SI QUEDO BIEN de esa version, y se conserva: el shell abre sin pedirle nada al
+ *   servidor, el catalogo es perezoso y hay tope de espera. Buena arquitectura, diagnostico
+ *   equivocado.
+ * - verificar_modales.py suma el CHEQUEO 5, y existe porque este bug se colo justo por el
+ *   PUNTO CIEGO del chequeo 2: los scriptlets se reemplazan por un literal antes de correr
+ *   node --check, asi que el parser nunca ve el escapado y un archivo roto pasaba en verde.
+ *   Ahora se marca todo scriptlet que escapa, dentro de un <script>, en posicion de valor --
+ *   la regla es que ahi adentro solo es seguro DENTRO de un string literal. Probado en las dos
+ *   direcciones: verde sobre el codigo corregido, y senala vistasJson por su nombre sobre el
+ *   codigo roto.
+ * - Y NO SE ESCRIBEN LOS DELIMITADORES LITERALES NI SIQUIERA EN UN COMENTARIO: la plantilla se
+ *   procesa ANTES que el JS, asi que un scriptlet dentro de un comentario tambien se evalua.
+ *   El chequeo 5 lo detecto sobre el comentario que se habia escrito para explicar el bug, que
+ *   por eso mismo era peligroso.
+ * - Banco del shell, seccion 15: exige que el JSON use la forma que no escapa y que el pie use
+ *   la que SI escapa, porque va a texto HTML y ahi escapar es lo correcto.
+ *
  * [2026-08-25] v0.48.0 - Movimiento y Traspaso operan, y el shell deja de ser cuadrado.
  * - MOVIMIENTO NUEVO. Siembra UNA fila en la grilla de Cargas y llama a procesarCargas. NO
  *   escribe en "Registros" directo, y es deliberado: ese es el unico lugar que congela las

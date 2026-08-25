@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 48,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.48.0 - Movimiento y Traspaso, y el shell deja de ser cuadrado',
+ releaseName: 'v0.48.1 - El shell reacciona: el scriptlet escapaba el JSON',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.48.1 (2026-08-25) - El shell reacciona: el scriptlet escapaba el JSON
+! SINTOMA: el shell abria pero NO REACCIONABA. Ningun click hacia nada. Franco: "recargo la pagina y no ocurre nada".
+- CAUSA: el JSON de las vistas se inyectaba con el scriptlet que hace ESCAPADO CONTEXTUAL de HTML, que convierte cada comilla en &quot;. Adentro de un <script> eso es un error de sintaxis, y un error de sintaxis MATA EL ARCHIVO ENTERO: no se define el router, no se define ningun onclick, no se apaga ningun loader. La forma correcta para inyectar un valor en JS es la que NO escapa. pymes nunca lo piso porque solo inyecta un string simple entre comillas, donde el escapado es inofensivo.
+! CORRIGE EL DIAGNOSTICO DE LA v0.47.1. Ahi se dijo que los 30 segundos con el spinner girando eran por pedir el catalogo al abrir detras de un overlay. ERA FALSO: el script nunca corria, asi que el loader -- que en esa version nacia visible -- no tenia quien lo apagara. El sintoma se parecia tanto a una llamada lenta que se acepto sin probarlo. Lo que SI quedo bien de esa version: el shell abre sin pedirle nada al servidor y el catalogo es perezoso. Buena arquitectura, diagnostico equivocado.
++ verificar_modales.py suma el CHEQUEO 5, y existe porque este bug se colo justo por el PUNTO CIEGO del chequeo 2: los scriptlets se reemplazan por un literal antes de node --check, asi que el parser nunca ve el escapado y el archivo roto pasaba en verde. Ahora se marca todo scriptlet que escapa, dentro de un <script>, en posicion de valor. Probado en las dos direcciones.
++ NO SE ESCRIBEN LOS DELIMITADORES LITERALES NI EN UN COMENTARIO: la plantilla se procesa ANTES que el JS, asi que un scriptlet dentro de un comentario tambien se evalua. El chequeo 5 lo detecto sobre el comentario que explicaba el bug, que era genuinamente peligroso.
++ Banco del shell, seccion 15: exige que el JSON use la forma que no escapa y que el pie use la que SI escapa, porque va a texto HTML. Los catorce bancos en verde.
 v0.48.0 (2026-08-25) - Movimiento y Traspaso, y el shell deja de ser cuadrado
 + MOVIMIENTO NUEVO opera. Siembra una fila en la grilla de Cargas y llama a procesarCargas: NO escribe en Registros directo, porque ese es el unico lugar que congela las cuatro cotizaciones, persiste las nuevas al Data Lake, deduce el tipo de cuenta y reordena el ledger.
 + TRASPASO NUEVO opera, y escribe LAS DOS PATAS JUNTAS en una sola llamada a setValues: media operacion hace desaparecer plata del sistema. La moneda de cada caja la decide el catalogo, no el operador. Si cruzan monedas pide los dos montos y deja el TC de la operacion escrito en la nota -- el ledger congela el TC OFICIAL, que casi nunca es al que se opero, asi que ese dato se perderia. Avisa cuando el traspaso capitaliza.

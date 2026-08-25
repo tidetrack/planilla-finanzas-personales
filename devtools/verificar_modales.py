@@ -26,6 +26,14 @@ deployar, de forma estatica. Tres chequeos, cada uno por un modo de falla real:
   4. HANDLERS INLINE HUERFANOS -- cada onclick/onchange/oninput del HTML tiene que
      apuntar a una funcion que exista en el script. Un boton que llama a una funcion
      que no se escribio no da error visible: no hace nada, que es peor.
+  5. SCRIPTLET ESCAPADO DENTRO DE <script> -- <?= x ?> hace escapado contextual de
+     HTML: convierte cada comilla en &quot;. Para texto que va al HTML eso es lo
+     correcto; adentro de un <script>, en posicion de VALOR, es un error de sintaxis
+     que mata el archivo entero -- no corre el router, no corre ningun onclick, no se
+     apaga ningun loader. Ahi va <?!= x ?>. Este chequeo existe porque el bug de
+     v0.48.0 se colo justo por el punto ciego del chequeo 2: los scriptlets se
+     reemplazan por un literal antes de node --check, asi que el parser nunca ve el
+     escapado y siempre da verde.
 
 Portado de planilla-pymes (legacy/devtools/verificar_modales.py), Fase 5 del arnes.
 @see docs/permanente/ARNES_TIDETRACK.md seccion 7
@@ -52,6 +60,8 @@ RE_SCRIPTLET = re.compile(r'<\?[^>]*\?>')
 RE_INICIO_RUN = re.compile(r'google\.script\.run\b')
 # onclick="foo()" / onchange="foo(1,2)" -- se captura el nombre, no los argumentos.
 RE_HANDLER_INLINE = re.compile(r'\b(on[a-z]+)\s*=\s*"\s*([A-Za-z_$][\w$]*)\s*\(')
+# Scriptlets de HtmlService: se distingue la forma que ESCAPA (<?= ?>) de la que no (<?!= ?>).
+RE_SCRIPTLET_ESCAPA = re.compile(r'<\?=\s*(.*?)\s*\?>', re.S)
 # Lo que puede aparecer en un handler sin estar declarado en el script del archivo.
 GLOBALES_DEL_NAVEGADOR = {'alert', 'confirm', 'print', 'open', 'close', 'focus', 'blur'}
 
@@ -201,6 +211,21 @@ def verificar(ruta):
         if nombre and nombre not in declaradas and nombre not in GLOBALES_DEL_NAVEGADOR:
             problemas.append("%s=\"%s(...)\" llama a una funcion que no existe en el script"
                              % (atributo, nombre))
+
+    # --- 5. scriptlets que escapan, dentro de un <script>, en posicion de valor ---
+    # Regla: adentro de <script>, <?= ?> solo es seguro DENTRO de un string literal. En
+    # cualquier otra posicion el &quot; que introduce rompe el parseo del archivo entero.
+    for m_script in RE_SCRIPT.finditer(texto):
+        cuerpo = m_script.group(1)
+        for m in RE_SCRIPTLET_ESCAPA.finditer(cuerpo):
+            antes = cuerpo[m.start() - 1] if m.start() > 0 else ''
+            despues = cuerpo[m.end()] if m.end() < len(cuerpo) else ''
+            entre_comillas = antes in ('"', "'", '`') and despues in ('"', "'", '`')
+            if not entre_comillas:
+                problemas.append(
+                    '<?= %s ?> escapa comillas y esta dentro de un <script> en posicion de '
+                    'valor: rompe el archivo entero. Va <?!= %s ?>.'
+                    % (m.group(1), m.group(1)))
 
     # --- 4. cadenas google.script.run sin withFailureHandler ---
     # Solo se reporta la cadena cuyo exito APAGA algo (un loader, un disabled): si el

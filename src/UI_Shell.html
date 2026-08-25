@@ -345,10 +345,20 @@ body { padding: 0; background: var(--bg-secondary); }
 <script>
 // La lista de vistas y las dimensiones vienen INYECTADAS del backend. No hay una segunda
 // lista en el cliente que pueda desincronizarse: es la misma SHELL_VISTAS de 16_ShellService.
-var VISTAS = <?= vistasJson ?>;
+// OJO CON EL SCRIPTLET: para inyectar JSON va la forma con signo de admiracion, la que NO
+// escapa. La otra hace escapado contextual de HTML, o sea que convierte cada comilla en
+// &quot;, y adentro de un <script> eso es un error de sintaxis. Un error de sintaxis mata el
+// archivo ENTERO: no corre el router, no corre ningun onclick, no se apaga ningun loader.
+// Costo dos diagnosticos equivocados (v0.47.0 y v0.47.1) antes de encontrarse, porque el
+// sintoma -- "abre pero no reacciona" -- se parece a una llamada lenta.
+// La forma que escapa SI es la correcta para texto que va al HTML (el pie) y para un valor
+// simple entre comillas, como vistaInicial.
+// Y no se escriben los delimitadores literales ni siquiera en un comentario: la plantilla se
+// procesa ANTES que el JS, asi que un scriptlet dentro de un comentario tambien se evalua.
+var VISTAS = <?!= vistasJson ?>;
 var VISTA_INICIAL = '<?= vistaInicial ?>';
 // Los tipos que componen la riqueza, servidos por el backend: no se retipean aca.
-var TIPOS_RIQUEZA_CLIENTE = <?= tiposRiquezaJson ?>;
+var TIPOS_RIQUEZA_CLIENTE = <?!= tiposRiquezaJson ?>;
 
 var catalogo = null;
 

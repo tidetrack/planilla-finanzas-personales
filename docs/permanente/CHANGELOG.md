@@ -9,6 +9,38 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.48.1 - El shell reacciona: el scriptlet escapaba el JSON (2026-08-25)
+
+**Sintoma**, reportado por Franco: el shell abria pero **no reaccionaba**. Ningun click hacia
+nada. *"Recargo la pagina y no ocurre nada."*
+
+**Causa.** El JSON de las vistas se inyectaba con el scriptlet que hace **escapado contextual de
+HTML**, el que convierte cada comilla en `&quot;`. Adentro de un `<script>`, en posicion de valor,
+eso es un error de sintaxis — y un error de sintaxis **mata el archivo entero**: no se define el
+router, no se define ningun `onclick`, no se apaga ningun loader. Para inyectar un valor en JS va
+la otra forma, la que no escapa.
+
+pymes nunca lo piso porque su shell solo inyecta un string simple **entre comillas**, donde el
+escapado es inofensivo. El problema aparece recien al inyectar un objeto crudo, que es lo que hace
+falta para tener una sola lista de vistas.
+
+**Este release corrige el diagnostico de la v0.47.1.** Ahi se afirmo que los 30 segundos con el
+spinner girando eran porque el `DOMContentLoaded` pedia el catalogo detras de un overlay. **Era
+falso**: el script nunca corria, y el loader de esa version nacia visible, asi que no tenia quien
+lo apagara. El sintoma se parecia tanto a una llamada lenta que se acepto la explicacion sin
+probarla. Lo que **si** quedo bien de esa version, y se conserva: el shell abre sin pedirle nada al
+servidor, el catalogo es perezoso y hay tope de espera. Buena arquitectura, diagnostico equivocado.
+
+**`verificar_modales.py` suma el chequeo 5**, y existe porque este bug se colo justo por el **punto
+ciego del chequeo 2**: los scriptlets se reemplazan por un literal antes de `node --check`, asi que
+el parser nunca ve el escapado y un archivo roto pasaba en verde.
+
+Y **no se escriben los delimitadores literales ni siquiera en un comentario**: la plantilla se
+procesa antes que el JS, asi que un scriptlet dentro de un comentario tambien se evalua. El
+chequeo 5 lo detecto sobre el comentario escrito para explicar el bug.
+
+---
+
 ## v0.48.0 - Movimiento y Traspaso operan, y el shell deja de ser cuadrado (2026-08-25)
 
 **Movimiento nuevo** siembra una fila en la grilla de Cargas y llama a `procesarCargas`. No

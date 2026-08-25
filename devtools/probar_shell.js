@@ -310,8 +310,21 @@ ok(/enviar\('registrarMovimiento'/.test(HTML) && /enviar\('registrarTraspaso'/.t
     'el cliente llama a los endpoints de escritura');
 ok(/b\.disabled = v/.test(HTML),
     'los botones se deshabilitan mientras viaja: dos clicks serian dos movimientos en el ledger');
-ok(HTML.indexOf('<?= tiposRiquezaJson ?>') !== -1,
+ok(HTML.indexOf('tiposRiquezaJson') !== -1,
     'TIPOS_RIQUEZA viaja del backend al cliente, no se retipea');
 
-console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (14 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+seccion('15. El JSON se inyecta con el scriptlet que NO escapa');
+// El bug de la v0.48.0: se inyecto con la forma que hace escapado contextual, que convierte
+// cada comilla en &quot;. Adentro de un <script> eso es un error de sintaxis, y un error de
+// sintaxis mata el archivo entero -- no corre el router, no corre ningun onclick. El sintoma
+// ("abre pero no reacciona") se parece tanto a una llamada lenta que costo dos diagnosticos.
+const escapa = (v) => new RegExp('<\\?=\\s*' + v + '\\s*\\?>').test(HTML);
+const noEscapa = (v) => new RegExp('<\\?!=\\s*' + v + '\\s*\\?>').test(HTML);
+ok(noEscapa('vistasJson') && !escapa('vistasJson'), 'vistasJson usa la forma que NO escapa');
+ok(noEscapa('tiposRiquezaJson') && !escapa('tiposRiquezaJson'),
+    'tiposRiquezaJson tambien');
+ok(escapa('planilla') && escapa('version'),
+    'el pie SI usa la que escapa: va a texto HTML, y ahi escapar es lo correcto');
+
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (15 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
 process.exit(fallas === 0 ? 0 : 1);
