@@ -9,6 +9,41 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.51.2 - Presupuesto: sembrar Monto a Proyectar ahora pisa, con confirmacion (2026-08-25)
+
+Fix de diseno sobre v0.51.0/v0.51.1 (todavia sin desplegar). Sintoma textual de Franco: "Si
+quiero volver a sembrar otro mes, no me deja porque ya hay datos. Esta funcion deberia poder
+sembrar valores sin problemas." El analisis resulto correcto: `K/O/S` ("Monto a Proyectar") no
+son por mes -- son las MISMAS celdas de la hoja "Presupuesto" para cualquier periodo que se elija
+en `J2/J3` (a diferencia de `J/N/R`, que si son dinamicas y siguen al selector). La regla vieja
+("nunca pisar una celda con contenido") era estructuralmente equivocada, no solo prudente de mas:
+volvia la funcion util una sola vez en la vida, porque no hay forma de distinguir desde la celda
+"esto lo decidio Franco para este mes" de "esto quedo sembrado del mes pasado".
+
+Conducta nueva: `aplicarPresupuestoSembrar()` siembra TODAS las filas con cuenta y una fuente
+`J/N/R` numerica valida, pise o no pise lo que `K/O/S` ya tenia (incluido el caso limite de un
+cero tipeado a mano, que ya no se protege). `estadoPresupuestoSembrar()` separa, por bloque y en
+total, cuantas celdas estan REALMENTE vacias de cuantas SE VAN A PISAR, para que Franco vea ese
+numero antes de decidir. `aplicarPresupuestoSembrar()` pide una confirmacion EXPLICITA (mismo
+patron que `DEVTOOL_PurgaRespaldos.js`: numero exacto, desglose por bloque, "Continuar?") SOLO
+cuando hay al menos una celda con contenido previo, y nombra el periodo (el mes de referencia
+derivado en vivo de `J2/J3`) que se esta por sembrar; si no hay nada que pisar, corre derecho.
+
+El respaldo para revertir pasa a ser el seguro principal: como ahora se puede pisar una celda con
+contenido real, Document Properties guarda el VALOR PREVIO EXACTO de cada celda (no solo "estaba
+vacia" como en v0.51.0). `revertirPresupuestoSembrar()` repone ese estado exacto -- pero SOLO en
+la celda que TODAVIA tiene el numero que esa corrida escribio: la proteccion original (no pisar
+una correccion manual que Franco hizo despues de sembrar) se conserva identica. Un respaldo
+grabado por el codigo viejo (sin los campos nuevos) sigue siendo compatible.
+
+`devtools/probar_presupuesto_sembrar.js` se reescribio para la conducta nueva y suma la prueba de
+regresion pedida explicitamente por Franco: sembrar el mes A, cambiar el selector al mes B (con
+montos de origen distintos) y sembrar de nuevo -- `K/O/S` quedan con los valores de B, no los de
+A. Tambien prueba que revertir protege un valor "realmente viejo" que ninguna corrida habia
+tocado hasta la ultima, y que un segundo revertir no puede recuperar mas de un nivel.
+
+---
+
 ## v0.51.1 - PC_BLOQUES deja de depender del orden de archivos (2026-08-25)
 
 Cierre del incidente de v0.50.1. Ese hotfix arreglo el caso que rompio la planilla y dejo vivo su

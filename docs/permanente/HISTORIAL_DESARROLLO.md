@@ -6,6 +6,75 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-25 - Presupuesto: sembrar "Monto a Proyectar" ahora PISA, con confirmacion (v0.51.2)
+
+### El sintoma, en palabras de Franco
+
+"Si quiero volver a sembrar otro mes, no me deja porque ya hay datos. Esta funcion deberia poder
+sembrar valores sin problemas." Fix de diseno sobre v0.51.0/v0.51.1 (mas abajo en este mismo
+archivo), todavia sin desplegar cuando llego el reporte.
+
+### El analisis (verificado contra el codigo y la hoja, no asumido)
+
+Confirmado correcto: `K`/`O`/`S` ("Monto a Proyectar") **no son por mes**. Son las MISMAS celdas
+de la hoja "Presupuesto" para cualquier periodo que se elija en `J2`/`J3` -- a diferencia de
+`J`/`N`/`R`, que SI son dinamicas y recalculan solas con el selector (`DEVTOOL_PresupuestoModo.js`,
+"EL MES DE REFERENCIA": el mes calendario anterior al de `J2`/`J3`). Cambiar el selector de mes no
+mueve ni vacia `K`/`O`/`S`. Con la regla de v0.51.0 ("nunca pisar una celda con contenido"), la
+primera siembra llenaba las 90 celdas para siempre, y la siguiente vez que Franco quisiera
+sembrar para OTRO mes, "nunca pisar" significaba "no hacer nada" -- la funcion servia exactamente
+una vez en la vida de la planilla.
+
+Mas de fondo: una celda no tiene forma de decir de donde vino su contenido. Un numero en `K9`
+puede ser un dato que Franco tipeo con criterio para ESE mes, o el residuo de la ULTIMA vez que
+este mismo modulo sembro para un mes que ya no es el vigente -- las dos se ven identicas desde
+`getValue()`. Tratar "tiene contenido" como sinonimo de "es sagrado, no tocar" confundia
+sistematicamente una cosa con la otra.
+
+### La conducta nueva
+
+`aplicarPresupuestoSembrar()` (`DEVTOOL_PresupuestoSembrar.js`) ahora escribe TODAS las filas que
+tengan cuenta y una fuente `J`/`N`/`R` numerica valida, pise o no pise lo que `K`/`O`/`S` ya
+tenia -- incluido el caso limite de un cero tipeado a mano, que ya no se protege. El seguro deja
+de ser "abstenerse de escribir" y pasa a ser dos controles nuevos:
+
+1. `estadoPresupuestoSembrar()` separa, por bloque y en total, cuantas celdas estan REALMENTE
+   vacias (se llenan sin drama) de cuantas YA TENIAN un valor y por lo tanto SE VAN A PISAR.
+2. `aplicarPresupuestoSembrar()` pide una confirmacion EXPLICITA -- mismo patron que
+   `DEVTOOL_PurgaRespaldos.js` (la otra operacion deliberadamente destructiva del repo): numero
+   exacto de celdas a pisar, desglose por bloque, el periodo (mes de referencia, derivado en vivo
+   de `J2`/`J3` con un helper nuevo, `_periodoPs`) que se esta por sembrar, "Continuar?". Si no
+   hay ninguna celda con contenido previo, corre derecho, sin dialogo.
+
+### El respaldo pasa a ser el seguro principal
+
+En v0.51.0 el respaldo era una comodidad: como nunca se pisaba una celda con contenido, el estado
+"previo" de cualquier celda que el modulo pudiera escribir era siempre vacio. Eso ya no alcanza:
+ahora que se puede pisar un numero real, el respaldo en Document Properties guarda el VALOR
+PREVIO EXACTO de cada celda (vacio, o el numero que tuviera). `revertirPresupuestoSembrar()`
+repone eso -- pero conserva IDENTICA la proteccion original: solo toca una celda si TODAVIA tiene
+exactamente el numero que la corrida mas reciente escribio. Si Franco la corrigio a mano despues
+de sembrarla, revertir la deja como esta. Sigue siendo un undo de un solo nivel (la corrida mas
+reciente, no un historial completo) -- igual que sus hermanos (`DEVTOOL_PresupuestoModo.js`/
+`Resumen.js`). Un respaldo grabado por el codigo viejo (formato sin los campos nuevos) sigue
+siendo compatible: se asume que nunca piso nada, que es exactamente lo que paso.
+
+### La prueba de regresion (el pedido de Franco, encodeado)
+
+`devtools/probar_presupuesto_sembrar.js` se reescribio para la conducta nueva y suma el caso
+exacto que Franco reporto: sembrar el mes A, cambiar el selector al mes B (con montos de origen
+distintos) y sembrar de nuevo -- `K`/`O`/`S` quedan con los valores de B, no los de A. Tambien
+prueba que revertir protege un valor "realmente viejo" que ninguna corrida habia tocado hasta la
+ultima (una fila que no tenia cuenta en el mes A y recien se da de alta para el mes B), y que un
+segundo revertir no puede recuperar mas de un nivel hacia atras (si se sembraron A y B seguidos,
+revertir despues de B repone el estado de INMEDIATAMENTE ANTES de B -- que para una fila que A
+tambien piso es lo que A dejo, no el dato manual original de antes de A).
+
+Los 18 bancos de `devtools/`, `verificar_modales.py` y `probar_carga_apps_script.js` (carga +
+fragilidad) quedaron en verde tras el cambio.
+
+---
+
 ## 2026-08-25 - Presupuesto: sembrar "Monto a Proyectar" desde J/N/R (v0.51.0)
 
 ### Que pidio Franco

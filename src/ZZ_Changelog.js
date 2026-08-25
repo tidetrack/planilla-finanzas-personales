@@ -3,6 +3,40 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.51.2 - Presupuesto: sembrar "Monto a Proyectar" ahora PISA, con confirmacion.
+ * ! FIX DE DISENO SOBRE v0.51.0/v0.51.1 (todavia sin desplegar). Sintoma textual de Franco: "Si
+ *   quiero volver a sembrar otro mes, no me deja porque ya hay datos. Esta funcion deberia poder
+ *   sembrar valores sin problemas." Confirmado: el analisis de Franco era correcto. K/O/S no son
+ *   por mes -- son las MISMAS celdas de la hoja para cualquier periodo de J2/J3 (a diferencia de
+ *   J/N/R, que si son dinamicas). La regla vieja ("nunca pisar una celda con contenido") volvia
+ *   la funcion util una sola vez en la vida: la primera siembra llenaba las 90 celdas para
+ *   siempre y la proxima corrida, para otro mes, no hacia nada.
+ * ! CONDUCTA NUEVA: aplicarPresupuestoSembrar() ahora escribe TODAS las filas con cuenta y fuente
+ *   J/N/R numerica valida, pise o no pise lo que K/O/S tenia -- incluido el caso limite del cero
+ *   tipeado a mano, que ya no se protege. decision Franco 2026-08-25 (inline en el codigo): no
+ *   hay forma de distinguir desde la celda "esto lo decidio Franco para este mes" de "esto quedo
+ *   del mes pasado", asi que tratar todo contenido previo como sagrado era estructuralmente
+ *   equivocado, no solo prudente de mas.
+ * + estadoPresupuestoSembrar() separa, por bloque y en total, cuantas celdas estan REALMENTE
+ *   vacias (se llenan) de cuantas YA TENIAN valor y por lo tanto SE VAN A PISAR.
+ * + aplicarPresupuestoSembrar() pide confirmacion EXPLICITA (mismo patron que
+ *   DEVTOOL_PurgaRespaldos.js: numero exacto, desglose por bloque, "Continuar?") SOLO cuando hay
+ *   al menos una celda con contenido previo, y nombra el periodo (mes de referencia derivado de
+ *   J2/J3, via el nuevo helper _periodoPs) que se esta por sembrar. Si no hay nada que pisar,
+ *   corre derecho, sin dialogo.
+ * ! RESPALDO PARA REVERTIR PASA A SER EL SEGURO PRINCIPAL: como ahora se puede pisar una celda
+ *   con contenido real, el respaldo en Document Properties guarda el VALOR PREVIO EXACTO de cada
+ *   celda (no solo "estaba vacia"). revertirPresupuestoSembrar() repone ese estado exacto -- pero
+ *   SOLO en la celda que TODAVIA tiene el numero que la corrida escribio (si Franco la corrigio a
+ *   mano despues de sembrarla, revertir la deja como esta -- la conducta protectora original se
+ *   conserva IDENTICA). Compatible con un respaldo grabado por el codigo viejo (formato sin
+ *   `pisa`/`valorPrevio`): se asume `pisa:false`, correcto porque esa version nunca pisaba.
+ * + devtools/probar_presupuesto_sembrar.js: reescrito para la conducta nueva. Suma la prueba de
+ *   regresion pedida explicitamente por Franco -- sembrar el mes A, cambiar el selector al mes B
+ *   (fuente J/N/R distinta) y sembrar de nuevo: K/O/S quedan con los valores de B, no los de A.
+ *   Tambien prueba que revertir protege un valor "realmente viejo" (nunca tocado por ninguna
+ *   corrida hasta la ultima) y que un segundo revertir no puede volver mas atras que un nivel.
+ *
  * [2026-08-25] v0.51.1 - PC_BLOQUES deja de depender del orden de archivos.
  * ! CIERRE DEL INCIDENTE v0.50.1. Aquel hotfix arreglo el caso que ROMPIO la planilla
  *   (PG_UMBRAL_IDENTIDAD) y dejo vivo su gemelo: DEVTOOL_PresupuestoResumen.js hacia

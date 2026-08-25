@@ -3,7 +3,7 @@
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
  *
- * @version 0.11.3
+ * @version 0.11.4
  * @since 0.1.0
  * @lastModified 2026-08-25
  */
@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 51,
- patch: 1,
+ patch: 2,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.51.1 - PC_BLOQUES deja de depender del orden de archivos',
+ releaseName: 'v0.51.2 - Presupuesto: sembrar Monto a Proyectar ahora pisa, con confirmacion',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,24 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.51.2 (2026-08-25) - Presupuesto: sembrar Monto a Proyectar ahora pisa, con confirmacion
+! Fix de diseno sobre v0.51.0/v0.51.1 (sin desplegar): K/O/S no son por mes -- son las mismas
+  celdas para cualquier periodo de J2/J3. La regla vieja ("nunca pisar") volvia la funcion util
+  una sola vez en la vida. Confirmado el sintoma textual de Franco: "no me deja porque ya hay
+  datos".
+! aplicarPresupuestoSembrar() ahora escribe TODAS las filas con cuenta y fuente valida, pise o
+  no pise -- incluido el cero tipeado a mano, que ya no se protege.
++ estadoPresupuestoSembrar() separa vacias (se llenan) de las que SE PISAN (ya tenian valor),
+  por bloque y en total.
++ Confirmacion explicita (patron de DEVTOOL_PurgaRespaldos.js) SOLO cuando hay algo que pisar,
+  con el periodo exacto que se esta sembrando. Sin nada que pisar, corre derecho.
+! El respaldo pasa a ser el seguro principal: guarda el valor previo EXACTO de cada celda (no
+  solo "vacia"), y revertirPresupuestoSembrar() lo repone -- pero solo si la celda todavia tiene
+  el numero que esa corrida escribio (la proteccion contra pisar una correccion manual
+  posterior se conserva identica).
++ devtools/probar_presupuesto_sembrar.js: nueva prueba de regresion -- sembrar mes A, cambiar
+  el selector a mes B, sembrar de nuevo: K/O/S quedan en B, no en A.
+
 v0.51.0 (2026-08-25) - Presupuesto: sembrar Monto a Proyectar desde J/N/R
 + DEVTOOL_PresupuestoSembrar.js (nuevo): siembra K/O/S ("Monto a Proyectar") con lo que J/N/R
   ya muestran para el modo vivo (Proyeccion o Historico), solo en las cuentas donde esa celda
