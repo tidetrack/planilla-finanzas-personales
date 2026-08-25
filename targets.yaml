@@ -20,4 +20,4 @@ targets:
     # conocido del repo). Drift-check posterior: "sin drift". Este numero se escribe DESPUES
     # del deploy y verificado contra el remoto, nunca antes: escribirlo por adelantado fue
     # lo que dejo el campo stale en "0.23.5" mientras la planilla corria 0.38.3.
-    version_desplegada: "0.51.1"
+    version_desplegada: "0.51.2"
