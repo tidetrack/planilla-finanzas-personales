@@ -75,7 +75,18 @@ for c in lista[:4]:
     try:
         rc, salida = correr(d)
         ok(rc == 0, 'commit %s reconocido (exit 0)' % c[:7])
-        ok(salida.startswith(c[:7]), '  y devuelve ESE commit, no otro: "%s"' % salida[:60])
+        # NO se exige el mismo hash: varios commits pueden compartir el mismo src/ (los
+        # `chore` y los `docs` no lo tocan), y el verificador devuelve el mas reciente de
+        # ellos. Lo que importa, y lo unico que el deploy necesita, es que el arbol src/
+        # del commit devuelto sea IDENTICO al que se pidio reconocer.
+        devuelto = salida.split()[0] if salida else ''
+        mismo_arbol = devuelto and (
+            subprocess.run(['git', 'rev-parse', devuelto + ':src'], cwd=RAIZ,
+                           capture_output=True, text=True).stdout.strip()
+            == subprocess.run(['git', 'rev-parse', c + ':src'], cwd=RAIZ,
+                              capture_output=True, text=True).stdout.strip())
+        ok(bool(mismo_arbol),
+           '  y el commit devuelto tiene el MISMO src/ ("%s")' % salida[:52])
     finally:
         shutil.rmtree(d, ignore_errors=True)
 

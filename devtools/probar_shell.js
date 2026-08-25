@@ -74,19 +74,33 @@ const ctx = {
         return tablasFalsas[clave];
     },
     showAbmPlanCuentas() { ctx._abmAbierto = true; },
-    procesarCargas() { if (ctx._procesarExplota) throw new Error('el lote fallo'); ctx._loteProcesado = true; }
+    procesarCargas() { if (ctx._procesarExplota) throw new Error('el lote fallo'); ctx._loteProcesado = true; },
+    LockService: { getDocumentLock: () => ({ tryLock: () => !ctx._lockOcupado, releaseLock() {} }) }
 };
 vm.createContext(ctx);
 vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/00_Config.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/01_Version.js'), 'utf8') + '\n' +
+    // 03_SheetManager aporta columnLetterToIndex/getDataRow, que el shell usa para derivar
+    // la geometria de la grilla desde RANGES en vez de retipear posiciones.
+    fs.readFileSync(path.join(RAIZ, 'src/03_SheetManager.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/16_ShellService.js'), 'utf8') +
     '\n;Object.assign(globalThis,{SHELL_VISTAS,SHELL_GEOMETRIA,SHELL_VISTA_DEFECTO,_abrirShell,' +
     'abrirTidetrack,abrirMovimientoNuevo,abrirTraspasoNuevo,abrirProyeccionNueva,' +
     'abrirRecurrentes,abrirConciliacionNueva,obtenerCatalogoShell,abrirAbmDesdeShell,' +
-    'procesarCargasDesdeShell,diagnosticarShell,MENU_CONFIG,CUENTAS_NEUTRAS,MONEDAS_DISPONIBLES});',
+    'procesarCargasDesdeShell,diagnosticarShell,registrarMovimiento,registrarTraspaso,_validarMovimiento,_estadoGrillaCargas,_filaDeCarga,_plata,TIPOS_RIQUEZA,columnLetterToIndex,RANGES,SHEETS,MENU_CONFIG,CUENTAS_NEUTRAS,MONEDAS_DISPONIBLES});',
     ctx
 );
+
+// 03_SheetManager declara su propio getTableData y, al cargarse, PISA el stub del contexto.
+// Se repone despues: este banco prueba el shell, no la capa de datos, y necesita catalogos
+// deterministas. Lo que NO se stubea es columnLetterToIndex/getDataRow, que son justamente lo
+// que hace que el shell derive la geometria de RANGES en vez de retipearla.
+ctx.getTableData = (clave) => {
+    if (getTableDataExplota) throw new Error('boom');
+    if (!(clave in tablasFalsas)) throw new Error('tabla desconocida: ' + clave);
+    return tablasFalsas[clave];
+};
 
 const HTML = fs.readFileSync(path.join(RAIZ, 'src/UI_Shell.html'), 'utf8');
 
@@ -246,5 +260,58 @@ ok(jsShell.indexOf('host.close') === -1,
 ok(/function salirDeVista\s*\(\s*\)\s*\{\s*irAVista\('home'\)/.test(jsShell),
     'salirDeVista vuelve al Home, que es lo que el contenedor decide que significa "salir"');
 
-console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (10 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+seccion('11. Validacion de Movimiento: el gap de procesarCargas se tapa aca');
+// procesarCargas filtra SOLO por "monto no vacio": una fila sin cuenta entra igual al ledger
+// con tipo vacio. Ese gap es conocido y no se arregla en el pipeline; se tapa en la puerta.
+const catalogosVal = { medios: ['Galicia', 'Dolar Cash'] };
+const okBase = { monto: 100, tipo: 'Egreso', cuenta: 'Comidas', medio: 'Galicia', moneda: 'ARS' };
+ok(ctx._validarMovimiento(okBase, catalogosVal).length === 0, 'un movimiento completo pasa');
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { cuenta: '' }), catalogosVal).length === 1,
+    'sin cuenta NO pasa (es el gap de procesarCargas)');
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { monto: '' }), catalogosVal).length === 1, 'sin monto no pasa');
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { monto: -5 }), catalogosVal).length === 1,
+    'monto negativo no pasa: para que salga plata se usa el tipo Egreso');
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { medio: 'Banco Inventado' }), catalogosVal).length === 1,
+    'un medio que no esta en el Plan no pasa');
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { moneda: 'BRL' }), catalogosVal).length === 1,
+    'una moneda que la planilla no maneja no pasa');
+const manana = new Date(); manana.setDate(manana.getDate() + 2);
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { fecha: manana.toISOString() }), catalogosVal).length === 1,
+    'fecha futura no pasa: procesarCargas aborta el LOTE ENTERO si encuentra una');
+const hoy = new Date();
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { fecha: hoy.toISOString() }), catalogosVal).length === 0,
+    'la fecha de hoy SI pasa (se compara contra el fin del dia, no contra el instante)');
+
+seccion('12. La fila se arma desde RANGES, no retipeando posiciones');
+const fila = ctx._filaDeCarga({ monto: 123, tipo: 'Egreso', cuenta: 'Comidas', medio: 'Galicia',
+    moneda: 'ARS', fecha: '2026-08-25', nota: 'hola' });
+const cc = ctx.RANGES.CARGAS.columns;
+const base = ctx.RANGES.CARGAS.start.charCodeAt(0) - 64;
+const idx = (l) => l.charCodeAt(0) - 64 - base;
+ok(fila.length === 7, 'la fila tiene el ancho de la grilla (C:I)');
+ok(fila[idx(cc.monto)] === 123, 'el monto cae en la columna que declara RANGES');
+ok(fila[idx(cc.cuenta)] === 'Comidas', 'la cuenta tambien');
+ok(fila[idx(cc.nota)] === 'hola', 'y la nota');
+
+seccion('13. Formato de plata igual al de la hoja');
+ok(ctx._plata(319569.7, 'ARS') === '$319.569,70', 'ARS: simbolo pegado, miles con punto, coma decimal');
+ok(ctx._plata(1430, 'USD') === 'US$1.430,00', 'USD lleva US$');
+
+seccion('14. Las dos vistas nuevas estan marcadas como listas');
+const porId = {};
+ctx.SHELL_VISTAS.forEach(v => { porId[v.id] = v; });
+ok(porId.movimiento.listo === true, 'movimiento: listo');
+ok(porId.traspaso.listo === true, 'traspaso: listo');
+ok(porId.proyeccion.listo === false && porId.recurrentes.listo === false &&
+   porId.conciliacion.listo === false, 'las otras tres siguen declaradas como NO listas');
+ok(HTML.indexOf('id="movMonto"') !== -1 && HTML.indexOf('id="trasMontoO"') !== -1,
+    'los formularios existen en el HTML');
+ok(/enviar\('registrarMovimiento'/.test(HTML) && /enviar\('registrarTraspaso'/.test(HTML),
+    'el cliente llama a los endpoints de escritura');
+ok(/b\.disabled = v/.test(HTML),
+    'los botones se deshabilitan mientras viaja: dos clicks serian dos movimientos en el ledger');
+ok(HTML.indexOf('<?= tiposRiquezaJson ?>') !== -1,
+    'TIPOS_RIQUEZA viaja del backend al cliente, no se retipea');
+
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (14 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
 process.exit(fallas === 0 ? 0 : 1);

@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 47,
- patch: 1,
+ minor: 48,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.47.1 - El shell abre instantaneo: cero viajes al servidor',
+ releaseName: 'v0.48.0 - Movimiento y Traspaso, y el shell deja de ser cuadrado',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,17 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.48.0 (2026-08-25) - Movimiento y Traspaso, y el shell deja de ser cuadrado
++ MOVIMIENTO NUEVO opera. Siembra una fila en la grilla de Cargas y llama a procesarCargas: NO escribe en Registros directo, porque ese es el unico lugar que congela las cuatro cotizaciones, persiste las nuevas al Data Lake, deduce el tipo de cuenta y reordena el ledger.
++ TRASPASO NUEVO opera, y escribe LAS DOS PATAS JUNTAS en una sola llamada a setValues: media operacion hace desaparecer plata del sistema. La moneda de cada caja la decide el catalogo, no el operador. Si cruzan monedas pide los dos montos y deja el TC de la operacion escrito en la nota -- el ledger congela el TC OFICIAL, que casi nunca es al que se opero, asi que ese dato se perderia. Avisa cuando el traspaso capitaliza.
++ SE TAPA EL GAP DE procesarCargas EN LA PUERTA: su unico filtro es "monto no vacio", asi que una fila sin cuenta entra igual al ledger con tipo vacio. La validacion del shell exige cuenta, medio, tipo, monto positivo, moneda del catalogo y fecha no futura (una sola fecha futura aborta el LOTE ENTERO).
++ LockService en las dos rutas de escritura. Ninguna ruta productiva de este repo tomaba lock: con el shell, dos pestanias pueden sembrar la MISMA fila libre y una pisa a la otra.
++ Los botones se deshabilitan mientras viaja la llamada. Dos clicks son dos movimientos, y en un ledger eso es un duplicado que despues hay que ir a buscar a mano.
++ "Usar estos datos": propone cuenta, medio y tipo del ultimo movimiento. Es la ruta de dos toques del arnes, y sale de leer CINCO filas de Registros -- que esta ordenado por fecha descendente -- no el ledger entero.
+* DISENO, decision Franco 2026-08-25 ("esta todo muy cuadrado"): se van los bordes de 1px de las tarjetas y el radio chico. Cada tarjeta era un rectangulo con contorno adentro de otro con contorno, y el icono adentro era un tercero. Ahora la superficie se define por FONDO, que es lo que hace la hoja -- cero setBorder en toda la planilla, los bloques se separan por aire. Iconos circulares, radio 14px, mas aire, y fuera la linea del rotulo de seccion y la del pie. El unico contorno que queda es el del foco, que es accesibilidad.
++ verificar_modales.py suma el chequeo 4: cada onclick/onchange del HTML tiene que apuntar a una funcion que exista. El chequeo 1 mira JS -> DOM; este mira DOM -> JS, que es por donde se cuela un boton que no hace nada. Probado en las dos direcciones.
++ Banco 13 sube a 14 secciones: valida los seis rechazos de la validacion, que la fila se arme desde RANGES y no retipeando, el formato de plata de la hoja, y que TIPOS_RIQUEZA viaje del backend en vez de retipearse.
+! FALTAN TRES: Proyeccion, Recurrentes y Conciliacion siguen declaradas listo:false y muestran que van a hacer.
 v0.47.1 (2026-08-24) - El shell abre instantaneo: cero viajes al servidor
 ! SINTOMA REPORTADO POR FRANCO: el Centro de Operaciones abria, mostraba el Home en gris detras de un overlay con el spinner girando, y a los 30 segundos seguia igual. Inusable.
 - CAUSA, y es un error de diseno mio, no un bug de Apps Script: el DOMContentLoaded pedia obtenerCatalogoShell() -- las cinco lecturas del Plan de Cuentas -- detras de un overlay a pantalla completa, y recien al volver apagaba el loader. O sea que el costo de ABRIR era el costo del formulario mas caro que todavia no se habia abierto.

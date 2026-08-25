@@ -9,6 +9,41 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.48.0 - Movimiento y Traspaso operan, y el shell deja de ser cuadrado (2026-08-25)
+
+**Movimiento nuevo** siembra una fila en la grilla de Cargas y llama a `procesarCargas`. No
+escribe en `Registros` directo, y es deliberado: ese es el unico lugar que congela las cuatro
+cotizaciones, persiste las nuevas al Data Lake, deduce el tipo de cuenta y reordena el ledger.
+
+**Traspaso nuevo** escribe **las dos patas juntas**, en una sola llamada: media operacion hace
+desaparecer plata del sistema. La moneda de cada caja la decide el catalogo, no el operador. Si
+cruzan monedas pide los dos montos y deja el TC de la operacion escrito en la nota —el ledger
+congela el TC *oficial*, que casi nunca es al que se opero—. Y avisa cuando el traspaso capitaliza.
+
+**El gap de `procesarCargas` se tapa en la puerta.** Su unico filtro es "monto no vacio": una fila
+con monto y sin cuenta entra igual al ledger con tipo vacio. No se toca el pipeline —3.469 filas
+dependen de que se comporte igual—; se valida en el shell.
+
+**`LockService` en las dos rutas de escritura.** Ninguna ruta productiva de este repo tomaba lock:
+dos pestanias abiertas pueden sembrar la misma fila libre y una pisa a la otra.
+
+**"Usar estos datos"** propone cuenta, medio y tipo del ultimo movimiento —la ruta de dos toques
+del arnes—, leyendo cinco filas de `Registros`, nunca el ledger entero.
+
+**Diseno.** Decision de Franco, textual: *"esta todo muy cuadrado"*. Se van los bordes de 1px de
+las tarjetas y el radio chico. Cada tarjeta era un rectangulo con contorno adentro de otro con
+contorno, y el chip del icono era un tercero. Ahora la superficie se define por **fondo**, que es
+lo que hace la hoja: cero `setBorder` en toda la planilla, los bloques se separan por aire. Iconos
+circulares, radio 14px, mas aire, y fuera la linea del rotulo de seccion y la del pie.
+
+**`verificar_modales.py` suma el chequeo 4:** cada `onclick`/`onchange` tiene que apuntar a una
+funcion que exista. El chequeo 1 mira JS→DOM; este mira DOM→JS, que es por donde se cuela un boton
+que no hace nada. Probado en las dos direcciones.
+
+**Faltan tres:** Proyeccion, Recurrentes y Conciliacion siguen mostrando que van a hacer.
+
+---
+
 ## Herramienta - deploy verificado: "pisar" deja de ser una pregunta (2026-08-25)
 
 *Cambio de herramienta y gobernanza; no toca `src/`, asi que no mueve la version desplegada.*

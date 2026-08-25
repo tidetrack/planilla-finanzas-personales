@@ -3,6 +3,51 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.48.0 - Movimiento y Traspaso operan, y el shell deja de ser cuadrado.
+ * - MOVIMIENTO NUEVO. Siembra UNA fila en la grilla de Cargas y llama a procesarCargas. NO
+ *   escribe en "Registros" directo, y es deliberado: ese es el unico lugar que congela las
+ *   cuatro cotizaciones del dia, persiste las nuevas al Data Lake, deduce el tipo de cuenta y
+ *   reordena el ledger. Este repo ya dejo escrito por que no puede haber una segunda
+ *   implementacion "equivalente".
+ * - TRASPASO NUEVO. Escribe LAS DOS PATAS JUNTAS, en una sola llamada a setValues: si se
+ *   escribieran por separado y la segunda fallara, quedaria media operacion y eso hace
+ *   desaparecer plata del sistema. La moneda de cada caja la decide el CATALOGO, no el
+ *   operador. Si las cajas no comparten moneda pide los dos montos y deja el TC de la
+ *   operacion escrito en la nota -- el ledger congela el TC OFICIAL del dia, que casi nunca es
+ *   al que se opero, asi que ese dato se perderia si no se guardara ahi. Y avisa cuando el
+ *   traspaso capitaliza, leyendo TIPOS_RIQUEZA del backend en vez de retipear la lista.
+ * - EL GAP DE procesarCargas SE TAPA EN LA PUERTA. Su unico filtro es "monto no vacio": una
+ *   fila con monto y sin cuenta entra igual al ledger con tipo de cuenta vacio. No se toca el
+ *   pipeline (3.469 filas dependen de que se comporte igual), se valida en el shell: cuenta,
+ *   medio y tipo obligatorios, monto positivo, moneda de MONEDAS_DISPONIBLES, medio existente
+ *   en el Plan, y fecha no futura -- una sola fecha futura aborta el LOTE ENTERO.
+ * - LockService en las dos rutas de escritura. Ninguna ruta productiva de este repo tomaba
+ *   lock. Con el shell, dos pestanias abiertas pueden sembrar la MISMA fila libre de la grilla
+ *   y una pisa a la otra sin que nadie se entere.
+ * - Los botones se deshabilitan mientras la llamada viaja, y hay tope de 60 s con un mensaje
+ *   que dice que mirar. Dos clicks son dos movimientos, y en un ledger eso es un duplicado que
+ *   despues hay que ir a buscar a mano.
+ * - "Usar estos datos" propone cuenta, medio y tipo del ultimo movimiento. Es la ruta de dos
+ *   toques que pide el arnes, y sale de leer CINCO filas de "Registros" -- que esta ordenado
+ *   por fecha descendente, asi que las mas recientes son las primeras -- nunca el ledger entero.
+ * - DISENO, decision Franco 2026-08-25, textual: "esta todo muy cuadrado". Se van los bordes
+ *   de 1px de las tarjetas y el radio chico. Cada tarjeta era un rectangulo con contorno
+ *   adentro de otro rectangulo con contorno, y el chip del icono adentro era un tercero. Ahora
+ *   la superficie se define por FONDO y no por linea, que ademas es exactamente lo que hace la
+ *   hoja: no hay un solo setBorder en toda la planilla y los bloques se separan por aire.
+ *   Iconos circulares, radio 14px, mas padding, y fuera la linea del rotulo de seccion y la
+ *   del pie. El unico contorno que queda es el del foco, que es accesibilidad y no decoracion.
+ * - verificar_modales.py suma el CHEQUEO 4: cada onclick/onchange/oninput del HTML tiene que
+ *   apuntar a una funcion que exista en el script. El chequeo 1 mira JS -> DOM; este mira
+ *   DOM -> JS, que es la direccion contraria y por donde se cuela un boton que no hace nada --
+ *   no lanza error al cargar, solo falla en silencio cuando alguien lo aprieta. Probado en las
+ *   dos direcciones: verde sobre el codigo real, y rojo con un handler huerfano inyectado.
+ * - El banco del shell sube de 10 a 14 secciones: los seis rechazos de la validacion, que la
+ *   fila se arme desde RANGES y no retipeando posiciones, el formato de plata de la hoja, y
+ *   que TIPOS_RIQUEZA viaje del backend. Los catorce bancos en verde.
+ * - FALTAN TRES: Proyeccion, Recurrentes y Conciliacion siguen en listo:false y muestran que
+ *   van a hacer y contra que hoja escriben, en vez de prometer.
+ *
  * [2026-08-24] v0.47.1 - El shell abre instantaneo: cero viajes al servidor.
  * - SINTOMA, reportado por Franco con captura: el Centro de Operaciones abria, mostraba el Home
  *   en gris detras de un overlay con el spinner girando, y a los 30 segundos seguia igual.

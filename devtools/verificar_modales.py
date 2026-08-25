@@ -23,6 +23,9 @@ deployar, de forma estatica. Tres chequeos, cada uno por un modo de falla real:
   3. HANDLERS DE FALLA -- toda cadena google.script.run que apague un loader o
      deshabilite un control en su withSuccessHandler necesita su withFailureHandler,
      o una falla del servidor deja la UI trabada para siempre.
+  4. HANDLERS INLINE HUERFANOS -- cada onclick/onchange/oninput del HTML tiene que
+     apuntar a una funcion que exista en el script. Un boton que llama a una funcion
+     que no se escribio no da error visible: no hace nada, que es peor.
 
 Portado de planilla-pymes (legacy/devtools/verificar_modales.py), Fase 5 del arnes.
 @see docs/permanente/ARNES_TIDETRACK.md seccion 7
@@ -47,6 +50,10 @@ RE_GET_BY_ID = re.compile(r'getElementById\(\s*["\']([^"\']+)["\']\s*\)')
 RE_INCLUDE = re.compile(r'<\?!?=?\s*include\(\s*[\'"]([^\'"]+)[\'"]\s*\)\s*\?>')
 RE_SCRIPTLET = re.compile(r'<\?[^>]*\?>')
 RE_INICIO_RUN = re.compile(r'google\.script\.run\b')
+# onclick="foo()" / onchange="foo(1,2)" -- se captura el nombre, no los argumentos.
+RE_HANDLER_INLINE = re.compile(r'\b(on[a-z]+)\s*=\s*"\s*([A-Za-z_$][\w$]*)\s*\(')
+# Lo que puede aparecer en un handler sin estar declarado en el script del archivo.
+GLOBALES_DEL_NAVEGADOR = {'alert', 'confirm', 'print', 'open', 'close', 'focus', 'blur'}
 
 
 def cadenas_google_script_run(js):
@@ -182,7 +189,20 @@ def verificar(ruta):
         if tmp and os.path.exists(tmp):
             os.unlink(tmp)
 
-    # --- 3. cadenas google.script.run sin withFailureHandler ---
+    # --- 3. handlers inline que llaman a funciones que no existen ---
+    # El chequeo 1 mira JS -> DOM. Este mira DOM -> JS, que es la direccion contraria y el
+    # agujero por el que se cuela un boton que no hace nada: onclick="guardar()" sin guardar()
+    # no lanza nada visible al cargar, solo falla en silencio cuando alguien lo aprieta.
+    declaradas = set(re.findall(r'function\s+(\w+)\s*\(', js_limpio))
+    declaradas |= set(re.findall(r'(?:var|let|const)\s+(\w+)\s*=\s*function', js_limpio))
+    declaradas |= set(re.findall(r'(?:var|let|const)\s+(\w+)\s*=\s*\([^)]*\)\s*=>', js_limpio))
+    for atributo, llamada in RE_HANDLER_INLINE.findall(texto):
+        nombre = llamada.strip()
+        if nombre and nombre not in declaradas and nombre not in GLOBALES_DEL_NAVEGADOR:
+            problemas.append("%s=\"%s(...)\" llama a una funcion que no existe en el script"
+                             % (atributo, nombre))
+
+    # --- 4. cadenas google.script.run sin withFailureHandler ---
     # Solo se reporta la cadena cuyo exito APAGA algo (un loader, un disabled): si el
     # unico camino que devuelve el control al usuario esta en el success, la falla lo
     # deja trabado. Una cadena que no toca el estado de la UI puede fallar sin secuela.

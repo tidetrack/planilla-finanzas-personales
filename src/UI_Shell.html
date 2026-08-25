@@ -47,38 +47,80 @@ body { padding: 0; background: var(--bg-secondary); }
 .shell-band .volver:hover { background: rgba(255,255,255,0.22); }
 .shell-band .volver:focus-visible { outline: 2px solid var(--bg-main); outline-offset: 2px; }
 
-.shell-body { padding: 22px; }
+.shell-body { padding: 24px 22px 26px; }
 
-/* --- Rotulo de seccion con la linea que se estira. --- */
+/* --- Formularios. La base (label, input, select, boton) viene de UI_SharedStyles; aca vive
+       SOLO la grilla, que es lo propio de estas pantallas. --- */
+.shell-form { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; max-width: 660px; }
+.f { display: flex; flex-direction: column; gap: 6px; }
+.f.c3 { grid-column: span 3; } .f.c4 { grid-column: span 4; } .f.c5 { grid-column: span 5; }
+.f.c6 { grid-column: span 6; } .f.c7 { grid-column: span 7; } .f.c8 { grid-column: span 8; }
+.f.c12 { grid-column: span 12; }
+.f label {
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-secondary);
+}
+.f .hint { font-size: 12px; color: var(--text-secondary); }
+.f .form-input, .f .form-select { margin-bottom: 0; }
+/* El monto es el unico campo grande: es el que se tipea primero y el unico que Franco
+   realmente escribe -- todo lo demas se hereda o se elige. */
+.monto-grande {
+    font-family: var(--font-mono); font-size: 20px; font-weight: 600;
+    color: var(--primary-color); font-variant-numeric: tabular-nums;
+}
+
+/* --- Sugerencia de "repetir el ultimo": el camino de dos toques del arnes. --- */
+.shell-repetir {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--bg-main); border-radius: 12px; padding: 12px 16px;
+    margin-bottom: 20px; max-width: 660px; font-size: 13px; color: var(--text-data);
+}
+.shell-repetir .que { font-weight: 600; color: var(--primary-color); }
+.shell-repetir button {
+    margin-left: auto; font: inherit; font-size: 12px; font-weight: 600;
+    background: var(--bg-secondary); color: var(--primary-color);
+    border: 0; border-radius: 8px; padding: 7px 13px; cursor: pointer;
+}
+.shell-repetir button:hover { background: var(--primary-color); color: var(--text-inverse); }
+.shell-repetir button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+.shell-acciones {
+    display: flex; gap: 10px; align-items: center; margin-top: 24px; max-width: 660px;
+}
+.shell-acciones .crece { margin-right: auto; font-size: 12px; color: var(--text-secondary); }
+
+/* --- Rotulo de seccion. Sin la linea que se estira: era un borde mas en una pantalla que
+       Franco ya vio "muy cuadrada", y el rotulo en versalita ya separa por si solo. --- */
 .shell-sec {
     font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-secondary);
-    display: flex; align-items: center; gap: 10px; margin-bottom: 11px;
+    margin: 0 0 12px 4px;
 }
-.shell-sec::after { content: ""; flex: 1; height: 1px; background: var(--border-color); }
 
-/* --- Tarjetas del Home. Dos columnas, como el Home de pymes. --- */
-.shell-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; }
+/* --- Tarjetas del Home.
+       decision Franco 2026-08-25: "esta todo muy cuadrado". Se van los bordes de 1px y el
+       radio chico. Cada tarjeta era un rectangulo con contorno adentro de otro rectangulo con
+       contorno, y el icono adentro era un tercero. Ahora la superficie se define por FONDO y
+       no por linea -- que ademas es exactamente lo que hace la hoja, donde no hay un solo
+       setBorder y los bloques se separan por aire. El unico contorno que queda es el del
+       foco, que es accesibilidad y no decoracion. --- */
+.shell-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .shell-card {
-    display: flex; gap: 13px; align-items: flex-start; text-align: left; width: 100%;
-    background: var(--bg-main); border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-md); padding: 15px;
+    display: flex; gap: 14px; align-items: flex-start; text-align: left; width: 100%;
+    background: var(--bg-main); border: 0;
+    border-radius: 14px; padding: 18px 20px;
     font: inherit; color: inherit; cursor: pointer;
-    transition: border-color var(--transition-fast), transform var(--transition-fast),
-                box-shadow var(--transition-fast);
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
-.shell-card:hover {
-    border-color: var(--primary-color); transform: translateY(-1px); box-shadow: var(--shadow-md);
-}
+.shell-card:hover { background: var(--bg-tertiary); transform: translateY(-1px); }
+.shell-card:active { transform: translateY(0); }
 .shell-card:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 .shell-card .ico {
-    flex: 0 0 34px; height: 34px; border-radius: var(--border-radius-sm);
-    background: var(--bg-secondary); border: 1px solid var(--border-color);
+    flex: 0 0 36px; height: 36px; border-radius: 50%;
+    background: var(--bg-secondary); border: 0;
     display: grid; place-items: center; color: var(--primary-color);
 }
-.shell-card:hover .ico {
-    background: var(--primary-color); color: var(--text-inverse); border-color: var(--primary-color);
-}
+.shell-card:hover .ico { background: var(--primary-color); color: var(--text-inverse); }
 .shell-card .t { font-weight: 600; color: var(--primary-color); font-size: 14px; display: block; }
 .shell-card .d {
     color: var(--text-secondary); font-size: 12px; line-height: 1.4;
@@ -92,10 +134,10 @@ body { padding: 0; background: var(--bg-secondary); }
 .shell-pendiente ul { margin: 0 0 14px; padding-left: 1.15em; color: var(--text-data); }
 .shell-pendiente li { margin: 4px 0; }
 
-/* --- Pie: contexto de la planilla, como el footer del shell de pymes. --- */
+/* --- Pie: contexto de la planilla. Sin linea arriba: el cambio de fondo ya lo separa. --- */
 .shell-foot {
-    background: var(--bg-main); border-top: 1px solid var(--border-color);
-    padding: 8px 22px; font-family: var(--font-mono); font-size: 10.5px;
+    background: var(--bg-main);
+    padding: 10px 22px; font-family: var(--font-mono); font-size: 10.5px;
     letter-spacing: 0.04em; color: var(--text-secondary);
     display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
 }
@@ -175,26 +217,82 @@ body { padding: 0; background: var(--bg-secondary); }
          Cada una dice QUE va a hacer y contra que hoja escribe. Una pantalla que solo dijera
          "proximamente" no le sirve a nadie; esta le dice a Franco que esperar. -->
     <div id="vista-movimiento" class="hidden">
-        <div class="shell-pendiente">
-            <h2>Todavia no esta construida</h2>
-            <p>Va a cargar un gasto o un ingreso sin pasar por la grilla: monto, cuenta, medio y listo. El resto se completa solo con lo del ultimo movimiento.</p>
-            <ul>
-                <li>Escribe una fila en la grilla de Cargas y deja que el motor de siempre la procese, para no saltearse el congelado de las cuatro cotizaciones.</li>
-                <li>Muestra el saldo del medio y lo que ya llevas gastado en esa cuenta este mes.</li>
-            </ul>
-            <p>Mientras tanto se carga como siempre: tipeando en la hoja <b>Cargas</b> y despues <b>Procesar la hoja de Cargas</b>.</p>
+        <div id="movRepetir" class="shell-repetir hidden"></div>
+        <div class="shell-form">
+            <div class="f c4">
+                <label for="movMonto">Monto</label>
+                <input class="form-input monto-grande" id="movMonto" inputmode="decimal" placeholder="0,00">
+            </div>
+            <div class="f c3">
+                <label for="movTipo">Tipo</label>
+                <select class="form-select" id="movTipo">
+                    <option value="Egreso">Egreso</option>
+                    <option value="Ingreso">Ingreso</option>
+                </select>
+            </div>
+            <div class="f c5">
+                <label for="movCuenta">Cuenta</label>
+                <select class="form-select" id="movCuenta"></select>
+            </div>
+            <div class="f c5">
+                <label for="movMedio">Medio</label>
+                <select class="form-select" id="movMedio" onchange="movMonedaDelMedio()"></select>
+            </div>
+            <div class="f c3">
+                <label for="movMoneda">Moneda</label>
+                <select class="form-select" id="movMoneda"></select>
+                <span class="hint">La hereda del medio</span>
+            </div>
+            <div class="f c4">
+                <label for="movFecha">Fecha</label>
+                <input class="form-input" id="movFecha" type="date">
+            </div>
+            <div class="f c12">
+                <label for="movNota">Nota</label>
+                <input class="form-input" id="movNota" placeholder="Opcional">
+            </div>
+        </div>
+        <div class="shell-acciones">
+            <span class="crece">Se carga por la grilla de Cargas: congela las cuatro cotizaciones del dia.</span>
+            <button class="btn btn-secondary" id="movBtnSeguir" onclick="guardarMovimiento(true)">Cargar y seguir</button>
+            <button class="btn btn-primary" id="movBtnGuardar" onclick="guardarMovimiento(false)">Cargar</button>
         </div>
     </div>
 
     <div id="vista-traspaso" class="hidden">
-        <div class="shell-pendiente">
-            <h2>Todavia no esta construida</h2>
-            <p>Va a escribir las <b>dos patas</b> de un traspaso juntas, con la cuenta <b>Traspaso</b> y la misma nota, para que no quede nunca una sola mitad cargada.</p>
-            <ul>
-                <li>La moneda de cada caja sale del catalogo, no la elegis vos.</li>
-                <li>Si el traspaso cruza monedas pide los dos montos y deja el tipo de cambio de la operacion escrito en la nota.</li>
-                <li>Avisa cuando el traspaso capitaliza, o sea cuando la plata pasa a una caja de ahorro.</li>
-            </ul>
+        <div class="shell-form">
+            <div class="f c6">
+                <label for="trasOrigen">Sale de</label>
+                <select class="form-select" id="trasOrigen" onchange="trasMonedas()"></select>
+            </div>
+            <div class="f c6">
+                <label for="trasDestino">Entra a</label>
+                <select class="form-select" id="trasDestino" onchange="trasMonedas()"></select>
+            </div>
+            <div class="f c4">
+                <label for="trasMontoO">Monto que sale</label>
+                <input class="form-input monto-grande" id="trasMontoO" inputmode="decimal" placeholder="0,00">
+                <span class="hint" id="trasHintO"></span>
+            </div>
+            <div class="f c4 hidden" id="trasCampoDestino">
+                <label for="trasMontoD">Monto que entra</label>
+                <input class="form-input monto-grande" id="trasMontoD" inputmode="decimal" placeholder="0,00" oninput="trasTipoDeCambio()">
+                <span class="hint" id="trasHintD"></span>
+            </div>
+            <div class="f c4">
+                <label for="trasFecha">Fecha</label>
+                <input class="form-input" id="trasFecha" type="date">
+            </div>
+            <div class="f c12">
+                <label for="trasNota">Nota</label>
+                <input class="form-input" id="trasNota" placeholder="Opcional">
+                <span class="hint" id="trasAviso">Se escriben dos filas con la cuenta Traspaso: una que sale y una que entra.</span>
+            </div>
+        </div>
+        <div class="shell-acciones">
+            <span class="crece">Las dos patas se escriben juntas o no se escribe ninguna.</span>
+            <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
+            <button class="btn btn-primary" id="trasBtnGuardar" onclick="guardarTraspaso()">Registrar el traspaso</button>
         </div>
     </div>
 
@@ -249,6 +347,8 @@ body { padding: 0; background: var(--bg-secondary); }
 // lista en el cliente que pueda desincronizarse: es la misma SHELL_VISTAS de 16_ShellService.
 var VISTAS = <?= vistasJson ?>;
 var VISTA_INICIAL = '<?= vistaInicial ?>';
+// Los tipos que componen la riqueza, servidos por el backend: no se retipean aca.
+var TIPOS_RIQUEZA_CLIENTE = <?= tiposRiquezaJson ?>;
 
 var catalogo = null;
 
@@ -275,6 +375,10 @@ function irAVista(id) {
     document.getElementById('shellSubtitulo').textContent = vista.subtitulo;
     document.getElementById('shellVolver').classList.toggle('hidden', id === 'home');
     limpiarAviso();
+
+    // Init perezoso: la vista pide el catalogo la primera vez que se entra, no al abrir.
+    var preparar = VISTAS_CON_CATALOGO[id];
+    if (preparar) { asegurarCatalogo(preparar); }
 }
 
 /**
@@ -389,6 +493,263 @@ function asegurarCatalogo(cuando) {
             mostrarError('No se pudo leer el Plan de Cuentas: ' + err.message);
         })
         .obtenerCatalogoShell();
+}
+
+// ============================================
+// FORMULARIOS
+// ============================================
+
+/** Las vistas que necesitan el catalogo, y que por eso lo piden al entrar. */
+var VISTAS_CON_CATALOGO = { movimiento: prepararMovimiento, traspaso: prepararTraspaso };
+
+/** Fecha de hoy en el formato que espera <input type="date">. */
+function hoyISO() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+        '-' + String(d.getDate()).padStart(2, '0');
+}
+
+/** Convierte lo que se tipea ("12.400,50" o "12400.50") al numero que espera el backend. */
+function aNumero(txt) {
+    var t = String(txt == null ? '' : txt).trim();
+    if (t === '') return '';
+    // Con coma decimal (formato de la planilla) los puntos son separador de miles.
+    if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+    var n = Number(t);
+    return isNaN(n) ? '' : n;
+}
+
+function opcion(valor, texto) {
+    var o = document.createElement('option');
+    o.value = valor;
+    o.textContent = texto == null ? valor : texto;
+    return o;
+}
+
+/** Llena un <select> con grupos, para que las cuentas no lleguen como una lista de 60. */
+function llenarSelect(id, grupos, seleccionado) {
+    var sel = document.getElementById(id);
+    sel.innerHTML = '';
+    grupos.forEach(function (g) {
+        if (!g.items.length) return;
+        if (g.titulo) {
+            var og = document.createElement('optgroup');
+            og.label = g.titulo;
+            g.items.forEach(function (it) { og.appendChild(opcion(it)); });
+            sel.appendChild(og);
+        } else {
+            g.items.forEach(function (it) { sel.appendChild(opcion(it)); });
+        }
+    });
+    if (seleccionado) sel.value = seleccionado;
+}
+
+// ---------- Movimiento ----------
+
+var movListo = false;
+
+function prepararMovimiento(cat) {
+    if (!movListo) {
+        llenarSelect('movCuenta', [
+            { titulo: 'Gastos variables', items: cat.variables },
+            { titulo: 'Gastos fijos', items: cat.fijos },
+            { titulo: 'Ingresos', items: cat.ingresos }
+        ]);
+        llenarSelect('movMedio', [{ items: cat.medios.map(function (m) { return m.nombre; }) }]);
+        llenarSelect('movMoneda', [{ items: cat.monedas }]);
+        movListo = true;
+    }
+    if (!document.getElementById('movFecha').value) {
+        document.getElementById('movFecha').value = hoyISO();
+    }
+    movSugerirUltimo(cat);
+    movMonedaDelMedio();
+    document.getElementById('movMonto').focus();
+}
+
+/**
+ * La ruta de dos toques del arnes: proponer el ultimo movimiento en vez de preguntar todo.
+ * "Registro en menos de 3 segundos, maximo 2 toques" no se consigue con un formulario mas
+ * lindo, se consigue con defaults que casi siempre aciertan.
+ */
+function movSugerirUltimo(cat) {
+    var caja = document.getElementById('movRepetir');
+    var u = (cat.ultimos || []).filter(function (m) {
+        return m.cuenta && (cat.comodines || []).indexOf(m.cuenta) === -1;
+    })[0];
+    if (!u) { caja.classList.add('hidden'); return; }
+    caja.innerHTML = '';
+    var txt = document.createElement('span');
+    txt.innerHTML = 'Lo ultimo que cargaste: <span class="que"></span>';
+    txt.querySelector('.que').textContent = u.cuenta + ' con ' + u.medio;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Usar estos datos';
+    btn.onclick = function () {
+        document.getElementById('movCuenta').value = u.cuenta;
+        document.getElementById('movMedio').value = u.medio;
+        document.getElementById('movTipo').value = u.tipo || 'Egreso';
+        movMonedaDelMedio();
+        document.getElementById('movMonto').focus();
+    };
+    caja.appendChild(txt);
+    caja.appendChild(btn);
+    caja.classList.remove('hidden');
+}
+
+/** La moneda la decide el CATALOGO, igual que hace el onEdit de la hoja de Cargas. */
+function movMonedaDelMedio() {
+    if (!catalogo) return;
+    var medio = document.getElementById('movMedio').value;
+    var m = (catalogo.medios || []).filter(function (x) { return x.nombre === medio; })[0];
+    if (m && m.moneda) document.getElementById('movMoneda').value = m.moneda;
+}
+
+function guardarMovimiento(seguir) {
+    var datos = {
+        monto: aNumero(document.getElementById('movMonto').value),
+        tipo: document.getElementById('movTipo').value,
+        cuenta: document.getElementById('movCuenta').value,
+        medio: document.getElementById('movMedio').value,
+        moneda: document.getElementById('movMoneda').value,
+        fecha: document.getElementById('movFecha').value,
+        nota: document.getElementById('movNota').value
+    };
+    enviar('registrarMovimiento', datos, ['movBtnGuardar', 'movBtnSeguir'], function () {
+        document.getElementById('movMonto').value = '';
+        document.getElementById('movNota').value = '';
+        if (seguir) { document.getElementById('movMonto').focus(); }
+        else { irAVista('home'); }
+    });
+}
+
+// ---------- Traspaso ----------
+
+var trasListo = false;
+
+function prepararTraspaso(cat) {
+    if (!trasListo) {
+        var nombres = cat.medios.map(function (m) { return m.nombre; });
+        llenarSelect('trasOrigen', [{ items: nombres }]);
+        llenarSelect('trasDestino', [{ items: nombres }]);
+        if (nombres.length > 1) document.getElementById('trasDestino').value = nombres[1];
+        trasListo = true;
+    }
+    if (!document.getElementById('trasFecha').value) {
+        document.getElementById('trasFecha').value = hoyISO();
+    }
+    trasMonedas();
+    document.getElementById('trasMontoO').focus();
+}
+
+function monedaDe(nombre) {
+    var m = (catalogo && catalogo.medios || []).filter(function (x) { return x.nombre === nombre; })[0];
+    return m ? m.moneda : '';
+}
+function tipoDe(nombre) {
+    var m = (catalogo && catalogo.medios || []).filter(function (x) { return x.nombre === nombre; })[0];
+    return m ? m.tipo : '';
+}
+
+/**
+ * El segundo monto aparece SOLO si las cajas no comparten moneda. Cuando la comparten, pedirlo
+ * seria pedir un dato que ya se sabe -- y dejar que el operador lo tipee distinto es dejar que
+ * un traspaso invente o destruya plata.
+ */
+function trasMonedas() {
+    var o = document.getElementById('trasOrigen').value;
+    var d = document.getElementById('trasDestino').value;
+    var mo = monedaDe(o), md = monedaDe(d);
+    document.getElementById('trasHintO').textContent = mo ? mo + ', del catalogo' : '';
+    var cruza = mo && md && mo !== md;
+    document.getElementById('trasCampoDestino').classList.toggle('hidden', !cruza);
+    document.getElementById('trasHintD').textContent = cruza ? md + ', porque cruza moneda' : '';
+
+    var aviso = 'Se escriben dos filas con la cuenta Traspaso: una que sale y una que entra.';
+    if (o && d && o === d) aviso = 'El origen y el destino son la misma caja.';
+    else if (TIPOS_RIQUEZA_CLIENTE.indexOf(tipoDe(d)) !== -1) {
+        aviso += ' Este traspaso capitaliza: la plata pasa a una caja de ' + tipoDe(d) + '.';
+    }
+    document.getElementById('trasAviso').textContent = aviso;
+    trasTipoDeCambio();
+}
+
+/** Muestra el TC implicito mientras se tipea, que es el dato que el ledger no va a guardar. */
+function trasTipoDeCambio() {
+    var cruza = !document.getElementById('trasCampoDestino').classList.contains('hidden');
+    if (!cruza) return;
+    var a = aNumero(document.getElementById('trasMontoO').value);
+    var b = aNumero(document.getElementById('trasMontoD').value);
+    var hint = document.getElementById('trasHintD');
+    var md = monedaDe(document.getElementById('trasDestino').value);
+    if (a && b) {
+        hint.textContent = md + '. Tipo de cambio de la operacion: ' +
+            (Math.round((a / b) * 100) / 100).toString().replace('.', ',');
+    } else if (md) {
+        hint.textContent = md + ', porque cruza moneda';
+    }
+}
+
+function guardarTraspaso() {
+    var datos = {
+        origen: document.getElementById('trasOrigen').value,
+        destino: document.getElementById('trasDestino').value,
+        montoOrigen: aNumero(document.getElementById('trasMontoO').value),
+        montoDestino: aNumero(document.getElementById('trasMontoD').value),
+        fecha: document.getElementById('trasFecha').value,
+        nota: document.getElementById('trasNota').value
+    };
+    enviar('registrarTraspaso', datos, ['trasBtnGuardar'], function () {
+        document.getElementById('trasMontoO').value = '';
+        document.getElementById('trasMontoD').value = '';
+        document.getElementById('trasNota').value = '';
+        irAVista('home');
+    });
+}
+
+// ---------- Envio comun ----------
+
+/**
+ * Manda al backend y maneja los cuatro finales posibles: exito, validacion rechazada, error
+ * del servidor y silencio.
+ *
+ * Los botones se deshabilitan mientras viaja: sin eso, dos clicks son dos movimientos, y en
+ * un ledger eso es un duplicado que despues hay que ir a buscar a mano.
+ */
+function enviar(fn, datos, botones, alSalirBien) {
+    var deshabilitar = function (v) {
+        botones.forEach(function (id) {
+            var b = document.getElementById(id);
+            if (b) b.disabled = v;
+        });
+    };
+    deshabilitar(true);
+    loader(true);
+    limpiarAviso();
+
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true;
+        loader(false); deshabilitar(false);
+        mostrarError('La planilla esta tardando y no se pudo confirmar si el movimiento entro. ' +
+            'Miralo en la hoja Registros antes de cargarlo de nuevo.');
+    }, 60000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); deshabilitar(false); };
+
+    google.script.run
+        .withSuccessHandler(function (r) {
+            if (contesto) return;
+            cerrar();
+            if (r && r.ok) { mostrarOk(r.mensaje || 'Listo.'); alSalirBien(); }
+            else if (r && r.problemas) { mostrarError(r.problemas.join(' ')); }
+            else { mostrarError((r && r.error) || 'No se pudo guardar.'); }
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            cerrar();
+            mostrarError('No se pudo guardar: ' + err.message);
+        })[fn](datos);
 }
 
 document.addEventListener('DOMContentLoaded', function () {
