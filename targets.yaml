@@ -22,5 +22,5 @@ targets:
     # lo que dejo el campo stale en "0.23.5" mientras la planilla corria 0.38.3.
     # 2026-08-25: deploy v0.52.0 -- el merge que restaura los tres modulos de Presupuesto
     # que el deploy de v0.50.0 habia sacado de produccion, mas el rediseno del shell.
-    version_desplegada: "0.52.0"
+    version_desplegada: "0.52.1"
 
