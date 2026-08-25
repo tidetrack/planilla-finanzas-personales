@@ -9,6 +9,51 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.50.0 - Rediseno del Centro de Operaciones (2026-08-25)
+
+Pedido de Franco: *"necesito un equipo agentico que se ocupe de que el menu tenga un frontend
+mucho mas bonito [...] hace benchmarking del diseno del dashboard de planilla-pymes tanto del menu
+del centro de operaciones y de la webapp"*.
+
+**Como se hizo.** Cuatro agentes de benchmark en paralelo —el lenguaje visual de la webapp, el
+contrato de diseno de `handoff/design.md`, que hace que el centro de operaciones de pymes se vea
+terminado, y una critica sin piedad del shell actual—, dos direcciones de diseno independientes
+con angulos opuestos, y un director de arte que eligio una, injerto de la otra y entrego el CSS
+completo con chequeo de realidad.
+
+**El hallazgo que ordeno todo.** El director encontro, citando el changelog de la v0.48.0 de este
+mismo repo, que la direccion "mas sobria" **ya habia fallado dos veces**: sacar los bordes y
+definir la superficie por fondo es exactamente lo que se hizo antes de que Franco dijera "sigue
+feo". Su observacion de fondo: *una celda de Sheets no necesita borde porque la grilla ya es el
+borde; un input flotando en un modal no tiene grilla*. Por eso se **invierte el plano**: lienzo del
+color de la hoja y tarjetas blancas elevadas, en vez de lienzo blanco con tarjetas grises que se
+leian como pozos.
+
+Y midio algo que nadie habia contado: **el Home anterior armaba ~738px de flujo dentro de un modal
+de 700**. No entraba en si mismo. El nuevo suma 580, contado componente por componente.
+
+**Lo que cambia.** Home con una sola respuesta obvia (card hero para Movimiento, el resto en
+tarjetas y chips) en vez de siete tarjetas identicas donde cada apertura cobraba una decision.
+Acordeon en la carga multiple, que es la unica respuesta al tope real: quince bloques abiertos son
+2.910px en un modal de 700, colapsados son 48px cada uno. Segmentado Egreso/Ingreso y prefijo de
+moneda con el select transparente encima, que saca una columna entera de la grilla. Total del lote
+en vivo, y solo si todo comparte moneda.
+
+**Contraste medido par por par**, no estimado: el rojo `#c93232` sobre su riel daba 4.47:1 —abajo
+de AA— y pasa a `#ad2727` (5.76).
+
+**El ABM se alinea al mismo sistema.** `abrirAbm()` reemplaza el modal, asi que tocar "Gestionar
+cuentas" cambiaba de piel.
+
+**Lo que se conserva de la hoja, deliberadamente:** el navy medido `#34475d` como voz —no se
+importa el `#182040` de la webapp— y el `#eff2f9` como lienzo. El teal entra solo en rotulos de
+seccion, foco y un unico objeto: la card hero.
+
+56 tokens, cero hex sueltos fuera de `:root`, 323 usos de `var()`. Sin build, sin Tailwind, sin JS
+de terceros.
+
+---
+
 ## v0.49.0 - La tipografia nunca cargaba, y carga multiple (2026-08-25)
 
 **La causa raiz de "hay distorciones de tamanos de letras" no era la escala: era la familia.**

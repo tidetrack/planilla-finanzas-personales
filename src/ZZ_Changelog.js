@@ -3,6 +3,56 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.50.0 - Rediseno del Centro de Operaciones.
+ * - PEDIDO DE FRANCO: "necesito un equipo agentico que se ocupe de que el menu tenga un
+ *   frontend mucho mas bonito [...] hace benchmarking del diseno del dashboard de
+ *   planilla-pymes tanto del menu del centro de operaciones y de la webapp".
+ * - COMO SE HIZO: cuatro agentes de benchmark en paralelo (el lenguaje visual de la webapp,
+ *   el contrato de diseno de handoff/design.md, que hace que el centro de operaciones de pymes
+ *   se vea terminado, y una critica sin piedad del shell actual), dos direcciones de diseno
+ *   independientes con angulos opuestos, y un director de arte que eligio una, injerto de la
+ *   otra y entrego el CSS completo con chequeo de realidad.
+ * - EL HALLAZGO QUE ORDENO TODO: el director encontro, citando el changelog de la v0.48.0 de
+ *   este mismo archivo, que la direccion "mas sobria" YA HABIA FALLADO DOS VECES. Sacar los
+ *   bordes y definir la superficie por fondo es exactamente lo que se hizo antes de que Franco
+ *   dijera "sigue feo". Su observacion de fondo: UNA CELDA DE SHEETS NO NECESITA BORDE PORQUE
+ *   LA GRILLA YA ES EL BORDE; un input flotando en un modal no tiene grilla. Por eso se
+ *   INVIERTE EL PLANO: lienzo del color de la hoja (#eff2f9) y tarjetas blancas elevadas, en
+ *   vez de lienzo blanco con tarjetas grises, que se leian como pozos.
+ * - Y MIDIO ALGO QUE NADIE HABIA CONTADO: el Home anterior armaba ~738 px de flujo dentro de
+ *   un modal de 700. No entraba en si mismo. El nuevo suma 580, contado componente por
+ *   componente, con 120 de sobra.
+ * - HOME CON UNA SOLA RESPUESTA OBVIA. Card hero para "Movimiento nuevo", que es a lo que
+ *   Franco entra; el resto en tarjetas normales y chips. Antes eran SIETE tarjetas identicas
+ *   de 116 px en tres grillas iguales de repeat(3,1fr): cada apertura le cobraba una decision.
+ * - ACORDEON EN LA CARGA MULTIPLE, y es la unica respuesta al tope real. El cupo son 15 filas
+ *   de la grilla de Cargas; quince bloques ABIERTOS de 194 px son 2.910 px dentro de un modal
+ *   de 700. Colapsado un bloque son 48 px: quince entran con scroll corto y el boton de Cargar
+ *   queda pegado abajo, siempre a la vista.
+ * - Segmentado Egreso/Ingreso en lugar de un select de dos opciones (dos clicks y una lista
+ *   contra un click), y prefijo de moneda con el select transparente encima: saca una columna
+ *   entera de la grilla sin quitarle al operador la posibilidad de cambiarla, y es lo que baja
+ *   el bloque de tres filas a dos.
+ * - Total del lote en vivo, y SOLO si todo comparte moneda: sumar monedas distintas seria
+ *   mentir con un numero.
+ * - CONTRASTE MEDIDO PAR POR PAR, no estimado. El rojo #c93232 sobre su propio riel #fce8e6
+ *   daba 4.47:1, abajo del minimo AA, y pasa a #ad2727 (5.76). El placeholder pasa de 2.56 a
+ *   3.89. Los rotulos de seccion en teal dan 5.35 sobre lienzo y 6.00 sobre papel.
+ * - EL ABM SE ALINEA AL MISMO SISTEMA. abrirAbm() REEMPLAZA el modal del shell, asi que tocar
+ *   "Gestionar cuentas" cambiaba de piel: tenia el plano invertido y tres !important que
+ *   peleaban contra el sistema compartido en vez de usarlo. Ahora comparte plano y los
+ *   !important se van, salvo el de .hidden, que es legitimo.
+ * - LO QUE SE CONSERVA DE LA HOJA, deliberadamente: el navy MEDIDO #34475d como voz -- NO se
+ *   importa el #182040 de la webapp -- y el #eff2f9 como lienzo. El teal de la webapp entra
+ *   solo en rotulos de seccion, foco y un unico objeto: la card hero. Es el puente entre los
+ *   dos productos sin que el modal se lea como otra app.
+ * - 56 tokens, CERO hex sueltos fuera de :root, 323 usos de var(). Sin build, sin Tailwind,
+ *   sin JS de terceros: CSS plano y un solo link a Google Fonts.
+ * - El banco del shell exige ahora que el TAMANO del modal no este declarado en el CSS, no que
+ *   el numero no aparezca: un breakpoint de media query no es una redeclaracion del tamano, y
+ *   un numero dentro de un comentario tampoco. Probado en las dos direcciones.
+ * - Los catorce bancos y los tres modales en verde.
+ *
  * [2026-08-25] v0.49.0 - La tipografia nunca cargaba, y carga multiple de movimientos.
  * - LA CAUSA RAIZ DE "HAY DISTORCIONES DE TAMANOS DE LETRAS" NO ERA LA ESCALA: ERA LA FAMILIA.
  *   Dos cosas encadenadas. Primera: UI_SharedStyles declara 'Google Sans' pero el shell no

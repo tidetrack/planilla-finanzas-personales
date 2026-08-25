@@ -122,9 +122,19 @@ ok(ultimoModal.ancho === ctx.SHELL_GEOMETRIA.ancho,
 // DIMENSIONES DEL MODAL aparezcan escritas tambien en el HTML y dejen de coincidir con el
 // backend (en pymes el comentario dice 1120, el codigo 1000 y el fragmento 1080). Se busca
 // eso y no cualquier max-width -- el 560px de un parrafo es ancho de LECTURA, no de shell.
-const dims = new RegExp('(' + ctx.SHELL_GEOMETRIA.ancho + '|' + ctx.SHELL_GEOMETRIA.alto + ')\\s*px');
-ok(!dims.test(HTML),
-    'las dimensiones del modal NO estan retipeadas en el CSS: solo viven en SHELL_GEOMETRIA');
+// Lo que hay que impedir es que el TAMANO DEL MODAL este declarado dos veces y se
+// desincronice -- la cicatriz de pymes, donde el comentario dice 1120, el codigo 1000 y el
+// fragmento 1080. Un breakpoint de media query NO es eso: es una respuesta a que Sheets
+// recorte el dialogo. Y un numero dentro de un comentario tampoco. Se buscan DECLARACIONES
+// DE TAMANO, que es la unica forma en que las dos fuentes pueden contradecirse.
+const cssSinComentarios = HTML
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/@media[^{]*\{/g, '@media {');
+const dims = new RegExp(
+    '(?:^|[;{\\s])(?:min-|max-)?(?:width|height)\\s*:\\s*(?:' +
+    ctx.SHELL_GEOMETRIA.ancho + '|' + ctx.SHELL_GEOMETRIA.alto + ')px');
+ok(!dims.test(cssSinComentarios),
+    'el TAMANO del modal no esta declarado en el CSS: solo vive en SHELL_GEOMETRIA');
 
 seccion('2. Cada puerta de entrada abre SU vista');
 const PUERTAS = {

@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 49,
+ minor: 50,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.49.0 - La tipografia nunca cargaba, y carga multiple',
+ releaseName: 'v0.50.0 - Rediseno del Centro de Operaciones',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,17 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.50.0 (2026-08-25) - Rediseno del Centro de Operaciones
++ Franco: "necesito un equipo agentico que se ocupe de que el menu tenga un frontend mucho mas bonito". Se armo: cuatro agentes de benchmark (webapp de pymes, contrato de diseno del handoff, centro de operaciones, critica del estado actual), dos direcciones independientes y un director de arte que eligio, injerto y entrego el CSS.
+! EL DIRECTOR ENCONTRO QUE LA DIRECCION "MAS SOBRIA" YA HABIA FALLADO DOS VECES, citando el changelog de la v0.48.0: sacar los bordes y definir la superficie por fondo es exactamente lo que se hizo antes de que Franco dijera "sigue feo". La observacion de fondo: una celda de Sheets no necesita borde porque LA GRILLA YA ES EL BORDE; un input flotando en un modal no tiene grilla. Se invierte el plano: lienzo del color de la hoja, tarjetas blancas elevadas.
+! Y midio que el Home ANTERIOR armaba ~738px de flujo dentro de un modal de 700: no entraba en si mismo. El nuevo suma 580 con 120 de sobra, contado componente por componente.
++ HOME CON UNA SOLA RESPUESTA OBVIA: card hero para "Movimiento nuevo" -- que es a lo que Franco entra -- y el resto en tarjetas normales y chips. Antes eran siete tarjetas identicas de 116px en tres grillas iguales: cada apertura cobraba una decision.
++ ACORDEON EN LA CARGA MULTIPLE: un solo bloque abierto a la vez. Quince bloques abiertos de 194px son 2.910px en un modal de 700; colapsados son 48px cada uno y el cupo real entra con el boton de Cargar siempre a la vista.
++ Segmentado Egreso/Ingreso en vez de un select de dos opciones, y prefijo de moneda con el select transparente encima: saca una columna entera de la grilla y baja el bloque de tres filas a dos.
++ Total del lote en vivo, y solo si todo comparte moneda: sumar monedas distintas seria mentir.
+* CONTRASTE MEDIDO PAR POR PAR. El rojo #c93232 sobre su riel daba 4.47:1 -- abajo de AA -- y pasa a #ad2727 (5.76). El placeholder daba 2.56 y pasa a 3.89.
+* El ABM se alinea al mismo sistema: comparte plano con el shell y se le sacan los !important, que peleaban contra el sistema compartido en vez de usarlo. "Gestionar cuentas" reemplaza el modal, asi que tocarla cambiaba de piel.
++ 56 tokens, CERO hex sueltos fuera de :root, 323 usos de var(). Sin build, sin Tailwind, sin JS de terceros.
 v0.49.0 (2026-08-25) - La tipografia nunca cargaba, y carga multiple
 ! LA CAUSA RAIZ DE "HAY DISTORCIONES DE TAMANOS DE LETRAS" NO ERA LA ESCALA, ERA LA FAMILIA. UI_SharedStyles declara 'Google Sans' pero el shell no tenia el <link> a Google Fonts: la fuente NUNCA se descargaba. Y peor: los cinco rotulos mas chicos usaban var(--font-mono), que declara JetBrains Mono y Fira Code -- ninguna instalada -- asi que caian en COURIER NEW. La altura de x de Courier es ~0.42em contra ~0.53em de una grotesca: a 10.5px las minusculas median 4,4 px al lado de un select de 14px sans. Habia DOS cosas declaradas en 20px que no se parecian en nada, porque una era sans y la otra Courier.
 + Se carga la webfont de verdad. Se retira el token --font-mono del design system: un token que resuelve a algo que nadie eligio es una trampa. UNA SOLA FAMILIA en todo el shell, como pymes.
