@@ -212,20 +212,34 @@ const PC_TOKEN_CORRECTO = '$E$18';
 // "Monto a Proyectar" (K/O/S) y el rango del Plan de Cuentas que da la categoria de cada cuenta.
 // decision Franco 2026-08-24: mismo criterio de signo confirmado contra Tablero!AA10 (ver
 // cabecera) -- Ingresos suma, Gastos Fijos y Variables restan.
-const PC_BLOQUES = {
-    ingresos: {
-        colCuenta: PM_BLOQUES.ingresos.colCuenta, colModo: PM_BLOQUES.ingresos.colMonto,
-        colProyectar: 'K', rangesCfg: RANGES.INGRESOS
-    },
-    fijos: {
-        colCuenta: PM_BLOQUES.fijos.colCuenta, colModo: PM_BLOQUES.fijos.colMonto,
-        colProyectar: 'O', rangesCfg: RANGES.GASTOS_FIJOS
-    },
-    variables: {
-        colCuenta: PM_BLOQUES.variables.colCuenta, colModo: PM_BLOQUES.variables.colMonto,
-        colProyectar: 'S', rangesCfg: RANGES.GASTOS_VARIABLES
+// decision Franco 2026-08-25: _bloquesPc() deja de ser un const de nivel superior. Leia
+// PM_BLOQUES (DEVTOOL_PresupuestoModo.js) al CARGAR, y eso funcionaba SOLO porque la "R" de
+// Resumen ordena despues de la "M" de Modo. Apps Script comparte un unico scope global y evalua
+// los archivos en orden alfabetico: el gemelo exacto de este patron en
+// DEVTOOL_PresupuestoGuardar.js (cuya "G" ordena ANTES) tumbo la carga del PROYECTO ENTERO el
+// 2026-08-25 y dejo toda la planilla con #ERROR!. Este funcionaba de casualidad, no por diseno:
+// bastaba renombrar un archivo para despertarlo. Se resuelve al INVOCAR y se memoiza, asi el
+// orden de carga deja de importar. @see devtools/probar_carga_apps_script.js
+var _cacheBloquesPc;
+function _bloquesPc() {
+    if (!_cacheBloquesPc) {
+        _cacheBloquesPc = {
+        ingresos: {
+            colCuenta: PM_BLOQUES.ingresos.colCuenta, colModo: PM_BLOQUES.ingresos.colMonto,
+            colProyectar: 'K', rangesCfg: RANGES.INGRESOS
+        },
+        fijos: {
+            colCuenta: PM_BLOQUES.fijos.colCuenta, colModo: PM_BLOQUES.fijos.colMonto,
+            colProyectar: 'O', rangesCfg: RANGES.GASTOS_FIJOS
+        },
+        variables: {
+            colCuenta: PM_BLOQUES.variables.colCuenta, colModo: PM_BLOQUES.variables.colMonto,
+            colProyectar: 'S', rangesCfg: RANGES.GASTOS_VARIABLES
+        }
+        };
     }
-};
+    return _cacheBloquesPc;
+}
 // decision Franco 2026-08-25: NO inicializar un const de nivel superior leyendo un simbolo de
 // OTRO archivo. Apps Script evalua los archivos en orden alfabetico y no hay filePushOrder en
 // .clasp.json, asi que aca el orden HOY zafa ("...Resumen" va despues de "...Modo"), pero es la misma bomba. El
@@ -254,7 +268,7 @@ function _formulaAgrupadoPc(tipo, fila) {
     const defs = [];
     const terminos = [];
     _clavesBloquePc().forEach(function (k, i) {
-        const b = PC_BLOQUES[k];
+        const b = _bloquesPc()[k];
         const cfg = b.rangesCfg;
         const idx = columnLetterToIndex(cfg.columns.proyecto) - columnLetterToIndex(cfg.columns.nombre) + 1;
         const rangoPlan = _refHoja(cfg.sheet) + '!' + cfg.columns.nombre + ':' + cfg.columns.proyecto;
@@ -533,7 +547,7 @@ function _preflightPc(ss) {
 
     // --- 2. Las tres columnas "Monto a Proyectar" (K/O/S) -- este modulo las LEE, no las escribe ---
     _clavesBloquePc().forEach(function (k) {
-        chequear(PC_BLOQUES[k].colProyectar + '7', PC_TITULO_PROYECTAR);
+        chequear(_bloquesPc()[k].colProyectar + '7', PC_TITULO_PROYECTAR);
     });
 
     // --- 3. W7 dice EXACTAMENTE lo mismo que K7/O7/S7 ("Monto a Proyectar") -- este modulo lo

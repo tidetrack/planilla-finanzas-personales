@@ -199,7 +199,7 @@
  * rotuloCuenta, colCuenta, categoria), PM_CLAVES_BLOQUE, PM_FILA_INI, PM_FILA_FIN,
  * PM_UMBRAL_IDENTIDAD (NO reusa `_preflightPm` completo -- ver el preflight propio mas abajo,
  * "por que no se reusa `_preflightPm`").
- * Reusa de DEVTOOL_PresupuestoResumen.js: PC_BLOQUES (colProyectar: K/O/S), PC_TITULO_PROYECTAR,
+ * Reusa de DEVTOOL_PresupuestoResumen.js: _bloquesPc() (colProyectar: K/O/S), PC_TITULO_PROYECTAR,
  * PC_COL_PROYECTAR_AGRUPADO.
  * Reusa de DEVTOOL_PresupuestoBase.js: PB_MARCA, _preflightPb (Proyeccion espeja a Registros),
  * _borrarGeneradasPb (borrado bottom-up en bloques contiguos, generico por lista de filas).
@@ -356,7 +356,7 @@ function _preflightPresupuestoPg(ss) {
         const b = PM_BLOQUES[k];
         chequear(b.tituloBloque.celda, b.tituloBloque.esperado);
         chequear(b.rotuloCuenta.celda, b.rotuloCuenta.esperado);
-        chequear(PC_BLOQUES[k].colProyectar + '7', PC_TITULO_PROYECTAR);
+        chequear(_bloquesPc()[k].colProyectar + '7', PC_TITULO_PROYECTAR);
     });
     chequear(PC_COL_PROYECTAR_AGRUPADO + '7', PC_TITULO_PROYECTAR);
 
@@ -369,7 +369,7 @@ function _preflightPresupuestoPg(ss) {
     // significaria leer un nombre de cuenta o un monto que no es lo que parece.
     const conError = [];
     PM_CLAVES_BLOQUE.forEach(function (k) {
-        [PM_BLOQUES[k].colCuenta, PC_BLOQUES[k].colProyectar].forEach(function (col) {
+        [PM_BLOQUES[k].colCuenta, _bloquesPc()[k].colProyectar].forEach(function (col) {
             for (let f = PM_FILA_INI; f <= PM_FILA_FIN; f++) {
                 const err = _errorDeCelda(hoja.getRange(col + f));
                 if (err) conError.push(col + f + '=' + err);
@@ -419,7 +419,7 @@ function _leerFilasPresupuestoPg(hoja) {
 
     PM_CLAVES_BLOQUE.forEach(function (k) {
         const colCuenta = PM_BLOQUES[k].colCuenta;
-        const colMonto = PC_BLOQUES[k].colProyectar;
+        const colMonto = _bloquesPc()[k].colProyectar;
         const categoria = PM_BLOQUES[k].categoria;
         const tipo = k === 'ingresos' ? 'Ingreso' : 'Egreso';
 

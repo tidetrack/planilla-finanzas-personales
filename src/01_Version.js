@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 51,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.51.0 - Presupuesto: sembrar Monto a Proyectar desde J/N/R',
+ releaseName: 'v0.51.1 - PC_BLOQUES deja de depender del orden de archivos',
 
  /**
  * Changelog embebido (solo refleja el release vigente).

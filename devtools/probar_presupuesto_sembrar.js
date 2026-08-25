@@ -6,7 +6,7 @@
  * matarla. Las decisiones bajo prueba (ver la cabecera del modulo real para el porque de cada
  * una):
  *
- *   1. La correspondencia J->K, N->O, R->S sale de PC_BLOQUES (DEVTOOL_PresupuestoResumen.js),
+ *   1. La correspondencia J->K, N->O, R->S sale de _bloquesPc() (DEVTOOL_PresupuestoResumen.js),
  *      nunca retipeada.
  *   2. El anuncio de MODO: en "Historico" avisa EXPLICITO que no es la Proyeccion; en
  *      "Proyeccion" no lleva esa advertencia.
@@ -83,7 +83,7 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_PresupuestoResumen.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_PresupuestoSembrar.js'), 'utf8') +
     '\n;Object.assign(globalThis,{SHEETS,PM_MODO,PM_BLOQUES,PM_CLAVES_BLOQUE,PM_FILA_INI,PM_FILA_FIN,' +
-    'PC_BLOQUES,PC_TITULO_PROYECTAR,PS_UMBRAL_IDENTIDAD,PS_PROP_PREVIOS,_preflightPs,_planPs,' +
+    '_bloquesPc,PC_TITULO_PROYECTAR,PS_UMBRAL_IDENTIDAD,PS_PROP_PREVIOS,_preflightPs,_planPs,' +
     '_anuncioModoPs,_lineaBloquePs,estadoPresupuestoSembrar,aplicarPresupuestoSembrar,' +
     'revertirPresupuestoSembrar,_rotulosCompatibles,_normalizarRotulo});',
     ctx
@@ -146,7 +146,7 @@ function hojaBase(opciones) {
 
     ctx.PM_CLAVES_BLOQUE.forEach((k) => {
         const bPm = ctx.PM_BLOQUES[k];
-        const bPc = ctx.PC_BLOQUES[k];
+        const bPc = ctx._bloquesPc()[k];
         set(bPm.tituloBloque.celda, bPm.tituloBloque.esperado);
         set(bPm.rotuloCuenta.celda, bPm.rotuloCuenta.esperado);
         set(bPc.colProyectar + '7', ctx.PC_TITULO_PROYECTAR);
@@ -178,14 +178,14 @@ function snapshot(hoja) { return JSON.stringify(hoja.celdas); }
 
 // ============================================
 console.log('BANCO: DEVTOOL_PresupuestoSembrar');
-console.log('  geometria leida de PC_BLOQUES (DEVTOOL_PresupuestoResumen.js), no retipeada aca.');
+console.log('  geometria leida de _bloquesPc() (DEVTOOL_PresupuestoResumen.js), no retipeada aca.');
 
-seccion('0. Sanity: la correspondencia J->K, N->O, R->S sale de PC_BLOQUES');
-ok(ctx.PC_BLOQUES.ingresos.colModo === 'J' && ctx.PC_BLOQUES.ingresos.colProyectar === 'K',
+seccion('0. Sanity: la correspondencia J->K, N->O, R->S sale de _bloquesPc()');
+ok(ctx._bloquesPc().ingresos.colModo === 'J' && ctx._bloquesPc().ingresos.colProyectar === 'K',
     'ingresos: J -> K');
-ok(ctx.PC_BLOQUES.fijos.colModo === 'N' && ctx.PC_BLOQUES.fijos.colProyectar === 'O',
+ok(ctx._bloquesPc().fijos.colModo === 'N' && ctx._bloquesPc().fijos.colProyectar === 'O',
     'fijos: N -> O');
-ok(ctx.PC_BLOQUES.variables.colModo === 'R' && ctx.PC_BLOQUES.variables.colProyectar === 'S',
+ok(ctx._bloquesPc().variables.colModo === 'R' && ctx._bloquesPc().variables.colProyectar === 'S',
     'variables: R -> S');
 
 seccion('1. El plan clasifica bien: vacias, llenas (incl. el cero), sin cuenta');

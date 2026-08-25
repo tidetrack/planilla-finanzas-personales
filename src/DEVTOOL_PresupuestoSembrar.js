@@ -15,8 +15,8 @@
  *
  * LA CORRESPONDENCIA (verificada contra docs/permanente/DISENO_HOJA_PRESUPUESTO.md, seccion
  * "Que hay en cada columna", ANTES de escribir una linea de este modulo): J->K (Ingresos),
- * N->O (Gastos Fijos), R->S (Gastos Variables). Es exactamente PC_BLOQUES[k].colModo ->
- * PC_BLOQUES[k].colProyectar (DEVTOOL_PresupuestoResumen.js), asi que este modulo no retipea
+ * N->O (Gastos Fijos), R->S (Gastos Variables). Es exactamente _bloquesPc()[k].colModo ->
+ * _bloquesPc()[k].colProyectar (DEVTOOL_PresupuestoResumen.js), asi que este modulo no retipea
  * la geometria: la LEE de ahi (ver "POR QUE NO SE DUPLICA LA GEOMETRIA" mas abajo).
  *
  * "Categorias" (U/V/W) queda AFUERA a proposito: V/W son un AGRUPADO por categoria (suma de
@@ -87,7 +87,7 @@
  *
  * POR QUE NO SE DUPLICA LA GEOMETRIA (y por que ESTE archivo es el peligroso, no los otros):
  * PM_BLOQUES/PM_SELECTORES/PM_MODO/PM_CLAVES_BLOQUE/PM_FILA_INI/PM_FILA_FIN (DEVTOOL_Presupuesto
- * Modo.js) y PC_BLOQUES/PC_TITULO_PROYECTAR (DEVTOOL_PresupuestoResumen.js) YA describen esta
+ * Modo.js) y _bloquesPc()/PC_TITULO_PROYECTAR (DEVTOOL_PresupuestoResumen.js) YA describen esta
  * geometria completa (colCuenta, colModo, colProyectar, banda de filas, rotulos). Repetirla en
  * un tercer lugar es la forma barata de que un dia describan tres cosas distintas. Pero Apps
  * Script no tiene modulos -- comparte un scope global, evaluado en ORDEN ALFABETICO de archivo
@@ -172,7 +172,7 @@ function _preflightPs(ss) {
     // --- Los tres bloques: titulo, rotulo "Cuenta" y el titulo de "Monto a Proyectar" ---
     PM_CLAVES_BLOQUE.forEach(function (k) {
         const bPm = PM_BLOQUES[k];
-        const bPc = PC_BLOQUES[k];
+        const bPc = _bloquesPc()[k];
         chequear(bPm.tituloBloque.celda, bPm.tituloBloque.esperado);
         chequear(bPm.rotuloCuenta.celda, bPm.rotuloCuenta.esperado);
         chequear(bPc.colProyectar + '7', PC_TITULO_PROYECTAR);
@@ -187,7 +187,7 @@ function _preflightPs(ss) {
     // --- algo escribio ahi que no es Franco a mano y este modulo no sabe convivir con eso. ---
     const conFormula = [];
     PM_CLAVES_BLOQUE.forEach(function (k) {
-        const col = PC_BLOQUES[k].colProyectar;
+        const col = _bloquesPc()[k].colProyectar;
         for (let f = PM_FILA_INI; f <= PM_FILA_FIN; f++) {
             if (hoja.getRange(col + f).getFormula()) conFormula.push(col + f);
         }
@@ -224,7 +224,7 @@ function _planPs(pre) {
     PM_CLAVES_BLOQUE.forEach(function (k) {
         const colCuenta = PM_BLOQUES[k].colCuenta;
         const colFuente = PM_BLOQUES[k].colMonto;         // J / N / R
-        const colDestino = PC_BLOQUES[k].colProyectar;     // K / O / S
+        const colDestino = _bloquesPc()[k].colProyectar;     // K / O / S
 
         const cuentas = hoja.getRange(colCuenta + PM_FILA_INI + ':' + colCuenta + PM_FILA_FIN).getValues();
         const fuentes = hoja.getRange(colFuente + PM_FILA_INI + ':' + colFuente + PM_FILA_FIN).getValues();

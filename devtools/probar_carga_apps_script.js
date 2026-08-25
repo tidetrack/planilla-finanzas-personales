@@ -57,15 +57,35 @@ SERVICIOS.forEach(function (n) {
     });
 });
 
-const fuente = archivos.map(function (f) {
-    return '\n//# ' + f + '\n' + fs.readFileSync(path.join(DIR_SRC, f), 'utf8');
-}).join('\n');
+function _evaluarEnOrden(orden) {
+    const fuente = orden.map(function (f) {
+        return '\n//# ' + f + '\n' + fs.readFileSync(path.join(DIR_SRC, f), 'utf8');
+    }).join('\n');
+    const ctx = {};
+    SERVICIOS.forEach(function (n) {
+        ctx[n] = new Proxy(function () {}, {
+            get: function () { return ctx[n]; },
+            apply: function () { return ctx[n]; },
+            construct: function () { return ctx[n]; }
+        });
+    });
+    try {
+        vm.runInNewContext(fuente, vm.createContext(ctx), { filename: 'proyecto-apps-script.js' });
+        return null;
+    } catch (e) { return e; }
+}
 
-let error = null;
-try {
-    vm.runInNewContext(fuente, vm.createContext(contexto), { filename: 'proyecto-apps-script.js' });
-} catch (e) {
-    error = e;
+const error = _evaluarEnOrden(archivos);
+
+function _quienLoDefine(msg) {
+    const m = /'?(\w+)'? is not defined|Cannot access '(\w+)' before initialization/.exec(msg);
+    if (!m) return null;
+    const simbolo = m[1] || m[2];
+    const duenio = archivos.filter(function (f) {
+        return new RegExp('^(?:const|var|let|function)\\s+' + simbolo + '\\b', 'm')
+            .test(fs.readFileSync(path.join(DIR_SRC, f), 'utf8'));
+    });
+    return { simbolo: simbolo, archivo: duenio.length ? duenio[0] : null };
 }
 
 if (error) {
@@ -88,6 +108,35 @@ if (error) {
     console.log('');
 }
 ok(!error, 'el proyecto entero evalua en orden alfabetico sin romper');
+
+// ----------------------------------------------------------------------------
+// CHEQUEO 2 - FRAGILIDAD, no rotura.
+// El chequeo 1 solo ve lo que YA esta roto. PC_BLOQUES leia PM_BLOQUES al cargar y pasaba en
+// verde porque la "R" de Resumen ordena despues de la "M" de Modo: funcionaba de casualidad, y
+// bastaba renombrar un archivo para despertarlo.
+// Prueba: los NUMERADOS (00_, 01_, ...) conservan su orden -- su prefijo es deliberado y ningun
+// rename los mueve detras de un DEVTOOL, porque los digitos ordenan antes que las letras -- y el
+// RESTO se invierte. Si el proyecto sigue cargando, ningun archivo no-numerado depende de otro
+// no-numerado en su nivel superior, y el orden entre ellos es irrelevante.
+// ----------------------------------------------------------------------------
+const numerados = archivos.filter(function (f) { return /^[0-9]/.test(f); });
+const resto = archivos.filter(function (f) { return !/^[0-9]/.test(f); });
+const ordenInverso = numerados.concat(resto.slice().reverse());
+const errorFragil = _evaluarEnOrden(ordenInverso);
+
+if (errorFragil) {
+    const q = _quienLoDefine(errorFragil.message);
+    console.log('\n  FRAGIL: hoy carga, pero solo por el orden alfabetico de los nombres de archivo.');
+    console.log('  Invirtiendo los no-numerados:\n');
+    console.log('    ' + errorFragil.name + ': ' + errorFragil.message);
+    if (q && q.archivo) {
+        console.log('\n    "' + q.simbolo + '" lo define ' + q.archivo + ', otro archivo no-numerado.');
+        console.log('    Leerlo en un const de nivel superior ata este modulo a que ESE archivo');
+        console.log('    ordene antes. Un rename lo rompe. Arreglo: leerlo al INVOCAR.');
+    }
+    console.log('');
+}
+ok(!errorFragil, 'ningun archivo no-numerado depende del orden de otro no-numerado al cargar');
 
 console.log('\n' + (fallas === 0 ? 'TODO OK' : fallas + ' FALLA(S)'));
 process.exit(fallas === 0 ? 0 : 1);

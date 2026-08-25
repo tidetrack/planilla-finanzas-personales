@@ -9,6 +9,20 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.51.1 - PC_BLOQUES deja de depender del orden de archivos (2026-08-25)
+
+Cierre del incidente de v0.50.1. Ese hotfix arreglo el caso que rompio la planilla y dejo vivo su
+gemelo: `DEVTOOL_PresupuestoResumen.js` inicializaba `PC_BLOQUES` leyendo `PM_BLOQUES` al cargar.
+Nunca fallo, pero no por diseno -- la "R" de Resumen ordena despues de la "M" de Modo, y bastaba
+un rename para despertarlo. Pasa a leerse al invocar (`_bloquesPc()`), memoizado.
+
+El banco de v0.50.1 no podia verlo, y esa era su falla real: evaluaba solo el orden alfabetico
+real, asi que detectaba lo roto y nunca lo fragil. Ahora hace una segunda pasada con los archivos
+numerados en su orden y todo el resto invertido; si el proyecto carga igual, ningun archivo
+no-numerado depende del orden de otro. Contesta el interprete, no una regex.
+
+---
+
 ## v0.51.0 - Presupuesto: sembrar "Monto a Proyectar" desde J/N/R (2026-08-25)
 
 Pedido textual de Franco: "me agregas una funcion dev que te arme los valores de 'Monto a

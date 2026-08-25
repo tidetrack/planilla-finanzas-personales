@@ -62,7 +62,7 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_PresupuestoGuardar.js'), 'utf8') +
     '\n;Object.assign(globalThis,{RANGES,SHEETS,MONEDAS_DISPONIBLES,columnLetterToIndex,' +
     'invalidarCacheNombresHojas,PM_TITULO,PM_SELECTORES,PM_BLOQUES,PM_CLAVES_BLOQUE,PM_FILA_INI,' +
-    'PM_FILA_FIN,PM_UMBRAL_IDENTIDAD,PC_BLOQUES,PC_TITULO_PROYECTAR,PC_COL_PROYECTAR_AGRUPADO,' +
+    'PM_FILA_FIN,PM_UMBRAL_IDENTIDAD,_bloquesPc,PC_TITULO_PROYECTAR,PC_COL_PROYECTAR_AGRUPADO,' +
     'PB_MARCA,IP_MESES,PG_MARCA,' +
     '_periodoDesdeSelectoresPg,_claveMesPg,_mismoMesPg,_leerCotizacionesVivasPg,' +
     '_preflightPresupuestoPg,_preflightProyeccionPg,_leerFilasPresupuestoPg,_sumarPorBloquePg,' +
@@ -172,7 +172,7 @@ function hojaPresupuestoMock(bloques, overridesTotales) {
         const b = ctx.PM_BLOQUES[k];
         set(b.tituloBloque.celda, b.tituloBloque.esperado);
         set(b.rotuloCuenta.celda, b.rotuloCuenta.esperado);
-        set(ctx.PC_BLOQUES[k].colProyectar + '7', ctx.PC_TITULO_PROYECTAR);
+        set(ctx._bloquesPc()[k].colProyectar + '7', ctx.PC_TITULO_PROYECTAR);
 
         const entradas = (bloques && bloques[k]) || [];
         const cuentas = new Array(nFilas).fill('');
@@ -182,7 +182,7 @@ function hojaPresupuestoMock(bloques, overridesTotales) {
             montos[i] = (e.proyectar === undefined || e.proyectar === null) ? '' : e.proyectar;
         });
         setColumna(b.colCuenta, ctx.PM_FILA_INI, cuentas);
-        setColumna(ctx.PC_BLOQUES[k].colProyectar, ctx.PM_FILA_INI, montos);
+        setColumna(ctx._bloquesPc()[k].colProyectar, ctx.PM_FILA_INI, montos);
     });
     set(ctx.PC_COL_PROYECTAR_AGRUPADO + '7', ctx.PC_TITULO_PROYECTAR);
 

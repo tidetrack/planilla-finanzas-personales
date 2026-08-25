@@ -70,7 +70,7 @@ vm.runInContext(
     'PC_COL_CATEGORIA,PC_COL_MODO_AGRUPADO,PC_COL_PROYECTAR_AGRUPADO,' +
     'PC_TITULO_PROYECTAR,PC_ROTULO_CATEGORIAS,PC_ROTULO_NOMBRE,' +
     'PC_CELDA_TITULO_TABLA1,PC_TITULO_TABLA1,PC_FILAS_TABLA2,PC_TOKEN_ROTO,PC_TOKEN_CORRECTO,' +
-    'PC_BLOQUES,_clavesBloquePc,_formulaAgrupadoPc,_formulaRotuloMesRefPc,_repararReferenciaTabla2Pc,' +
+    '_bloquesPc,_clavesBloquePc,_formulaAgrupadoPc,_formulaRotuloMesRefPc,_repararReferenciaTabla2Pc,' +
     '_recalcularAgrupadoPc,_leerMapaCategoriaPc,_verificarInvariantesPc,_preflightPc,_planPc});',
     ctx);
 
@@ -162,7 +162,7 @@ console.log('\n=== 2. EL CABLEADO ===');
         // dice EXACTAMENTE lo mismo que K7/O7/S7 ("Monto a Proyectar").
         set(ctx.PC_COL_MODO_AGRUPADO + '7', 'Monto \nHistórico');
         set(ctx.PC_COL_PROYECTAR_AGRUPADO + '7', ctx.PC_TITULO_PROYECTAR);
-        Object.keys(ctx.PC_BLOQUES).forEach(k => set(ctx.PC_BLOQUES[k].colProyectar + '7', ctx.PC_TITULO_PROYECTAR));
+        Object.keys(ctx._bloquesPc()).forEach(k => set(ctx._bloquesPc()[k].colProyectar + '7', ctx.PC_TITULO_PROYECTAR));
 
         for (let f = ctx.PM_FILA_INI; f <= ctx.PM_FILA_FIN; f++) {
             set(ctx.PC_COL_CATEGORIA + f, 'Categoria ' + f, "='Plan de Cuentas'!P" + (f - 1));
@@ -378,7 +378,7 @@ console.log('\n=== 4. EL PREFLIGHT (con mock de hoja y mutaciones dirigidas) ===
         // escribe). W7 ESTATICO, mismo texto que K7/O7/S7.
         set(ctx.PC_COL_MODO_AGRUPADO + '7', 'Monto \nHistórico');
         set(ctx.PC_COL_PROYECTAR_AGRUPADO + '7', ctx.PC_TITULO_PROYECTAR);
-        Object.keys(ctx.PC_BLOQUES).forEach(k => set(ctx.PC_BLOQUES[k].colProyectar + '7', ctx.PC_TITULO_PROYECTAR));
+        Object.keys(ctx._bloquesPc()).forEach(k => set(ctx._bloquesPc()[k].colProyectar + '7', ctx.PC_TITULO_PROYECTAR));
 
         for (let f = ctx.PM_FILA_INI; f <= ctx.PM_FILA_FIN; f++) {
             set(ctx.PC_COL_CATEGORIA + f, 'Categoria ' + f, "='Plan de Cuentas'!P" + (f - 1));

@@ -3,6 +3,21 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.51.1 - PC_BLOQUES deja de depender del orden de archivos.
+ * ! CIERRE DEL INCIDENTE v0.50.1. Aquel hotfix arreglo el caso que ROMPIO la planilla
+ *   (PG_UMBRAL_IDENTIDAD) y dejo vivo su gemelo: DEVTOOL_PresupuestoResumen.js hacia
+ *   "const PC_BLOQUES = { ...PM_BLOQUES... }" al CARGAR. Nunca fallo, pero no por diseno: la
+ *   "R" de Resumen ordena despues de la "M" de Modo. Bastaba renombrar un archivo para
+ *   despertarlo. Ahora se lee al invocar y se memoiza: _bloquesPc().
+ * ! EL BANCO DE v0.50.1 NO PODIA VERLO, y esa era su falla real: solo evaluaba el orden
+ *   alfabetico REAL, o sea que solo detectaba lo que ya estaba roto, jamas lo que estaba por
+ *   romperse. Lo encontro un agente leyendo el codigo, no la herramienta.
+ * + CHEQUEO NUEVO en probar_carga_apps_script.js: FRAGILIDAD, no rotura. Evalua el proyecto una
+ *   segunda vez con los numerados en su orden (su prefijo es deliberado, y ningun rename los
+ *   mueve detras de un DEVTOOL porque los digitos ordenan antes que las letras) y TODO EL RESTO
+ *   INVERTIDO. Si carga igual, ningun archivo no-numerado depende del orden de otro. Sin regex
+ *   y sin falsos positivos: es el interprete el que contesta.
+ *
  * [2026-08-25] v0.51.0 - Presupuesto: sembrar "Monto a Proyectar" desde J/N/R.
  * + PEDIDO TEXTUAL DE FRANCO: "me agregas una funcion dev que te arme los valores de 'Monto a
  *   proyectar' que sean iguales a la 'Proyeccion' del mes seleccionado?". El disparador
