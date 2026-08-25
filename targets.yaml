@@ -16,4 +16,4 @@ targets:
     # El valor anterior, "0.23.5", estaba stale: el remoto ya venia en 0.38.3 -- las corridas
     # v0.24-v0.38.3 se deployaron sin actualizar este campo. La verdad del estado es el
     # drift-check, no este archivo; se corrige para que vuelvan a coincidir.
-    version_desplegada: "0.48.1"
+    version_desplegada: "0.49.0"
