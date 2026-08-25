@@ -3,6 +3,20 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.52.1 - El bloque que entra desacelera, no rebota.
+ * - La animacion de entrada de un bloque de carga multiple usaba
+ *   cubic-bezier(.34, 1.56, .64, 1). Ese 1.56 pasa de largo el valor final y vuelve: el bloque
+ *   se pasa de posicion y de escala antes de asentarse.
+ * - POR QUE IMPORTA ACA Y NO EN CUALQUIER PANTALLA: en la carga multiple se agregan hasta
+ *   QUINCE bloques, asi que el rebote se ve quince veces seguidas en un solo lote. Y esto es
+ *   una herramienta de cargar plata, cuya voz de marca esta escrita: "traduce, no impresiona".
+ *   Un objeto real desacelera, no rebota.
+ * - Pasa a cubic-bezier(.22, 1, .36, 1), easeOutQuint: entra rapido y se frena sin pasarse.
+ *   Queda alineado con las otras dos curvas del sistema, que ya eran desaceleraciones puras --
+ *   era la unica con overshoot de las tres.
+ * - El token se llamaba --mov-rebote y pasa a --mov-entra. Un nombre que promete un rebote
+ *   invita a reponerlo.
+ *
  * [2026-08-25] v0.51.1 - PC_BLOQUES deja de depender del orden de archivos.
  * ! CIERRE DEL INCIDENTE v0.50.1. Aquel hotfix arreglo el caso que ROMPIO la planilla
  *   (PG_UMBRAL_IDENTIDAD) y dejo vivo su gemelo: DEVTOOL_PresupuestoResumen.js hacia

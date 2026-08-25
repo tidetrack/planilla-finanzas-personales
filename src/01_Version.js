@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 52,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -23,7 +23,7 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseName: 'v0.52.0 - Rediseno del Centro de Operaciones + Presupuesto',
+ releaseName: 'v0.52.1 - El bloque que entra desacelera, no rebota',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -35,6 +35,11 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.52.1 (2026-08-25) - El bloque que entra desacelera, no rebota
+- La animacion de entrada de un bloque de carga multiple usaba cubic-bezier(.34, 1.56, .64, 1). El 1.56 pasa de largo el valor final y vuelve: el bloque se pasa de posicion y de escala antes de asentarse.
+- POR QUE IMPORTA ACA Y NO EN CUALQUIER LADO: en esa pantalla se agregan hasta QUINCE bloques, asi que el rebote se ve quince veces seguidas en una sola carga. Y es una herramienta de cargar plata, cuya voz de marca "traduce, no impresiona". Un objeto real desacelera; no rebota.
++ Pasa a cubic-bezier(.22, 1, .36, 1) -- easeOutQuint: entra rapido y se frena sin pasarse. Queda alineado con las otras dos curvas del sistema, que ya eran desaceleraciones puras.
+* El token se llamaba --mov-rebote y ahora es --mov-entra: un nombre que promete un rebote invita a reponerlo.
 v0.51.0 (2026-08-25) - Presupuesto: sembrar Monto a Proyectar desde J/N/R
 + DEVTOOL_PresupuestoSembrar.js (nuevo): siembra K/O/S ("Monto a Proyectar") con lo que J/N/R
   ya muestran para el modo vivo (Proyeccion o Historico), solo en las cuentas donde esa celda

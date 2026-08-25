@@ -143,7 +143,12 @@
     /* ---- MOVIMIENTO. Tres curvas, tres duraciones, nunca transition: all -- */
     --mov-out:    cubic-bezier(.33, 1, .68, 1);      /* easeOutCubic: hover-lift */
     --mov-std:    cubic-bezier(.4, 0, .2, 1);        /* color, fondo, colapso */
-    --mov-rebote: cubic-bezier(.34, 1.56, .64, 1);   /* SOLO el bloque que entra */
+    /* El bloque que entra. Era un rebote (.34, 1.56, .64, 1): el 1.56 pasa de largo el
+       valor final y vuelve, o sea que el bloque se pasa de posicion y de escala. En una
+       pantalla donde se agregan hasta QUINCE bloques, ese rebote se ve quince veces
+       seguidas -- y esto es una herramienta de cargar plata, no una app de juego. Un objeto
+       real desacelera, no rebota. easeOutQuint: entra rapido y se frena, sin pasarse. */
+    --mov-entra:  cubic-bezier(.22, 1, .36, 1);
     --t1: 120ms;  --t2: 200ms;  --t3: 280ms;
 
     /* Chevron propio para los select. Data-URI porque el CSP del iframe de
@@ -688,7 +693,7 @@ body {
 }
 .bloque[data-estado="resumen"] { box-shadow: var(--elev-1), var(--filo); }
 /* Entrada del bloque nuevo: 8px y un rebote chico. Unico rebote del sistema. */
-.bloque--nuevo { animation: bloqueEntra var(--t3) var(--mov-rebote) both; }
+.bloque--nuevo { animation: bloqueEntra var(--t3) var(--mov-entra) both; }
 @keyframes bloqueEntra {
     from { opacity: 0; transform: translateY(8px) scale(0.985); }
     to   { opacity: 1; transform: translateY(0) scale(1); }

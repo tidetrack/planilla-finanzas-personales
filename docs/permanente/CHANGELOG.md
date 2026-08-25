@@ -7,6 +7,23 @@ Historial de versiones y cambios significativos del proyecto.
 > Nota: el historial canonico y completo vive en `src/ZZ_Changelog.js`.
 > Este archivo refleja los releases principales para lectura humana rapida.
 
+
+---
+
+## v0.52.1 - El bloque que entra desacelera, no rebota (2026-08-25)
+
+La animacion de entrada de un bloque de carga multiple usaba
+`cubic-bezier(.34, 1.56, .64, 1)`. Ese `1.56` pasa de largo el valor final y vuelve: el bloque se
+pasa de posicion y de escala antes de asentarse.
+
+Importa aca y no en cualquier pantalla: **en la carga multiple se agregan hasta quince bloques**,
+asi que el rebote se ve quince veces seguidas en un solo lote. Y esto es una herramienta de cargar
+plata, cuya voz de marca esta escrita: *"traduce, no impresiona"*. Un objeto real desacelera.
+
+Pasa a `cubic-bezier(.22, 1, .36, 1)` —easeOutQuint—, alineado con las otras dos curvas del
+sistema, que ya eran desaceleraciones puras. El token se llamaba `--mov-rebote` y pasa a
+`--mov-entra`: un nombre que promete un rebote invita a reponerlo.
+
 ---
 
 ## v0.51.1 - PC_BLOQUES deja de depender del orden de archivos (2026-08-25)
