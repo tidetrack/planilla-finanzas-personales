@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 48,
- patch: 1,
+ minor: 49,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-24',
- releaseName: 'v0.48.1 - El shell reacciona: el scriptlet escapaba el JSON',
+ releaseName: 'v0.49.0 - La tipografia nunca cargaba, y carga multiple',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,18 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.49.0 (2026-08-25) - La tipografia nunca cargaba, y carga multiple
+! LA CAUSA RAIZ DE "HAY DISTORCIONES DE TAMANOS DE LETRAS" NO ERA LA ESCALA, ERA LA FAMILIA. UI_SharedStyles declara 'Google Sans' pero el shell no tenia el <link> a Google Fonts: la fuente NUNCA se descargaba. Y peor: los cinco rotulos mas chicos usaban var(--font-mono), que declara JetBrains Mono y Fira Code -- ninguna instalada -- asi que caian en COURIER NEW. La altura de x de Courier es ~0.42em contra ~0.53em de una grotesca: a 10.5px las minusculas median 4,4 px al lado de un select de 14px sans. Habia DOS cosas declaradas en 20px que no se parecian en nada, porque una era sans y la otra Courier.
++ Se carga la webfont de verdad. Se retira el token --font-mono del design system: un token que resuelve a algo que nadie eligio es una trampa. UNA SOLA FAMILIA en todo el shell, como pymes.
++ Escala de cinco pasos enteros: 22 / 16 / 14 / 13 / 11. Se van los 10.5px, que Chrome redondea distinto segun donde caiga la caja.
++ ALTURA FIJA en todos los controles (42px). Un select ignora line-height y calcula su alto con su metrica interna; un input[type=date] trae su propio shadow DOM. Con el mismo font-size y el mismo padding daban 43 y 47 px, y el Monto a 20px daba 56: TRES ALTURAS EN LA MISMA FILA. Nunca se iguala un input con un select por padding.
++ CARGA MULTIPLE, portada de pymes: bloques repetibles con agregar, quitar y renumerado. Hereda medio y fecha del bloque anterior, nunca monto, cuenta ni nota -- heredar lo que cambia obliga a borrarlo. El tope sale de las filas LIBRES que informa el backend: la grilla de personales es de 15 filas contra las 50 de pymes, asi que dejar agregar sin limite seria hacer tipear diez bloques para que el backend diga que no entran.
++ Los cortes del grid se COMPARTEN entre filas. Antes la fila 1 cortaba en 4 y 7 y la fila 2 en 5 y 8: corridos exactamente una columna, la peor distancia posible.
++ Home de tres columnas: con dos, la septima tarjeta quedaba huerfana con 430px de blanco al lado.
++ Pie FIJO al piso. Antes era estatico y saltaba de lugar al navegar.
++ Los inputs pierden borde y sombra: la doctrina de este shell es que la superficie se define por fondo, y estaba aplicada solo a las tarjetas -- Home y formulario parecian dos productos.
+* --text-secondary pasa de #6e7f8d a #5f6368: el anterior daba 3.69:1 sobre el fondo de bloque, por debajo del minimo AA. Y el foco de los inputs deja de ser un halo gris sobre gris (invisible) para usar el mismo outline que los botones.
++ Banco del shell: 17 secciones. Los catorce bancos en verde.
 v0.48.1 (2026-08-25) - El shell reacciona: el scriptlet escapaba el JSON
 ! SINTOMA: el shell abria pero NO REACCIONABA. Ningun click hacia nada. Franco: "recargo la pagina y no ocurre nada".
 - CAUSA: el JSON de las vistas se inyectaba con el scriptlet que hace ESCAPADO CONTEXTUAL de HTML, que convierte cada comilla en &quot;. Adentro de un <script> eso es un error de sintaxis, y un error de sintaxis MATA EL ARCHIVO ENTERO: no se define el router, no se define ningun onclick, no se apaga ningun loader. La forma correcta para inyectar un valor en JS es la que NO escapa. pymes nunca lo piso porque solo inyecta un string simple entre comillas, donde el escapado es inofensivo.

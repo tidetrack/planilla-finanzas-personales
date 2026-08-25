@@ -3,6 +3,58 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.49.0 - La tipografia nunca cargaba, y carga multiple de movimientos.
+ * - LA CAUSA RAIZ DE "HAY DISTORCIONES DE TAMANOS DE LETRAS" NO ERA LA ESCALA: ERA LA FAMILIA.
+ *   Dos cosas encadenadas. Primera: UI_SharedStyles declara 'Google Sans' pero el shell no
+ *   tenia el <link> a Google Fonts, asi que la fuente NUNCA se descargaba y caia al sistema --
+ *   los dos shells decian usar la misma tipografia y no la estaban usando (pymes SI lo carga,
+ *   07_UI_Shell.html:25). Segunda, y peor: los cinco rotulos mas chicos del shell usaban
+ *   var(--font-mono), que declara JetBrains Mono y Fira Code, ninguna instalada en
+ *   macOS/Chrome, asi que resolvia a COURIER NEW. La altura de x de Courier es ~0.42em contra
+ *   ~0.53em de una grotesca: a 10.5px las minusculas median 4,4 px reales al lado de un select
+ *   de 14px sans. Y habia DOS textos declarados en 20px que no se parecian en nada, porque uno
+ *   era sans y el otro Courier -- el ojo lee la diferencia de familia como diferencia de
+ *   tamano. Se venia ajustando la ESCALA, que era tratar el sintoma.
+ * - Se carga la webfont. Se RETIRA el token --font-mono del design system: un token que
+ *   resuelve a algo que nadie eligio es una trampa para el que venga. Una sola familia.
+ * - ESCALA de cinco pasos enteros -- 22/16/14/13/11 -- y se van los 10.5px, que Chrome redondea
+ *   a subpixel distinto segun donde caiga la caja: dos rotulos declarados igual no median igual.
+ * - ALTURA FIJA (42px) en todos los controles. Un select IGNORA line-height en Chrome y calcula
+ *   su alto con su metrica interna; un input[type=date] agrega su propio shadow DOM. Con el
+ *   mismo font-size y el mismo padding daban 43 y 47 px, y el Monto a 20px daba 56: tres
+ *   alturas en la MISMA fila. Nunca se iguala un input con un select por padding, se fija
+ *   height. El Monto vuelve al tamano de todos: un campo se destaca por su lugar en la grilla
+ *   y por el foco, no agrandandole la letra.
+ * - CARGA MULTIPLE (Franco: "no tenes opciones de registros multiples como planilla pymes").
+ *   Bloques repetibles portados de pymes: agregar, quitar, renumerar. Hereda MEDIO y FECHA del
+ *   bloque anterior y nunca monto, cuenta ni nota -- heredar lo que cambia obliga a borrarlo,
+ *   que es peor que tipearlo. El tope sale de las filas LIBRES que informa el backend: la
+ *   grilla de personales es de 15 filas contra las 50 de pymes, asi que dejar agregar sin
+ *   limite seria hacer tipear diez bloques para que el backend conteste que no entran.
+ * - Y no es solo comodidad: cada movimiento suelto disparaba un procesarCargas COMPLETO --
+ *   APIs de cotizacion, persistencia al Data Lake, reordenamiento del ledger entero. Seis
+ *   gastos de a uno eran seis pasadas; ahora es UNA.
+ * - Los cortes del grid se COMPARTEN entre filas. La fila 1 cortaba en 4 y 7 y la fila 2 en 5
+ *   y 8: corridos exactamente una columna, que es la peor distancia posible -- no es
+ *   alineacion ni es contraste, es error.
+ * - Home de TRES columnas: con dos, la septima tarjeta quedaba huerfana con 430 px de blanco al
+ *   lado, que era lo primero que se veia al abrir.
+ * - PIE FIJO al piso. Era estatico y quedaba a 500 px del borde en el Home y a 260 en otra
+ *   vista: un cromo que salta de lugar al navegar hace que la UI se sienta amateur aunque cada
+ *   pantalla por separado este bien.
+ * - Los inputs pierden borde y sombra. La doctrina declarada de este shell es que la superficie
+ *   se define por FONDO y no por linea, y estaba aplicada solo a las tarjetas: el formulario
+ *   tenia siete cajas con contorno de 1px Y sombra. Home y formulario parecian dos productos.
+ * - CONTRASTE: --text-secondary pasa de #6e7f8d a #5f6368. El anterior daba 3.69:1 sobre el
+ *   fondo de bloque #eff2f9 y 4.14:1 sobre blanco, por debajo del minimo AA de 4.5:1. Se veia
+ *   lavado, y lavado en un modal chico se lee como sin terminar.
+ * - FOCO: los inputs tenian un halo GRIS sobre fondo gris, o sea invisible. Ahora usan el mismo
+ *   outline que los botones: un solo tratamiento de foco para todo el sistema.
+ * - Se retira la sugerencia de "usar estos datos" del ultimo movimiento (Franco: "es al
+ *   pedo") junto con la lectura del ledger que la alimentaba. La respuesta a "maximo 2 toques"
+ *   resulto ser la carga multiple, no adivinarle el proximo movimiento.
+ * - Banco del shell: 17 secciones. Los catorce bancos y los tres modales en verde.
+ *
  * [2026-08-25] v0.48.1 - El shell reacciona: el scriptlet escapaba el JSON.
  * - SINTOMA, reportado por Franco: el shell abria pero NO REACCIONABA. Ningun click hacia
  *   nada. "Recargo la pagina y no ocurre nada."

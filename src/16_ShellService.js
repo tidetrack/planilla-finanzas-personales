@@ -206,7 +206,11 @@ function obtenerCatalogoShell() {
             // gasto, y el formulario tiene que poder ofrecerlas sin mezclarlas.
             // @see DEVTOOL_CuentasComodin.js
             comodines: CUENTAS_NEUTRAS,
-            comodinesUsan: 'la cuenta Traspaso la pone sola la pantalla de Traspaso'
+            // Cuantas filas quedan libres en la grilla de Cargas. El cliente lo necesita para
+            // cortar el boton "Agregar otro" en el tope REAL: la grilla de personales es de
+            // altura fija (15 filas), a diferencia de las 50 de pymes. Sin esto, el operador
+            // tipea diez bloques para que el backend le diga que no entran.
+            libres: _filasLibresCargas()
         };
     } catch (e) {
         logError('obtenerCatalogoShell', e);
@@ -413,6 +417,18 @@ function _finDeHoy() {
     const h = new Date();
     h.setHours(23, 59, 59, 999);
     return h;
+}
+
+/** Filas libres de la grilla de Cargas. Nunca lanza: si falla, se asume la grilla entera. */
+function _filasLibresCargas() {
+    try {
+        const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(RANGES.CARGAS.sheet);
+        if (!hoja) return RANGES.CARGAS.filas;
+        return _estadoGrillaCargas(hoja).libres;
+    } catch (e) {
+        logError('_filasLibresCargas', e);
+        return RANGES.CARGAS.filas;
+    }
 }
 
 /** Los nombres de medio del catalogo, para validar sin traer todo el objeto. */

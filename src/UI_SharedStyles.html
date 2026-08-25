@@ -25,7 +25,11 @@
   * lo puso a mano). Los numeros y el texto de tabla del shell van con este, no con --text-main,
   * que es la tinta de la CHROME (titulos de bloque y headers). */
  --text-data: #39444d;
- --text-secondary: #6e7f8d;
+ /* decision Franco 2026-08-25: #6e7f8d daba 3.69:1 sobre el fondo de bloque #eff2f9 y
+  * 4.14:1 sobre blanco -- por debajo del minimo AA de 4.5:1 para texto normal. Se veia
+  * lavado, y "lavado" en un modal chico se lee como "sin terminar". #5f6368 -- el que usa
+  * pymes -- da 6.4:1 sobre blanco. */
+ --text-secondary: #5f6368;
  --text-accent: #6e7f8d;
  --text-inverse: #FFFFFF;
 
@@ -60,7 +64,13 @@
 
  /* Fonts */
  --font-family: 'Google Sans', 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
- --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+ /* decision Franco 2026-08-25: se RETIRA --font-mono. Declaraba JetBrains Mono y Fira Code,
+  * ninguna de las dos instalada en macOS/Chrome, asi que en la practica resolvia a Courier
+  * New -- cuya altura de x es ~0.42em contra ~0.53em de una grotesca. Usado en un rotulo de
+  * 11px, las minusculas median ~4,4px al lado de un control de 14px sans, y eso se lee como
+  * texto roto, no como jerarquia. Fue la causa de las "distorciones de tamanos de letras".
+  * Un token que resuelve a algo que nadie eligio es una trampa para el que venga: se saca.
+  * Si algun dia hace falta mono de verdad, se carga la webfont primero. */
 
  /* Transitions */
  --transition-fast: 0.15s ease-in-out;
@@ -144,10 +154,14 @@ hr.divider {
  box-shadow: var(--shadow-sm);
 }
 
+/* decision Franco 2026-08-25: el foco era un halo GRIS sobre fondo gris, o sea invisible.
+ * Ahora es el mismo tratamiento que el de los botones -- un solo foco para todo el sistema,
+ * como hace pymes. */
 .form-input:focus, .form-select:focus {
- outline: none;
- border-color: var(--accent-color);
- box-shadow: 0 0 0 3px rgba(181, 191, 198, 0.35);
+ outline: 2px solid var(--primary-color);
+ outline-offset: 1px;
+ border-color: var(--primary-color);
+ box-shadow: none;
 }
 
 .form-input::placeholder {

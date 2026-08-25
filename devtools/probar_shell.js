@@ -304,10 +304,49 @@ ok(porId.movimiento.listo === true, 'movimiento: listo');
 ok(porId.traspaso.listo === true, 'traspaso: listo');
 ok(porId.proyeccion.listo === false && porId.recurrentes.listo === false &&
    porId.conciliacion.listo === false, 'las otras tres siguen declaradas como NO listas');
-ok(HTML.indexOf('id="movMonto"') !== -1 && HTML.indexOf('id="trasMontoO"') !== -1,
+ok(/class="[^"]*b-monto/.test(HTML) && HTML.indexOf('id="trasMontoO"') !== -1,
     'los formularios existen en el HTML');
-ok(/enviar\('registrarMovimiento'/.test(HTML) && /enviar\('registrarTraspaso'/.test(HTML),
+ok(/enviar\('registrarMovimientos'/.test(HTML) && /enviar\('registrarTraspaso'/.test(HTML),
     'el cliente llama a los endpoints de escritura');
+
+seccion('16. Carga multiple: bloques repetibles con tope real');
+ok(/function agregarBloqueMovimiento/.test(HTML), 'se pueden agregar bloques');
+ok(/function quitarBloqueMovimiento/.test(HTML), 'y quitarlos');
+ok(/function renumerarBloques/.test(HTML), 'los bloques se renumeran al agregar o quitar');
+ok(/function cupoMaximo/.test(HTML) && /catalogo\.libres/.test(HTML),
+    'el tope sale de las filas LIBRES que informa el backend, no de un numero inventado');
+ok(typeof ctx._filasLibresCargas === 'function', 'el backend sabe cuantas filas quedan libres');
+ok(/heredaMedio|heredaFecha/.test(HTML),
+    'un bloque nuevo hereda medio y fecha del anterior');
+ok(!/heredaMonto|heredaCuenta|heredaNota/.test(HTML),
+    'y NO hereda monto, cuenta ni nota: heredar lo que cambia obliga a borrarlo');
+ok(typeof ctx.registrarMovimientos === 'function', 'existe el endpoint de lote');
+const lote = ctx.registrarMovimientos([]);
+ok(lote.ok === false, 'un lote vacio se rechaza');
+
+seccion('17. Tipografia: una sola familia y la fuente se carga de verdad');
+// El bug que Franco vio como "distorciones de tamanos de letras": --font-mono declara
+// JetBrains Mono y Fira Code, ninguna instalada, asi que los rotulos caian en Courier New.
+// A 10.5px la altura de x de Courier es ~4,4px al lado de un select de 14px sans.
+// Se miran las DECLARACIONES, no el archivo entero: los comentarios de este shell explican
+// el bug y nombran tanto --font-mono como 10.5px. Un test que se tropieza con la
+// documentacion del bug que previene es ruido, y ya paso tres veces en esta campana.
+const sinComentarios = HTML
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .split('\n').map(l => l.replace(/^\s*\/\/.*$/, '')).join('\n');
+ok(/fonts\.googleapis\.com/.test(HTML),
+    'el HTML CARGA la webfont: sin el link, Google Sans nunca se descarga');
+ok(!/var\(--font-mono\)/.test(sinComentarios),
+    'cero usos de la familia mono en el shell: una sola familia, como pymes');
+ok(!/10\.5px/.test(sinComentarios),
+    'cero 10.5px: Chrome los redondea distinto segun donde caiga la caja');
+ok(!/var\(--font-mono\)/.test(
+        fs.readFileSync(path.join(RAIZ, 'src/UI_SharedStyles.html'), 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, '')),
+    'el token --font-mono ya no existe en el design system: resolvia a Courier New');
+ok(/--alto-control/.test(HTML) && /height: var\(--alto-control\)/.test(HTML),
+    'los controles tienen ALTURA FIJA: un select ignora line-height y un date trae su propio shadow DOM');
 ok(/b\.disabled = v/.test(HTML),
     'los botones se deshabilitan mientras viaja: dos clicks serian dos movimientos en el ledger');
 ok(HTML.indexOf('tiposRiquezaJson') !== -1,
@@ -326,5 +365,5 @@ ok(noEscapa('tiposRiquezaJson') && !escapa('tiposRiquezaJson'),
 ok(escapa('planilla') && escapa('version'),
     'el pie SI usa la que escapa: va a texto HTML, y ahi escapar es lo correcto');
 
-console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (15 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (17 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
 process.exit(fallas === 0 ? 0 : 1);

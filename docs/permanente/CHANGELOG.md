@@ -9,6 +9,40 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.49.0 - La tipografia nunca cargaba, y carga multiple (2026-08-25)
+
+**La causa raiz de "hay distorciones de tamanos de letras" no era la escala: era la familia.**
+
+Dos cosas encadenadas. `UI_SharedStyles` declara `'Google Sans'` pero el shell **no tenia el
+`<link>` a Google Fonts**, asi que la fuente nunca se descargaba. Y peor: los cinco rotulos mas
+chicos usaban `var(--font-mono)`, que declara JetBrains Mono y Fira Code —ninguna instalada— y
+por lo tanto resolvia a **Courier New**. Su altura de x es ~0.42em contra ~0.53em de una
+grotesca: a 10.5px las minusculas median **4,4 px reales** al lado de un select de 14px sans. Y
+habia dos textos declarados en 20px que no se parecian en nada, porque uno era sans y el otro
+Courier. Se venia ajustando la *escala*, que era tratar el sintoma.
+
+Se carga la webfont y se **retira el token `--font-mono`**: un token que resuelve a algo que nadie
+eligio es una trampa. Una sola familia, como pymes. Escala de cinco pasos enteros —**22/16/14/13/11**—
+y se van los 10.5px, que Chrome redondea distinto segun donde caiga la caja.
+
+**Altura fija (42px) en todos los controles.** Un `select` ignora `line-height` y calcula su alto
+con su metrica interna; un `input[type=date]` trae su propio shadow DOM. Con el mismo `font-size`
+y el mismo padding daban 43 y 47px, y el Monto a 20px daba 56: **tres alturas en la misma fila**.
+
+**Carga multiple**, portada de pymes. Bloques repetibles con agregar, quitar y renumerar. Hereda
+medio y fecha del bloque anterior, nunca monto, cuenta ni nota. El tope sale de las filas **libres**
+que informa el backend: la grilla de personales tiene 15 filas contra las 50 de pymes. Y no es solo
+comodidad: cada movimiento suelto disparaba un `procesarCargas` completo, asi que seis gastos de a
+uno eran seis pasadas; ahora es una.
+
+**Mas:** los cortes del grid se comparten entre filas (antes estaban corridos exactamente una
+columna); Home de tres columnas (la septima tarjeta quedaba huerfana); pie fijo al piso; los inputs
+pierden borde y sombra, porque la doctrina de "superficie por fondo" estaba aplicada solo a las
+tarjetas; `--text-secondary` sube a `#5f6368` (el anterior daba 3.69:1, por debajo de AA); y el
+foco deja de ser un halo gris sobre gris.
+
+---
+
 ## v0.48.1 - El shell reacciona: el scriptlet escapaba el JSON (2026-08-25)
 
 **Sintoma**, reportado por Franco: el shell abria pero **no reaccionaba**. Ningun click hacia
