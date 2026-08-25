@@ -377,8 +377,19 @@ function _respaldarFilasPa(ss, hojaProy, filas, sello) {
 const PA_PROP_HUELLA_PING = 'ping_abm_ultimo';
 
 function pingProyeccionAbm() {
-    PropertiesService.getDocumentProperties()
-        .setProperty(PA_PROP_HUELLA_PING, String(new Date().getTime()));
+    // El instrumento NO puede romper lo que mide: si escribir la huella fallara, el ping tiene
+    // que llegar igual a devolver su respuesta, porque lo que se esta midiendo es el canal y no
+    // el almacenamiento. El riesgo de tragarse el error -- leer "no hay huella" y concluir "no
+    // llego" cuando en realidad si llego y fallo la escritura -- lo cubre el DIAG por otro lado:
+    // su paso 2 verifica de forma independiente que PropertiesService sea accesible, y hoy
+    // reporta 36 propiedades guardadas. Si ese paso dijera que no es accesible, la huella no
+    // seria concluyente y hay que decirlo antes de interpretar nada.
+    try {
+        PropertiesService.getDocumentProperties()
+            .setProperty(PA_PROP_HUELLA_PING, String(new Date().getTime()));
+    } catch (e) {
+        Logger.log('[pingProyeccionAbm] no se pudo sellar la huella: ' + e.message);
+    }
     return { mensaje: 'pong', ts: Date.now() };
 }
 

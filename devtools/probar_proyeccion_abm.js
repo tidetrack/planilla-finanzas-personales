@@ -493,9 +493,34 @@ console.log('\n=== 7. pingProyeccionAbm ===');
     // Sin ninguna spreadsheet activa (ssActual null, la anterior seccion no la dejo puesta):
     // si pingProyeccionAbm tocara SpreadsheetApp de cualquier forma, esto ya explotaria.
     ssActual = null;
-    propsActual = null;
+
+    // La huella del ping SI se prueba: se le da un almacen de mentira y se verifica que la selle.
+    // Es la pieza que biseca ida vs vuelta, asi que un banco que la esquivara dejaria sin cubrir
+    // justo el instrumento del que va a depender el diagnostico.
+    const almacen = {};
+    propsActual = {
+        setProperty: function (k, v) { almacen[k] = v; return this; },
+        getProperty: function (k) { return Object.prototype.hasOwnProperty.call(almacen, k) ? almacen[k] : null; },
+        deleteProperty: function (k) { delete almacen[k]; return this; },
+        getKeys: function () { return Object.keys(almacen); }
+    };
 
     const r1 = ctx.pingProyeccionAbm();
+    ok(typeof almacen['ping_abm_ultimo'] === 'string' && Number(almacen['ping_abm_ultimo']) > 0,
+       'sella la huella "ping_abm_ultimo" al entrar (dio ' + JSON.stringify(almacen['ping_abm_ultimo']) + ')');
+
+    // Y si el almacen falla, el ping tiene que responder IGUAL: el instrumento no rompe lo que mide.
+    propsActual = { setProperty: function () { throw new Error('almacen caido'); } };
+    const rSinAlmacen = ctx.pingProyeccionAbm();
+    ok(rSinAlmacen && rSinAlmacen.mensaje === 'pong',
+       'con el almacen caido el ping responde igual, no se lleva puesto el canal que esta midiendo');
+    propsActual = {
+        setProperty: function (k, v) { almacen[k] = v; return this; },
+        getProperty: function (k) { return Object.prototype.hasOwnProperty.call(almacen, k) ? almacen[k] : null; },
+        deleteProperty: function (k) { delete almacen[k]; return this; },
+        getKeys: function () { return Object.keys(almacen); }
+    };
+
     ok(r1 && typeof r1 === 'object', 'devuelve un objeto');
     ok(typeof r1.mensaje === 'string' && r1.mensaje.length > 0, 'tiene un campo string no vacio, dio ' + JSON.stringify(r1.mensaje));
     ok(typeof r1.ts === 'number' && isFinite(r1.ts), 'tiene un campo numero finito, dio ' + r1.ts);
