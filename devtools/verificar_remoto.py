@@ -9,9 +9,21 @@ produccion puede ir adelante -- pero hasta hoy se contestaba mirando un diff a o
 
 Esa pregunta es mecanica y este script la contesta. Si el contenido del remoto coincide, byte
 a byte, con el src/ de ALGUN commit alcanzable del repo, entonces nadie edito en el editor de
-Apps Script: el remoto es una version nuestra, mas vieja, y "pisarlo" es simplemente
-desplegar. No hay nada que adjudicar. Si NO coincide con ningun commit, hay contenido que el
-repo nunca vio: ahi si frena y decide una persona.
+Apps Script. Pero son DOS preguntas, no una, y esa distincion costo un incidente real el
+2026-08-25:
+
+  1. El remoto es un commit de este repo? (nadie edito en el editor de Apps Script)
+  2. Ese commit es ANCESTRO del HEAD local? (pushear va hacia adelante, no hacia atras)
+
+La primera sola NO alcanza. Un commit puede ser perfectamente conocido y aun asi estar MAS
+ADELANTE que el HEAD local: por ejemplo cuando OTRA RAMA del mismo repo deployo despues. Ese
+dia el remoto tenia v0.51.1 desde otra rama, este script contesto "es un commit conocido,
+segui", y el deploy saco de produccion tres modulos que estaban andando. Verificar identidad
+sin verificar direccion es exactamente la mitad del trabajo, y la mitad que falta es la que
+rompe.
+
+Ahora se exigen las dos. Si el commit del remoto no es ancestro del HEAD, devuelve 1: no hay
+trabajo ajeno, pero pushear RETROCEDERIA la produccion, y eso lo decide una persona.
 
 [FUNDAMENTO TEORICO / ADMINISTRATIVO]
 No compara contenidos: compara HASHES DE BLOB de git. Para cada archivo del pull calcula el
@@ -25,8 +37,11 @@ que lo llama tiene que tratarlo como no verificado. El unico exito es el 0.
 USO:  python3 devtools/verificar_remoto.py <dir_del_pull> [--max-commits N]
 
 SALIDA (exit code):
-  0  el remoto es exactamente un commit del repo (lo imprime). Deployar es seguro.
-  1  el remoto NO coincide con ningun commit: hay trabajo ajeno. Decide una persona.
+  0  el remoto es un commit del repo Y es ancestro del HEAD local. Deployar avanza: es seguro.
+  1  no se puede deployar solo. Dos casos, y el mensaje de error los distingue:
+       a) el remoto no coincide con ningun commit -> hay trabajo ajeno;
+       b) coincide pero NO es ancestro del HEAD -> la produccion va ADELANTE y pushear
+          la haria retroceder. Hay que mergear primero.
   2  no se pudo verificar. Se trata como el caso 1, por prudencia.
 
 @version 0.1.0
@@ -123,6 +138,18 @@ def main(argv):
             try:
                 if huella_del_commit(commit) == remoto:
                     corto = git('log', '-1', '--format=%h %s', commit).strip()
+                    # SEGUNDA PREGUNTA: el remoto va hacia atras o hacia adelante? Un commit
+                    # conocido que NO es ancestro del HEAD significa que la produccion esta
+                    # MAS ADELANTE que lo que se quiere pushear.
+                    es_ancestro = subprocess.run(
+                        ['git', 'merge-base', '--is-ancestor', commit, 'HEAD'],
+                        cwd=RAIZ, capture_output=True).returncode == 0
+                    if not es_ancestro:
+                        sys.stderr.write(
+                            'El remoto ES un commit del repo (' + corto + ') pero NO es '
+                            'ancestro del HEAD local: la produccion va ADELANTE y pushear la '
+                            'haria retroceder. Mergea primero.\n')
+                        return 1
                     print(corto)
                     return 0
             except RuntimeError:
