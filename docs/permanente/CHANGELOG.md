@@ -11,6 +11,40 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## v0.55.1 - El merge dejo dos patch, y tres numeros de version distintos (2026-08-25)
+
+El merge entre las dos lineas de trabajo dejo en `01_Version.js` **dos lineas `patch:` seguidas**
+— `patch: 0` del release nuevo y `patch: 1` que venia de v0.53.1. Git no marco conflicto: son
+lineas distintas, no texto disputado, asi que las conservo las dos y el merge se reporto limpio.
+
+En un literal de objeto JavaScript la clave repetida no es un error: **gana la ultima**. El
+archivo termino declarando tres numeros a la vez, y `targets.yaml` un cuarto:
+
+| Fuente | Decia |
+|---|---|
+| `VERSION.toString()` | `0.55.1` |
+| `releaseName` | `v0.55.0` |
+| changelog embebido | encabezado por `v0.54.0` |
+| `targets.yaml` | `0.55.0` |
+
+Y no quedo en el repo: **se desplego**. La planilla estuvo reportando una version que no existia
+en ningun changelog. Se resuelve hacia arriba, a v0.55.1, no bajando el rotulo a v0.55.0: 0.55.1
+es lo que el codigo realmente reporta y lo que ya esta corriendo.
+
+**Lo grave no es el numero, es que ningun guard podia agarrarlo.** Parsea perfecto —
+`verificar_sintaxis.py` daba verde con los 44 archivos— y no hay parser de JavaScript que lo
+rechace, porque ES6 permite claves duplicadas en literales incluso en modo estricto.
+
+`verificar_sintaxis.py` suma ahora la verificacion de coherencia: ninguna clave repetida en el
+bloque `VERSION`, y `major.minor.patch` igual en las cuatro fuentes que declaran el numero por
+separado. Importa porque `targets.yaml` es la referencia del drift-check: si la version que la
+planilla reporta no es la que el repo cree haber desplegado, el mecanismo que evita que dos
+sesiones se pisen queda mintiendo. En su primera corrida real encontro una incoherencia que se
+me habia pasado a mano.
+
 ---
 
 ## v0.53.1 - La banda pierde el subtitulo (2026-08-25)

@@ -13,7 +13,6 @@
 const VERSION = {
  major: 0,
  minor: 55,
- patch: 0,
  patch: 1,
 
  /**
@@ -25,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.55.0 - Merge: el shell v0.53.1 y el ABM conviven, y el menu es tidetrack Dev',
+ releaseName: 'v0.55.1 - El merge dejo dos patch, y tres numeros de version distintos',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -37,6 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.55.1 (2026-08-25) - El merge dejo dos patch, y tres numeros de version distintos
+- El merge de las dos lineas de trabajo dejo en 01_Version.js DOS lineas patch seguidas: patch: 0 (del release v0.55.0) y patch: 1 (que venia de v0.53.1). Git no marco conflicto porque son lineas distintas: las conservo las dos.
+- En un literal de objeto JavaScript la clave repetida NO es un error: gana la ultima. Asi que el archivo decia TRES numeros distintos a la vez -- toString() devolvia "0.55.1", releaseName decia v0.55.0, y el changelog embebido seguia encabezado por v0.54.0. targets.yaml, que es la referencia del drift-check, declaraba 0.55.0.
+- NINGUN guard lo agarraba, y ninguno podia: parsea perfecto -- verificar_sintaxis.py daba verde con los 44 archivos -- y ES6 permite claves duplicadas en literales incluso en modo estricto. No hay parser de JavaScript que lo rechace.
+* verificar_sintaxis.py ahora, ademas de parsear, verifica la COHERENCIA del bloque VERSION: ninguna clave repetida, y major.minor.patch igual a lo que dicen releaseName, el changelog embebido y la entrada de arriba de ZZ_Changelog.js. Eran cuatro lugares que declaraban el numero por separado; ahora tienen que coincidir.
+
 v0.54.0 (2026-08-25) - Presupuesto: ABM de Proyecciones Elaboradas (ver, corregir, dar de baja)
 + Encargo textual de Franco: "en el menu deberiamos poder hacer el ABM de proyecciones
   elaboradas". La hoja "Presupuesto" ya permite decidir cuanto se va a gastar/ingresar el mes
