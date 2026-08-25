@@ -60,6 +60,15 @@ la casa, en pymes, es borde completo de 1px—. Y locales porque una alerta es c
 Ahora son `.alert` y sus variantes en `UI_SharedStyles.html`, resueltas con fondo tenido y tinta:
 el color del fondo ya dice lo que la franja diria.
 
+**La escala tipografica se colapsa a cinco pasos.** La primera version tenia siete tamanos y dos
+pares que diferian un 4% —`10.5/11` y `13.5/14`—: esa diferencia no se ve, asi que no era una
+decision sino deriva. Queda **20 / 16 / 14 / 12 / 10.5**, con el salto grande arriba (`20/16` =
+1.25), que es donde hace falta, y los parrafos heredando el cuerpo de 14 px del design system en
+vez de declarar un 13.5 propio. Abajo los pasos siguen siendo chicos a proposito: es una UI densa
+de operacion, y ahi la jerarquia la cargan tambien el peso, la versalita, el color y la familia
+mono. La hoja hace lo mismo —sus saltos dramaticos estan en los KPI (45/32/30/26) y sus rotulos y
+datos viven apretados en 15/14/12/11/10—.
+
 **Banco 13.** `devtools/probar_shell.js` cruza `SHELL_VISTAS` contra los divs del HTML en las dos
 direcciones, prueba que cada puerta abre su vista, que una vista desconocida cae al Home, que
 `obtenerCatalogoShell` **nunca lanza** —ni con `getTableData` explotando ni sin planilla activa,

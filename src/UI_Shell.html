@@ -7,6 +7,22 @@
 /* Estilos PROPIOS del shell. La base (paleta, botones, inputs, tarjetas) viene de
    UI_SharedStyles: contrato de fragmentos de la Fase 5, un solo design system y no dos. */
 
+/* ESCALA TIPOGRAFICA -- cinco pasos, ni uno mas.
+   La primera version tenia SIETE tamanos con dos pares que diferian un 4% (10.5/11 y
+   13.5/14): esa diferencia no se ve, asi que no era una decision sino deriva. Colapsados.
+
+     20px  titulo de la banda            (el unico display del shell)
+     16px  titulo dentro de una vista
+     14px  cuerpo: titulo de tarjeta, parrafos   <- es el 14px de UI_SharedStyles, se hereda
+     12px  secundario: descripcion de tarjeta, subtitulo de la banda
+     10.5px  micro en versalita: rotulo de seccion, pie, boton Volver
+
+   El salto grande esta arriba (20/16 = 1.25) porque es donde hace falta. Abajo los pasos son
+   mas chicos A PROPOSITO: es una UI densa de operacion, y ahi la jerarquia la cargan tambien
+   el PESO, la VERSALITA, el color y la familia mono -- no solo el tamano. La hoja hace lo
+   mismo: sus saltos dramaticos estan en los KPI (45/32/30/26) y sus rotulos y datos viven
+   apretados en 15/14/12/11/10. */
+
 body { padding: 0; background: var(--bg-secondary); }
 
 /* --- La banda navy de titulo: la hoja abre TODAS sus pestanias con una, y el shell tiene
@@ -19,11 +35,11 @@ body { padding: 0; background: var(--bg-secondary); }
     align-items: baseline;
     gap: 12px;
 }
-.shell-band h1 { font-size: 19px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
-.shell-band .sub { color: var(--bg-main); font-size: 12.5px; }
+.shell-band h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+.shell-band .sub { color: var(--bg-main); font-size: 12px; }
 .shell-band .spacer { flex: 1; }
 .shell-band .volver {
-    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em;
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em;
     text-transform: uppercase; color: var(--bg-main);
     background: rgba(255,255,255,0.12); border: 0;
     padding: 5px 10px; border-radius: var(--border-radius-sm); cursor: pointer;
@@ -65,15 +81,15 @@ body { padding: 0; background: var(--bg-secondary); }
 }
 .shell-card .t { font-weight: 600; color: var(--primary-color); font-size: 14px; display: block; }
 .shell-card .d {
-    color: var(--text-secondary); font-size: 12.5px; line-height: 1.4;
+    color: var(--text-secondary); font-size: 12px; line-height: 1.4;
     margin-top: 2px; display: block;
 }
 
 /* --- Vista en construccion: dice QUE va a hacer, no "proximamente". --- */
 .shell-pendiente { max-width: 560px; }
 .shell-pendiente h2 { font-size: 16px; color: var(--primary-color); margin: 0 0 10px; }
-.shell-pendiente p { font-size: 13.5px; color: var(--text-data); line-height: 1.55; margin: 0 0 10px; }
-.shell-pendiente ul { margin: 0 0 14px; padding-left: 1.15em; font-size: 13.5px; color: var(--text-data); }
+.shell-pendiente p { color: var(--text-data); line-height: 1.55; margin: 0 0 10px; }
+.shell-pendiente ul { margin: 0 0 14px; padding-left: 1.15em; color: var(--text-data); }
 .shell-pendiente li { margin: 4px 0; }
 
 /* --- Pie: contexto de la planilla, como el footer del shell de pymes. --- */
