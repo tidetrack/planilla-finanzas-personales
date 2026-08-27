@@ -3,6 +3,27 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-25] v0.55.2 - Una sola flecha por combo, y el servidor local simula el modal real.
+ * - Franco reporto dos flechas una al lado de la otra en los combos de traspaso. La segunda
+ *   no la dibuja el shell: la dibuja Chrome para TODO input con datalist, via
+ *   ::-webkit-calendar-picker-indicator, y la revela recien en hover -- por eso el campo
+ *   quieto parecia sano. No se puede apagar con display:none porque ese pseudo-elemento ES el
+ *   boton que abre la lista (medido en el servidor local: sin el, el click sobre la zona
+ *   derecha deja de desplegar y solo mueve el cursor). Se vuelve invisible y se estira sobre
+ *   los mismos 30px que ocupa el chevron dibujado: un solo dibujo, y el click cae donde el
+ *   ojo espera. El :not([type="date"]) protege los campos de fecha, que usan el MISMO
+ *   pseudo-elemento con su propio tratamiento.
+ * - "Podrias hacer que el html en el localhost simule el lugar real donde va a estar el
+ *   popup?": el servidor local ahora renderiza el shell dentro de un iframe de 900x700
+ *   EXACTOS -- la geometria se lee de SHELL_GEOMETRIA en cada regeneracion, sin copia a mano
+ *   -- dentro de un dialogo simulado de Sheets con su barra y su "x". Si la ventana es mas
+ *   chica se escala TODO con transform, nunca se achica el iframe: adentro sigue midiendo
+ *   900x700 en px CSS y el breakpoint de 700 no se cruza, que era el sentido del pedido.
+ *   La vista a pantalla completa sobrevive en /shell.html.
+ * - El doble de pruebas estaba desincronizado: el shell ya cargaba traspasos en lote
+ *   (registrarTraspasos) y el doble solo implementaba el singular, asi que en el entorno
+ *   local el boton de guardar traspasos no hacia nada y parecia un bug de la interfaz.
+ *
  * [2026-08-25] v0.55.1 - El merge dejo dos patch, y tres numeros de version distintos.
  * - El merge entre las dos lineas de trabajo (el shell y el ABM de Proyecciones) dejo en
  *   01_Version.js DOS lineas `patch:` seguidas: `patch: 0` del release nuevo y `patch: 1` que

@@ -51,12 +51,17 @@ def main(argv):
         sys.stderr.write('El puerto tiene que ser un numero, y llego "%s".\n' % crudo)
         return 2
 
-    indice = os.path.join(DIRECTORIO, 'index.html')
-    if not os.path.exists(indice):
-        sys.stderr.write(
-            'No existe %s.\nRegeneralo con: python3 devtools/regenerar_servidor_shell.py\n'
-            % indice)
-        return 1
+    # decision Franco 2026-08-25: se exigen LOS DOS archivos. Desde que index.html es el
+    # marco y el shell vive en shell.html, un index.html presente con shell.html ausente no
+    # falla: abre un dialogo con un 404 adentro. Diagnosticable, pero feo y lento. Mejor
+    # cortar aca y decir que regenerar.
+    for nombre in ('index.html', 'shell.html'):
+        ruta = os.path.join(DIRECTORIO, nombre)
+        if not os.path.exists(ruta):
+            sys.stderr.write(
+                'No existe %s.\nRegeneralo con: python3 devtools/regenerar_servidor_shell.py\n'
+                % ruta)
+            return 1
 
     handler = functools.partial(Silencioso, directory=DIRECTORIO)
     socketserver.TCPServer.allow_reuse_address = True

@@ -13,6 +13,27 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## v0.55.2 - Una sola flecha por combo, y el servidor local simula el modal real (2026-08-25)
+
+**Las dos flechas.** La segunda no la dibujaba el shell: la dibuja Chrome para todo input con
+datalist (`::-webkit-calendar-picker-indicator`) y la revela recien en hover — por eso el campo
+quieto parecia sano. No se apaga con `display:none`, porque ese pseudo-elemento **es el boton
+que abre la lista** (medido: sin el, el click sobre la zona derecha deja de desplegar). Se
+vuelve invisible y se estira sobre los mismos 30px del chevron dibujado: un solo dibujo, y el
+click cae donde el ojo espera.
+
+**El marco.** El servidor local ahora muestra el shell dentro de un modal simulado de Sheets de
+900x700 exactos (iframe), con la geometria leida de `SHELL_GEOMETRIA` en cada regeneracion. Si
+la ventana es mas chica se escala todo el dialogo con `transform`: adentro sigue midiendo
+900x700 y el breakpoint no se cruza — que era el sentido del pedido de Franco ("aca lo veo
+distorsionado"). La pantalla completa queda en `/shell.html`.
+
+**Y el doble gano `registrarTraspasos`**: el shell ya cargaba traspasos en lote y el doble solo
+tenia el singular, asi que en el entorno local ese boton no hacia nada.
+
 ---
 
 ## Herramientas - el drift-check deja de ser un callejon sin salida (2026-08-25)

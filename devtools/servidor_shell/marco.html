@@ -33,8 +33,8 @@
    SHELL_GEOMETRIA de src/16_ShellService.js. Si se escriben a mano, el
    generador aborta: una segunda copia de un numero siempre termina mintiendo. */
 :root {
-    --sim-ancho: 900px;
-    --sim-alto:  700px;
+    --sim-ancho: {{ANCHO}}px;
+    --sim-alto:  {{ALTO}}px;
 }
 
 /* ---- SUPUESTOS. TODOS JUNTOS, A PROPOSITO ----------------------------------
@@ -184,14 +184,14 @@ body.sim-cerrado .sim-etiqueta { display: none; }
             </button>
         </div>
         <iframe class="sim-lienzo" id="simShell" title="Shell Tidetrack"
-                src="shell.html" data-src="shell.html"></iframe>
+                src="{{SHELL_SRC}}" data-src="{{SHELL_SRC}}"></iframe>
     </div>
 
     <button class="sim-reabrir" id="simAbrir">Tidetrack - abrir</button>
 </div>
 
 <div class="sim-etiqueta">
-    modal simulado 900 x 700 px reales - vista al <span id="simEscala">100%</span>
+    modal simulado {{ANCHO}} x {{ALTO}} px reales - vista al <span id="simEscala">100%</span>
 </div>
 
 <script>

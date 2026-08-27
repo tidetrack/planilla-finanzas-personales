@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 55,
- patch: 1,
+ patch: 2,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.55.1 - El merge dejo dos patch, y tres numeros de version distintos',
+ releaseName: 'v0.55.2 - Una sola flecha por combo, y el servidor local simula el modal real',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,11 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.55.2 (2026-08-25) - Una sola flecha por combo, y el servidor local simula el modal real
+- Franco reporto dos flechas juntas en "Sale de". La segunda la dibuja Chrome para todo input con datalist (::-webkit-calendar-picker-indicator) y la revela en hover: por eso el campo quieto se veia bien. NO se apaga con display:none -- ese pseudo-elemento ES el boton que abre la lista, medido: sin el, el click derecho del campo deja de desplegar. Se vuelve invisible y se estira sobre los mismos 30px del chevron dibujado, asi el click cae donde el ojo espera.
+- El servidor local ahora muestra el shell DENTRO de un modal simulado de Sheets de 900x700 exactos (iframe), con la geometria leida de SHELL_GEOMETRIA, no escrita a mano. Si la ventana es mas chica se escala todo el dialogo con transform: adentro sigue midiendo 900x700 y el breakpoint no se cruza. La vista a pantalla completa queda en /shell.html.
+- El doble de pruebas gano registrarTraspasos (plural): la carga multiple de traspasos existia en el shell y el doble solo tenia el singular, asi que el boton no hacia nada en el entorno local.
+
 v0.55.1 (2026-08-25) - El merge dejo dos patch, y tres numeros de version distintos
 - El merge de las dos lineas de trabajo dejo en 01_Version.js DOS lineas patch seguidas: patch: 0 (del release v0.55.0) y patch: 1 (que venia de v0.53.1). Git no marco conflicto porque son lineas distintas: las conservo las dos.
 - En un literal de objeto JavaScript la clave repetida NO es un error: gana la ultima. Asi que el archivo decia TRES numeros distintos a la vez -- toString() devolvia "0.55.1", releaseName decia v0.55.0, y el changelog embebido seguia encabezado por v0.54.0. targets.yaml, que es la referencia del drift-check, declaraba 0.55.0.

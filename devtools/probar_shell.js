@@ -338,6 +338,21 @@ ok(/list="dlCuentas"/.test(HTML) && /list="dlMedios"/.test(HTML),
     'los desplegables son filtrables: input con datalist, no select');
 ok(/<datalist id="dlCuentas">/.test(HTML) && /<datalist id="dlMedios">/.test(HTML),
     'los datalist son COMPARTIDOS, se pueblan una vez y cada bloque los referencia');
+// La flecha nativa del datalist y el chevron dibujado tienen que ser LA MISMA flecha: una
+// invisible encima de la otra. Si alguien la apaga con display:none se pierde el click que
+// abre la lista (medido: el click pasa a mover el cursor dentro del texto), y si el ancho
+// deja de coincidir con el padding-right, la zona clickeable se corre del dibujo.
+const reglaFlecha = (HTML.match(
+    /\.f \.combo input:not\(\[type="date"\]\)::-webkit-calendar-picker-indicator\s*\{([^}]*)\}/) || [])[1] || '';
+const padCombo = (HTML.match(/\.f \.combo input \{[^}]*padding-right:\s*(\d+)px/) || [])[1];
+ok(reglaFlecha !== '', 'el combo neutraliza la flecha nativa del datalist: una sola flecha por campo');
+ok(/opacity:\s*0\s*;/.test(reglaFlecha) && !/display:\s*none/.test(reglaFlecha),
+    'la flecha nativa queda INVISIBLE pero clickeable: nunca display:none, ahi vive el click que abre la lista');
+ok(!!padCombo && new RegExp('width:\\s*' + padCombo + 'px').test(reglaFlecha) &&
+   new RegExp('margin:\\s*0 -' + padCombo + 'px 0 0').test(reglaFlecha),
+    'la zona clickeable mide lo mismo que el padding-right: el click cae sobre el chevron dibujado');
+ok(!/\.f \.form-input\[type="date"\]::-webkit-calendar-picker-indicator\s*\{[^}]*opacity:\s*0\s*;/.test(HTML),
+    'los campos de fecha conservan su flecha visible: la regla del combo no los alcanza');
 ok(/aria-pressed="true"\]\[data-v="Egreso"\]/.test(HTML) &&
    /aria-pressed="true"\]\[data-v="Ingreso"\]/.test(HTML),
     'el Tipo elegido se pinta con el semaforo, rojo o verde');
@@ -399,5 +414,56 @@ ok(noEscapa('tiposRiquezaJson') && !escapa('tiposRiquezaJson'),
 ok(escapa('planilla') && escapa('version'),
     'el pie SI usa la que escapa: va a texto HTML, y ahi escapar es lo correcto');
 
-console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (17 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+seccion('18. El servidor local de pruebas: el doble sigue al shell, el marco a la geometria');
+// El drift que vivio tres releases: el shell paso a registrarTraspasos (plural) en v0.53.0 y
+// el doble siguio doblando el singular. No fallaba limpio -- enviar() ya habia prendido el
+// loader y armado el tope de 60 s, asi que la pantalla colgaba un minuto y despues mandaba a
+// revisar Registros por un movimiento que nunca se escribio. Aca se cruza el shell contra el
+// doble en las DOS formas de llamada: la cadena directa y el despacho dinamico de enviar().
+const DOBLE = fs.readFileSync(path.join(RAIZ, 'devtools/servidor_shell/doble.js'), 'utf8');
+const MARCO = fs.readFileSync(path.join(RAIZ, 'devtools/servidor_shell/marco.html'), 'utf8');
+const HANDLERS = ['withSuccessHandler', 'withFailureHandler'];
+const nombres = (re, txt) => {
+    const salida = []; let m;
+    while ((m = re.exec(txt)) !== null) { if (HANDLERS.indexOf(m[1]) === -1) salida.push(m[1]); }
+    return salida;
+};
+const usadas = new Set([].concat(
+    nombres(/\}\)\s*\.(\w+)\s*\(/g, HTML),
+    nombres(/google\.script\.run\s*\.(\w+)\s*\(/g, HTML),
+    nombres(/enviar\(\s*'(\w+)'/g, HTML)));
+const listaDoble = DOBLE.match(/\[([^\]]*?)\]\.forEach/);
+const expuestas = new Set(
+    (listaDoble ? listaDoble[1].match(/'(\w+)'/g) || [] : []).map((t) => t.slice(1, -1)));
+const faltan = [...usadas].filter((n) => !expuestas.has(n));
+ok(listaDoble !== null, 'el doble expone su API por una whitelist legible');
+ok(faltan.length === 0,
+    'el doble implementa TODO lo que el shell llama por google.script.run' +
+    (faltan.length ? ' -- faltan: ' + faltan.join(', ') : ''));
+ok(usadas.has('registrarTraspasos'),
+    'el shell llama al endpoint de traspasos en LOTE: si vuelve el singular, el doble se entera');
+
+// El catalogo del doble es el CONTRATO del backend. Si el backend gana un campo y el doble no,
+// la vista que lo estrene descubre en local que llega undefined -- y no siempre rompe fuerte:
+// filasGrilla faltaba y coincidia por casualidad con el fallback duro a 15 del cliente.
+const clavesBackend = Object.keys(ctx.obtenerCatalogoShell()).sort();
+const clavesDoble = Object.keys(
+    JSON.parse((DOBLE.match(/var CATALOGO_REAL = (\{[\s\S]*?\});/) || [])[1] || '{}')).sort();
+ok(clavesDoble.length > 0, 'el catalogo del doble se puede leer como JSON');
+ok(clavesDoble.join(',') === clavesBackend.join(','),
+    'el catalogo del doble tiene EXACTAMENTE los campos que devuelve obtenerCatalogoShell');
+
+// La geometria del modal vive UNA sola vez, en SHELL_GEOMETRIA. El marco la recibe por hueco:
+// si alguien escribe 900 a mano ahi, la simulacion deja de seguir a la fuente y miente.
+ok(/--sim-ancho:\s*\{\{ANCHO\}\}px/.test(MARCO) && /--sim-alto:\s*\{\{ALTO\}\}px/.test(MARCO),
+    'el marco NO tiene la geometria escrita: la recibe de SHELL_GEOMETRIA por hueco');
+ok(/(?<![-\w])src="\{\{SHELL_SRC\}\}"/.test(MARCO) && /data-src="\{\{SHELL_SRC\}\}"/.test(MARCO),
+    'el iframe del marco recibe el nombre del shell por hueco, en src Y en data-src');
+ok(/width:\s*var\(--sim-ancho\)/.test(MARCO) && /height:\s*var\(--sim-alto\)/.test(MARCO) &&
+   !/\.sim-lienzo\s*\{[^}]*(width|height):\s*\d+%/.test(MARCO),
+    'el iframe mide ancho x alto EXACTOS: si fuera porcentaje, el marco no simularia nada');
+ok(/transform\s*=\s*'scale\(/.test(MARCO) && /Math\.min\(1,/.test(MARCO),
+    'si la ventana no da se escala el DIALOGO con transform y nunca por encima de 1');
+
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (18 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
 process.exit(fallas === 0 ? 0 : 1);
