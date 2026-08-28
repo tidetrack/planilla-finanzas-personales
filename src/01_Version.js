@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 55,
- patch: 2,
+ minor: 56,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-25',
- releaseName: 'v0.55.2 - Una sola flecha por combo, y el servidor local simula el modal real',
+ releaseName: 'v0.56.0 - El shell completa sus seis funciones: Proyeccion, Recurrentes y Conciliacion',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.56.0 (2026-08-27) - El shell completa sus seis funciones: Proyeccion, Recurrentes y Conciliacion
++ Proyeccion nueva: cargar proyecciones sueltas ("el mes que viene gasto X en tal cosa") directo a la hoja Proyeccion, en bloques repetibles como Movimiento, con TCs congelados y nota sellada que el ABM de Proyecciones Elaboradas reconoce. Aditiva: nunca borra lo que el mes ya tenia.
++ Gastos recurrentes (src/17_RecurrentesService.js, NUEVO): las subscripciones viven en una hoja oculta "Recurrentes" (SSOT en Config, creada al primer uso), con ABM en el shell (alta/edicion por upsert, pausa, borrado en dos pasos) y un volcado EXPLICITO al mes elegido, idempotente: re-volcar un mes reemplaza el volcado anterior, jamas duplica, y no toca lo que vino del presupuesto.
++ Conciliacion: por cada medio, el saldo que calcula el sistema (motor validado al centavo, corte por Inicio Mes) contra el saldo real que se tipea; las diferencias fuera de tolerancia se cargan como movimientos de Ajuste por el MISMO pipeline de cargas. Con guarda anti-carrera: si el saldo cambio entre que abriste la vista y confirmaste, rechaza y pide re-entrar.
+* Las seis funciones del encargo original quedan operativas. Verificacion adversarial fina diferida a la pasada de correccion, a pedido de Franco; los bancos (20 secciones), los modales y los 45 archivos en verde.
+
 v0.55.2 (2026-08-25) - Una sola flecha por combo, y el servidor local simula el modal real
 - Franco reporto dos flechas juntas en "Sale de". La segunda la dibuja Chrome para todo input con datalist (::-webkit-calendar-picker-indicator) y la revela en hover: por eso el campo quieto se veia bien. NO se apaga con display:none -- ese pseudo-elemento ES el boton que abre la lista, medido: sin el, el click derecho del campo deja de desplegar. Se vuelve invisible y se estira sobre los mismos 30px del chevron dibujado, asi el click cae donde el ojo espera.
 - El servidor local ahora muestra el shell DENTRO de un modal simulado de Sheets de 900x700 exactos (iframe), con la geometria leida de SHELL_GEOMETRIA, no escrita a mano. Si la ventana es mas chica se escala todo el dialogo con transform: adentro sigue midiendo 900x700 y el breakpoint no se cruza. La vista a pantalla completa queda en /shell.html.

@@ -14,6 +14,24 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## v0.56.0 - El shell completa sus seis funciones (2026-08-27)
+
+Las tres vistas que faltaban del Centro de Operaciones, construidas por equipo (investigacion
+con evidencia -> backend -> frontend -> verificacion de contrato):
+
+| Vista | Que hace |
+|---|---|
+| **Proyeccion nueva** | Proyecciones sueltas directo a la hoja Proyeccion, bloques repetibles, TCs congelados, nota sellada que el ABM de Proyecciones Elaboradas reconoce. Aditiva |
+| **Gastos recurrentes** | `src/17_RecurrentesService.js` (nuevo) + hoja oculta `Recurrentes` (SSOT en Config, creada al primer uso). ABM por upsert, pausa, borrado en dos pasos. Volcado explicito al mes, **idempotente**: re-volcar reemplaza lo propio y no toca lo del presupuesto |
+| **Conciliacion** | Saldo sistema (motor validado al centavo, corte por Inicio Mes) contra saldo real tipeado; diferencias fuera de tolerancia se cargan como Ajuste por el mismo pipeline. Guarda anti-carrera: si el saldo cambio desde que abriste la vista, rechaza y pide re-entrar |
+
+Con esto las **seis funciones del encargo original** (2026-08-24) quedan operativas. La
+verificacion adversarial fina quedo diferida a la pasada de correccion, a pedido de Franco;
+los hallazgos menores del verificador de contrato estan anotados para esa pasada.
+
 ---
 
 ## v0.55.2 - Una sola flecha por combo, y el servidor local simula el modal real (2026-08-25)

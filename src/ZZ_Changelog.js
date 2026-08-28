@@ -3,6 +3,34 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-27] v0.56.0 - El shell completa sus seis funciones: Proyeccion, Recurrentes y Conciliacion.
+ * - PROYECCION NUEVA: carga de proyecciones sueltas directo a la hoja Proyeccion, sin pasar
+ *   por la hoja Presupuesto. Bloques repetibles como Movimiento, mes con input type=month
+ *   (degrada a texto libre donde no exista), TCs congelados leidos de las MISMAS fuentes que
+ *   usa el guardado del presupuesto -- sin invocar sus helpers privados ni copiarlos: la
+ *   logica se reimplemento contra Config, que es el contrato. La nota lleva el sello que el
+ *   ABM de Proyecciones Elaboradas reconoce, asi la fila aparece en su listado. Aditiva.
+ * - GASTOS RECURRENTES (src/17_RecurrentesService.js, NUEVO): el encargo fundacional de la
+ *   "herramienta de subscripciones". Viven en una hoja oculta "Recurrentes" -- hoja y no
+ *   PropertiesService por la filosofia de legibilidad directa; oculta como el bloque de
+ *   comodines, precedente de Franco -- declarada en SHEETS y RANGES y creada al primer uso
+ *   con verificacion por relectura. ABM por upsert de nombre, pausa (activo Si/No), borrado
+ *   en dos pasos. El volcado al mes es un boton explicito con confirmacion que muestra el
+ *   estado antes (activos, pausados, que ya tiene el mes), e IDEMPOTENTE: re-volcar
+ *   reemplaza el volcado propio anterior y no toca las filas del presupuesto base ni del
+ *   guardado manual.
+ * - CONCILIACION: por cada medio, saldo sistema contra saldo real tipeado. El calculo es un
+ *   port verbatim del motor validado al centavo (corte por la cuenta de arrastre "Inicio
+ *   Mes"); las diferencias fuera de tolerancia (0.005) se cargan como movimientos de la
+ *   cuenta Ajuste por el MISMO pipeline de cargas -- un solo camino de escritura al ledger.
+ *   Guarda anti-carrera: el cliente devuelve el saldo que VIO, y si el recalculado difiere,
+ *   se rechaza el lote y se pide re-entrar; nadie concilia contra un numero viejo.
+ * - Con esto las SEIS funciones del encargo original (2026-08-24) quedan operativas. La
+ *   verificacion adversarial fina quedo diferida a la pasada de correccion a pedido de
+ *   Franco; los tres hallazgos menores del verificador de contrato (prefijo de nota
+ *   compartido con el guardado del ABM, sello parseado con nota libre adentro, doble de
+ *   pruebas con estado de volcado fijo) estan anotados para esa pasada.
+ *
  * [2026-08-25] v0.55.2 - Una sola flecha por combo, y el servidor local simula el modal real.
  * - Franco reporto dos flechas una al lado de la otra en los combos de traspaso. La segunda
  *   no la dibuja el shell: la dibuja Chrome para TODO input con datalist, via

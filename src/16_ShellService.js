@@ -72,9 +72,9 @@ const SHELL_VISTAS = [
     { id: 'home', titulo: 'tidetrack', listo: true },
     { id: 'movimiento', titulo: 'Movimiento nuevo', listo: true },
     { id: 'traspaso', titulo: 'Traspaso nuevo', listo: true },
-    { id: 'proyeccion', titulo: 'Proyeccion nueva', listo: false },
-    { id: 'recurrentes', titulo: 'Gastos recurrentes', listo: false },
-    { id: 'conciliacion', titulo: 'Conciliacion', listo: false }
+    { id: 'proyeccion', titulo: 'Proyeccion nueva', listo: true },
+    { id: 'recurrentes', titulo: 'Gastos recurrentes', listo: true },
+    { id: 'conciliacion', titulo: 'Conciliacion', listo: true }
 ];
 
 /** La vista a la que se cae si alguien pide una que no existe. */
@@ -516,7 +516,18 @@ function registrarMovimiento(d) {
  * @returns {{ok:boolean, mensaje?:string, problemas?:Array<string>, error?:string}}
  */
 function registrarMovimientos(lista) {
-    return _conLock(function () {
+    return _conLock(function () { return _registrarMovimientosSinLock(lista); });
+}
+
+/**
+ * El cuerpo de registrarMovimientos, SIN lock propio.
+ *
+ * Existe porque el lock de documento no es reentrante garantizado y la Conciliacion necesita
+ * medir los saldos y escribir sus ajustes bajo EL MISMO lock: si registrarConciliacion llamara
+ * a registrarMovimientos (que toma el suyo), el segundo tryLock podria fallar contra el primero.
+ * Todo caller NUEVO tiene que envolverlo en _conLock; nunca llamarlo pelado desde un endpoint.
+ */
+function _registrarMovimientosSinLock(lista) {
         if (!Array.isArray(lista) || !lista.length) {
             return { ok: false, error: 'No llego ningun movimiento para cargar.' };
         }
@@ -578,7 +589,6 @@ function registrarMovimientos(lista) {
               (unaSolaMoneda ? ', ' + _plata(total, lista[0].moneda) + ' en total' : '') + '.';
         if (tandas > 1) mensaje += ' Se procesaron en ' + tandas + ' tandas.';
         return { ok: true, mensaje: mensaje };
-    });
 }
 
 /**
@@ -742,6 +752,551 @@ function registrarTraspasos(lista) {
             if (capitalizan) mensaje += ' ' + capitalizan + ' de ellos capitalizan.';
             if (tandas > 1) mensaje += ' Se procesaron en ' + tandas + ' tandas.';
         }
+        return { ok: true, mensaje: mensaje };
+    });
+}
+
+// ============================================
+// PROYECCIONES SUELTAS (vista "Proyeccion nueva")
+// ============================================
+
+/**
+ * Registra proyecciones sueltas: filas nuevas en la BD "Proyeccion", directo, sin pasar por
+ * la grilla de Cargas. Contrato: o entran todas o no entra ninguna.
+ *
+ * NO pasa por procesarCargas, y es deliberado: una proyeccion no es un movimiento real -- no
+ * tiene fecha de operacion en el ledger sino un MES OBJETIVO, y su cotizacion congelada es la
+ * del dia en que se DECIDIO, no la de cada fecha de movimiento. Es exactamente la semantica de
+ * "Guardar Proyeccion" (DEVTOOL_PresupuestoGuardar.js, decision 1), calcada aca sin invocar
+ * sus helpers privados. La escritura es ADITIVA: el shell suma filas, nunca borra las del
+ * presupuesto base ni las de un guardado previo.
+ *
+ * @param {Array<Object>} lista {cuenta, monto, moneda, mes ('YYYY-MM'), nota}
+ * @returns {{ok:boolean, mensaje?:string, problemas?:Array<string>, error?:string}}
+ */
+function registrarProyecciones(lista) {
+    return _conLock(function () {
+        if (!Array.isArray(lista) || !lista.length) {
+            return { ok: false, error: 'No llego ninguna proyeccion para guardar.' };
+        }
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const hoja = ss.getSheetByName(SHEETS.PROYECCION);
+        if (!hoja) {
+            return { ok: false, error: 'No existe la hoja "' + SHEETS.PROYECCION + '". Correla ' +
+                'desde tidetrack Dev, "BD de Proyeccion (presupuesto)", antes de usar esta pantalla.' };
+        }
+        _preflightEspejoProyeccionShell(ss, hoja);
+
+        // Se valida el lote ENTERO antes de tocar una celda (contrato de registrarMovimientos).
+        const catalogos = _catalogosDeCuentasShell();
+        const problemas = [];
+        const tipos = [];
+        lista.forEach(function (d, i) {
+            const r = _validarProyeccion(d, catalogos);
+            r.problemas.forEach(function (p) { problemas.push('Fila ' + (i + 1) + ': ' + p); });
+            tipos.push(r.tipoCuenta);
+        });
+        if (problemas.length) return { ok: false, problemas: problemas };
+
+        // Cotizaciones DESPUES de validar y ANTES de escribir: si la API falla, el corte es
+        // limpio -- la excepcion sube al catch de _conLock y sale como {ok:false, error}.
+        const cot = _cotizacionesCongeladasShell();
+
+        // Resolucion de segundos (misma razon que _selloPg: dos corridas en el mismo minuto
+        // son plausibles) y prefijo 'shell_' para que el origen quede auditable a simple
+        // vista en la hoja y el sello sea inconfundible con los de PG.
+        const sello = 'shell_' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd_HHmmss');
+
+        // Pre-scan de convivencia (solo lectura, alimenta el mensaje final): hay ya filas de
+        // estos meses, sean de un guardado previo (PG) o del presupuesto base (PB)?
+        // PG_MARCA y PB_MARCA se leen ACA ADENTRO, nunca en un const de nivel superior:
+        // 16_ ordena antes que DEVTOOL_ en la carga alfabetica de Apps Script y un top-level
+        // que los lea tumba el proyecto entero (cicatriz v0.50.1).
+        const cfg = RANGES.REGISTROS;
+        const clavesLote = {};
+        lista.forEach(function (d) { clavesLote[d.mes] = true; });
+        let hayPrevias = false;
+        const ultima = hoja.getLastRow();
+        if (ultima >= cfg.dataRow) {
+            const n = ultima - cfg.dataRow + 1;
+            const notas = hoja.getRange(cfg.dataRow, columnLetterToIndex(cfg.columns.nota), n, 1).getValues();
+            const fechas = hoja.getRange(cfg.dataRow, columnLetterToIndex(cfg.columns.fecha), n, 1).getValues();
+            Object.keys(clavesLote).forEach(function (clave) {
+                if (hayPrevias) return;
+                const partes = clave.split('-');
+                const anio = Number(partes[0]);
+                const mes = Number(partes[1]);
+                for (let i = 0; i < n; i++) {
+                    const nota = String(notas[i][0] || '');
+                    if (nota.indexOf(PG_MARCA + ' ' + clave + ' ') === 0) { hayPrevias = true; return; }
+                    if (nota.indexOf(PB_MARCA) === 0) {
+                        const f = fechas[i][0];
+                        if (f instanceof Date && f.getFullYear() === anio && f.getMonth() === mes - 1) {
+                            hayPrevias = true;
+                            return;
+                        }
+                    }
+                }
+            });
+        }
+
+        const filas = lista.map(function (d, i) { return _filaDeProyeccion(d, tipos[i], cot, sello); });
+
+        // UNA sola escritura al pie; Proyeccion es append-only y NO se ordena (PG tampoco).
+        const colIni = columnLetterToIndex(cfg.start);
+        const primera = Math.max(hoja.getLastRow() + 1, cfg.dataRow);
+        if (primera + filas.length - 1 > hoja.getMaxRows()) {
+            asegurarCapacidadFilas(hoja, primera + filas.length - 1);
+        }
+        hoja.getRange(primera, colIni, filas.length, filas[0].length).setValues(filas);
+        SpreadsheetApp.flush();
+
+        // VERIFICACION por relectura: las filas de ESTA corrida son las que llevan el sello
+        // (con segundos + prefijo shell_ es unico). El conteo y la suma POR MONEDA tienen que
+        // cerrar contra el lote de entrada; jamas se suman monedas distintas entre si.
+        const fin = hoja.getLastRow();
+        const nRe = fin - cfg.dataRow + 1;
+        const notasRe = hoja.getRange(cfg.dataRow, columnLetterToIndex(cfg.columns.nota), nRe, 1).getValues();
+        const montosRe = hoja.getRange(cfg.dataRow, columnLetterToIndex(cfg.columns.monto), nRe, 1).getValues();
+        const monedasRe = hoja.getRange(cfg.dataRow, columnLetterToIndex(cfg.columns.moneda), nRe, 1).getValues();
+        const escritas = [];
+        const sumaRe = {};
+        for (let i = 0; i < nRe; i++) {
+            if (String(notasRe[i][0] || '').indexOf(' ' + sello) === -1) continue;
+            escritas.push(cfg.dataRow + i);
+            const mon = String(monedasRe[i][0] || '');
+            sumaRe[mon] = (sumaRe[mon] || 0) + (Number(montosRe[i][0]) || 0);
+        }
+        const sumaLote = {};
+        lista.forEach(function (d) { sumaLote[d.moneda] = (sumaLote[d.moneda] || 0) + Number(d.monto); });
+        let detalleFalla = '';
+        if (escritas.length !== lista.length) {
+            detalleFalla = 'se esperaban ' + lista.length + ' fila(s) y se releyeron ' + escritas.length;
+        } else {
+            Object.keys(sumaLote).forEach(function (mon) {
+                if (Math.abs((sumaRe[mon] || 0) - sumaLote[mon]) > 0.01) {
+                    detalleFalla = 'la suma en ' + mon + ' no cierra al releer';
+                }
+            });
+        }
+        if (detalleFalla) {
+            _quitarFilasShell(hoja, escritas);
+            SpreadsheetApp.flush();
+            logError('registrarProyecciones: no verifica (' + detalleFalla + '); se quito lo escrito.');
+            return { ok: false, error: 'Se escribio pero no verifica: ' + detalleFalla +
+                '. Se quito lo escrito: no quedo nada a medias.' };
+        }
+
+        const claves = Object.keys(clavesLote);
+        const monedasLote = Object.keys(sumaLote);
+        let mensaje;
+        if (lista.length === 1) {
+            mensaje = 'Listo. Proyectaste ' + _plata(lista[0].monto, lista[0].moneda) + ' en ' +
+                lista[0].cuenta + ' para ' + _mesEnCastellanoShell(lista[0].mes) + '.';
+        } else {
+            mensaje = 'Listo. Guardaste ' + lista.length + ' proyecciones' +
+                (claves.length === 1 ? ' para ' + _mesEnCastellanoShell(claves[0]) : ' en varios meses') +
+                (monedasLote.length === 1 ? ', ' + _plata(sumaLote[monedasLote[0]], monedasLote[0]) + ' en total' : '') +
+                '.';
+        }
+        // decision Franco 2026-08-26: el shell SUMA, nunca reemplaza. Retirar filas base o un
+        // guardado previo es territorio de Guardar Proyeccion y del ABM, que tienen respaldo y
+        // reversion; duplicar esa maquinaria aca seria una segunda superficie de borrado sobre
+        // una BD de produccion. El costo es que una puntual convive (y suma) con el base del
+        // mismo mes: el mensaje lo dice.
+        if (hayPrevias) mensaje += ' Se suman a lo que ese mes ya tenia proyectado.';
+        logSuccess('registrarProyecciones: ' + lista.length + ' fila(s) en "' + SHEETS.PROYECCION + '".');
+        return { ok: true, mensaje: mensaje };
+    });
+}
+
+/**
+ * Comprueba que "Proyeccion" siga siendo un espejo EXACTO de "Registros" en su fila de header.
+ *
+ * Implementacion PROPIA sobre Config (mismas fuentes que _preflightPb, cero invocaciones a
+ * helpers ajenos: los DEVTOOL_Presupuesto* son de otra linea de trabajo). Al primer desvio
+ * LANZA nombrando columna, esperado y vivo -- no se escribe nada.
+ */
+function _preflightEspejoProyeccionShell(ss, hoja) {
+    const cfg = RANGES.REGISTROS;
+    const hojaReg = ss.getSheetByName(cfg.sheet);
+    if (!hojaReg) throw new Error('No existe el ledger "' + cfg.sheet + '".');
+    const colIni = columnLetterToIndex(cfg.start);
+    const nCols = columnLetterToIndex(cfg.end) - colIni + 1;
+    const enLedger = hojaReg.getRange(cfg.headerRow, colIni, 1, nCols).getValues()[0];
+    const enProy = hoja.getRange(cfg.headerRow, colIni, 1, nCols).getValues()[0];
+    for (let i = 0; i < nCols; i++) {
+        const esperado = String(enLedger[i] === null || enLedger[i] === undefined ? '' : enLedger[i]).trim();
+        const vivo = String(enProy[i] === null || enProy[i] === undefined ? '' : enProy[i]).trim();
+        if (esperado !== vivo) {
+            throw new Error('La hoja "' + SHEETS.PROYECCION + '" dejo de espejar a "' + cfg.sheet +
+                '": la columna ' + columnIndexToLetter(colIni + i) + ' dice "' + vivo +
+                '" y se esperaba "' + esperado + '". No se escribio nada.');
+        }
+    }
+}
+
+/** Los tres catalogos de cuentas del Plan, una lectura por lote (mismo patron que obtenerCatalogoShell). */
+function _catalogosDeCuentasShell() {
+    const nombresDe = function (clave) {
+        return getTableData(clave)
+            .map(function (f) { return String(f[0] || '').trim(); })
+            .filter(function (v) { return v !== ''; });
+    };
+    return {
+        ingresos: nombresDe('INGRESOS'),
+        fijos: nombresDe('GASTOS_FIJOS'),
+        variables: nombresDe('GASTOS_VARIABLES')
+    };
+}
+
+/**
+ * Valida UNA proyeccion. A diferencia de _validarMovimiento, aca una cuenta fuera de catalogo
+ * BLOQUEA: una fila sin tipo_cuenta valido cae en "otrasFilas" del ABM de Proyecciones
+ * Elaboradas y no suma en ningun bloque del Tablero. Se clasifica SIN la opcion tolerante:
+ * el nombre escrito en la BD tiene que ser el canonico del Plan, porque los consumidores
+ * cruzan por nombre exacto.
+ *
+ * @returns {{problemas:Array<string>, tipoCuenta:string}}
+ */
+function _validarProyeccion(d, catalogos) {
+    const problemas = [];
+    let tipoCuenta = '';
+    const monto = Number(d.monto);
+    if (!d.monto && d.monto !== 0) problemas.push('Falta el monto.');
+    else if (isNaN(monto)) problemas.push('El monto no es un numero.');
+    else if (monto <= 0) problemas.push('El monto tiene que ser mayor a cero.');
+
+    if (!d.cuenta) {
+        problemas.push('Falta la cuenta.');
+    } else if (esCuentaNeutra(d.cuenta)) {
+        problemas.push('La cuenta "' + d.cuenta + '" es tecnica del sistema: no se proyecta.');
+    } else {
+        tipoCuenta = deducirTipoCuenta(d.cuenta, catalogos);
+        if (tipoCuenta === '') {
+            problemas.push('La cuenta "' + d.cuenta + '" no esta en el Plan de Cuentas. Una ' +
+                'proyeccion necesita saber si es ingreso, gasto fijo o variable.');
+        }
+    }
+    if (!d.moneda || MONEDAS_DISPONIBLES.indexOf(d.moneda) === -1) {
+        problemas.push('La moneda "' + (d.moneda || '') + '" no es una de las que maneja la planilla.');
+    }
+    if (!d.mes || !/^\d{4}-(0[1-9]|1[0-2])$/.test(String(d.mes))) {
+        problemas.push('El mes no se entiende: se espera anio y mes.');
+    } else {
+        const partes = String(d.mes).split('-');
+        const primero = new Date(Number(partes[0]), Number(partes[1]) - 1, 1);
+        const hoy = new Date();
+        // El mes en curso SI se acepta, igual que PG lo permite desde J2/J3.
+        if (primero < new Date(hoy.getFullYear(), hoy.getMonth(), 1)) {
+            problemas.push('Ese mes ya paso: una proyeccion es de aca para adelante.');
+        }
+    }
+    return { problemas: problemas, tipoCuenta: tipoCuenta };
+}
+
+/**
+ * Las cuatro cotizaciones del dia, congeladas: UNA lectura por corrida (todas las filas del
+ * lote son la misma decision del mismo instante, misma razon que la decision 1 de PG). Un
+ * fallo de la API LANZA sin silenciarse ni reemplazarse por un default (Regla Estricta 9);
+ * la excepcion la atrapa el catch de _conLock y sale como {ok:false, error}.
+ */
+function _cotizacionesCongeladasShell() {
+    // decision Franco 2026-08-26: cotizaciones propias del shell leyendo las MISMAS custom
+    // functions publicas (15_ExchangeRateApi.js) que usa Guardar Proyeccion. No se invoca
+    // _leerCotizacionesVivasPg: prefijo privado de un modulo de otra linea de trabajo.
+    const usd = Number(TIDETRACK_USD());
+    const aud = Number(TIDETRACK_AUD());
+    const eur = Number(TIDETRACK_EUR());
+    const chequear = function (nombre, v) {
+        if (!isFinite(v) || v <= 0) {
+            throw new Error('La cotizacion de ' + nombre + ' no es un numero valido ("' + v +
+                '"): no se escribio nada.');
+        }
+    };
+    chequear('USD', usd);
+    chequear('AUD', aud);
+    chequear('EUR', eur);
+    return { ARS: 1, USD: usd, AUD: aud, EUR: eur };
+}
+
+/** Arma la fila B:M de una proyeccion en el ORDEN de RANGES.REGISTROS (misma tecnica que _filaDeCarga). */
+function _filaDeProyeccion(d, tipoCuenta, cot, sello) {
+    const cfg = RANGES.REGISTROS;
+    const colIni = columnLetterToIndex(cfg.start);
+    const ancho = columnLetterToIndex(cfg.end) - colIni + 1;
+    const fila = new Array(ancho).fill('');
+    const poner = function (clave, valor) { fila[columnLetterToIndex(cfg.columns[clave]) - colIni] = valor; };
+    // decision Franco 2026-08-26: la Nota lleva el marcado de PG a proposito. Es el UNICO
+    // formato que el ABM de Proyecciones Elaboradas reconoce sin tocarlo, y retipear el literal
+    // seria la segunda constante "parecida" que ya costo caro (leccion v0.46.0). La nota libre
+    // del usuario viaja al final, visible en la hoja.
+    const nota = PG_MARCA + ' ' + d.mes + ' ' + sello + (d.nota ? ' ' + d.nota : '');
+    const partes = String(d.mes).split('-');
+    poner('monto', Number(d.monto));
+    poner('tipo', tipoCuenta === 'Ingreso' ? 'Ingreso' : 'Egreso');
+    poner('cuenta', d.cuenta);
+    poner('tipo_cuenta', tipoCuenta);
+    // Misma convencion que PG: no hay medio en una proyeccion y ningun consumidor lo lee.
+    poner('medio', '');
+    poner('moneda', d.moneda);
+    // PRIMER DIA del mes: la convencion unica de la hoja, los consumidores filtran por rango.
+    poner('fecha', new Date(Number(partes[0]), Number(partes[1]) - 1, 1));
+    poner('nota', nota);
+    poner('tc_ars', cot.ARS);
+    poner('tc_usd', cot.USD);
+    poner('tc_aud', cot.AUD);
+    poner('tc_eur', cot.EUR);
+    return fila;
+}
+
+/** Borra una lista de filas fisicas, de abajo hacia arriba para no correr los indices. */
+function _quitarFilasShell(hoja, filas) {
+    filas.slice().sort(function (a, b) { return b - a; }).forEach(function (f) { hoja.deleteRow(f); });
+}
+
+/** 'sep 2026' -> 'septiembre 2026': el mes de una clave 'YYYY-MM' en castellano sobrio. */
+function _mesEnCastellanoShell(clave) {
+    const partes = String(clave).split('-');
+    // IP_MESES se lee ACA ADENTRO (vive en DEVTOOL_InicioPresupuesto.js, que carga despues).
+    const meses = IP_MESES.split(',');
+    return meses[Number(partes[1]) - 1].toLowerCase() + ' ' + partes[0];
+}
+
+// ============================================
+// CONCILIACION (vista "Conciliacion")
+// ============================================
+
+/** Diferencias por debajo de esto no generan ajuste (misma cifra que el DEVTOOL: sub-centavo). */
+const SHELL_CONC_TOLERANCIA = 0.005;
+
+/**
+ * Saldo por medio con la regla que cierra al centavo: ultimo asiento CUENTA_ARRASTRE del
+ * medio + todo lo posterior (fecha >= corte). PORT VERBATIM de _planConciliar
+ * (DEVTOOL_ConciliarSaldos.js:198-252, validado 5/7 al centavo contra saldos reales el
+ * 2026-08-19): mismas lecturas via RANGES, mismo corte, mismo neto. Vive aca y no se invoca
+ * el DEVTOOL porque aquel es un one-shot con los objetivos de Franco hardcodeados, candidato
+ * declarado a salir del deploy, y su retorno no trae los saldos de todos los medios.
+ *
+ * @returns {{medios:Array<{medio:string, moneda:string, saldo:number}>, ultimaFechaLedger:string}}
+ */
+function _saldosPorMedioShell(ss) {
+    const cfg = RANGES.REGISTROS;
+    const hojaReg = ss.getSheetByName(cfg.sheet);
+    if (!hojaReg) throw new Error('No existe el ledger "' + cfg.sheet + '".');
+    const cfgMed = RANGES.MEDIOS_PAGO;
+    const hojaPC = ss.getSheetByName(cfgMed.sheet);
+    if (!hojaPC) throw new Error('No existe la hoja "' + cfgMed.sheet + '".');
+
+    // Catalogo de medios con su moneda (fallback 'ARS', como el original).
+    const colMed = columnLetterToIndex(cfgMed.start);
+    const nColsMed = columnLetterToIndex(cfgMed.end) - colMed + 1;
+    const filaMed = getDataRow(cfgMed);
+    const altoMed = hojaPC.getMaxRows() - filaMed + 1;
+    const medios = [];
+    const monedaDe = Object.create(null);
+    if (altoMed > 0) {
+        hojaPC.getRange(filaMed, colMed, altoMed, nColsMed).getValues().forEach(function (f) {
+            const nombre = String(f[0] || '').trim();
+            if (!nombre) return;
+            medios.push(nombre);
+            monedaDe[nombre] = String(f[1] || '').trim() || 'ARS';
+        });
+    }
+
+    // Ledger: saldo por medio con la regla del ultimo corte.
+    const colIni = columnLetterToIndex(cfg.start);
+    const nCols = columnLetterToIndex(cfg.end) - colIni + 1;
+    const alto = hojaReg.getMaxRows() - cfg.dataRow + 1;
+    const iMonto = columnLetterToIndex(cfg.columns.monto) - colIni;
+    const iTipo = columnLetterToIndex(cfg.columns.tipo) - colIni;
+    const iCuenta = columnLetterToIndex(cfg.columns.cuenta) - colIni;
+    const iMedio = columnLetterToIndex(cfg.columns.medio) - colIni;
+    const iFecha = columnLetterToIndex(cfg.columns.fecha) - colIni;
+
+    const filas = [];
+    let ultimaFecha = null;
+    if (alto > 0) {
+        hojaReg.getRange(cfg.dataRow, colIni, alto, nCols).getValues().forEach(function (f) {
+            const medio = String(f[iMedio] || '').trim();
+            const fecha = f[iFecha];
+            if (!medio || !(fecha instanceof Date)) return;
+            const monto = Number(f[iMonto]) || 0;
+            const tipo = String(f[iTipo] || '').trim();
+            filas.push({
+                medio: medio, cuenta: String(f[iCuenta] || '').trim(), fecha: fecha.getTime(),
+                neto: (tipo === 'Egreso' ? -monto : monto)
+            });
+            if (!ultimaFecha || fecha.getTime() > ultimaFecha) ultimaFecha = fecha.getTime();
+        });
+    }
+
+    const cortes = Object.create(null);
+    filas.forEach(function (f) {
+        if (f.cuenta !== CUENTA_ARRASTRE) return;
+        if (cortes[f.medio] === undefined || f.fecha > cortes[f.medio]) cortes[f.medio] = f.fecha;
+    });
+    const saldos = Object.create(null);
+    medios.forEach(function (m) { saldos[m] = 0; });
+    filas.forEach(function (f) {
+        if (saldos[f.medio] === undefined) return;             // medio fuera del Plan: no participa
+        const corte = cortes[f.medio] === undefined ? -Infinity : cortes[f.medio];
+        if (f.fecha >= corte) saldos[f.medio] += f.neto;
+    });
+
+    const tz = Session.getScriptTimeZone();
+    return {
+        medios: medios.map(function (m) {
+            return { medio: m, moneda: monedaDe[m], saldo: Math.round(saldos[m] * 100) / 100 };
+        }),
+        ultimaFechaLedger: ultimaFecha
+            ? Utilities.formatDate(new Date(ultimaFecha), tz, 'dd/MM/yyyy')
+            : '(sin datos)'
+    };
+}
+
+/**
+ * Los saldos que el sistema calcula por medio, para la tabla de Conciliacion.
+ * Llamada cara: lee el ledger entero (~3.500 filas x 12 columnas) en un getValues.
+ * NO lee bloques TC: las cotizaciones las congela procesarCargas al escribir.
+ *
+ * Nunca lanza (cicatriz v0.45.2: excepcion sin withFailureHandler = loader eterno).
+ *
+ * @returns {{ok:boolean, saldos?:Array<{medio:string, moneda:string, saldo:number}>,
+ *            tolerancia?:number, ultimaFechaLedger?:string, hoy?:string, error?:string}}
+ */
+function obtenerSaldosConciliacion() {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const medicion = _saldosPorMedioShell(ss);
+        return {
+            ok: true,
+            saldos: medicion.medios,
+            tolerancia: SHELL_CONC_TOLERANCIA,
+            ultimaFechaLedger: medicion.ultimaFechaLedger,
+            hoy: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy')
+        };
+    } catch (e) {
+        logError('obtenerSaldosConciliacion', e);
+        return { ok: false, error: String(e && e.message ? e.message : e) };
+    }
+}
+
+/**
+ * Carga los ajustes de conciliacion como movimientos de CUENTA_AJUSTE, por el MISMO camino
+ * que todo lo demas: siembra en Cargas y procesarCargas congela TCs y deduce tipo de cuenta.
+ * O entran todos o no entra ninguno.
+ *
+ * POR QUE EL PIPELINE Y NO LA ESCRITURA DIRECTA DEL DEVTOOL: (1) procesarCargas es el UNICO
+ * lugar que congela las cuatro cotizaciones -- y las busca via API para la fecha del dia,
+ * mejor que el fallback "mas reciente disponible" de _tcParaFechaConc; (2) el ledger queda
+ * reordenado por fecha como con toda carga; (3) el shell ya tiene lock, tandas y validacion
+ * de lote resueltos para este camino; (4) este repo ya dejo escrito dos veces que una segunda
+ * implementacion equivalente es la forma mas barata de clasificar distinto sin que nadie se
+ * entere. El costo asumido y declarado: tipo_cuenta de los ajustes queda 'Ingreso' (la cuenta
+ * esta dada de alta en el bloque Ingresos del Plan), no '' como escribia el DEVTOOL.
+ *
+ * @param {Array<{medio:string, saldoVisto:number, saldoReal:number}>} lista
+ * @returns {{ok:boolean, mensaje?:string, problemas?:Array<string>, error?:string}}
+ */
+function registrarConciliacion(lista) {
+    return _conLock(function () {
+        if (!Array.isArray(lista) || !lista.length) {
+            return { ok: false, error: 'No llego ninguna caja para conciliar.' };
+        }
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const medicion = _saldosPorMedioShell(ss);
+        const mapa = Object.create(null);
+        medicion.medios.forEach(function (m) { mapa[m.medio] = m; });
+
+        // Se valida el lote ENTERO antes de escribir. ANTI-CARRERA: la vista se cargo antes y
+        // otra pestania pudo escribir en el medio; si el saldo medido ahora no es el que el
+        // cliente vio, se aborta el lote entero.
+        const problemas = [];
+        lista.forEach(function (d) {
+            const m = mapa[d.medio];
+            if (!m) { problemas.push('El medio "' + d.medio + '" no esta en el Plan de Cuentas.'); return; }
+            if (!isFinite(Number(d.saldoReal))) {
+                problemas.push('El saldo real de "' + d.medio + '" no es un numero.');
+                return;
+            }
+            if (Math.abs(m.saldo - Number(d.saldoVisto)) > SHELL_CONC_TOLERANCIA) {
+                problemas.push('El saldo de "' + d.medio + '" cambio desde que abriste la vista (era ' +
+                    _plata(d.saldoVisto, m.moneda) + ', ahora ' + _plata(m.saldo, m.moneda) +
+                    '). Volve a entrar a Conciliacion.');
+            }
+        });
+        if (problemas.length) return { ok: false, problemas: problemas };
+
+        // El cliente ya filtra las diferencias sub-tolerancia; el servidor es la regla.
+        const hoyIso = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+        const movs = [];
+        const conciliados = [];
+        lista.forEach(function (d) {
+            const m = mapa[d.medio];
+            const saldoReal = Math.round(Number(d.saldoReal) * 100) / 100;
+            const delta = Math.round((saldoReal - m.saldo) * 100) / 100;
+            if (Math.abs(delta) <= SHELL_CONC_TOLERANCIA) return;
+            movs.push({
+                monto: Math.abs(delta),
+                tipo: delta >= 0 ? 'Ingreso' : 'Egreso',
+                cuenta: CUENTA_AJUSTE,
+                medio: d.medio,
+                // La moneda es la del CATALOGO, nunca la del cliente.
+                moneda: m.moneda,
+                fecha: hoyIso,
+                nota: 'Conciliacion: saldo real ' + _plata(saldoReal, m.moneda) + ' contra ' +
+                    _plata(m.saldo, m.moneda) + ' registrado'
+            });
+            conciliados.push({ medio: d.medio, moneda: m.moneda, saldoReal: saldoReal, delta: delta });
+        });
+        if (!conciliados.length) {
+            return { ok: true, mensaje: 'Todos los saldos ya coinciden. No se cargo nada.' };
+        }
+
+        // El MISMO cuerpo que la carga de movimientos, bajo el lock que YA tenemos tomado.
+        const r = _registrarMovimientosSinLock(movs);
+        if (!r.ok) return r;
+
+        // VERIFICACION por relectura (portada de aplicarConciliarSaldos): cada medio conciliado
+        // tiene que quedar en su saldoReal. Si no, el error es fuerte y sin silenciar; las
+        // filas NO se borran (el DEVTOOL tampoco lo hace): ya son asientos del ledger.
+        const releida = _saldosPorMedioShell(ss);
+        const mapaRe = Object.create(null);
+        releida.medios.forEach(function (m) { mapaRe[m.medio] = m; });
+        const fallas = [];
+        conciliados.forEach(function (c) {
+            const m = mapaRe[c.medio];
+            const vivo = m ? m.saldo : NaN;
+            if (!isFinite(vivo) || Math.abs(vivo - c.saldoReal) > SHELL_CONC_TOLERANCIA) {
+                fallas.push('"' + c.medio + '" quedo en ' + _plata(vivo || 0, c.moneda) +
+                    ' en vez de ' + _plata(c.saldoReal, c.moneda));
+            }
+        });
+        if (fallas.length) {
+            logError('registrarConciliacion: no verifica al releer: ' + fallas.join('; '));
+            return { ok: false, error: 'Se cargaron los ajustes pero al releer ' + fallas.join('; ') +
+                '. Revisa la hoja Registros: las filas nuevas ya estan en el ledger.' };
+        }
+
+        // Mensaje SIN sumar monedas distintas entre si.
+        let mensaje;
+        if (conciliados.length === 1) {
+            mensaje = 'Listo. ' + conciliados[0].medio + ' quedo en ' +
+                _plata(conciliados[0].saldoReal, conciliados[0].moneda) + '.';
+        } else {
+            const porMoneda = {};
+            conciliados.forEach(function (c) {
+                if (!porMoneda[c.moneda]) porMoneda[c.moneda] = { n: 0, total: 0 };
+                porMoneda[c.moneda].n++;
+                porMoneda[c.moneda].total += Math.abs(c.delta);
+            });
+            const partes = Object.keys(porMoneda).map(function (mon) {
+                return porMoneda[mon].n + ' en ' + mon + ' por ' + _plata(porMoneda[mon].total, mon);
+            });
+            mensaje = 'Listo. Se cargaron ' + conciliados.length + ' ajustes: ' + partes.join(' | ');
+        }
+        logSuccess('registrarConciliacion: ' + conciliados.length + ' ajuste(s).');
         return { ok: true, mensaje: mensaje };
     });
 }

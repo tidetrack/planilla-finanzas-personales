@@ -2,6 +2,11 @@
 <html>
 <head>
 <base target="_top">
+<!-- El charset EXPLICITO. HtmlService lo manda por header y el archivo se ve bien en la
+     planilla, pero el servidor local de pruebas (python http.server) no lo declara: sin esta
+     linea el navegador adivina windows-1252 y los acentos del catalogo (Uala con tilde,
+     Prestamo con tilde) salen rotos en la simulacion. Medido el 2026-08-27. -->
+<meta charset="utf-8">
 <!-- LA FUENTE SE CARGA DE VERDAD. UI_SharedStyles declara la familia pero sin este link no se
      descarga nunca. Verificado contra la API de Google Fonts: responde 200 y sirve los cuatro
      pesos en subset latin. -->
@@ -962,39 +967,115 @@ body {
 
 
 /* ============================================================
-   10. VISTA EN CONSTRUCCION -- el copy ya esta a nivel producto
-   (UI_Shell.html:331-358); lo que le falta es un contenedor.
+   10. VISTAS NUEVAS -- lo que proyeccion, recurrentes y conciliacion
+   necesitan y ninguna clase existente cubre. Todo sobre los tokens de
+   :root, cero hex sueltos. (El CSS de .shell-pendiente se retiro entero:
+   ya no queda ninguna vista en construccion que lo use.)
    ============================================================ */
-.shell-pendiente {
-    padding: var(--e5) var(--e5) var(--e4);
+/* El estado de un recurrente, en el segmentado y en el punto del resumen:
+   pausado es un estado de ATENCION (ambar), no un error. */
+.seg button[aria-pressed="true"][data-v="Si"] {
+    background: var(--est-verde-bg); color: var(--est-verde-ink);
+    box-shadow: inset 0 0 0 1px rgba(53,104,84,0.22);
+}
+.seg button[aria-pressed="true"][data-v="No"] {
+    background: var(--est-ambar-bg); color: var(--est-ambar-ink);
+    box-shadow: inset 0 0 0 1px rgba(109,77,0,0.22);
+}
+.bloque-punto[data-activo="Si"] {
+    background: var(--est-verde);
+    box-shadow: 0 0 0 3px var(--est-verde-bg);
+}
+.bloque-punto[data-activo="No"] {
+    background: var(--est-ambar);
+    box-shadow: 0 0 0 3px var(--est-ambar-bg);
+}
+/* Pie de un bloque recurrente: Guardar y Borrar van en fila, por bloque,
+   porque cada recurrente es su propio registro (upsert), no parte de un lote. */
+.bloque .rec-pie { flex-direction: row; align-items: center; gap: 10px; }
+.rec-borrar[data-conf="1"] {
+    background: var(--est-rojo-bg); color: var(--est-rojo-ink);
+    box-shadow: inset 0 0 0 1px rgba(173,39,39,0.22);
+}
+/* En la barra de recurrentes conviven resumen, dos selects y dos botones: los botones y
+   los selects NO se achican ni parten renglon; el que cede es el resumen, que puede
+   envolver en dos lineas dentro de los 60px de la barra. */
+.shell-acciones .btn { flex: 0 0 auto; white-space: nowrap; }
+/* Los selects de periodo del volcado, compactos para convivir en la barra. */
+.shell-acciones .form-input {
+    flex: 0 0 auto;
+    width: auto;   /* pisa el width:100% del design system: en la barra mide su contenido */
+    height: 34px; padding: 0 30px 0 10px;
+    border: 0; border-radius: var(--r-sm);
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    background: var(--sup-hueco) var(--chevron) no-repeat right 10px center / 10px 7px;
+    box-shadow: var(--filo);
+    font: inherit; font-size: var(--fs-aux); color: var(--ink-2);
+    cursor: pointer;
+}
+.shell-acciones .form-input:focus {
+    outline: none; background-color: var(--sup-card);
+    box-shadow: inset 0 0 0 1.5px var(--tt-teal), 0 0 0 3px rgba(var(--tt-teal-rgb), 0.18);
+}
+/* Un aviso con botones adentro: la confirmacion inline del volcado y el
+   reintento de la conciliacion. El shell no usa dialogos nativos. */
+.alert > span:first-of-type { flex: 1 1 auto; align-self: center; }
+.alert .btn { flex: 0 0 auto; align-self: center; height: 32px; padding: 0 14px; }
+/* Hints de contexto de la conciliacion: viven fuera de la grilla .f. */
+.conc-hint {
+    margin: 0 0 10px;
+    font-size: var(--fs-aux); line-height: 1.45; color: var(--ink-3);
+}
+.conc-hint.alerta { color: var(--est-ambar-ink); }
+/* La tabla de conciliacion: una fila por medio, numeros a la derecha. */
+.conc-card {
     background: var(--sup-card);
     border-radius: var(--r-md);
     box-shadow: var(--elev-1), var(--filo);
+    overflow: hidden;
 }
-.shell-pendiente .marca {
-    display: inline-flex; align-items: center; gap: 7px;
-    height: 24px; padding: 0 11px; margin-bottom: 12px;
-    border-radius: var(--r-full);
-    background: var(--est-ambar-bg); color: var(--est-ambar-ink);
-    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+.conc-tabla { width: 100%; border-collapse: collapse; }
+.conc-tabla th {
+    padding: 10px 12px;
+    font-size: var(--fs-rotulo); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ink-3); text-align: left;
+    box-shadow: 0 1px 0 var(--linea);
 }
-.shell-pendiente h2 {
-    margin: 0 0 8px;
-    font-size: var(--fs-hero); font-weight: 600; letter-spacing: -0.15px;
-    color: var(--ink-1);
+.conc-tabla td { padding: 8px 12px; vertical-align: middle; box-shadow: 0 1px 0 var(--linea); }
+.conc-tabla tr:last-child td { box-shadow: none; }
+.conc-tabla .num { text-align: right; font-variant-numeric: tabular-nums; }
+.conc-medio { font-size: 13px; font-weight: 600; color: var(--ink-1); }
+.conc-tag {
+    margin-left: 6px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: var(--ink-3);
 }
-.shell-pendiente p {
-    margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--ink-2);
+.conc-sis { font-size: 13px; color: var(--ink-2); }
+.conc-real {
+    width: 116px; height: 32px; padding: 0 10px;
+    border: 0; border-radius: var(--r-sm);
+    background: var(--sup-hueco); box-shadow: var(--filo);
+    font: inherit; font-size: 13px; text-align: right; color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
 }
-.shell-pendiente ul { margin: 0; padding-left: 0; list-style: none; }
-.shell-pendiente li {
-    position: relative; padding-left: 18px; margin: 7px 0;
-    font-size: 13px; line-height: 1.5; color: var(--ink-2);
+.conc-real::placeholder { color: var(--ink-ph); }
+.conc-real:focus {
+    outline: none; background: var(--sup-card);
+    box-shadow: inset 0 0 0 1.5px var(--tt-teal), 0 0 0 3px rgba(var(--tt-teal-rgb), 0.18);
 }
-.shell-pendiente li::before {
-    content: ""; position: absolute; left: 2px; top: 8px;
-    width: 5px; height: 5px; border-radius: 50%; background: var(--tt-teal-soft);
+.conc-estado { min-width: 132px; }
+.conc-dir { font-size: var(--fs-aux); color: var(--ink-ph); }
+.conc-pill {
+    display: inline-block; padding: 2px 9px; border-radius: var(--r-full);
+    font-size: var(--fs-aux); font-weight: 600; font-variant-numeric: tabular-nums;
 }
+/* Verde = hay MAS de verdad que en la planilla (falta anotar un ingreso);
+   rojo = la planilla dice mas de lo que hay (salio plata sin anotarse). */
+.conc-pill[data-dir="igual"], .conc-pill[data-dir="mas"] {
+    background: var(--est-verde-bg); color: var(--est-verde-ink);
+}
+.conc-pill[data-dir="menos"] { background: var(--est-rojo-bg); color: var(--est-rojo-ink); }
+.conc-sub { display: block; margin-top: 3px; font-size: var(--fs-rotulo); color: var(--ink-3); }
 
 
 /* ============================================================
@@ -1131,7 +1212,7 @@ body {
                     <span class="t">Movimiento nuevo</span>
                     <span class="d">Uno o varios gastos e ingresos, de una sentada.</span>
                 </span>
-                <span class="pend" title="Todavia no esta construida"></span>
+                <span class="pend"></span>
                 <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
                      stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
@@ -1148,7 +1229,7 @@ body {
                     <span class="t">Traspaso nuevo</span>
                     <span class="d">Plata de una caja a otra. Escribe las dos patas juntas.</span>
                 </span>
-                <span class="pend" title="Todavia no esta construida"></span>
+                <span class="pend"></span>
                 <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
                      stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
@@ -1161,7 +1242,7 @@ body {
                     <span class="t">Proyeccion nueva</span>
                     <span class="d">Lo que pensas gastar el mes que viene.</span>
                 </span>
-                <span class="pend" title="Todavia no esta construida"></span>
+                <span class="pend"></span>
                 <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
                      stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
@@ -1191,7 +1272,7 @@ body {
                     <span class="t">Conciliacion</span>
                     <span class="d">Emparejar cada caja con lo que dice el banco.</span>
                 </span>
-                <span class="pend" title="Todavia no esta construida"></span>
+                <span class="pend"></span>
                 <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
                      stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
@@ -1204,7 +1285,7 @@ body {
                     <span class="t">Gastos recurrentes</span>
                     <span class="d">Lo que se repite todos los meses.</span>
                 </span>
-                <span class="pend" title="Todavia no esta construida"></span>
+                <span class="pend"></span>
                 <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
                      stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
@@ -1257,35 +1338,45 @@ body {
     </div>
 
     <div id="vista-proyeccion" class="vista-form hidden">
-        <div class="shell-pendiente">
-            <h2>Todavia no esta construida</h2>
-            <p>Va a guardar lo que pensas gastar en la base <b>Proyeccion</b>, que ya existe, para que el Tablero pueda medir cuanto te falta.</p>
-            <ul>
-                <li>Es el paso que hoy le falta a la hoja Presupuesto: bajar lo que escribis a mano a la base.</li>
-                <li>Lo proyectado en dolares no lleva cotizacion congelada a proposito: un movimiento que no ocurrio no tiene tipo de cambio.</li>
-            </ul>
+        <div id="proyLista"></div>
+        <button type="button" class="btn-agregar" id="proyAgregar" onclick="agregarBloqueProyeccion()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Agregar otra proyeccion
+        </button>
+        <div class="shell-acciones">
+            <span class="crece" id="proyCupo"></span>
+            <span class="total">
+                <span class="rot">Lote</span>
+                <span class="val" id="proyTotal">&mdash;</span>
+            </span>
+            <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
+            <button class="btn btn-primary" id="proyBtnGuardar" onclick="guardarProyecciones()">Guardar</button>
         </div>
     </div>
 
     <div id="vista-recurrentes" class="vista-form hidden">
-        <div class="shell-pendiente">
-            <h2>Todavia no esta construida</h2>
-            <p>Va a guardar las suscripciones y los gastos que se repiten todos los meses, para que la proyeccion los tenga en cuenta sola.</p>
-            <ul>
-                <li>Cada regla dice cuenta, medio, monto, dia del mes y desde cuando hasta cuando.</li>
-                <li>Al regenerar no toca los meses ya cerrados, y avisa antes de pisar una fila que hayas editado a mano.</li>
-            </ul>
+        <div id="recLista"></div>
+        <button type="button" class="btn-agregar" id="recAgregar" onclick="agregarBloqueRecurrente()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Agregar recurrente
+        </button>
+        <div class="shell-acciones">
+            <span class="crece" id="recResumen"></span>
+            <select class="form-input" id="recMes" aria-label="Mes a volcar"></select>
+            <select class="form-input" id="recAnio" aria-label="Anio a volcar"></select>
+            <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
+            <button class="btn btn-primary" id="recBtnVolcar" onclick="pedirVolcado()">Volcar a la proyeccion</button>
         </div>
     </div>
 
     <div id="vista-conciliacion" class="vista-form hidden">
-        <div class="shell-pendiente">
-            <h2>Todavia no esta construida</h2>
-            <p>Va a poner lado a lado, por cada caja, lo que dice la planilla y lo que hay de verdad, y cargar la diferencia con la cuenta <b>Ajuste</b>, que es la que ya usas.</p>
-            <ul>
-                <li>El saldo lo calcula con la regla que ya cierra al centavo: el ultimo <b>Inicio Mes</b> de cada caja mas todo lo posterior.</li>
-                <li>Una caja que no declares conserva su saldo. Nunca se asume cero.</li>
-            </ul>
+        <div id="concContenido"></div>
+        <div class="shell-acciones">
+            <span class="crece" id="concResumen"></span>
+            <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
+            <button class="btn btn-primary" id="concBtnGuardar" onclick="guardarConciliacion()" disabled>Conciliar</button>
         </div>
     </div>
 
@@ -1316,7 +1407,12 @@ var VISTA_INICIAL = '<?= vistaInicial ?>';
 var TIPOS_RIQUEZA_CLIENTE = <?!= tiposRiquezaJson ?>;
 
 var catalogo = null;
-var VISTAS_CON_CATALOGO = { movimiento: prepararMovimiento, traspaso: prepararTraspaso };
+var saldosConc = null;   // la medicion de Conciliacion: NUNCA se cachea entre entradas
+var VISTAS_CON_CATALOGO = { movimiento: prepararMovimiento, traspaso: prepararTraspaso,
+    proyeccion: prepararProyeccion, recurrentes: prepararRecurrentes };
+// Conciliacion no necesita el catalogo del Plan: mide los saldos con su propio viaje, cada
+// vez que se entra. Va en un mapa aparte para no cobrarle el costo de asegurarCatalogo.
+var VISTAS_CON_PREPARADOR_PROPIO = { conciliacion: prepararConciliacion };
 
 // ============================================
 // ROUTER
@@ -1335,6 +1431,8 @@ function irAVista(id) {
     limpiarAviso();
     var preparar = VISTAS_CON_CATALOGO[id];
     if (preparar) { asegurarCatalogo(preparar); }
+    var propio = VISTAS_CON_PREPARADOR_PROPIO[id];
+    if (propio) { propio(); }
 }
 
 /** Volver. NUNCA cierra el modal: el contenedor decide que significa "salir". */
@@ -1986,6 +2084,795 @@ function guardarTraspasos() {
     enviar('registrarTraspasos', lista, ['trasBtnGuardar'], function () {
         document.getElementById('trasLista').innerHTML = '';
         catalogo = null;
+        irAVista('home');
+    });
+}
+
+// ============================================
+// PROYECCION -- carga multiple directo a la BD Proyeccion
+// ============================================
+//
+// No pasa por la grilla de Cargas: el backend escribe en la hoja Proyeccion con el mismo
+// marcado que Guardar Proyeccion, asi el ABM de Proyecciones Elaboradas la reconoce sin
+// tocarlo. La semantica es ADITIVA: el shell suma filas, nunca reemplaza las del presupuesto
+// base ni las de un guardado previo -- la hint del bloque lo dice.
+
+var PLANTILLA_PROYECCION =
+        '<div class="bloque bloque--nuevo" data-estado="edicion" data-tipo="Egreso">' +
+        '<button type="button" class="bloque-resumen" onclick="abrirBloqueProyeccion(this)">' +
+        '<span class="bloque-punto" data-tipo="Egreso" aria-hidden="true"></span>' +
+        '<span class="bloque-cuenta">Sin cuenta</span>' +
+        '<span class="bloque-meta"></span>' +
+        '<span class="bloque-monto" data-vacio="1">&mdash;<span class="u">ARS</span></span>' +
+        '<svg class="chev-abrir" width="15" height="15" viewBox="0 0 24 24" fill="none" ' +
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ' +
+        'aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+        '</button>' +
+        '<div class="bloque-head">' +
+        '<span class="bloque-num"><span class="n">1</span>Proyeccion</span>' +
+        '<button type="button" class="btn-quitar" title="Quitar esta proyeccion" ' +
+        'onclick="quitarBloqueProyeccion(this)">&times;</button>' +
+        '</div>' +
+        '<div class="bloque-cuerpo"><div class="inner"><div class="pad">' +
+        '<div class="shell-form">' +
+        '<label class="f c4">' +
+        '<span class="rot">Monto</span>' +
+        '<span class="campo-monto">' +
+        '<input class="monto p-monto" inputmode="decimal" placeholder="0,00" autocomplete="off">' +
+        '<span class="pref p-pref" aria-hidden="true">ARS</span>' +
+        '<select class="moneda p-moneda" aria-label="Moneda de esta proyeccion"></select>' +
+        '</span>' +
+        '</label>' +
+        '<label class="f c3">' +
+        '<span class="rot">Mes</span>' +
+        '<input class="form-input p-mes" type="month">' +
+        '</label>' +
+        '<label class="f c5">' +
+        '<span class="rot">Cuenta</span>' +
+        '<span class="combo"><input class="form-input p-cuenta" list="dlCuentas" ' +
+        'autocomplete="off" placeholder="Buscar cuenta"></span>' +
+        '</label>' +
+        '<label class="f c12">' +
+        '<span class="rot">Nota</span>' +
+        '<input class="form-input p-nota" placeholder="Opcional" autocomplete="off">' +
+        '<span class="hint">Se guarda en la base Proyeccion con las cotizaciones del dia ' +
+        'congeladas. Guardar despues el presupuesto entero de ese mes desde la hoja ' +
+        'Presupuesto la reemplaza.</span>' +
+        '</label>' +
+        '</div>' +
+        '</div></div></div>' +
+        '</div>';
+
+function prepararProyeccion() {
+    if (!document.querySelectorAll('#proyLista .bloque').length) {
+        agregarBloqueProyeccion();
+    }
+    actualizarCupoProyeccion();
+}
+
+/** 'YYYY-MM' del mes actual: el piso del input de mes (el mes en curso SI se acepta). */
+function mesActualISO() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+/** 'YYYY-MM' del mes siguiente: el default del primer bloque ("el mes que viene gasto X"). */
+function mesProximoISO() {
+    var d = new Date();
+    var m = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    return m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0');
+}
+
+/** 'sep 2026' para el resumen del bloque. Cosmetico y del cliente: la clave la valida el backend. */
+function mesCortoCliente(clave) {
+    if (!clave) return '';
+    var p = String(clave).split('-');
+    var f = new Date(Number(p[0]), Number(p[1]) - 1, 1);
+    return f.toLocaleDateString('es-AR', { month: 'short', year: 'numeric' });
+}
+
+/** El signo del resumen lo decide el Plan: cuenta de ingresos suma, el resto resta. */
+function esCuentaDeIngreso(cuenta) {
+    return !!catalogo && (catalogo.ingresos || []).indexOf(cuenta) !== -1;
+}
+
+/**
+ * Agrega un bloque heredando MES y MONEDA del anterior: es lo que se repite al cargar varias
+ * proyecciones de una sentada. Monto, cuenta y nota cambian siempre y no se heredan.
+ * Defaults del primer bloque: el mes que viene, y la moneda base -- aca no hay medio del cual
+ * deducir la moneda, asi que arranca en la primera de MONEDAS_DISPONIBLES.
+ */
+function agregarBloqueProyeccion() {
+    var lista = document.getElementById('proyLista');
+    var previos = lista.querySelectorAll('.bloque');
+    if (previos.length >= cupoMaximo()) return;
+
+    var heredaMes = mesProximoISO();
+    var heredaMoneda = (catalogo.monedas || [])[0];
+    if (previos.length) {
+        var ult = previos[previos.length - 1];
+        heredaMes = ult.querySelector('.p-mes').value || heredaMes;
+        heredaMoneda = ult.querySelector('.p-moneda').value || heredaMoneda;
+        resumirProyeccion(ult);
+        ult.dataset.estado = 'resumen';
+    }
+
+    var env = document.createElement('div');
+    env.innerHTML = PLANTILLA_PROYECCION;
+    var div = env.firstElementChild;
+    lista.appendChild(div);
+
+    vigilarCombo(div.querySelector('.p-cuenta'), todasLasCuentas());
+    llenarSelect(div.querySelector('.p-moneda'), [{ items: catalogo.monedas }], heredaMoneda);
+    div.querySelector('.p-pref').textContent = heredaMoneda;
+    div.querySelector('.p-mes').value = heredaMes;
+    div.querySelector('.p-mes').min = mesActualISO();
+    div.querySelector('.p-moneda').onchange = function () {
+        div.querySelector('.p-pref').textContent = div.querySelector('.p-moneda').value;
+        actualizarTotalProyeccion();
+    };
+    div.querySelector('.p-monto').oninput = actualizarTotalProyeccion;
+    div.querySelector('.p-cuenta').oninput = function () {
+        var tipo = esCuentaDeIngreso(div.querySelector('.p-cuenta').value) ? 'Ingreso' : 'Egreso';
+        div.dataset.tipo = tipo;
+        div.querySelector('.bloque-punto').dataset.tipo = tipo;
+        actualizarTotalProyeccion();
+    };
+
+    renumerarProyecciones();
+    actualizarCupoProyeccion();
+    actualizarTotalProyeccion();
+    div.querySelector('.p-monto').focus();
+}
+
+function quitarBloqueProyeccion(btn) {
+    var lista = document.getElementById('proyLista');
+    if (lista.querySelectorAll('.bloque').length <= 1) return;
+    btn.closest('.bloque').remove();
+    renumerarProyecciones();
+    actualizarCupoProyeccion();
+    actualizarTotalProyeccion();
+}
+
+function abrirBloqueProyeccion(el) {
+    var b = el.closest('.bloque');
+    document.querySelectorAll('#proyLista .bloque').forEach(function (o) {
+        if (o !== b) { resumirProyeccion(o); o.dataset.estado = 'resumen'; }
+    });
+    b.dataset.estado = 'edicion';
+    b.querySelector('.p-monto').focus();
+}
+
+function resumirProyeccion(b) {
+    var v = function (s) { var e = b.querySelector(s); return e ? e.value : ''; };
+    var monto = aNumero(v('.p-monto'));
+    var tipo = esCuentaDeIngreso(v('.p-cuenta')) ? 'Ingreso' : 'Egreso';
+    b.querySelector('.bloque-punto').dataset.tipo = tipo;
+    b.querySelector('.bloque-cuenta').textContent = v('.p-cuenta') || 'Sin cuenta';
+    b.querySelector('.bloque-meta').textContent = mesCortoCliente(v('.p-mes'));
+    var caja = b.querySelector('.bloque-monto');
+    caja.dataset.vacio = monto ? '0' : '1';
+    caja.innerHTML = (monto ? escapar(monto.toFixed(2).replace('.', ','))
+                            : '\u2014') + '<span class="u">' + escapar(v('.p-moneda')) + '</span>';
+}
+
+function renumerarProyecciones() {
+    var bs = document.querySelectorAll('#proyLista .bloque');
+    bs.forEach(function (b, i) {
+        b.querySelector('.bloque-num .n').textContent = (i + 1);
+        b.querySelector('.btn-quitar').style.visibility = bs.length > 1 ? 'visible' : 'hidden';
+    });
+}
+
+/** Sin tandas: la proyeccion no pasa por la grilla, se escribe directo en la base. */
+function actualizarCupoProyeccion() {
+    var n = document.querySelectorAll('#proyLista .bloque').length;
+    document.getElementById('proyAgregar').disabled = n >= CUPO_BLOQUES;
+    document.getElementById('proyCupo').textContent = n >= CUPO_BLOQUES
+        ? 'Llegaste al tope de ' + CUPO_BLOQUES + ' por carga. Guarda estas y segui.'
+        : n + ' proyeccion' + (n === 1 ? '' : 'es') + '. Se guardan todas juntas, directo en la base.';
+}
+
+/** El total del lote, solo si comparte moneda. Signo + para cuentas de ingresos, - para el resto. */
+function actualizarTotalProyeccion() {
+    var total = 0, monedas = {}, hay = false;
+    document.querySelectorAll('#proyLista .bloque').forEach(function (b) {
+        var m = aNumero(b.querySelector('.p-monto').value);
+        if (m === '' || !m) return;
+        hay = true;
+        total += (esCuentaDeIngreso(b.querySelector('.p-cuenta').value) ? m : -m);
+        monedas[b.querySelector('.p-moneda').value] = true;
+    });
+    var caja = document.getElementById('proyTotal');
+    if (!hay) { caja.textContent = '\u2014'; caja.dataset.signo = ''; return; }
+    var claves = Object.keys(monedas);
+    if (claves.length > 1) { caja.textContent = 'varias monedas'; caja.dataset.signo = ''; return; }
+    caja.dataset.signo = total < 0 ? 'neg' : 'pos';
+    caja.textContent = (total < 0 ? '-' : '+') +
+        Math.abs(total).toFixed(2).replace('.', ',') + ' ' + claves[0];
+}
+
+function guardarProyecciones() {
+    var lista = [];
+    document.querySelectorAll('#proyLista .bloque').forEach(function (b) {
+        lista.push({
+            cuenta: b.querySelector('.p-cuenta').value,
+            monto: aNumero(b.querySelector('.p-monto').value),
+            moneda: b.querySelector('.p-moneda').value,
+            mes: b.querySelector('.p-mes').value,
+            nota: b.querySelector('.p-nota').value
+        });
+    });
+    enviar('registrarProyecciones', lista, ['proyBtnGuardar'], function () {
+        document.getElementById('proyLista').innerHTML = '';
+        // NO se anula el catalogo: esta vista no toca la grilla de Cargas.
+        irAVista('home');
+    });
+}
+
+// ============================================
+// RECURRENTES -- ABM por bloque + volcado explicito al mes
+// ============================================
+//
+// Cada bloque es SU PROPIO registro (upsert por nombre en el backend), no parte de un lote:
+// por eso Guardar y Borrar viven en el bloque y no en la barra. La barra tiene lo unico que
+// opera sobre el conjunto: el volcado de los activos a un mes de la Proyeccion, que es
+// explicito y con confirmacion inline -- nunca un efecto oculto.
+
+var PLANTILLA_RECURRENTE =
+        '<div class="bloque bloque--nuevo" data-estado="edicion" data-guardado="0">' +
+        '<button type="button" class="bloque-resumen" onclick="abrirBloqueRecurrente(this)">' +
+        '<span class="bloque-punto" data-activo="Si" aria-hidden="true"></span>' +
+        '<span class="bloque-cuenta">Sin nombre</span>' +
+        '<span class="bloque-meta"></span>' +
+        '<span class="bloque-monto" data-vacio="1">&mdash;<span class="u">ARS</span></span>' +
+        '<svg class="chev-abrir" width="15" height="15" viewBox="0 0 24 24" fill="none" ' +
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ' +
+        'aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+        '</button>' +
+        '<div class="bloque-head">' +
+        '<span class="bloque-num"><span class="n">1</span>Recurrente</span>' +
+        '</div>' +
+        '<div class="bloque-cuerpo"><div class="inner"><div class="pad">' +
+        '<div class="shell-form">' +
+        '<label class="f c5">' +
+        '<span class="rot">Nombre</span>' +
+        '<input class="form-input r-nombre" placeholder="Netflix, alquiler, gimnasio" autocomplete="off">' +
+        '<span class="hint"></span>' +
+        '</label>' +
+        '<label class="f c4">' +
+        '<span class="rot">Monto</span>' +
+        '<span class="campo-monto">' +
+        '<input class="monto r-monto" inputmode="decimal" placeholder="0,00" autocomplete="off">' +
+        '<span class="pref r-pref" aria-hidden="true">ARS</span>' +
+        '<select class="moneda r-moneda" aria-label="Moneda de este recurrente"></select>' +
+        '</span>' +
+        '<span class="hint"></span>' +
+        '</label>' +
+        '<label class="f c3">' +
+        '<span class="rot">Dia del mes</span>' +
+        '<input class="form-input r-dia" inputmode="numeric" placeholder="1-31" autocomplete="off">' +
+        '<span class="hint">Si el mes es mas corto, se usa el ultimo dia</span>' +
+        '</label>' +
+        '<label class="f c5">' +
+        '<span class="rot">Cuenta</span>' +
+        '<span class="combo"><input class="form-input r-cuenta" list="dlCuentas" ' +
+        'autocomplete="off" placeholder="Buscar cuenta"></span>' +
+        '</label>' +
+        '<label class="f c4">' +
+        '<span class="rot">Medio</span>' +
+        '<span class="combo"><input class="form-input r-medio" list="dlMedios" ' +
+        'autocomplete="off" placeholder="Buscar medio"></span>' +
+        '</label>' +
+        '<div class="f c3">' +
+        '<span class="rot">Estado</span>' +
+        '<div class="seg" role="group" aria-label="Estado del recurrente">' +
+        '<button type="button" data-v="Si" aria-pressed="true" onclick="segActivo(this)">Activo</button>' +
+        '<button type="button" data-v="No" aria-pressed="false" onclick="segActivo(this)">Pausado</button>' +
+        '</div>' +
+        '<input type="hidden" class="r-activo" value="Si">' +
+        '</div>' +
+        '<label class="f c12">' +
+        '<span class="rot">Nota</span>' +
+        '<input class="form-input r-nota" placeholder="Opcional" autocomplete="off">' +
+        '</label>' +
+        '<div class="f c12 rec-pie">' +
+        '<button type="button" class="btn btn-primary" onclick="guardarRecurrenteUI(this)">Guardar</button>' +
+        '<button type="button" class="btn btn-secondary rec-borrar" onclick="borrarRecurrenteUI(this)">Borrar</button>' +
+        '</div>' +
+        '</div>' +
+        '</div></div></div>' +
+        '</div>';
+
+function prepararRecurrentes() {
+    llenarPeriodoVolcado();
+    cargarRecurrentes();
+}
+
+/** Pide la lista al backend y la pinta. La hoja es la verdad, no el DOM. */
+function cargarRecurrentes() {
+    loader(true, 'Leyendo los recurrentes');
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true; loader(false);
+        mostrarError('Los recurrentes estan tardando mas de la cuenta. Proba de nuevo.');
+    }, 15000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); };
+
+    google.script.run
+        .withSuccessHandler(function (r) {
+            if (contesto) return;
+            cerrar();
+            if (!r || !r.ok) {
+                mostrarError('No se pudieron leer los recurrentes: ' + ((r && r.error) || 'error desconocido'));
+                return;
+            }
+            pintarRecurrentes(r.recurrentes || []);
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            cerrar();
+            mostrarError('No se pudieron leer los recurrentes: ' + err.message);
+        })
+        .obtenerRecurrentes();
+}
+
+/** Un bloque por recurrente, TODOS en resumen: el usuario abre el que quiere tocar. */
+function pintarRecurrentes(recs) {
+    document.getElementById('recLista').innerHTML = '';
+    recs.forEach(function (r) {
+        var div = nuevoBloqueRecurrente(r);
+        resumirRecurrente(div);
+        div.dataset.estado = 'resumen';
+    });
+    renumerarRecurrentes();
+    actualizarResumenRecurrentes();
+}
+
+/** Arma un bloque; con `r` lo puebla desde la hoja, sin `r` es un alta vacia. */
+function nuevoBloqueRecurrente(r) {
+    var env = document.createElement('div');
+    env.innerHTML = PLANTILLA_RECURRENTE;
+    var div = env.firstElementChild;
+    document.getElementById('recLista').appendChild(div);
+
+    vigilarCombo(div.querySelector('.r-cuenta'), todasLasCuentas());
+    vigilarCombo(div.querySelector('.r-medio'), nombresDeMedio());
+    llenarSelect(div.querySelector('.r-moneda'), [{ items: catalogo.monedas }]);
+    div.querySelector('.r-medio').onchange = function () { monedaDelMedioRec(div); };
+    div.querySelector('.r-moneda').onchange = function () {
+        div.querySelector('.r-pref').textContent = div.querySelector('.r-moneda').value;
+    };
+
+    if (r) {
+        div.dataset.guardado = '1';
+        div.querySelector('.r-nombre').value = r.nombre;
+        div.querySelector('.r-cuenta').value = r.cuenta;
+        div.querySelector('.r-monto').value = String(r.monto).replace('.', ',');
+        div.querySelector('.r-moneda').value = r.moneda;
+        div.querySelector('.r-medio').value = r.medio;
+        div.querySelector('.r-dia').value = r.dia;
+        div.querySelector('.r-nota').value = r.nota || '';
+        ponerActivo(div, r.activo ? 'Si' : 'No');
+    } else {
+        // La moneda la decide el medio, como en toda la casa (ADR-002).
+        div.querySelector('.r-medio').value = medioPorDefecto();
+        monedaDelMedioRec(div);
+        ponerActivo(div, 'Si');
+    }
+    div.querySelector('.r-pref').textContent = div.querySelector('.r-moneda').value;
+    return div;
+}
+
+/** La moneda del catalogo para el medio elegido, como monedaDelMedio pero sobre .r-*. */
+function monedaDelMedioRec(div) {
+    var medio = div.querySelector('.r-medio').value;
+    var m = ((catalogo && catalogo.medios) || []).filter(function (x) { return x.nombre === medio; })[0];
+    if (m && m.moneda) div.querySelector('.r-moneda').value = m.moneda;
+    div.querySelector('.r-pref').textContent = div.querySelector('.r-moneda').value;
+}
+
+/** Segmentado Activo/Pausado -> input oculto con 'Si'/'No', que es lo que espera el backend. */
+function ponerActivo(div, valor) {
+    div.querySelector('.r-activo').value = valor;
+    div.querySelectorAll('.seg button').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x.dataset.v === valor));
+    });
+    div.querySelector('.bloque-punto').dataset.activo = valor;
+}
+
+function segActivo(btn) {
+    ponerActivo(btn.closest('.bloque'), btn.dataset.v);
+    actualizarResumenRecurrentes();
+}
+
+function agregarBloqueRecurrente() {
+    document.querySelectorAll('#recLista .bloque').forEach(function (o) {
+        resumirRecurrente(o);
+        o.dataset.estado = 'resumen';
+    });
+    var div = nuevoBloqueRecurrente(null);
+    renumerarRecurrentes();
+    actualizarResumenRecurrentes();
+    div.querySelector('.r-nombre').focus();
+}
+
+function abrirBloqueRecurrente(el) {
+    var b = el.closest('.bloque');
+    document.querySelectorAll('#recLista .bloque').forEach(function (o) {
+        if (o !== b) { resumirRecurrente(o); o.dataset.estado = 'resumen'; }
+    });
+    b.dataset.estado = 'edicion';
+    b.querySelector('.r-monto').focus();
+}
+
+function resumirRecurrente(b) {
+    var v = function (s) { var e = b.querySelector(s); return e ? e.value : ''; };
+    var monto = aNumero(v('.r-monto'));
+    b.querySelector('.bloque-punto').dataset.activo = v('.r-activo');
+    b.querySelector('.bloque-cuenta').textContent = v('.r-nombre') || 'Sin nombre';
+    b.querySelector('.bloque-meta').textContent =
+        [v('.r-cuenta'), v('.r-dia') ? 'dia ' + v('.r-dia') : ''].filter(Boolean).join(' - ');
+    var caja = b.querySelector('.bloque-monto');
+    caja.dataset.vacio = monto ? '0' : '1';
+    caja.innerHTML = (monto ? escapar(monto.toFixed(2).replace('.', ','))
+                            : '\u2014') + '<span class="u">' + escapar(v('.r-moneda')) + '</span>';
+}
+
+function renumerarRecurrentes() {
+    document.querySelectorAll('#recLista .bloque').forEach(function (b, i) {
+        b.querySelector('.bloque-num .n').textContent = (i + 1);
+    });
+}
+
+function actualizarResumenRecurrentes() {
+    var activos = 0, pausados = 0;
+    document.querySelectorAll('#recLista .bloque .r-activo').forEach(function (x) {
+        if (x.value === 'Si') activos++; else pausados++;
+    });
+    document.getElementById('recResumen').textContent =
+        activos + ' activo' + (activos === 1 ? '' : 's') + ', ' +
+        pausados + ' pausado' + (pausados === 1 ? '' : 's') + '.';
+}
+
+function guardarRecurrenteUI(btn) {
+    var b = btn.closest('.bloque');
+    var d = {
+        nombre: b.querySelector('.r-nombre').value.trim(),
+        cuenta: b.querySelector('.r-cuenta').value,
+        monto: aNumero(b.querySelector('.r-monto').value),
+        moneda: b.querySelector('.r-moneda').value,
+        medio: b.querySelector('.r-medio').value,
+        dia: parseInt(b.querySelector('.r-dia').value, 10),
+        nota: b.querySelector('.r-nota').value,
+        activo: b.querySelector('.r-activo').value
+    };
+    enviar('guardarRecurrente', d, ['recBtnVolcar'], cargarRecurrentes);
+}
+
+/**
+ * Borrado en DOS PASOS, sin dialogo nativo: el primer click arma la confirmacion sobre el
+ * mismo boton y un timeout de 4 s la desarma; el segundo click borra de verdad. Un bloque
+ * nuevo todavia no guardado se quita del DOM sin viaje al servidor.
+ */
+function borrarRecurrenteUI(btn) {
+    var b = btn.closest('.bloque');
+    if (b.dataset.guardado !== '1') {
+        b.remove();
+        renumerarRecurrentes();
+        actualizarResumenRecurrentes();
+        return;
+    }
+    if (btn.dataset.conf !== '1') {
+        btn.dataset.conf = '1';
+        btn.textContent = 'Confirmar borrado';
+        window.setTimeout(function () {
+            btn.dataset.conf = '0';
+            btn.textContent = 'Borrar';
+        }, 4000);
+        return;
+    }
+    enviar('borrarRecurrente', b.querySelector('.r-nombre').value.trim(), ['recBtnVolcar'],
+        cargarRecurrentes);
+}
+
+/** Los selects de periodo: meses en espanol (strings de UI) y el mes que viene por defecto. */
+function llenarPeriodoVolcado() {
+    var mesSel = document.getElementById('recMes');
+    var anioSel = document.getElementById('recAnio');
+    if (mesSel.options.length) return;
+    var MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+        'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    MESES.forEach(function (nombre, i) {
+        var o = document.createElement('option');
+        o.value = String(i + 1);
+        o.textContent = nombre;
+        mesSel.appendChild(o);
+    });
+    var hoy = new Date();
+    var prox = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
+    for (var a = hoy.getFullYear(); a <= hoy.getFullYear() + 2; a++) {
+        var oa = document.createElement('option');
+        oa.value = String(a);
+        oa.textContent = String(a);
+        anioSel.appendChild(oa);
+    }
+    mesSel.value = String(prox.getMonth() + 1);
+    anioSel.value = String(prox.getFullYear());
+}
+
+/** Pide el estado del volcado y arma la confirmacion inline con los numeros reales. */
+function pedirVolcado() {
+    var mes = Number(document.getElementById('recMes').value);
+    var anio = Number(document.getElementById('recAnio').value);
+    loader(true, 'Midiendo el volcado');
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true; loader(false);
+        mostrarError('El estado del volcado esta tardando mas de la cuenta. Proba de nuevo.');
+    }, 15000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); };
+
+    google.script.run
+        .withSuccessHandler(function (r) {
+            if (contesto) return;
+            cerrar();
+            if (!r || !r.ok) { mostrarError((r && r.error) || 'No se pudo medir el volcado.'); return; }
+            if (!r.activos) { mostrarError('No hay recurrentes activos para volcar.'); return; }
+            mostrarConfirmacionVolcado(r, mes, anio);
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            cerrar();
+            mostrarError('No se pudo medir el volcado: ' + err.message);
+        })
+        .estadoVolcadoRecurrentes({ mes: mes, anio: anio });
+}
+
+function mostrarConfirmacionVolcado(r, mes, anio) {
+    var tot = r.totalPorMoneda || {};
+    var partes = Object.keys(tot).map(function (mon) {
+        return Number(tot[mon]).toFixed(2).replace('.', ',') + ' ' + mon;
+    });
+    var t = 'Se van a volcar ' + r.activos + ' recurrente' + (r.activos === 1 ? '' : 's') +
+        ' a ' + r.periodo + (partes.length ? ' por ' + partes.join(' | ') : '') + '.';
+    if (r.previasPropias) {
+        t += ' Reemplaza el volcado anterior de ese mes (' + r.previasPropias + ' filas).';
+    }
+    var otras = r.otrasDelMes || {};
+    if (otras.base || otras.manual) {
+        t += ' El mes ya tiene ' + (otras.base || 0) + ' fila(s) del presupuesto base y ' +
+            (otras.manual || 0) + ' del guardado manual: no se tocan, y se SUMAN a lo volcado.';
+    }
+
+    var caja = document.getElementById('shellAviso');
+    caja.innerHTML = '';
+    var alerta = document.createElement('div');
+    alerta.className = 'alert alert-warning';
+    var texto = document.createElement('span');
+    texto.textContent = t;
+    var confirmar = document.createElement('button');
+    confirmar.className = 'btn btn-primary';
+    confirmar.textContent = 'Confirmar volcado';
+    confirmar.onclick = function () {
+        enviar('volcarRecurrentesAlMes', { mes: mes, anio: anio }, ['recBtnVolcar'], function () {
+            cargarRecurrentes();   // queda en la vista: el volcado no es un cierre
+        });
+    };
+    var cancelar = document.createElement('button');
+    cancelar.className = 'btn btn-secondary';
+    cancelar.textContent = 'Cancelar';
+    cancelar.onclick = limpiarAviso;
+    alerta.appendChild(texto);
+    alerta.appendChild(confirmar);
+    alerta.appendChild(cancelar);
+    caja.appendChild(alerta);
+}
+
+// ============================================
+// CONCILIACION -- saldo sistema vs saldo real, ajuste por diferencia
+// ============================================
+//
+// La tabla muestra TODOS los medios del Plan con el saldo que calcula el sistema (ultimo
+// Inicio Mes + lo posterior). Una caja sin declarar conserva su saldo: nunca se asume cero.
+// Solo las diferencias fuera de tolerancia se cargan, como movimientos de la cuenta Ajuste,
+// por el pipeline de siempre. La tolerancia viaja del backend: no se retipea aca.
+
+function prepararConciliacion() {
+    saldosConc = null;
+    medirSaldosConciliacion();
+}
+
+function medirSaldosConciliacion() {
+    document.getElementById('concContenido').innerHTML = '';
+    document.getElementById('concResumen').textContent = '';
+    document.getElementById('concBtnGuardar').disabled = true;
+    loader(true, 'Midiendo los saldos');
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true; loader(false);
+        errorConciliacion('La medicion de saldos esta tardando mas de la cuenta.');
+    }, 30000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); };
+
+    google.script.run
+        .withSuccessHandler(function (r) {
+            if (contesto) return;
+            cerrar();
+            if (!r || !r.ok) {
+                errorConciliacion((r && r.error) || 'No se pudieron medir los saldos.');
+                return;
+            }
+            saldosConc = r;
+            pintarConciliacion(r);
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            cerrar();
+            errorConciliacion('No se pudieron medir los saldos: ' + err.message);
+        })
+        .obtenerSaldosConciliacion();
+}
+
+/** El estado de error vive EN la vista, con Reintentar: un aviso suelto se pierde al navegar. */
+function errorConciliacion(txt) {
+    var cont = document.getElementById('concContenido');
+    cont.innerHTML = '';
+    var alerta = document.createElement('div');
+    alerta.className = 'alert alert-error';
+    var s = document.createElement('span');
+    s.textContent = txt;
+    var b = document.createElement('button');
+    b.className = 'btn btn-secondary';
+    b.textContent = 'Reintentar';
+    b.onclick = medirSaldosConciliacion;
+    alerta.appendChild(s);
+    alerta.appendChild(b);
+    cont.appendChild(alerta);
+}
+
+/** 'dd/MM/yyyy' -> timestamp, para comparar las fechas que manda el backend. */
+function fechaDeTexto(s) {
+    var p = String(s || '').split('/');
+    if (p.length !== 3) return NaN;
+    return new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])).getTime();
+}
+
+function pintarConciliacion(r) {
+    var cont = document.getElementById('concContenido');
+    cont.innerHTML = '';
+
+    var hint = document.createElement('div');
+    hint.className = 'conc-hint';
+    hint.textContent = 'Los ajustes se cargan con fecha de hoy, con la cuenta Ajuste.';
+    cont.appendChild(hint);
+
+    // La advertencia del ledger corto, portada del DEVTOOL: un movimiento real sin cargar de
+    // esos dias queda adentro del ajuste, sin detalle.
+    var tLedger = fechaDeTexto(r.ultimaFechaLedger);
+    var tHoy = fechaDeTexto(r.hoy);
+    if (isFinite(tLedger) && isFinite(tHoy) && tLedger < tHoy) {
+        var alerta = document.createElement('div');
+        alerta.className = 'conc-hint alerta';
+        alerta.textContent = 'El ledger llega hasta el ' + r.ultimaFechaLedger + '. Si te ' +
+            'falta cargar movimientos de esos dias, cargalos ANTES de conciliar: si no, ' +
+            'quedan adentro del ajuste, sin detalle.';
+        cont.appendChild(alerta);
+    }
+
+    var card = document.createElement('div');
+    card.className = 'conc-card';
+    var tabla = document.createElement('table');
+    tabla.className = 'conc-tabla';
+    tabla.id = 'concTabla';
+    var thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>Caja</th><th class="num">Segun la planilla</th>' +
+        '<th class="num">Lo que hay de verdad</th><th>Estado</th></tr>';
+    tabla.appendChild(thead);
+    var tbody = document.createElement('tbody');
+    (r.saldos || []).forEach(function (s) {
+        var tr = document.createElement('tr');
+        tr.dataset.medio = s.medio;
+        tr.dataset.moneda = s.moneda;
+        tr.dataset.saldo = String(s.saldo);
+        var tdMedio = document.createElement('td');
+        tdMedio.innerHTML = '<span class="conc-medio">' + escapar(s.medio) + '</span>' +
+            '<span class="conc-tag">' + escapar(s.moneda) + '</span>';
+        var tdSis = document.createElement('td');
+        tdSis.className = 'num conc-sis';
+        tdSis.textContent = Number(s.saldo).toFixed(2).replace('.', ',');
+        var tdReal = document.createElement('td');
+        tdReal.className = 'num';
+        var input = document.createElement('input');
+        input.className = 'conc-real';
+        input.setAttribute('inputmode', 'decimal');
+        input.placeholder = '\u2014';
+        input.oninput = function () {
+            estadoFilaConciliacion(tr);
+            actualizarResumenConciliacion();
+        };
+        tdReal.appendChild(input);
+        var tdEstado = document.createElement('td');
+        tdEstado.className = 'conc-estado';
+        tdEstado.innerHTML = '<span class="conc-dir">\u2014</span>';
+        tr.appendChild(tdMedio);
+        tr.appendChild(tdSis);
+        tr.appendChild(tdReal);
+        tr.appendChild(tdEstado);
+        tbody.appendChild(tr);
+    });
+    tabla.appendChild(tbody);
+    card.appendChild(tabla);
+    cont.appendChild(card);
+    actualizarResumenConciliacion();
+}
+
+function toleranciaConc() {
+    return (saldosConc && typeof saldosConc.tolerancia === 'number') ? saldosConc.tolerancia : 0;
+}
+
+/** null = sin declarar (no se toca la caja); NaN = tipeo invalido; numero = diferencia. */
+function deltaDeFila(tr) {
+    var v = tr.querySelector('.conc-real').value.trim();
+    if (v === '') return null;
+    var real = aNumero(v);
+    if (real === '') return NaN;
+    return Math.round((real - Number(tr.dataset.saldo)) * 100) / 100;
+}
+
+function estadoFilaConciliacion(tr) {
+    var celda = tr.querySelector('.conc-estado');
+    var delta = deltaDeFila(tr);
+    if (delta === null) { celda.innerHTML = '<span class="conc-dir">\u2014</span>'; return; }
+    if (isNaN(delta)) { celda.innerHTML = '<span class="conc-dir">no es un numero</span>'; return; }
+    if (Math.abs(delta) <= toleranciaConc()) {
+        celda.innerHTML = '<span class="conc-pill" data-dir="igual">Coincide</span>';
+        return;
+    }
+    celda.innerHTML = '<span class="conc-pill" data-dir="' + (delta > 0 ? 'mas' : 'menos') + '">' +
+        (delta > 0 ? '+' : '-') + Math.abs(delta).toFixed(2).replace('.', ',') + '</span>' +
+        '<span class="conc-sub">entra como ' + (delta > 0 ? 'Ingreso' : 'Egreso') + '</span>';
+}
+
+/** El resumen del lote, POR MONEDA y nunca cruzado: sumar monedas distintas seria mentir. */
+function actualizarResumenConciliacion() {
+    var n = 0, porMoneda = {};
+    document.querySelectorAll('#concTabla tbody tr').forEach(function (tr) {
+        var delta = deltaDeFila(tr);
+        if (delta === null || isNaN(delta) || Math.abs(delta) <= toleranciaConc()) return;
+        n++;
+        porMoneda[tr.dataset.moneda] = (porMoneda[tr.dataset.moneda] || 0) + delta;
+    });
+    var caja = document.getElementById('concResumen');
+    if (!n) {
+        caja.textContent = '';
+    } else {
+        var partes = Object.keys(porMoneda).map(function (mon) {
+            var t = porMoneda[mon];
+            return (t < 0 ? '-' : '+') + Math.abs(t).toFixed(2).replace('.', ',') + ' ' + mon;
+        });
+        caja.textContent = n + ' ajuste' + (n === 1 ? '' : 's') + ': ' + partes.join(' | ');
+    }
+    document.getElementById('concBtnGuardar').disabled = n === 0;
+}
+
+function guardarConciliacion() {
+    var lista = [];
+    document.querySelectorAll('#concTabla tbody tr').forEach(function (tr) {
+        var delta = deltaDeFila(tr);
+        if (delta === null || isNaN(delta) || Math.abs(delta) <= toleranciaConc()) return;
+        lista.push({
+            medio: tr.dataset.medio,
+            saldoVisto: Number(tr.dataset.saldo),
+            saldoReal: aNumero(tr.querySelector('.conc-real').value)
+        });
+    });
+    enviar('registrarConciliacion', lista, ['concBtnGuardar'], function () {
+        saldosConc = null;
+        catalogo = null;   // los ajustes pasaron por la grilla: las filas libres cambiaron
         irAVista('home');
     });
 }

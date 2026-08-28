@@ -116,7 +116,15 @@ const SHEETS = {
     // vs "Proyección") y esa clase de ambiguedad ya costo caro en este repo tres veces. El
     // canonico es SIN tilde -- ninguna otra pestania de la planilla usa acentos -- pero si
     // alguien la renombra con tilde el resolver la encuentra igual.
-    get PROYECCION() { return _resolverNombreHoja(['Proyeccion', 'Proyección']); }
+    get PROYECCION() { return _resolverNombreHoja(['Proyeccion', 'Proyección']); },
+    // decision Franco 2026-08-26: hoja-BD de los gastos recurrentes, creada por el backend
+    // en el primer uso y OCULTA (infraestructura de sistema, mismo criterio que el bloque
+    // comodin: tiene que existir para que el sistema la lea, no para que compita con las
+    // hojas de trabajo). String estatico y no getter de alias: es una hoja que el sistema
+    // CREA, no hay historico con datos con el que pueda haber ambiguedad (mismo argumento
+    // que SHEETS.PRESUPUESTO). Hoja y no PropertiesService: la filosofia del producto es
+    // legibilidad directa en la hoja (CLAUDE.md seccion 1).
+    RECURRENTES: 'Recurrentes'
 };
 
 // DEFAULT GLOBAL, no verdad universal: corresponden al layout del Plan de Cuentas, la unica
@@ -305,6 +313,20 @@ const RANGES = {
         headerRow: 7,
         dataRow: 8,
         columns: { fecha: 'L', cotizacion: 'M' }
+    },
+
+    // --- Recurrentes: hoja-BD oculta, layout de BD Fix (titulo B2, header 6, datos 7) ---
+    // decision Franco 2026-08-26: misma geometria que Registros (titulo B2, header fila 6,
+    // datos fila 7, arranque en B) para que sea una BD mas y no un caso especial.
+    // 'dia' es el dia del mes en que el gasto se repite (1-31; al volcar se recorta al
+    // largo real del mes). 'activo' es 'Si'/'No': pausar no borra la historia de la regla.
+    RECURRENTES: {
+        sheet: SHEETS.RECURRENTES,
+        start: 'B',
+        end: 'I',
+        headerRow: 6,
+        dataRow: 7,
+        columns: { nombre: 'B', cuenta: 'C', monto: 'D', moneda: 'E', medio: 'F', dia: 'G', nota: 'H', activo: 'I' }
     }
 };
 
@@ -408,6 +430,12 @@ const CUENTAS_NEUTRAS = ['Traspaso', 'Inicio Mes'];
  */
 const CUENTA_ARRASTRE = 'Inicio Mes';
 
+// decision Franco 2026-08-27: 'Ajuste' entra a Config porque ya lo nombran tres modulos
+// (DEVTOOL_AltaCuentas, DEVTOOL_ConciliarSaldos, y ahora el shell). Los DEVTOOLs conservan
+// sus literales propios: son one-shots en retirada y un const que lee el const de otro
+// archivo es la bomba de orden de carga que este repo ya desactivo una vez (SYF_ARRASTRE).
+const CUENTA_AJUSTE = 'Ajuste';
+
 /**
  * Normaliza un nombre de cuenta o de medio para poder compararlo.
  *
@@ -498,6 +526,10 @@ const MENU_CONFIG = {
         // la hoja Presupuesto + "Guardar Proyeccion" (tidetrack Dev), y el modal lo dice.
         // @see DEVTOOL_ProyeccionAbm.js @see UI_AbmProyeccionElaborada.html
         { name: 'Proyecciones Elaboradas', function: 'showAbmProyeccionElaborada' },
+        // decision Franco 2026-08-26: el item entra RECIEN cuando la vista esta construida
+        // (criterio de la decision 2026-08-24: "el shell los absorbe cuando cada vista este
+        // construida, no antes"). La puerta abrirRecurrentes existia desde v0.47.0 sin menu.
+        { name: 'Gastos recurrentes', function: 'abrirRecurrentes' },
         { separator: true },
         {
             submenu: 'Ir a la hoja', items: [

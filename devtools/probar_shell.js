@@ -84,11 +84,15 @@ vm.runInContext(
     // 03_SheetManager aporta columnLetterToIndex/getDataRow, que el shell usa para derivar
     // la geometria de la grilla desde RANGES en vez de retipear posiciones.
     fs.readFileSync(path.join(RAIZ, 'src/03_SheetManager.js'), 'utf8') + '\n' +
-    fs.readFileSync(path.join(RAIZ, 'src/16_ShellService.js'), 'utf8') +
+    fs.readFileSync(path.join(RAIZ, 'src/16_ShellService.js'), 'utf8') + '\n' +
+    // 17_RecurrentesService: la BD de recurrentes y su volcado a Proyeccion. Carga DESPUES
+    // del shell, igual que en Apps Script (16_ < 17_ en el orden alfabetico).
+    fs.readFileSync(path.join(RAIZ, 'src/17_RecurrentesService.js'), 'utf8') +
     '\n;Object.assign(globalThis,{SHELL_VISTAS,SHELL_GEOMETRIA,SHELL_VISTA_DEFECTO,_abrirShell,' +
     'abrirTidetrack,abrirMovimientoNuevo,abrirTraspasoNuevo,abrirProyeccionNueva,' +
     'abrirRecurrentes,abrirConciliacionNueva,obtenerCatalogoShell,abrirAbmDesdeShell,' +
-    'procesarCargasDesdeShell,diagnosticarShell,registrarMovimiento,registrarTraspaso,_validarMovimiento,_estadoGrillaCargas,_filaDeCarga,_plata,TIPOS_RIQUEZA,columnLetterToIndex,RANGES,SHEETS,MENU_CONFIG,CUENTAS_NEUTRAS,MONEDAS_DISPONIBLES});',
+    'procesarCargasDesdeShell,diagnosticarShell,registrarMovimiento,registrarTraspaso,_validarMovimiento,_estadoGrillaCargas,_filaDeCarga,_plata,TIPOS_RIQUEZA,columnLetterToIndex,RANGES,SHEETS,MENU_CONFIG,CUENTAS_NEUTRAS,MONEDAS_DISPONIBLES,' +
+    'SHELL_CONC_TOLERANCIA,CUENTA_AJUSTE,CUENTA_ARRASTRE,REC_MARCA,REC_ACTIVO_SI,REC_ACTIVO_NO,REC_MESES});',
     ctx
 );
 
@@ -312,8 +316,9 @@ const porId = {};
 ctx.SHELL_VISTAS.forEach(v => { porId[v.id] = v; });
 ok(porId.movimiento.listo === true, 'movimiento: listo');
 ok(porId.traspaso.listo === true, 'traspaso: listo');
-ok(porId.proyeccion.listo === false && porId.recurrentes.listo === false &&
-   porId.conciliacion.listo === false, 'las otras tres siguen declaradas como NO listas');
+ok(porId.proyeccion.listo === true && porId.recurrentes.listo === true &&
+   porId.conciliacion.listo === true,
+   'las tres vistas nuevas quedaron declaradas LISTAS (su backend existe y se prueba abajo)');
 ok(/class="[^"]*b-monto/.test(HTML) && /class="[^"]*t-montoO/.test(HTML),
     'los dos formularios existen y los dos son bloques repetibles');
 ok(/enviar\('registrarMovimientos'/.test(HTML) && /enviar\('registrarTraspasos'/.test(HTML),
@@ -465,5 +470,352 @@ ok(/width:\s*var\(--sim-ancho\)/.test(MARCO) && /height:\s*var\(--sim-alto\)/.te
 ok(/transform\s*=\s*'scale\(/.test(MARCO) && /Math\.min\(1,/.test(MARCO),
     'si la ventana no da se escala el DIALOGO con transform y nunca por encima de 1');
 
-console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (18 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+seccion('19. Backend de las tres vistas nuevas: proyeccion, conciliacion, recurrentes');
+// Las constantes ajenas que el backend lee en runtime se DERIVAN de los archivos reales,
+// nunca se retipean: un banco con su propia copia de un literal miente (memoria del repo).
+const leerSrc = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
+ctx.PG_MARCA = /const PG_MARCA = '([^']+)'/.exec(leerSrc('src/DEVTOOL_PresupuestoGuardar.js'))[1];
+ctx.PB_MARCA = /const PB_MARCA = '([^']+)'/.exec(leerSrc('src/DEVTOOL_PresupuestoBase.js'))[1];
+ctx.IP_MESES = /const IP_MESES = '([^']+)'/.exec(leerSrc('src/DEVTOOL_InicioPresupuesto.js'))[1];
+ok(!!ctx.PG_MARCA && !!ctx.PB_MARCA && !!ctx.IP_MESES,
+    'PG_MARCA, PB_MARCA e IP_MESES se leyeron de los archivos reales, no de una copia');
+ok(ctx.REC_MARCA.indexOf(ctx.PG_MARCA) !== 0 && ctx.PG_MARCA.indexOf(ctx.REC_MARCA) !== 0 &&
+   ctx.REC_MARCA.indexOf(ctx.PB_MARCA) !== 0 && ctx.PB_MARCA.indexOf(ctx.REC_MARCA) !== 0,
+    'REC_MARCA no es prefijo de PG/PB ni al reves: el indexOf(...)===0 nunca confunde');
+
+// Se stubean SOLO dependencias externas al shell: el motor FX (15) y el clasificador (06).
+ctx._fxExplota = false;
+ctx.TIDETRACK_USD = () => { if (ctx._fxExplota) throw new Error('API caida'); return 1300; };
+ctx.TIDETRACK_AUD = () => 850;
+ctx.TIDETRACK_EUR = () => 1500;
+ctx.leerCatalogosPlanCuentas = () => ({
+    ingresos: tablasFalsas.INGRESOS.map(f => f[0]).filter(v => v),
+    fijos: tablasFalsas.GASTOS_FIJOS.map(f => f[0]).filter(v => v),
+    variables: tablasFalsas.GASTOS_VARIABLES.map(f => f[0]).filter(v => v)
+});
+ctx.deducirTipoCuenta = (cuenta, cats) => {
+    if ((cats.ingresos || []).indexOf(cuenta) !== -1) return 'Ingreso';
+    if ((cats.fijos || []).indexOf(cuenta) !== -1) return 'Gasto Fijo';
+    if ((cats.variables || []).indexOf(cuenta) !== -1) return 'Gasto Variable';
+    return '';
+};
+
+// Una planilla falsa CON hojas de verdad (grilla en memoria), porque estas vistas escriben.
+function hojaFalsa(nombre) {
+    const grid = [];
+    for (let r = 0; r < 80; r++) grid.push(new Array(20).fill(''));
+    return {
+        _grid: grid,
+        getName: () => nombre,
+        getMaxRows: () => grid.length,
+        getLastRow: function () {
+            for (let r = grid.length - 1; r >= 0; r--) {
+                if (grid[r].some(c => c !== '' && c !== null)) return r + 1;
+            }
+            return 0;
+        },
+        getRange: function (fila, col, nf, nc) {
+            nf = nf || 1; nc = nc || 1;
+            return {
+                getValues: function () {
+                    const out = [];
+                    for (let r = 0; r < nf; r++) out.push((grid[fila - 1 + r] || []).slice(col - 1, col - 1 + nc));
+                    return out;
+                },
+                getValue: function () { return (grid[fila - 1] || [])[col - 1]; },
+                setValues: function (vals) {
+                    vals.forEach((v, i) => v.forEach((c, j) => { grid[fila - 1 + i][col - 1 + j] = c; }));
+                },
+                setValue: function (v) { grid[fila - 1][col - 1] = v; },
+                clearContent: function () {
+                    for (let r = 0; r < nf; r++) for (let c = 0; c < nc; c++) grid[fila - 1 + r][col - 1 + c] = '';
+                },
+                copyTo: function () { /* formato: no aplica en el banco */ }
+            };
+        },
+        insertRowsAfter: function (pos, cant) { for (let i = 0; i < cant; i++) grid.push(new Array(20).fill('')); },
+        deleteRows: function (ini, cant) {
+            grid.splice(ini - 1, cant);
+            for (let i = 0; i < cant; i++) grid.push(new Array(20).fill(''));
+        },
+        deleteRow: function (fila) { this.deleteRows(fila, 1); },
+        hideSheet: function () { this._oculta = true; }
+    };
+}
+const hojasFalsas = {};
+const ssFalsa = {
+    getName: () => 'PLANILLA FALSA',
+    getSheets: () => Object.keys(hojasFalsas).map(n => hojasFalsas[n]),
+    getSheetByName: (n) => hojasFalsas[n] || null,
+    insertSheet: (n) => { hojasFalsas[n] = hojaFalsa(n); return hojasFalsas[n]; },
+    deleteSheet: (h) => { delete hojasFalsas[h.getName()]; }
+};
+// La geometria de las hojas falsas se DERIVA de RANGES, no se retipea.
+const cfgReg19 = ctx.RANGES.REGISTROS;
+const col19 = (letra) => ctx.columnLetterToIndex(letra);
+const HDR19 = ['Monto', 'Tipo', 'Cuenta', 'Tipo de Cuenta', 'Medio', 'Moneda', 'Fecha', 'Nota',
+    'TC ARS', 'TC USD', 'TC AUD', 'TC EUR'];
+const hojaReg19 = ssFalsa.insertSheet(cfgReg19.sheet);
+hojaReg19.getRange(cfgReg19.headerRow, col19(cfgReg19.start), 1, HDR19.length).setValues([HDR19]);
+const hojaProy19 = ssFalsa.insertSheet('Proyeccion');
+hojaProy19.getRange(cfgReg19.headerRow, col19(cfgReg19.start), 1, HDR19.length).setValues([HDR19]);
+const hojaPlan19 = ssFalsa.insertSheet('Plan de Cuentas');
+const cfgMed19 = ctx.RANGES.MEDIOS_PAGO;
+hojaPlan19.getRange(8, col19(cfgMed19.start), 2, 3)
+    .setValues([['Galicia', 'ARS', 'Hogar'], ['Dolar Cash', 'USD', 'Ahorros']]);
+const hojaCargas19 = ssFalsa.insertSheet('Cargas');
+// Ledger inicial: Galicia arranca con un 'Inicio Mes' de 1000 y un egreso de 200 -> saldo 800.
+const filaLedger = (monto, tipo, cuenta, medio, moneda, fecha) => {
+    const fila = new Array(col19(cfgReg19.end) - col19(cfgReg19.start) + 1).fill('');
+    const pon = (k, v) => { fila[col19(cfgReg19.columns[k]) - col19(cfgReg19.start)] = v; };
+    pon('monto', monto); pon('tipo', tipo); pon('cuenta', cuenta);
+    pon('medio', medio); pon('moneda', moneda); pon('fecha', fecha);
+    return fila;
+};
+hojaReg19.getRange(cfgReg19.dataRow, col19(cfgReg19.start), 2, HDR19.length).setValues([
+    filaLedger(1000, 'Ingreso', ctx.CUENTA_ARRASTRE, 'Galicia', 'ARS', new Date(2026, 7, 1)),
+    filaLedger(200, 'Egreso', 'Comidas', 'Galicia', 'ARS', new Date(2026, 7, 10))
+]);
+
+// El stub global de formatDate devuelve un sello fijo; la conciliacion necesita fechas DE
+// VERDAD (la fecha del ajuste viaja como 'yyyy-MM-dd' y se valida). Se formatea en serio.
+ctx.Utilities = {
+    formatDate: function (fecha, tz, formato) {
+        const p2 = (n) => String(n).padStart(2, '0');
+        const y = fecha.getFullYear(), M = p2(fecha.getMonth() + 1), d = p2(fecha.getDate());
+        if (formato === 'yyyy-MM-dd') return y + '-' + M + '-' + d;
+        if (formato === 'dd/MM/yyyy') return d + '/' + M + '/' + y;
+        return y + '-' + M + '-' + d + '_' + p2(fecha.getHours()) + p2(fecha.getMinutes()) + p2(fecha.getSeconds());
+    }
+};
+const SpreadsheetAppPrevio = ctx.SpreadsheetApp;
+ctx.SpreadsheetApp = {
+    getUi: SpreadsheetAppPrevio.getUi,
+    getActiveSpreadsheet: () => ssFalsa,
+    flush: () => {},
+    CopyPasteType: { PASTE_FORMAT: 'PASTE_FORMAT' }
+};
+ctx.invalidarCacheNombresHojas();
+// El lock, instrumentado: cuenta cuantas veces se toma (el refactor SinLock no puede duplicarlo).
+let locksTomados = 0;
+ctx.LockService = {
+    getDocumentLock: () => ({ tryLock: () => { locksTomados++; return !ctx._lockOcupado; }, releaseLock() {} })
+};
+// getTableData del stub gana una tabla: RECURRENTES, resuelta sobre la hoja falsa con la
+// geometria de RANGES (las demas siguen siendo los catalogos deterministas de siempre).
+const getTableDataBase19 = ctx.getTableData;
+ctx.getTableData = function (clave) {
+    if (clave === 'RECURRENTES') {
+        const cfg = ctx.RANGES.RECURRENTES;
+        const hoja = hojasFalsas[cfg.sheet];
+        if (!hoja) throw new Error('no existe la hoja ' + cfg.sheet);
+        const ult = hoja.getLastRow();
+        if (ult < cfg.dataRow) return [];
+        return hoja.getRange(cfg.dataRow, col19(cfg.start), ult - cfg.dataRow + 1,
+            col19(cfg.end) - col19(cfg.start) + 1).getValues()
+            .filter(f => f.some(c => c !== ''));
+    }
+    return getTableDataBase19(clave);
+};
+// procesarCargas simulado de punta a punta: mueve la grilla de Cargas al ledger y la limpia
+// (lo que el real hace, reducido a lo que estas pruebas miden: el saldo resultante).
+ctx.procesarCargas = function () {
+    const cfgC = ctx.RANGES.CARGAS;
+    const cIni = col19(cfgC.start);
+    const nC = col19(cfgC.end) - cIni + 1;
+    const grilla = hojaCargas19.getRange(cfgC.dataRow, cIni, cfgC.filas, nC).getValues();
+    const ic = (k) => col19(cfgC.columns[k]) - cIni;
+    grilla.forEach(function (f) {
+        if (f[ic('monto')] === '' || f[ic('monto')] === null) return;
+        const destino = hojaReg19.getLastRow() + 1;
+        hojaReg19.getRange(destino, col19(cfgReg19.start), 1, HDR19.length).setValues([
+            filaLedger(f[ic('monto')], f[ic('tipo')], f[ic('cuenta')], f[ic('medio')],
+                f[ic('moneda')], new Date(String(f[ic('fecha')]) + 'T00:00:00'))
+        ]);
+    });
+    hojaCargas19.getRange(cfgC.dataRow, cIni, cfgC.filas, nC).clearContent();
+};
+
+// --- Proyeccion ---
+const hoy19 = new Date();
+const mesFut19 = new Date(hoy19.getFullYear(), hoy19.getMonth() + 1, 1);
+const claveFut19 = mesFut19.getFullYear() + '-' + String(mesFut19.getMonth() + 1).padStart(2, '0');
+ok(ctx.registrarProyecciones([]).ok === false, 'un lote de proyecciones vacio se rechaza');
+let rp = ctx.registrarProyecciones([{ cuenta: 'Comidas', monto: 100, moneda: 'ARS', mes: '2020-01' }]);
+ok(rp.ok === false && rp.problemas && /ya paso/.test(rp.problemas[0]), 'un mes pasado se rechaza');
+rp = ctx.registrarProyecciones([{ cuenta: 'Cuenta Inventada', monto: 100, moneda: 'ARS', mes: claveFut19 }]);
+ok(rp.ok === false && rp.problemas && /no esta en el Plan/.test(rp.problemas[0]),
+    'cuenta fuera del Plan BLOQUEA (a diferencia del movimiento: sin tipo no suma en ningun bloque)');
+rp = ctx.registrarProyecciones([{ cuenta: ctx.CUENTAS_NEUTRAS[0], monto: 100, moneda: 'ARS', mes: claveFut19 }]);
+ok(rp.ok === false && /tecnica del sistema/.test(rp.problemas[0]), 'una cuenta neutra no se proyecta');
+const notasProy19 = () => {
+    const ult = hojaProy19.getLastRow();
+    if (ult < cfgReg19.dataRow) return [];
+    return hojaProy19.getRange(cfgReg19.dataRow, col19(cfgReg19.columns.nota),
+        ult - cfgReg19.dataRow + 1, 1).getValues().map(f => String(f[0] || '')).filter(v => v);
+};
+ctx._fxExplota = true;
+rp = ctx.registrarProyecciones([{ cuenta: 'Comidas', monto: 10, moneda: 'ARS', mes: claveFut19 }]);
+ctx._fxExplota = false;
+ok(rp.ok === false && /API caida/.test(rp.error || ''), 'si la API de FX cae, corta con {ok:false} (Regla 9)');
+ok(notasProy19().length === 0, 'y NO escribio ninguna fila');
+rp = ctx.registrarProyecciones([{ cuenta: 'Comidas', monto: 5000, moneda: 'ARS', mes: claveFut19, nota: 'extra' }]);
+ok(rp.ok === true, 'una proyeccion valida entra: ' + (rp.error || (rp.problemas || []).join('; ') || 'ok'));
+const notaPg19 = notasProy19()[0] || '';
+ok(notaPg19.indexOf(ctx.PG_MARCA + ' ' + claveFut19 + ' shell_') === 0,
+    'la Nota lleva el marcado PG + clave + sello shell_: el ABM la reconoce sin tocarlo');
+ok(/ extra$/.test(notaPg19), 'la nota libre del usuario viaja al final, visible en la hoja');
+ok(/para (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) \d{4}\./.test(rp.mensaje),
+    'el mensaje nombra el mes en castellano');
+
+// --- Conciliacion ---
+ok(ctx.registrarConciliacion([]).ok === false, 'un lote de conciliacion vacio se rechaza');
+let sc = ctx.obtenerSaldosConciliacion();
+ok(sc.ok === true && Array.isArray(sc.saldos) && sc.saldos.length === 2,
+    'obtenerSaldosConciliacion mide TODOS los medios del Plan (no un snapshot)');
+const galicia19 = sc.saldos.filter(x => x.medio === 'Galicia')[0];
+ok(!!galicia19 && galicia19.saldo === 800,
+    'el saldo aplica la regla del ultimo Inicio Mes + lo posterior (dio ' + (galicia19 && galicia19.saldo) + ')');
+ok(sc.tolerancia === ctx.SHELL_CONC_TOLERANCIA, 'la tolerancia viaja del backend: el cliente no la retipea');
+let rc = ctx.registrarConciliacion([{ medio: 'Banco Inventado', saldoVisto: 0, saldoReal: 10 }]);
+ok(rc.ok === false && /no esta en el Plan/.test(rc.problemas[0]), 'un medio fuera del Plan se rechaza');
+rc = ctx.registrarConciliacion([{ medio: 'Galicia', saldoVisto: 123, saldoReal: 500 }]);
+ok(rc.ok === false && /cambio desde que abriste/.test(rc.problemas[0]),
+    'ANTI-CARRERA: si el saldo cambio desde que se abrio la vista, aborta el lote entero');
+rc = ctx.registrarConciliacion([{ medio: 'Galicia', saldoVisto: 800, saldoReal: 800 }]);
+ok(rc.ok === true && /ya coinciden/.test(rc.mensaje), 'sin diferencias no se carga nada');
+rc = ctx.registrarConciliacion([{ medio: 'Galicia', saldoVisto: 800, saldoReal: 1000 }]);
+ok(rc.ok === true && /Galicia quedo en \$1\.000,00/.test(rc.mensaje || ''),
+    'un ajuste real entra por el pipeline y verifica al releer: ' + (rc.error || rc.mensaje));
+sc = ctx.obtenerSaldosConciliacion();
+ok(sc.saldos.filter(x => x.medio === 'Galicia')[0].saldo === 1000,
+    'el saldo releido quedo en el declarado');
+const cuentaAjuste19 = hojaReg19.getRange(cfgReg19.dataRow, col19(cfgReg19.columns.cuenta),
+    hojaReg19.getLastRow() - cfgReg19.dataRow + 1, 1).getValues()
+    .filter(f => String(f[0]) === ctx.CUENTA_AJUSTE).length;
+ok(cuentaAjuste19 === 1, 'el ajuste quedo en el ledger con la cuenta CUENTA_AJUSTE');
+locksTomados = 0;
+ctx.registrarMovimientos([]);
+ok(locksTomados === 1, 'registrarMovimientos toma el lock exactamente UNA vez (el refactor no lo duplico)');
+locksTomados = 0;
+rc = ctx.registrarConciliacion([{ medio: 'Galicia', saldoVisto: 1000, saldoReal: 1000 }]);
+ok(rc.ok === true && locksTomados === 1,
+    'registrarConciliacion tambien: mide y escribe bajo UN solo lock, sin re-entrar');
+
+// --- Recurrentes ---
+let lr = ctx.obtenerRecurrentes();
+ok(lr.ok === true && lr.recurrentes.length === 0,
+    'obtenerRecurrentes con hoja ausente devuelve lista vacia SIN lanzar (leer no crea la hoja)');
+const recBase19 = { nombre: 'Netflix', cuenta: 'Comidas', monto: 5000, moneda: 'ARS',
+    medio: 'Galicia', dia: 5, nota: '', activo: 'Si' };
+let gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { cuenta: ctx.CUENTAS_NEUTRAS[0] }));
+ok(gr.ok === false && /comodin del sistema/.test((gr.problemas || []).join(' ')),
+    'una cuenta comodin no puede ser recurrente');
+gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { dia: 0 }));
+ok(gr.ok === false, 'dia 0 se rechaza');
+gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { dia: 32 }));
+ok(gr.ok === false, 'dia 32 se rechaza');
+gr = ctx.guardarRecurrente(recBase19);
+ok(gr.ok === true, 'un recurrente valido se guarda: ' + (gr.error || (gr.problemas || []).join('; ') || 'ok'));
+ok(!!hojasFalsas[ctx.SHEETS.RECURRENTES] && hojasFalsas[ctx.SHEETS.RECURRENTES]._oculta === true,
+    'la hoja se creo en el primer guardado y quedo OCULTA recien despues de verificar');
+lr = ctx.obtenerRecurrentes();
+ok(lr.ok === true && lr.recurrentes.length === 1 && lr.recurrentes[0].activo === true,
+    'la lectura devuelve el recurrente, con activo como booleano');
+const filasRec19 = () => notasProy19().filter(n => n.indexOf(ctx.REC_MARCA + ' ' + claveFut19 + ' ') === 0).length;
+const periodo19 = { mes: mesFut19.getMonth() + 1, anio: mesFut19.getFullYear() };
+let vr = ctx.volcarRecurrentesAlMes(periodo19);
+ok(vr.ok === true && filasRec19() === 1,
+    'el volcado escribe una fila por recurrente activo: ' + (vr.error || vr.mensaje));
+vr = ctx.volcarRecurrentesAlMes(periodo19);
+ok(vr.ok === true && filasRec19() === 1,
+    'volcar DOS veces el mismo mes deja N filas, no 2N (idempotente por periodo)');
+ok(/Se reemplazo el volcado anterior/.test(vr.mensaje), 'y el mensaje dice que reemplazo');
+ok(notasProy19().filter(n => n.indexOf(ctx.PG_MARCA) === 0).length === 1,
+    'las filas PG del mismo mes NO se tocaron: los recurrentes son aditivos');
+ctx._fxExplota = true;
+vr = ctx.volcarRecurrentesAlMes(periodo19);
+ctx._fxExplota = false;
+ok(vr.ok === false && filasRec19() === 1,
+    'si la API de FX cae, el volcado corta SIN escribir y SIN tocar el volcado previo');
+const ev19 = ctx.estadoVolcadoRecurrentes(periodo19);
+ok(ev19.ok === true && ev19.activos === 1 && ev19.previasPropias === 1 && ev19.otrasDelMes.manual === 1,
+    'estadoVolcado informa activos, previas propias y las filas ajenas del mes ANTES de escribir');
+let br = ctx.borrarRecurrente('No Existe');
+ok(br.ok === false && /No existe un recurrente/.test(br.error), 'borrar un recurrente inexistente avisa');
+br = ctx.borrarRecurrente('Netflix');
+ok(br.ok === true && ctx.obtenerRecurrentes().recurrentes.length === 0,
+    'borrar quita la fila de la BD (lo ya volcado no se toca)');
+ok(filasRec19() === 1, 'y efectivamente lo volcado sigue en Proyeccion');
+
+seccion('20. El cliente de las tres vistas nuevas');
+// El backend ya se probo en la 19; aca se prueba que el HTML lo INVOQUE de verdad y que el
+// doble del servidor local siga al shell (el drift doble-shell ya costo tres releases).
+ok(HTML.indexOf('Todavia no esta construida') === -1,
+    'no queda ningun placeholder "en construccion": las tarjetas prometen solo lo que opera');
+// Se mira el HTML sin comentarios: el CSS nuevo DOCUMENTA que .shell-pendiente se retiro,
+// y un test que se tropieza con la documentacion del cambio que verifica es ruido.
+ok(!/shell-pendiente/.test(sinComentarios),
+    'el CSS y el DOM de la vista-en-construccion se retiraron enteros: cero clases muertas');
+
+// -- Proyeccion --
+ok(/id="proyLista"/.test(HTML) && /id="proyBtnGuardar"/.test(HTML) && /id="proyCupo"/.test(HTML),
+    'la vista proyeccion tiene lista de bloques, cupo y boton de guardar');
+ok(/class="form-input p-mes" type="month"/.test(HTML),
+    'el mes objetivo es un input type="month" (degrada a texto libre; la regex vive en el servidor)');
+ok(!/p-medio/.test(HTML),
+    'una proyeccion NO pide medio: la BD lo deja vacio a proposito y ningun consumidor lo lee');
+ok(/enviar\('registrarProyecciones'/.test(HTML),
+    'proyeccion guarda por enviar(): lote entero, doble-click bloqueado, cuatro finales');
+ok(/PLANTILLA_PROYECCION/.test(HTML) && /abrirBloqueProyeccion/.test(HTML),
+    'proyeccion reusa el patron de bloques repetibles con acordeon');
+ok(/no lleva cotizacion congelada/.test(HTML) === false,
+    'el texto falso sobre cotizaciones no congeladas se retiro: PG congela J:M desde v0.50.0');
+
+// -- Recurrentes --
+ok(/id="recLista"/.test(HTML) && /id="recBtnVolcar"/.test(HTML) &&
+   /id="recMes"/.test(HTML) && /id="recAnio"/.test(HTML),
+    'la vista recurrentes tiene lista, periodo (mes y anio) y boton de volcado');
+ok(/enviar\('guardarRecurrente'/.test(HTML) && /enviar\('borrarRecurrente'/.test(HTML) &&
+   /enviar\('volcarRecurrentesAlMes'/.test(HTML),
+    'recurrentes guarda, borra y vuelca por enviar()');
+ok(usadas.has('obtenerRecurrentes') && usadas.has('estadoVolcadoRecurrentes'),
+    'la lista se lee del backend y el volcado pide su estado ANTES de escribir');
+ok(/Confirmar borrado/.test(HTML),
+    'borrar pide un segundo click sobre el mismo boton: dos pasos, sin dialogo nativo');
+ok(/Confirmar volcado/.test(HTML) && /alert-warning/.test(HTML),
+    'el volcado se confirma INLINE con los numeros reales, nunca como efecto oculto');
+ok(/data-v="Si"/.test(HTML) && /data-v="No"/.test(HTML) &&
+   /\[data-activo="Si"\]/.test(HTML) && /\[data-activo="No"\]/.test(HTML),
+    'el estado Activo/Pausado usa el segmentado y el punto del resumen, verde/ambar del semaforo');
+
+// -- Conciliacion --
+ok(/id="concContenido"/.test(HTML) && /id="concBtnGuardar"/.test(HTML) && /id="concResumen"/.test(HTML),
+    'la vista conciliacion tiene su contenido, su resumen y su boton Conciliar');
+ok(usadas.has('obtenerSaldosConciliacion') && /enviar\('registrarConciliacion'/.test(HTML),
+    'mide los saldos con su propio viaje y carga los ajustes por enviar()');
+ok(/saldosConc = null/.test(jsShell),
+    'la medicion NO se cachea entre entradas: cada entrada a la vista re-mide');
+ok(!/0\.005/.test(jsShell),
+    'la tolerancia no esta retipeada en el cliente: viaja en la respuesta del backend');
+ok(/Reintentar/.test(HTML),
+    'el estado de error de la medicion vive EN la vista, con boton Reintentar');
+ok(/quedan adentro del ajuste, sin detalle/.test(HTML),
+    'la advertencia del ledger corto (portada del DEVTOOL) esta en la vista');
+ok(/'mas' : 'menos'/.test(jsShell) && /entra como /.test(jsShell),
+    'el semaforo de direccion dice ademas COMO entra el ajuste (Ingreso/Egreso)');
+// Conciliacion NO pasa por asegurarCatalogo: su preparador va en el mapa propio.
+ok(/VISTAS_CON_PREPARADOR_PROPIO = \{ conciliacion: prepararConciliacion \}/.test(HTML),
+    'prepararConciliacion no paga el costo del catalogo del Plan: mapa de preparadores propio');
+
+// -- El doble sigue al shell tambien en lo nuevo (la whitelist ya se cruzo en la 18;
+//    aca se fija que los OCHO endpoints nuevos esten de verdad implementados) --
+['registrarProyecciones', 'obtenerSaldosConciliacion', 'registrarConciliacion',
+ 'obtenerRecurrentes', 'guardarRecurrente', 'borrarRecurrente',
+ 'estadoVolcadoRecurrentes', 'volcarRecurrentesAlMes'].forEach(function (fn) {
+    ok(new RegExp(fn + ': function').test(DOBLE),
+        'el doble implementa ' + fn + ' (metodo real, no solo whitelist)');
+});
+
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (20 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
 process.exit(fallas === 0 ? 0 : 1);
