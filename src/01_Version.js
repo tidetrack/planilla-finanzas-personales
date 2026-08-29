@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 58,
+ minor: 59,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-29',
- releaseName: 'v0.58.0 - Merge: las seis funciones del shell y los fixes del ABM conviven',
+ releaseName: 'v0.59.0 - Pasada de correccion adversarial: 17 defectos cazados y arreglados',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.59.0 (2026-08-29) - Pasada de correccion adversarial: 17 defectos cazados y arreglados
+- Cuatro lentes adversariales sobre el shell completo encontraron 31 hallazgos; cada uno paso por un juez que intento refutarlo; 17 se confirmaron y arreglaron, cada arreglo con su assert nuevo (22 secciones del banco, 2 mutaciones probadas en rojo).
+- Los mas serios: las tandas pisaban filas ocupadas de la grilla si habia huecos; una fecha de maniana pasaba la validacion por parseo UTC; procesarCargasDesdeShell escribia sin lock; conciliar con filas manuales pendientes generaba ajustes falsos que persistian; aNumero leia "500.000" como 500 (un saldo con punto de miles = ajuste gigante y falso); el volcado de recurrentes fallaba-abierto con montos rotos en la hoja.
+- Poda del catalogo: cinco campos que nadie leia (dos costaban una lectura de hoja por apertura) y la relectura completa del Plan tras cada guardado, todos retirados con sus comentarios-justificacion. Guard nuevo: todo campo que un endpoint devuelve tiene que tener lector en el cliente.
+- Cinco hallazgos quedaron documentados SIN arreglar porque su fix vive en DEVTOOL_* de la otra linea de trabajo (el mas grave: re-correr Guardar Proyeccion desde Presupuesto retira tambien las proyecciones sueltas del shell de ese mes; el shell ahora lo declara en su mensaje). Coordinacion pendiente.
+
 v0.58.0 (2026-08-29) - Merge: las seis funciones del shell y los fixes del ABM conviven
 * Confluyen las dos lineas de trabajo: v0.56.0 (Proyeccion, Recurrentes y Conciliacion en el shell) y v0.57.x (DOCTYPE del ABM Proyecciones, reintentos y diagnostico del canal). Sin cambios de codigo propios: solo la reconciliacion de version, con el guard de coherencia en verde.
 

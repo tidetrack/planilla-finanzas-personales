@@ -91,7 +91,7 @@ vm.runInContext(
     '\n;Object.assign(globalThis,{SHELL_VISTAS,SHELL_GEOMETRIA,SHELL_VISTA_DEFECTO,_abrirShell,' +
     'abrirTidetrack,abrirMovimientoNuevo,abrirTraspasoNuevo,abrirProyeccionNueva,' +
     'abrirRecurrentes,abrirConciliacionNueva,obtenerCatalogoShell,abrirAbmDesdeShell,' +
-    'procesarCargasDesdeShell,diagnosticarShell,registrarMovimiento,registrarTraspaso,_validarMovimiento,_estadoGrillaCargas,_filaDeCarga,_plata,TIPOS_RIQUEZA,columnLetterToIndex,RANGES,SHEETS,MENU_CONFIG,CUENTAS_NEUTRAS,MONEDAS_DISPONIBLES,' +
+    'procesarCargasDesdeShell,diagnosticarShell,_validarMovimiento,_estadoGrillaCargas,_filaDeCarga,_plata,TIPOS_RIQUEZA,columnLetterToIndex,RANGES,SHEETS,MENU_CONFIG,CUENTAS_NEUTRAS,MONEDAS_DISPONIBLES,' +
     'SHELL_CONC_TOLERANCIA,CUENTA_AJUSTE,CUENTA_ARRASTRE,REC_MARCA,REC_ACTIVO_SI,REC_ACTIVO_NO,REC_MESES});',
     ctx
 );
@@ -198,9 +198,13 @@ ok(cat.medios[0].nombre === 'Galicia' && cat.medios[0].moneda === 'ARS' && cat.m
     'cada medio trae nombre, moneda Y tipo (los tres ejes que el formulario necesita)');
 ok(JSON.stringify(cat.monedas) === JSON.stringify(ctx.MONEDAS_DISPONIBLES),
     'las monedas salen de la constante de backend (ADR-003)');
-ok(JSON.stringify(cat.comodines) === JSON.stringify(ctx.CUENTAS_NEUTRAS),
-    'las comodines viajan APARTE de las tres listas de cuentas');
-ok(cat.planilla.length > 0 && cat.version.length > 0, 'trae el nombre de la planilla y la version');
+ok(typeof cat.filasGrilla === 'number' && cat.filasGrilla === ctx.RANGES.CARGAS.filas,
+    'filasGrilla viaja y sale de RANGES: el cliente cuenta tandas con el dato real');
+// La poda 2026-08-29: los cinco campos sin consumidor en el cliente ya no viajan. Dos de
+// ellos (categorias, libres) costaban una lectura de hoja por apertura de formulario.
+['planilla', 'version', 'categorias', 'comodines', 'libres'].forEach(function (campo) {
+    ok(!(campo in cat), 'el catalogo ya NO arrastra "' + campo + '": campo muerto, podado');
+});
 
 seccion('7. MUTACION: el catalogo NUNCA lanza, aunque todo falle');
 getTableDataExplota = true;
@@ -295,6 +299,18 @@ ok(ctx._validarMovimiento(Object.assign({}, okBase, { fecha: manana.toISOString(
 const hoy = new Date();
 ok(ctx._validarMovimiento(Object.assign({}, okBase, { fecha: hoy.toISOString() }), catalogosVal).length === 0,
     'la fecha de hoy SI pasa (se compara contra el fin del dia, no contra el instante)');
+// La trampa del parseo UTC: el input type=date manda 'YYYY-MM-DD' pelado y new Date() lo
+// parsea en UTC -- en UTC-3 la fecha de MANIANA caia 21:00 de hoy y pasaba la validacion,
+// dejando el lote atascado en la grilla (fetchArsRate rechaza fechas futuras).
+const isoPlano = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+    '-' + String(d.getDate()).padStart(2, '0');
+const mananaPlano = new Date(); mananaPlano.setDate(mananaPlano.getDate() + 1);
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { fecha: isoPlano(mananaPlano) }), catalogosVal).length === 1,
+    "la fecha de MANIANA como 'YYYY-MM-DD' pelado NO pasa: se parsea con componentes locales, no UTC");
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { fecha: isoPlano(hoy) }), catalogosVal).length === 0,
+    "la fecha de HOY como 'YYYY-MM-DD' pelado SI pasa");
+ok(ctx._validarMovimiento(Object.assign({}, okBase, { nota: '=HOY()' }), catalogosVal).length === 1,
+    'una nota que empieza con "=" se rechaza: setValues la escribiria como formula viva');
 
 seccion('12. La fila se arma desde RANGES, no retipeando posiciones');
 const fila = ctx._filaDeCarga({ monto: 123, tipo: 'Egreso', cuenta: 'Comidas', medio: 'Galicia',
@@ -363,7 +379,8 @@ ok(/aria-pressed="true"\]\[data-v="Egreso"\]/.test(HTML) &&
     'el Tipo elegido se pinta con el semaforo, rojo o verde');
 ok(/<h1 id="shellTitulo">tidetrack<\/h1>/.test(HTML),
     'la marca va en minusculas');
-ok(typeof ctx._filasLibresCargas === 'function', 'el backend sabe cuantas filas quedan libres');
+ok(typeof ctx._filasLibresCargas === 'undefined',
+    '_filasLibresCargas se retiro con la poda de "libres": ya no tenia llamadores');
 ok(/heredaMedio|heredaFecha/.test(HTML),
     'un bloque nuevo hereda medio y fecha del anterior');
 ok(/function medioPorDefecto/.test(HTML),
@@ -476,9 +493,17 @@ seccion('19. Backend de las tres vistas nuevas: proyeccion, conciliacion, recurr
 const leerSrc = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8');
 ctx.PG_MARCA = /const PG_MARCA = '([^']+)'/.exec(leerSrc('src/DEVTOOL_PresupuestoGuardar.js'))[1];
 ctx.PB_MARCA = /const PB_MARCA = '([^']+)'/.exec(leerSrc('src/DEVTOOL_PresupuestoBase.js'))[1];
-ctx.IP_MESES = /const IP_MESES = '([^']+)'/.exec(leerSrc('src/DEVTOOL_InicioPresupuesto.js'))[1];
-ok(!!ctx.PG_MARCA && !!ctx.PB_MARCA && !!ctx.IP_MESES,
-    'PG_MARCA, PB_MARCA e IP_MESES se leyeron de los archivos reales, no de una copia');
+ok(!!ctx.PG_MARCA && !!ctx.PB_MARCA,
+    'PG_MARCA y PB_MARCA se leyeron de los archivos reales, no de una copia');
+// IP_MESES NO se define a proposito: la ruta diaria del shell no puede depender de un
+// DEVTOOL (candidato a salir del deploy). Si 16_ShellService volviera a leerlo, los tests
+// de proyeccion de abajo explotarian con ReferenceError al armar el mensaje. Se miran solo
+// las lineas EJECUTABLES: la decision inline documenta el cambio nombrando la constante.
+const srcShellEjecutable = leerSrc('src/16_ShellService.js')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
+ok(!/IP_MESES/.test(srcShellEjecutable),
+    'el shell no depende de IP_MESES: los meses salen de REC_MESES (misma linea de trabajo)');
 ok(ctx.REC_MARCA.indexOf(ctx.PG_MARCA) !== 0 && ctx.PG_MARCA.indexOf(ctx.REC_MARCA) !== 0 &&
    ctx.REC_MARCA.indexOf(ctx.PB_MARCA) !== 0 && ctx.PB_MARCA.indexOf(ctx.REC_MARCA) !== 0,
     'REC_MARCA no es prefijo de PG/PB ni al reves: el indexOf(...)===0 nunca confunde');
@@ -817,5 +842,187 @@ ok(/VISTAS_CON_PREPARADOR_PROPIO = \{ conciliacion: prepararConciliacion \}/.tes
         'el doble implementa ' + fn + ' (metodo real, no solo whitelist)');
 });
 
-console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (20 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+seccion('21. GUARD: todo campo que viaja tiene consumidor real en el cliente');
+// Asi sobrevivio 'libres' dos auditorias: los tests exigian que el campo VIAJE, no que
+// alguien lo lea. La lista del backend se obtiene EJECUTANDO los endpoints en el vm (un
+// banco con copia propia miente, memoria del repo); la del cliente se busca SOLO en jsShell
+// (el <script> sin comentarios), para que un comentario que nombre el campo no cuente.
+const camposCatalogo = Object.keys(ctx.obtenerCatalogoShell())
+    .filter(k => k !== 'ok' && k !== 'error');
+camposCatalogo.forEach(function (campo) {
+    const consumidor = new RegExp(
+        '\\b(?:catalogo|data)\\s*\\.\\s*' + campo + '\\b' +
+        '|\\[\\s*[\'"]' + campo + '[\'"]\\s*\\]' +
+        '|\\{[^{}]*\\b' + campo + '\\b[^{}]*\\}\\s*=\\s*(?:catalogo|data)\\b');
+    ok(consumidor.test(jsShell),
+        'catalogo.' + campo + ' tiene al menos un consumidor real en UI_Shell.html');
+});
+// Lo mismo para los endpoints de medicion (asi se cazo 'pausados'). Salvedad documentada:
+// el alias generico 'r' puede dar falso positivo si dos endpoints comparten nombre de campo.
+[['obtenerSaldosConciliacion', ctx.obtenerSaldosConciliacion()],
+ ['estadoVolcadoRecurrentes', ctx.estadoVolcadoRecurrentes(periodo19)]].forEach(function (par) {
+    ok(par[1] && par[1].ok === true, par[0] + ' respondio ok para poder listar sus campos');
+    Object.keys(par[1] || {}).filter(k => k !== 'ok' && k !== 'error').forEach(function (campo) {
+        ok(new RegExp('\\b(?:r|saldosConc)\\s*\\.\\s*' + campo + '\\b').test(jsShell),
+            par[0] + '.' + campo + ' tiene lector en el cliente');
+    });
+});
+
+seccion('22. Correcciones de la pasada adversarial post-v0.58.0');
+// -- (1) La escritura por tandas NO pisa una fila tipeada a mano en el medio de la grilla --
+const cfgC22 = ctx.RANGES.CARGAS;
+const cIni22 = col19(cfgC22.start);
+const hoy22 = new Date();
+const iso22 = hoy22.getFullYear() + '-' + String(hoy22.getMonth() + 1).padStart(2, '0') +
+    '-' + String(hoy22.getDate()).padStart(2, '0');
+const filaManual22 = ctx._filaDeCarga({ monto: 777, tipo: 'Egreso', cuenta: 'Comidas',
+    medio: 'Galicia', moneda: 'ARS', fecha: iso22, nota: 'tipeada a mano' });
+// La manual va en la fila 10 de la grilla (indice 9), con las 9 de arriba vacias: el hueco.
+hojaCargas19.getRange(cfgC22.dataRow + 9, cIni22, 1, filaManual22.length).setValues([filaManual22]);
+const estado22 = ctx._estadoGrillaCargas(hojaCargas19);
+ok(estado22.libres === cfgC22.filas - 1 && estado22.libresContiguas === 9,
+    '_estadoGrillaCargas distingue libres (' + estado22.libres + ') de libresContiguas (' +
+    estado22.libresContiguas + '): la tanda solo puede usar el tramo contiguo');
+const lote22 = [];
+for (let i = 0; i < 10; i++) {
+    lote22.push({ monto: 100 + i, tipo: 'Egreso', cuenta: 'Comidas', medio: 'Galicia',
+        moneda: 'ARS', fecha: iso22 });
+}
+const antesLedger22 = hojaReg19.getLastRow();
+r = ctx.registrarMovimientos(lote22);
+ok(r.ok === true, 'un lote de 10 con la fila manual en el medio entra: ' + (r.error || 'ok'));
+const nuevas22 = hojaReg19.getLastRow() - antesLedger22;
+ok(nuevas22 === 11, 'el ledger gano 11 filas: las 10 del lote MAS la manual (gano ' + nuevas22 + ')');
+const montosLedger22 = hojaReg19.getRange(cfgReg19.dataRow, col19(cfgReg19.columns.monto),
+    hojaReg19.getLastRow() - cfgReg19.dataRow + 1, 1).getValues().map(f => f[0]);
+ok(montosLedger22.indexOf(777) !== -1,
+    'la fila tipeada a mano NO se piso: su monto llego intacto al ledger');
+
+// -- (3 del encargo) procesarCargasDesdeShell ahora toma el lock --
+locksTomados = 0;
+r = ctx.procesarCargasDesdeShell();
+ok(r.ok === true && locksTomados === 1,
+    'procesarCargasDesdeShell toma el lock: era el unico endpoint de escritura sin el');
+
+// -- (4) Conciliar con filas manuales pendientes ABORTA antes de calcular deltas --
+let scAntes22 = ctx.obtenerSaldosConciliacion();
+const saldoGal22 = scAntes22.saldos.filter(x => x.medio === 'Galicia')[0].saldo;
+hojaCargas19.getRange(cfgC22.dataRow, cIni22, 1, filaManual22.length).setValues([filaManual22]);
+rc = ctx.registrarConciliacion([{ medio: 'Galicia', saldoVisto: saldoGal22, saldoReal: saldoGal22 + 500 }]);
+ok(rc.ok === false && /grilla de Cargas/.test(rc.error || ''),
+    'con la grilla ocupada la conciliacion aborta: el saldo medido no incluye lo pendiente y el ajuste doble-contaria');
+hojaCargas19.getRange(cfgC22.dataRow, cIni22, 1, filaManual22.length).clearContent();
+rc = ctx.registrarConciliacion([{ medio: 'Galicia', saldoVisto: saldoGal22, saldoReal: saldoGal22 }]);
+ok(rc.ok === true, 'con la grilla vacia la conciliacion vuelve a operar');
+
+// -- (18) saldoVisto no numerico ya no desactiva el anti-carrera en silencio --
+rc = ctx.registrarConciliacion([{ medio: 'Galicia', saldoReal: 100 }]);
+ok(rc.ok === false && /Volve a entrar a Conciliacion/.test((rc.problemas || []).join(' ')),
+    'saldoVisto ausente o no numerico se rechaza explicito en vez de apagar el guard (NaN > x da false)');
+
+// -- (19) anio fuera de rango en el volcado --
+let vr22 = ctx.volcarRecurrentesAlMes({ mes: 8, anio: 26 });
+ok(vr22.ok === false && /cuatro cifras/.test(vr22.error || ''),
+    'anio de dos digitos se rechaza: Date lo mapearia a 1926 y el volcado seria invisible');
+ok(ctx.estadoVolcadoRecurrentes({ mes: 8, anio: 2026.5 }).ok === false,
+    'anio no entero tambien se rechaza, en el estado y en el volcado');
+
+// -- (6) El volcado revalida lo leido de la hoja Recurrentes y corta ANTES de borrar --
+gr = ctx.guardarRecurrente(recBase19);
+ok(gr.ok === true, 'se re-crea el recurrente para el escenario de hoja corrupta');
+const hojaRec22 = hojasFalsas[ctx.SHEETS.RECURRENTES];
+const cfgRec22 = ctx.RANGES.RECURRENTES;
+const celdaMonto22 = hojaRec22.getRange(cfgRec22.dataRow, col19(cfgRec22.columns.monto), 1, 1);
+celdaMonto22.setValue('$4.500');   // pegado a mano en la hoja oculta: Number() da NaN
+vr22 = ctx.volcarRecurrentesAlMes(periodo19);
+ok(vr22.ok === false && /Netflix/.test(vr22.error || ''),
+    'un monto con texto corta el volcado NOMBRANDO la fila invalida (antes fallaba abierto: NaN > tolerancia da false)');
+ok(filasRec19() === 1, 'y el volcado previo del mes quedo intacto: se corto antes de borrar');
+celdaMonto22.setValue(5000);
+vr22 = ctx.volcarRecurrentesAlMes(periodo19);
+ok(vr22.ok === true && filasRec19() === 1,
+    'con el monto reparado el volcado vuelve a operar (y sigue idempotente)');
+
+// -- (21) Dos lotes de proyecciones en el mismo segundo: el rollback no cruza corridas --
+const notasAntes22 = notasProy19().length;
+rp = ctx.registrarProyecciones([{ cuenta: 'Comidas', monto: 100, moneda: 'ARS', mes: claveFut19 }]);
+const rp2 = ctx.registrarProyecciones([{ cuenta: 'Comidas', monto: 200, moneda: 'ARS', mes: claveFut19 }]);
+ok(rp.ok === true && rp2.ok === true, 'dos lotes seguidos (mismo segundo de reloj) entran los dos');
+ok(notasProy19().length === notasAntes22 + 2,
+    'quedaron LAS DOS filas: la verificacion es por bloque propio y un sello repetido no puede borrar la corrida anterior');
+ok(/Guardar Proyeccion para ese mes/.test(rp.mensaje || ''),
+    'el mensaje declara que un Guardar Proyeccion posterior del mes reemplaza tambien las puntuales del shell');
+
+// -- (14) aNumero: el punto sin coma tambien es separador de miles cuando el patron es-AR
+//    es inequivoco. Se prueba la FUNCION REAL extraida del HTML, no una copia. --
+const fuenteANumero = (jsShell.match(/function aNumero\([\s\S]*?\n\}/) || [''])[0];
+ok(fuenteANumero.length > 0, 'aNumero se pudo extraer del HTML para probarla de verdad');
+const aNum = new Function('return ' + fuenteANumero + ';')();
+ok(aNum('500.000') === 500000, "aNumero('500.000') = 500000 (antes: 500, ajuste gigante y falso en conciliacion)");
+ok(aNum('1.234') === 1234, "aNumero('1.234') = 1234 (patron de miles es-AR)");
+ok(aNum('12.400,50') === 12400.5, "aNumero('12.400,50') = 12400.5 (coma decimal, como siempre)");
+ok(aNum('12400.50') === 12400.5, "aNumero('12400.50') = 12400.5 (punto decimal cuando NO matchea miles)");
+ok(aNum('12.34') === 12.34, "aNumero('12.34') = 12.34 (dos decimales: no es patron de miles)");
+ok(aNum('') === '', 'vacio sigue siendo vacio');
+
+// -- mesCortoCliente ya no promete meses que el backend va a negar (degradacion de type=month) --
+const fuenteMesCorto = (jsShell.match(/function mesCortoCliente\([\s\S]*?\n\}/) || [''])[0];
+ok(fuenteMesCorto.length > 0, 'mesCortoCliente se pudo extraer del HTML');
+const mesCorto = new Function('return ' + fuenteMesCorto + ';')();
+ok(mesCorto('2026-13') === '2026-13',
+    "mesCortoCliente('2026-13') devuelve la clave cruda, no 'ene 2027' por rollover de Date");
+ok(mesCorto('septiembre') === 'septiembre',
+    "texto libre degradado devuelve el texto crudo, nunca 'Invalid Date'");
+
+// -- (11) El mensaje de exito sobrevive a la navegacion: alSalirBien ANTES de mostrarOk --
+ok(/alSalirBien\(\);\s*mostrarOk\(/.test(jsShell),
+    'el exito navega PRIMERO y muestra el mensaje DESPUES: limpiarAviso de irAVista ya paso');
+ok(!/mostrarOk\(r\.mensaje[^\n]*;\s*alSalirBien\(\)/.test(jsShell),
+    'no quedo el orden viejo (mostrarOk borrado en el mismo tick por irAVista)');
+
+// -- (12) Los botones por bloque de recurrentes se deshabilitan mientras viaja --
+ok(/typeof bt === 'string' \? document\.getElementById\(bt\) : bt/.test(jsShell),
+    'enviar() acepta elementos ademas de ids: los botones por bloque no tienen id');
+ok((jsShell.match(/\['recBtnVolcar', btn\]/g) || []).length === 2,
+    'guardar Y borrar de cada bloque recurrente pasan SU boton a enviar (doble Enter bloqueado)');
+
+// -- (13) Con el catalogo caido, los botones Agregar no tiran TypeError ni dejan DOM a medias --
+ok(/function avisoSinCatalogo/.test(jsShell),
+    'existe el aviso comun para el catalogo ausente');
+ok((jsShell.match(/if \(!catalogo\) \{ avisoSinCatalogo\(\); return; \}/g) || []).length === 4,
+    'movimiento, traspaso, proyeccion y recurrentes guardan la entrada si catalogo es null');
+
+// -- (16) El catalogo ya no se tira despues de cada guardado (solo la declaracion queda) --
+ok((jsShell.match(/catalogo = null/g) || []).length === 1,
+    'cero invalidaciones del catalogo por guardado: nada de lo que el cliente consume cambia al guardar');
+
+// -- (24) Los campos de un bloque colapsado salen del orden de Tab --
+ok(/\.bloque\[data-estado="resumen"\] \.bloque-cuerpo > \.inner \{ visibility: hidden; \}/.test(HTML),
+    'el cuerpo colapsado lleva visibility:hidden: sin paradas de foco invisibles ni Enter sobre botones ocultos');
+
+// -- (25) El Mes de proyeccion tiene ancho para el anio --
+const plantillaProy22 = (HTML.match(/var PLANTILLA_PROYECCION =[\s\S]*?';\n/) || [''])[0];
+ok(plantillaProy22.indexOf('f c3') === -1 &&
+   (plantillaProy22.match(/f c4/g) || []).length === 3,
+    'proyeccion reparte 4+4+4: el Mes ya no recorta el anio ("septiembre de 2...")');
+
+// -- (27) La tabla de conciliacion scrollea dentro de su card en vez de clipear Estado --
+ok(/\.conc-card \{[^}]*overflow-x: auto/.test(HTML),
+    'la conc-card scrollea horizontal por debajo de ~530px: la columna Estado siempre alcanzable');
+
+// -- (28) Un solo separador de eco en toda la casa --
+ok(!/join\(' - '\)/.test(jsShell),
+    'el resumen de recurrentes usa el punto medio de toda la casa, no guion');
+
+// -- (30) Los endpoints singulares sin llamadores se retiraron --
+ok(typeof ctx.registrarMovimiento === 'undefined' && typeof ctx.registrarTraspaso === 'undefined',
+    'registrarMovimiento y registrarTraspaso (singulares) ya no existen: cero llamadores medidos');
+
+// -- (31) CSS muerto retirado (mismo estilo de guard que shell-pendiente) --
+['\\.f\\.c7', '\\.f\\.c8', 'hint\\.fuerte', 'form-select', 'alert-info'].forEach(function (patron) {
+    ok(!new RegExp(patron).test(sinComentarios),
+        'sin rastro ejecutable de ' + patron.replace(/\\/g, '') + ': la regla muerta no volvio');
+});
+
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (22 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
 process.exit(fallas === 0 ? 0 : 1);

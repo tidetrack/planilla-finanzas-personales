@@ -198,25 +198,19 @@ function obtenerCatalogoShell() {
             logError('obtenerCatalogoShell: no se pudieron leer los medios', e);
         }
 
+        // decision Franco 2026-08-29: se podan del catalogo los campos SIN consumidor en el
+        // cliente (planilla, version, categorias, comodines, libres). Dos de ellos costaban
+        // una lectura de hoja extra por apertura de formulario; el pie viaja por plantilla,
+        // las comodines las arma el servidor (traspaso) y el tope de bloques del cliente es
+        // CUPO_BLOQUES + filasGrilla, nunca "libres". El guard de probar_shell.js exige que
+        // todo campo que viaje tenga un lector real en UI_Shell.html.
         return {
             ok: true,
-            planilla: _nombrePlanillaShell(),
-            version: (typeof VERSION === 'object' && VERSION.toString) ? VERSION.toString() : '',
             ingresos: nombresDe('INGRESOS'),
             fijos: nombresDe('GASTOS_FIJOS'),
             variables: nombresDe('GASTOS_VARIABLES'),
-            categorias: nombresDe('CATEGORIAS_CUENTA'),
             medios: medios,
             monedas: MONEDAS_DISPONIBLES,
-            // Las comodines viajan aparte de las tres listas de cuentas: no son ingreso ni
-            // gasto, y el formulario tiene que poder ofrecerlas sin mezclarlas.
-            // @see DEVTOOL_CuentasComodin.js
-            comodines: CUENTAS_NEUTRAS,
-            // Cuantas filas quedan libres en la grilla de Cargas. El cliente lo necesita para
-            // cortar el boton "Agregar otro" en el tope REAL: la grilla de personales es de
-            // altura fija (15 filas), a diferencia de las 50 de pymes. Sin esto, el operador
-            // tipea diez bloques para que el backend le diga que no entran.
-            libres: _filasLibresCargas(),
             // La ALTURA de la grilla, para que el cliente pueda decir en cuantas tandas se va
             // a procesar un lote grande. El tope de la grilla ya no corta la carga, pero el
             // usuario tiene derecho a saber que su lote de 40 son tres pasadas.
@@ -250,13 +244,15 @@ function abrirAbmDesdeShell() {
  * @returns {{ok:boolean, error?:string}}
  */
 function procesarCargasDesdeShell() {
-    try {
+    // decision Franco 2026-08-29: bajo _conLock, como TODOS los endpoints de escritura del
+    // shell. Era el unico que corria sin lock: dos pestanias podian procesar la misma grilla
+    // en paralelo (doble append al ledger, o el clearContent de una borrando filas recien
+    // sembradas por la otra) -- exactamente la carrera que el lock existe para evitar.
+    // El catch de _conLock convierte cualquier excepcion en {ok:false, error}.
+    return _conLock(function () {
         procesarCargas();
         return { ok: true };
-    } catch (e) {
-        logError('procesarCargasDesdeShell', e);
-        return { ok: false, error: String(e && e.message ? e.message : e) };
-    }
+    });
 }
 
 /**
@@ -279,7 +275,7 @@ function diagnosticarShell() {
         l.push('Abrir la planilla y contar hojas: ' + (new Date().getTime() - t0) + ' ms  (' +
             hojas + ' hojas)');
 
-        ['INGRESOS', 'GASTOS_FIJOS', 'GASTOS_VARIABLES', 'CATEGORIAS_CUENTA', 'MEDIOS_PAGO']
+        ['INGRESOS', 'GASTOS_FIJOS', 'GASTOS_VARIABLES', 'MEDIOS_PAGO']
             .forEach(function (clave) {
                 const t = new Date().getTime();
                 let filas = 0, err = '';
@@ -361,15 +357,28 @@ function _estadoGrillaCargas(hojaCargas) {
     const datos = hojaCargas.getRange(cfg.dataRow, colIni, cfg.filas, nCols).getValues();
     let ocupadas = 0;
     let primeraLibre = -1;
-    datos.forEach(function (fila, i) {
-        const vacia = fila.every(function (c) { return c === '' || c === null; });
+    const vacias = datos.map(function (fila) {
+        return fila.every(function (c) { return c === '' || c === null; });
+    });
+    vacias.forEach(function (vacia, i) {
         if (vacia) { if (primeraLibre === -1) primeraLibre = i; }
         else { ocupadas++; }
     });
+    // decision Franco 2026-08-29: se agrega libresContiguas. `libres` cuenta filas vacias en
+    // CUALQUIER posicion, pero la escritura por tandas hace un setValues de bloque contiguo
+    // desde primeraLibre: si Franco tenia una fila tipeada a mano mas abajo (hueco en el
+    // medio), la tanda la pisaba en silencio y su contenido se perdia antes de procesarse.
+    // Las tandas dimensionan por el tramo CONTIGUO; la fila manual se procesa intacta junto
+    // con la tanda y el tramo siguiente se libera solo.
+    let libresContiguas = 0;
+    if (primeraLibre !== -1) {
+        for (let i = primeraLibre; i < vacias.length && vacias[i]; i++) libresContiguas++;
+    }
     return {
         ocupadas: ocupadas,
         primeraLibre: primeraLibre,
         libres: cfg.filas - ocupadas,
+        libresContiguas: libresContiguas,
         filaHoja: primeraLibre === -1 ? -1 : cfg.dataRow + primeraLibre
     };
 }
@@ -415,10 +424,11 @@ function _validarMovimiento(d, catalogos) {
         p.push('El medio "' + d.medio + '" no esta en el Plan de Cuentas.');
     }
     if (d.fecha) {
-        const f = new Date(d.fecha);
+        const f = _fechaDelClienteShell(d.fecha);
         if (isNaN(f.getTime())) p.push('La fecha no se entiende.');
         else if (f > _finDeHoy()) p.push('La fecha es futura. procesarCargas rechaza el lote entero si encuentra una.');
     }
+    if (_empiezaComoFormulaShell(d.nota)) p.push(_MSJ_NOTA_FORMULA);
     return p;
 }
 
@@ -429,16 +439,30 @@ function _finDeHoy() {
     return h;
 }
 
-/** Filas libres de la grilla de Cargas. Nunca lanza: si falla, se asume la grilla entera. */
-function _filasLibresCargas() {
-    try {
-        const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(RANGES.CARGAS.sheet);
-        if (!hoja) return RANGES.CARGAS.filas;
-        return _estadoGrillaCargas(hoja).libres;
-    } catch (e) {
-        logError('_filasLibresCargas', e);
-        return RANGES.CARGAS.filas;
-    }
+/**
+ * Parsea la fecha que manda el cliente. Un input type=date manda 'YYYY-MM-DD' pelado, y
+ * new Date('YYYY-MM-DD') parsea en UTC: en Buenos Aires (UTC-3) la medianoche UTC de MANIANA
+ * cae 21:00 de HOY, asi que una fecha futura pasaba la validacion, se sembraba en la grilla
+ * y fetchArsRate abortaba el lote entero dejandolo atascado. Se arma con componentes LOCALES
+ * (mismo patron que _validarProyeccion con el mes); cualquier otro formato sigue por new Date.
+ */
+function _fechaDelClienteShell(v) {
+    const s = String(v == null ? '' : v).trim();
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return new Date(s);
+}
+
+/** Mensaje unico para el rechazo de texto-formula (se usa en tres validadores). */
+const _MSJ_NOTA_FORMULA = 'La nota no puede empezar con "=": la hoja la leeria como formula.';
+
+/**
+ * Un string que empieza con '=' se escribiria via setValues como FORMULA VIVA, no como
+ * texto: la relectura de verificacion veria el resultado evaluado, no encontraria el sello
+ * y el rollback borraria el resto del lote con un error confuso. Se rechaza en la entrada.
+ */
+function _empiezaComoFormulaShell(v) {
+    return typeof v === 'string' && v.charAt(0) === '=';
 }
 
 /** Los nombres de medio del catalogo, para validar sin traer todo el objeto. */
@@ -453,55 +477,18 @@ function _nombresDeMedio() {
     }
 }
 
-/**
- * Registra UN movimiento: siembra una fila en la grilla de Cargas y deja que procesarCargas
- * haga el resto.
- *
- * NO escribe en "Registros" directo, y es deliberado. procesarCargas es el UNICO lugar que
- * congela las cuatro cotizaciones del dia, persiste las nuevas al Data Lake, deduce el tipo de
- * cuenta y reordena el ledger. Este repo ya dejo escrito por que no puede haber una segunda
- * implementacion "equivalente": es la forma mas barata de que dos partes del sistema
- * clasifiquen distinto sin que nadie se entere.
- *
- * @param {Object} d {monto, tipo, cuenta, medio, moneda, fecha, nota}
- * @returns {{ok:boolean, mensaje?:string, problemas?:Array<string>, error?:string}}
- */
-function registrarMovimiento(d) {
-    return _conLock(function () {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const hojaCargas = ss.getSheetByName(RANGES.CARGAS.sheet);
-        if (!hojaCargas) return { ok: false, error: 'No existe la hoja "' + RANGES.CARGAS.sheet + '".' };
-
-        const problemas = _validarMovimiento(d, { medios: _nombresDeMedio() });
-        if (problemas.length) return { ok: false, problemas: problemas };
-
-        const grilla = _estadoGrillaCargas(hojaCargas);
-        if (grilla.primeraLibre === -1) {
-            return { ok: false, error: 'La grilla de Cargas esta llena (' + RANGES.CARGAS.filas +
-                ' filas). Procesa lo que hay antes de cargar otro movimiento.' };
-        }
-
-        const colIni = columnLetterToIndex(RANGES.CARGAS.start);
-        const fila = _filaDeCarga(d);
-        hojaCargas.getRange(grilla.filaHoja, colIni, 1, fila.length).setValues([fila]);
-        SpreadsheetApp.flush();
-
-        procesarCargas();
-
-        const otras = grilla.ocupadas;
-        let mensaje = 'Listo. Cargaste ' + _plata(d.monto, d.moneda) + ' en ' + d.cuenta + '.';
-        if (otras > 0) {
-            mensaje += ' Se procesaron tambien ' + otras + ' fila(s) que ya estaban en la grilla.';
-        }
-        return { ok: true, mensaje: mensaje };
-    });
-}
+// decision Franco 2026-08-29: se retiraron registrarMovimiento y registrarTraspaso (los
+// endpoints singulares). El shell paso a lote en v0.53.0 y quedaron con CERO llamadores --
+// ni la UI, ni el menu, ni el doble, ni el banco los invocaban: superficie google.script.run
+// duplicada que podia divergir de la de lote sin que ningun test lo note, y ~35 lineas que
+// Apps Script parsea en cada ejecucion. NO escribir en "Registros" directo sigue siendo la
+// regla: procesarCargas es el UNICO lugar que congela cotizaciones y deduce tipo de cuenta.
 
 /**
  * Registra VARIOS movimientos de una sola vez.
  *
  * [POR QUE EXISTE, y no es solo comodidad]
- * Cada llamada a registrarMovimiento dispara un procesarCargas COMPLETO: pega a las APIs de
+ * Cargar de a uno dispararia un procesarCargas COMPLETO por movimiento: pega a las APIs de
  * cotizacion, persiste lo nuevo al Data Lake, reordena el ledger entero por fecha. Cargar seis
  * gastos de a uno son seis pasadas de eso. En lote es UNA. La carga multiple es, antes que una
  * comodidad, la forma de que cargar seis cosas no cueste seis veces lo que cuesta una.
@@ -560,12 +547,15 @@ function _registrarMovimientosSinLock(lista) {
 
         while (entraron < lista.length) {
             const grilla = _estadoGrillaCargas(hojaCargas);
-            if (grilla.libres <= 0) {
+            // El tamanio de tanda es el tramo CONTIGUO de filas vacias desde primeraLibre
+            // (nunca `libres`): el setValues escribe un bloque y una fila tipeada a mano en
+            // el medio de la grilla se pisaria en silencio. Ver _estadoGrillaCargas.
+            if (grilla.libresContiguas <= 0) {
                 return { ok: false, error: 'La grilla de Cargas quedo sin filas libres despues ' +
                     'de ' + tandas + ' tanda(s). Entraron ' + entraron + ' de ' + lista.length +
                     ' movimientos; revisa la hoja antes de reintentar el resto.' };
             }
-            const tanda = lista.slice(entraron, entraron + grilla.libres);
+            const tanda = lista.slice(entraron, entraron + grilla.libresContiguas);
             const filas = tanda.map(_filaDeCarga);
 
             // UNA sola escritura por tanda: si se escribiera fila por fila y fallara la
@@ -589,26 +579,6 @@ function _registrarMovimientosSinLock(lista) {
               (unaSolaMoneda ? ', ' + _plata(total, lista[0].moneda) + ' en total' : '') + '.';
         if (tandas > 1) mensaje += ' Se procesaron en ' + tandas + ' tandas.';
         return { ok: true, mensaje: mensaje };
-}
-
-/**
- * Registra un traspaso entre dos cajas propias: DOS filas, una que sale y una que entra.
- *
- * El modelo ya estaba adoptado en este repo antes que la herramienta -- CUENTAS_NEUTRAS lo
- * documenta y el ledger tiene 533 pares historicos -- pero las dos filas se tipeaban a mano,
- * que es de donde salen las variantes "traspaso " que arruinan los agregados. Aca se escriben
- * juntas o no se escribe ninguna: media operacion hace desaparecer plata del sistema.
- *
- * MULTIMONEDA: la moneda de cada pata la decide el CATALOGO, no el operador. Si las cajas no
- * comparten moneda hay que dar los dos montos, y el tipo de cambio de la operacion queda
- * escrito en la nota -- el ledger congela el TC OFICIAL del dia, que casi nunca es al que se
- * opero, asi que el dato se perderia si no se guardara aca.
- *
- * @param {Object} d {origen, destino, montoOrigen, montoDestino, fecha, nota}
- * @returns {{ok:boolean, mensaje?:string, problemas?:Array<string>, error?:string}}
- */
-function registrarTraspaso(d) {
-    return registrarTraspasos([d]);
 }
 
 /** El catalogo de medios como mapa nombre -> {moneda, tipo}. Una sola lectura por lote. */
@@ -652,10 +622,11 @@ function _prepararTraspaso(d, medios) {
             }
         }
         if (d.fecha) {
-            const f = new Date(d.fecha);
+            const f = _fechaDelClienteShell(d.fecha);
             if (isNaN(f.getTime())) problemas.push('La fecha no se entiende.');
             else if (f > _finDeHoy()) problemas.push('La fecha es futura.');
         }
+        if (_empiezaComoFormulaShell(d.nota)) problemas.push(_MSJ_NOTA_FORMULA);
         if (problemas.length) return { problemas: problemas };
 
         // La nota es la MISMA en las dos patas: es lo unico que permite reconstruir el par
@@ -719,8 +690,10 @@ function registrarTraspasos(lista) {
         let hechos = 0, tandas = 0;
         while (hechos < preparados.length) {
             const grilla = _estadoGrillaCargas(hojaCargas);
-            // Se divide por PARES: una tanda nunca parte un traspaso al medio.
-            const caben = Math.floor(grilla.libres / 2);
+            // Se divide por PARES: una tanda nunca parte un traspaso al medio. Y sobre el
+            // tramo CONTIGUO desde primeraLibre, nunca `libres`: el setValues de bloque
+            // pisaria una fila tipeada a mano en el medio (ver _estadoGrillaCargas).
+            const caben = Math.floor(grilla.libresContiguas / 2);
             if (caben <= 0) {
                 return { ok: false, error: 'La grilla de Cargas quedo sin lugar para otro par ' +
                     'despues de ' + tandas + ' tanda(s). Entraron ' + hechos + ' de ' +
@@ -803,9 +776,13 @@ function registrarProyecciones(lista) {
         const cot = _cotizacionesCongeladasShell();
 
         // Resolucion de segundos (misma razon que _selloPg: dos corridas en el mismo minuto
-        // son plausibles) y prefijo 'shell_' para que el origen quede auditable a simple
-        // vista en la hoja y el sello sea inconfundible con los de PG.
-        const sello = 'shell_' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd_HHmmss');
+        // son plausibles) MAS los milisegundos: dos lotes chicos completan dentro del mismo
+        // segundo de reloj (el lock los serializa pero no separa el timestamp) y un sello
+        // compartido hacia que el rollback del segundo borrara tambien el primero. El prefijo
+        // 'shell_' deja el origen auditable a simple vista y lo hace inconfundible con PG.
+        const ahora = new Date();
+        const sello = 'shell_' + Utilities.formatDate(ahora, Session.getScriptTimeZone(), 'yyyy-MM-dd_HHmmss') +
+            ('000' + ahora.getMilliseconds()).slice(-3);
 
         // Pre-scan de convivencia (solo lectura, alimenta el mensaje final): hay ya filas de
         // estos meses, sean de un guardado previo (PG) o del presupuesto base (PB)?
@@ -851,19 +828,22 @@ function registrarProyecciones(lista) {
         hoja.getRange(primera, colIni, filas.length, filas[0].length).setValues(filas);
         SpreadsheetApp.flush();
 
-        // VERIFICACION por relectura: las filas de ESTA corrida son las que llevan el sello
-        // (con segundos + prefijo shell_ es unico). El conteo y la suma POR MONEDA tienen que
-        // cerrar contra el lote de entrada; jamas se suman monedas distintas entre si.
-        const fin = hoja.getLastRow();
-        const nRe = fin - cfg.dataRow + 1;
-        const notasRe = hoja.getRange(cfg.dataRow, columnLetterToIndex(cfg.columns.nota), nRe, 1).getValues();
-        const montosRe = hoja.getRange(cfg.dataRow, columnLetterToIndex(cfg.columns.monto), nRe, 1).getValues();
-        const monedasRe = hoja.getRange(cfg.dataRow, columnLetterToIndex(cfg.columns.moneda), nRe, 1).getValues();
+        // VERIFICACION por relectura ACOTADA AL BLOQUE de esta corrida: las filas se
+        // escribieron en [primera, primera + filas.length). decision Franco 2026-08-29: no se
+        // busca el sello en la hoja entera -- si dos corridas llegaran a compartir sello, el
+        // rollback de la segunda borraba tambien la primera (ya confirmada al usuario);
+        // verificando solo el bloque propio, un sello repetido no puede tocar filas ajenas.
+        // El conteo y la suma POR MONEDA tienen que cerrar contra el lote de entrada; jamas
+        // se suman monedas distintas entre si.
+        const nRe = filas.length;
+        const notasRe = hoja.getRange(primera, columnLetterToIndex(cfg.columns.nota), nRe, 1).getValues();
+        const montosRe = hoja.getRange(primera, columnLetterToIndex(cfg.columns.monto), nRe, 1).getValues();
+        const monedasRe = hoja.getRange(primera, columnLetterToIndex(cfg.columns.moneda), nRe, 1).getValues();
         const escritas = [];
         const sumaRe = {};
         for (let i = 0; i < nRe; i++) {
             if (String(notasRe[i][0] || '').indexOf(' ' + sello) === -1) continue;
-            escritas.push(cfg.dataRow + i);
+            escritas.push(primera + i);
             const mon = String(monedasRe[i][0] || '');
             sumaRe[mon] = (sumaRe[mon] || 0) + (Number(montosRe[i][0]) || 0);
         }
@@ -874,7 +854,10 @@ function registrarProyecciones(lista) {
             detalleFalla = 'se esperaban ' + lista.length + ' fila(s) y se releyeron ' + escritas.length;
         } else {
             Object.keys(sumaLote).forEach(function (mon) {
-                if (Math.abs((sumaRe[mon] || 0) - sumaLote[mon]) > 0.01) {
+                const dif = Math.abs((sumaRe[mon] || 0) - sumaLote[mon]);
+                // !isFinite es falla EXPLICITA: NaN > 0.01 da false y la verificacion
+                // pasaria abierta justo cuando un monto releido no es un numero.
+                if (!isFinite(dif) || dif > 0.01) {
                     detalleFalla = 'la suma en ' + mon + ' no cierra al releer';
                 }
             });
@@ -904,7 +887,14 @@ function registrarProyecciones(lista) {
         // reversion; duplicar esa maquinaria aca seria una segunda superficie de borrado sobre
         // una BD de produccion. El costo es que una puntual convive (y suma) con el base del
         // mismo mes: el mensaje lo dice.
+        // ATENCION (auditoria 2026-08-29): la reciproca NO vale y el mensaje lo declara --
+        // la Nota lleva el prefijo de PG, asi que un Guardar Proyeccion POSTERIOR del mismo
+        // mes retira tambien estas puntuales (quedan solo en el respaldo oculto de PG).
+        // Excluir el sello 'shell_' de ese retiro exige tocar DEVTOOL_PresupuestoGuardar.js,
+        // que es de la otra linea de trabajo: decision de Franco pendiente.
         if (hayPrevias) mensaje += ' Se suman a lo que ese mes ya tenia proyectado.';
+        mensaje += ' Ojo: si despues corres Guardar Proyeccion para ese mes, ese guardado ' +
+            'reemplaza tambien estas proyecciones del shell.';
         logSuccess('registrarProyecciones: ' + lista.length + ' fila(s) en "' + SHEETS.PROYECCION + '".');
         return { ok: true, mensaje: mensaje };
     });
@@ -992,6 +982,7 @@ function _validarProyeccion(d, catalogos) {
             problemas.push('Ese mes ya paso: una proyeccion es de aca para adelante.');
         }
     }
+    if (_empiezaComoFormulaShell(d.nota)) problemas.push(_MSJ_NOTA_FORMULA);
     return { problemas: problemas, tipoCuenta: tipoCuenta };
 }
 
@@ -1058,9 +1049,17 @@ function _quitarFilasShell(hoja, filas) {
 /** 'sep 2026' -> 'septiembre 2026': el mes de una clave 'YYYY-MM' en castellano sobrio. */
 function _mesEnCastellanoShell(clave) {
     const partes = String(clave).split('-');
-    // IP_MESES se lee ACA ADENTRO (vive en DEVTOOL_InicioPresupuesto.js, que carga despues).
-    const meses = IP_MESES.split(',');
-    return meses[Number(partes[1]) - 1].toLowerCase() + ' ' + partes[0];
+    // decision Franco 2026-08-29: los meses salen de REC_MESES (17_RecurrentesService.js,
+    // misma linea de trabajo), no de IP_MESES: los DEVTOOL_* son candidatos declarados a
+    // salir del deploy, y si salian, un registrarProyecciones EXITOSO devolvia ReferenceError
+    // al armar el mensaje -- con las filas ya escritas y el usuario reintentando el lote.
+    // Se lee ACA ADENTRO (17_ carga despues de 16_ en el orden alfabetico) y con fallback a
+    // la clave cruda: el mensaje nunca puede hacer fallar una escritura que ya verifico.
+    try {
+        return REC_MESES[Number(partes[1]) - 1].toLowerCase() + ' ' + partes[0];
+    } catch (e) {
+        return String(clave);
+    }
 }
 
 // ============================================
@@ -1205,6 +1204,23 @@ function registrarConciliacion(lista) {
             return { ok: false, error: 'No llego ninguna caja para conciliar.' };
         }
         const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+        // decision Franco 2026-08-29: con filas tipeadas a mano en la grilla de Cargas, la
+        // conciliacion ABORTA antes de calcular un solo delta. El saldo medido sale solo del
+        // ledger, sin lo pendiente de la grilla; y como el ajuste se procesa JUNTO con esas
+        // filas (procesarCargas levanta la grilla entera), el movimiento pendiente se
+        // doble-contaba y el ajuste erroneo quedaba persistido en el ledger.
+        const hojaCargasConc = ss.getSheetByName(RANGES.CARGAS.sheet);
+        if (hojaCargasConc) {
+            const grillaConc = _estadoGrillaCargas(hojaCargasConc);
+            if (grillaConc.ocupadas > 0) {
+                return { ok: false, error: 'La grilla de Cargas tiene ' + grillaConc.ocupadas +
+                    ' fila(s) sin procesar. Procesalas primero (Procesar Cargas) y volve a ' +
+                    'entrar a Conciliacion: si no, el saldo medido no las incluye y el ajuste ' +
+                    'saldria mal calculado.' };
+            }
+        }
+
         const medicion = _saldosPorMedioShell(ss);
         const mapa = Object.create(null);
         medicion.medios.forEach(function (m) { mapa[m.medio] = m; });
@@ -1218,6 +1234,13 @@ function registrarConciliacion(lista) {
             if (!m) { problemas.push('El medio "' + d.medio + '" no esta en el Plan de Cuentas.'); return; }
             if (!isFinite(Number(d.saldoReal))) {
                 problemas.push('El saldo real de "' + d.medio + '" no es un numero.');
+                return;
+            }
+            // saldoVisto no numerico NO desactiva el anti-carrera en silencio: NaN > x da
+            // false y el guard quedaba apagado justo en el caso degradado.
+            if (!isFinite(Number(d.saldoVisto))) {
+                problemas.push('El saldo visto de "' + d.medio + '" no llego como numero. ' +
+                    'Volve a entrar a Conciliacion.');
                 return;
             }
             if (Math.abs(m.saldo - Number(d.saldoVisto)) > SHELL_CONC_TOLERANCIA) {

@@ -8,6 +8,26 @@ Historial de versiones y cambios significativos del proyecto.
 > Este archivo refleja los releases principales para lectura humana rapida.
 
 
+
+---
+
+## v0.59.0 - Pasada de correccion adversarial (2026-08-29)
+
+Cuatro lentes sobre el shell completo -> 31 hallazgos -> juez adversarial que intento refutar
+cada uno -> **17 confirmados y arreglados**, cada uno con assert nuevo (22 secciones, 2
+mutaciones probadas en rojo). Los mas serios: tandas que pisaban filas ocupadas con huecos en
+la grilla, fechas de maniana colandose por parseo UTC, un endpoint escribiendo sin lock,
+conciliacion con pendientes generando ajustes falsos, y `aNumero` leyendo "500.000" como 500.
+
+Ademas, la **poda del catalogo**: cinco campos que nadie leia (dos costaban una lectura de hoja
+por apertura), retirados junto con sus comentarios-justificacion, y un guard nuevo que exige un
+lector real por cada campo devuelto.
+
+Cinco hallazgos quedaron **documentados sin arreglar**: su fix vive en los `DEVTOOL_*` de la
+otra linea de trabajo. El mas grave: re-correr Guardar Proyeccion desde Presupuesto retira
+tambien las proyecciones sueltas del shell de ese mes (el shell ahora lo declara en su
+mensaje). Espera decision de Franco y coordinacion entre lineas.
+
 ---
 
 ## v0.58.0 - Merge: las seis funciones del shell y los fixes del ABM conviven (2026-08-29)

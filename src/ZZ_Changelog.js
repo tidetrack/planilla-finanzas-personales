@@ -3,6 +3,33 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-29] v0.59.0 - Pasada de correccion adversarial: 17 defectos cazados y arreglados.
+ * - Metodo: cuatro lentes (backend/datos, contrato con el ABM, cliente/UI, catalogo muerto)
+ *   produjeron 31 hallazgos con escenario reproducible; un juez adversarial intento refutar
+ *   cada uno leyendo el codigo real; los 17 confirmados (mas menores) se arreglaron, cada uno
+ *   con assert propio. Control final: 22 secciones del banco en verde y DOS mutaciones
+ *   probadas en rojo (revertir aNumero y quitar el lock disparan el banco).
+ * - Datos: las tandas pisaban filas ocupadas cuando la grilla tenia huecos (ahora se siembra
+ *   solo el tramo CONTIGUO de filas vacias); "maniana" pasaba la validacion porque
+ *   new Date('YYYY-MM-DD') parsea UTC (ahora se parsea por componentes locales);
+ *   procesarCargasDesdeShell escribia sin _conLock; conciliar con filas manuales pendientes
+ *   en la grilla producia ajustes falsos (ahora aborta y pide procesarlas primero); el
+ *   anti-carrera aceptaba saldoVisto no numerico; el volcado de recurrentes no revalidaba lo
+ *   leido de la hoja y su tolerancia fallaba-abierta con NaN.
+ * - Cliente: aNumero leia "500.000" como 500 -- patron de miles es-AR ahora reconocido;
+ *   el mensaje de exito se borraba en el mismo tick por la navegacion al home; doble Enter
+ *   podia duplicar Guardar/Borrar de recurrentes; catalogo caido dejaba TypeError silencioso.
+ * - Poda del catalogo (cicatriz "libres"): fuera planilla, version, categorias, comodines y
+ *   libres -- nadie los leia y dos costaban una lectura de hoja por apertura -- CON sus
+ *   comentarios-justificacion en el mismo cambio; fuera tambien la relectura completa del
+ *   Plan tras cada guardado. Guard nuevo en el banco: todo campo devuelto por un endpoint
+ *   exige un lector real en el HTML (en su primera corrida cazo "pausados").
+ * - Quedan CINCO hallazgos documentados sin arreglar porque su fix vive en los DEVTOOL_* de
+ *   la otra linea de trabajo (los sellos del ABM, la baja de periodo que no distingue
+ *   origenes, el volcado invisible para el ABM). El mas grave -- re-correr Guardar Proyeccion
+ *   retira tambien las proyecciones sueltas del shell -- quedo mitigado declarandolo en el
+ *   mensaje del shell y espera decision de Franco + coordinacion entre lineas.
+ *
  * [2026-08-29] v0.58.0 - Merge: las seis funciones del shell y los fixes del ABM conviven.
  * - Confluyen v0.56.0 (las tres vistas nuevas del shell) y v0.57.x (los fixes del ABM de
  *   Proyecciones: DOCTYPE, reintentos, huella del ping). Esta vez git SI marco conflicto en

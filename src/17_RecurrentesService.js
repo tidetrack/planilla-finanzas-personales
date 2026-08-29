@@ -248,7 +248,7 @@ function borrarRecurrente(nombre) {
  * (INFORMATIVO: no se tocan).
  *
  * @param {Object} d {mes: 1..12, anio}
- * @returns {{ok:boolean, periodo?:string, activos?:number, pausados?:number,
+ * @returns {{ok:boolean, periodo?:string, activos?:number,
  *            totalPorMoneda?:Object, previasPropias?:number,
  *            otrasDelMes?:{base:number, manual:number}, error?:string}}
  */
@@ -257,8 +257,8 @@ function estadoVolcadoRecurrentes(d) {
         d = d || {};
         const mes = Number(d.mes);
         const anio = Number(d.anio);
-        if (!isFinite(mes) || mes < 1 || mes > 12 || mes !== Math.floor(mes) || !isFinite(anio)) {
-            return { ok: false, error: 'El periodo no se entiende: se espera mes (1-12) y anio.' };
+        if (!_periodoValidoRec(mes, anio)) {
+            return { ok: false, error: REC_MSJ_PERIODO };
         }
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const hojaProy = ss.getSheetByName(SHEETS.PROYECCION);
@@ -275,11 +275,13 @@ function estadoVolcadoRecurrentes(d) {
             totalPorMoneda[r.moneda] = Math.round(((totalPorMoneda[r.moneda] || 0) + r.monto) * 100) / 100;
         });
         const clave = anio + '-' + String(mes).padStart(2, '0');
+        // decision Franco 2026-08-29: se podo `pausados` del retorno -- ningun cliente lo
+        // leia (el conteo de pausados en pantalla lo arma actualizarResumenRecurrentes desde
+        // el DOM). El guard campo->consumidor de probar_shell.js lo caza si reaparece.
         return {
             ok: true,
             periodo: REC_MESES[mes - 1] + ' ' + anio,
             activos: activos.length,
-            pausados: lect.recurrentes.length - activos.length,
             totalPorMoneda: totalPorMoneda,
             previasPropias: _filasRecPorPrefijo(hojaProy, REC_MARCA + ' ' + clave + ' ').length,
             otrasDelMes: _otrasDelMesRec(hojaProy, mes, anio)
@@ -303,8 +305,8 @@ function volcarRecurrentesAlMes(d) {
         d = d || {};
         const mes = Number(d.mes);
         const anio = Number(d.anio);
-        if (!isFinite(mes) || mes < 1 || mes > 12 || mes !== Math.floor(mes) || !isFinite(anio)) {
-            return { ok: false, error: 'El periodo no se entiende: se espera mes (1-12) y anio.' };
+        if (!_periodoValidoRec(mes, anio)) {
+            return { ok: false, error: REC_MSJ_PERIODO };
         }
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const hojaProy = ss.getSheetByName(SHEETS.PROYECCION);
@@ -320,6 +322,24 @@ function volcarRecurrentesAlMes(d) {
         if (!lect.ok) return lect;
         const activos = lect.recurrentes.filter(function (r) { return r.activo; });
         if (!activos.length) return { ok: false, error: 'No hay recurrentes activos para volcar.' };
+
+        // decision Franco 2026-08-29: se REVALIDA lo leido de la hoja (oculta pero editable)
+        // ANTES de borrar el volcado previo. Un Monto pegado como texto daba monto=NaN, y
+        // NaN > tolerancia evalua false: la verificacion final fallaba ABIERTA con la fila
+        // basura escrita en Proyeccion (o lanzaba DESPUES de borrar el volcado anterior).
+        // guardarRecurrente valida solo en el alta; este es el otro camino de entrada.
+        const invalidos = [];
+        activos.forEach(function (r) {
+            if (!isFinite(r.monto) || r.monto <= 0 ||
+                !isFinite(r.dia) || r.dia < 1 || r.dia > 31) {
+                invalidos.push('"' + r.nombre + '"');
+            }
+        });
+        if (invalidos.length) {
+            return { ok: false, error: 'La hoja "' + SHEETS.RECURRENTES + '" tiene datos ' +
+                'invalidos en ' + invalidos.join(', ') + ' (monto o dia no numericos). ' +
+                'Corregilos desde la vista de recurrentes y volve a volcar. No se toco nada.' };
+        }
 
         const clave = anio + '-' + String(mes).padStart(2, '0');
         // Segundos, misma razon que _selloPg: dos corridas en el mismo minuto son plausibles.
@@ -403,7 +423,10 @@ function volcarRecurrentesAlMes(d) {
                 releido[mon] = (releido[mon] || 0) + (Number(montosRe[i][0]) || 0);
             });
             Object.keys(totalPorMoneda).forEach(function (mon) {
-                if (Math.abs((releido[mon] || 0) - totalPorMoneda[mon]) > 0.01) {
+                const dif = Math.abs((releido[mon] || 0) - totalPorMoneda[mon]);
+                // !isFinite es falla EXPLICITA: NaN > 0.01 da false y la verificacion
+                // pasaba abierta justo cuando un valor releido no era un numero.
+                if (!isFinite(dif) || dif > 0.01) {
                     detalleFalla = 'la suma en ' + mon + ' no cierra al releer';
                 }
             });
@@ -480,7 +503,28 @@ function _validarRecurrente(d, catalogos) {
     if (d.activo !== REC_ACTIVO_SI && d.activo !== REC_ACTIVO_NO) {
         p.push('El estado tiene que ser "' + REC_ACTIVO_SI + '" o "' + REC_ACTIVO_NO + '".');
     }
+
+    // Texto que empieza con '=' se escribiria como FORMULA VIVA via setValues; el nombre
+    // releido diferiria del guardado y el upsert por nombre dejaria de encontrar la fila.
+    // Se reusa el chequeo del shell (16_ShellService.js, misma linea de trabajo).
+    if (_empiezaComoFormulaShell(d.nombre)) {
+        p.push('El nombre no puede empezar con "=": la hoja lo leeria como formula.');
+    }
+    if (_empiezaComoFormulaShell(d.nota)) p.push(_MSJ_NOTA_FORMULA);
     return p;
+}
+
+/** El mensaje unico del rechazo de periodo (mismo texto en estado y volcado). */
+const REC_MSJ_PERIODO = 'El periodo no se entiende: se espera mes (1-12) y anio de cuatro cifras.';
+
+/**
+ * Valida el periodo del volcado. El anio se exige entero y en rango: new Date(26, ...) mapea
+ * al anio 1926 (regla 0-99 de Date) y el volcado "exitoso" escribia filas con fecha 1926 que
+ * ningun consumidor (filtran por rango de mes) iba a mostrar jamas.
+ */
+function _periodoValidoRec(mes, anio) {
+    return isFinite(mes) && mes >= 1 && mes <= 12 && mes === Math.floor(mes) &&
+        isFinite(anio) && anio === Math.floor(anio) && anio >= 2024 && anio <= 2100;
 }
 
 /**

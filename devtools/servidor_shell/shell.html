@@ -773,9 +773,9 @@ body {
    ============================================================ */
 .shell-form { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--e3); }
 .f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+/* Solo los spans que el markup usa de verdad: c7/c8 nunca tuvieron un elemento. */
 .f.c3 { grid-column: span 3; }  .f.c4 { grid-column: span 4; }
 .f.c5 { grid-column: span 5; }  .f.c6 { grid-column: span 6; }
-.f.c7 { grid-column: span 7; }  .f.c8 { grid-column: span 8; }
 .f.c12 { grid-column: span 12; }
 
 /* Registro tipografico 3 de 3: caja normal, peso 500, gris.
@@ -795,7 +795,6 @@ body {
     min-height: 16px;
     font-size: var(--fs-aux); line-height: 1.35; color: var(--ink-3);
 }
-.f .hint.fuerte { color: var(--ink-2); font-weight: 500; }
 .f .hint.alerta { color: var(--est-ambar-ink); }
 
 /* ALTURA FIJA en todos los controles. Se conserva el fix de UI_Shell.html:127-140:
@@ -805,7 +804,10 @@ body {
    Lo que SI cambia: el control ahora EXISTE. Hoy es #eff2f9 dentro de un
    bloque #eff2f9 (:161), o blanco dentro de #eff2f9: 1.12:1 en los dos casos
    y sin sombra. Hay texto flotando, no cajas. */
-.f .form-input, .f .form-select {
+/* Los <select> reales del shell llevan class .moneda (en el campo de monto) o viven en la
+   barra (.shell-acciones .form-input): la familia .form-select nunca tuvo un elemento y se
+   retiro entera. */
+.f .form-input {
     width: 100%;
     height: var(--alto-control);
     padding: 0 12px;
@@ -820,31 +822,19 @@ body {
     transition: background-color var(--t1) var(--mov-std),
                 box-shadow var(--t1) var(--mov-std);
 }
-.f .form-input:hover, .f .form-select:hover {
+.f .form-input:hover {
     background: var(--sup-hover);
     box-shadow: inset 0 0 0 1px var(--linea-fuerte);
 }
 .f .form-input::placeholder { color: var(--ink-ph); }
 /* Foco: anillo teal de 3px + filo teal, sin outline. Un outline de 2px con
    offset sobre un control de 40px en una grilla de 12 se pisa con el vecino. */
-.f .form-input:focus, .f .form-select:focus {
+.f .form-input:focus {
     outline: none;
     background: var(--sup-card);
     box-shadow: inset 0 0 0 1.5px var(--tt-teal),
                 0 0 0 3px rgba(var(--tt-teal-rgb), 0.18);
 }
-
-.f .form-select {
-    appearance: none; -webkit-appearance: none; -moz-appearance: none;
-    padding-right: 34px;
-    background-image: var(--chevron);
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 11px 7px;
-    background-color: var(--sup-hueco);
-}
-.f .form-select:hover { background-color: var(--sup-hover); }
-.f .form-select:focus { background-color: var(--sup-card); }
 
 .f .form-input[type="date"] { padding-right: var(--e2); }
 .f .form-input[type="date"]::-webkit-calendar-picker-indicator {
@@ -1103,7 +1093,15 @@ body {
     transition: grid-template-rows var(--t3) var(--mov-std);
 }
 .bloque[data-estado="resumen"] .bloque-cuerpo { grid-template-rows: 0fr; }
-.bloque-cuerpo > .inner { overflow: hidden; min-height: 0; }
+/* visibility saca los campos del bloque colapsado del ORDEN DE TAB (con quince recurrentes
+   colapsados eran mas de cien paradas de foco invisibles, y un Enter sobre el Guardar oculto
+   de un bloque cerrado disparaba su upsert). Es animable con transition y no toca el layout
+   del colapso 0fr: al ocultar, la visibilidad cae al final de la transicion. */
+.bloque-cuerpo > .inner {
+    overflow: hidden; min-height: 0;
+    transition: visibility var(--t3) var(--mov-std);
+}
+.bloque[data-estado="resumen"] .bloque-cuerpo > .inner { visibility: hidden; }
 .bloque-cuerpo .pad { padding: 10px var(--e4) var(--e4); }
 
 .bloque-head {
@@ -1267,11 +1265,11 @@ body {
     background: currentColor;
     box-shadow: 0 0 0 3px rgba(255,255,255,0.7);
 }
+/* Tres variantes y no cuatro: los avisos del shell son error/ok/warning; la
+   variante info nunca se compuso desde ningun JS y se retiro. */
 .alert-error   { background: var(--est-rojo-bg);  color: var(--est-rojo-ink); }
 .alert-ok      { background: var(--est-verde-bg); color: var(--est-verde-ink); }
 .alert-warning { background: var(--est-ambar-bg); color: var(--est-ambar-ink); }
-.alert-info    { background: var(--sup-card); color: var(--ink-2); box-shadow: var(--filo); }
-.alert-info::before { background: var(--tt-teal); box-shadow: none; }
 
 
 /* ============================================================
@@ -1340,7 +1338,10 @@ body {
     background: var(--sup-card);
     border-radius: var(--r-md);
     box-shadow: var(--elev-1), var(--filo);
-    overflow: hidden;
+    /* Contenido ancho que scrollea DENTRO de su contenedor: por debajo de ~530px la tabla
+       excedia la card y la columna Estado quedaba clipeada sin barra para alcanzarla. */
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 .conc-tabla { width: 100%; border-collapse: collapse; }
 .conc-tabla th {
@@ -1693,7 +1694,7 @@ body {
 <footer class="shell-foot">
     <span class="vivo">PLANILLA FINANZAS_v4 .WIP | Personal</span>
     <span class="spacer"></span>
-    <span class="ver">v0.56.0 local</span>
+    <span class="ver">v0.58.0 local</span>
 </footer>
 
 <!-- Los datalist son COMPARTIDOS por todos los bloques y se pueblan una sola vez: es lo que
@@ -1710,14 +1711,11 @@ body {
    Se reemplaza google.script.run por un doble que devuelve el catalogo REAL de la planilla
    (sacado del gemelo digital) con la latencia medida en vivo: 537 ms para el catalogo. Asi lo
    que se prueba es la interfaz de verdad, con los tiempos de verdad, y no una maqueta. */
-/* filasGrilla y categorias vienen de obtenerCatalogoShell y faltaban aca. filasGrilla no se
-   notaba porque el shell tiene fallback duro a 15 y RANGES.CARGAS.filas hoy vale 15: la
-   cuenta de tandas coincidia por casualidad, no porque el dato viajara. categorias todavia
-   no la lee ninguna vista, pero el doble es el contrato del backend y la vista que la use
-   manana no tiene que descubrir en local que llega undefined.
-   version es un dato que el shell NO lee -- el pie lo resuelve el regenerador desde
-   01_Version.js. Se actualiza igual para que el catalogo no mienta si alguien lo inspecciona. */
-var CATALOGO_REAL = {"ingresos": ["Tidetrack", "Umoh", "Ingresos Extra", "Intereses bancos", "Ingreso Asesor", "Plata Prestada", "Sueldo", "FF", "Ingreso Viejo", "Inversiones", "Rendimientos", "Ajuste"], "fijos": ["Auto", "Gatos", "Linea telefónica", "MONOTRIBUTO", "Nafta", "Pago tarjeta", "Prepaga Salud", "SportClub", "Prestamo Galicia", "Deuda Eze", "Deuda Viejo", "Deuda Dima", "Prestamo Viejo", "Subscripciones", "Seguro Compu", "Seguro Celu", "Pago Tarjeta MP"], "variables": ["Comidas", "Computación", "Corte Pelo", "Entretenimiento", "Estacionamiento", "Facultad", "Imprevistos", "Juntadas", "Medicamentos / Higiene", "Regalos", "Reparaciones Auto", "Ropa", "Trabajo", "Viajes", "Salidas", "Compra USD", "Entrenamiento", "Impuestos", "Otros"], "medios": [{"nombre": "Dolar Cash", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar Galicia", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar Mercado Pago", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar NaranjaX", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar Patagonia", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Efectivo", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Frasco Transitorio NaranjaX", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Frascos Naranja X", "moneda": "ARS", "tipo": "Ahorros"}, {"nombre": "Frascos Nx - Préstamo", "moneda": "ARS", "tipo": "Financiación"}, {"nombre": "Galicia", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Mercado Pago", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "NaranjaX", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Patagonia", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Ualá", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "YPF", "moneda": "ARS", "tipo": "Hogar"}], "monedas": ["ARS", "USD", "AUD", "EUR"], "comodines": ["Traspaso", "Inicio Mes"], "libres": 15, "filasGrilla": 15, "categorias": ["Alimentacion y social", "Bienestar", "Conciliacion", "Cuidado personal", "Deuda y financiacion", "Equipamiento", "Formacion", "Impuestos", "Ingresos extraordinarios", "Mascotas", "Negocios propios", "Ocio y regalos", "Otros", "Prestamos recibidos", "Rendimientos financieros", "Salud", "Servicios y suscripciones", "Sueldo", "Trabajo y negocio", "Vehiculo", "Viajes", "Seguros"], "ok": true, "planilla": "PLANILLA FINANZAS_v4 .WIP | Personal", "version": "0.55.1"};
+/* El catalogo del doble es el CONTRATO del backend: EXACTAMENTE los campos que devuelve
+   obtenerCatalogoShell (probar_shell.js cruza las claves). La poda 2026-08-29 retiro
+   planilla, version, categorias, comodines y libres: campos sin ningun consumidor en el
+   cliente -- el guard campo->consumidor de probar_shell.js impide que vuelvan sin lector. */
+var CATALOGO_REAL = {"ingresos": ["Tidetrack", "Umoh", "Ingresos Extra", "Intereses bancos", "Ingreso Asesor", "Plata Prestada", "Sueldo", "FF", "Ingreso Viejo", "Inversiones", "Rendimientos", "Ajuste"], "fijos": ["Auto", "Gatos", "Linea telefónica", "MONOTRIBUTO", "Nafta", "Pago tarjeta", "Prepaga Salud", "SportClub", "Prestamo Galicia", "Deuda Eze", "Deuda Viejo", "Deuda Dima", "Prestamo Viejo", "Subscripciones", "Seguro Compu", "Seguro Celu", "Pago Tarjeta MP"], "variables": ["Comidas", "Computación", "Corte Pelo", "Entretenimiento", "Estacionamiento", "Facultad", "Imprevistos", "Juntadas", "Medicamentos / Higiene", "Regalos", "Reparaciones Auto", "Ropa", "Trabajo", "Viajes", "Salidas", "Compra USD", "Entrenamiento", "Impuestos", "Otros"], "medios": [{"nombre": "Dolar Cash", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar Galicia", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar Mercado Pago", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar NaranjaX", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Dolar Patagonia", "moneda": "USD", "tipo": "Ahorros"}, {"nombre": "Efectivo", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Frasco Transitorio NaranjaX", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Frascos Naranja X", "moneda": "ARS", "tipo": "Ahorros"}, {"nombre": "Frascos Nx - Préstamo", "moneda": "ARS", "tipo": "Financiación"}, {"nombre": "Galicia", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Mercado Pago", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "NaranjaX", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Patagonia", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "Ualá", "moneda": "ARS", "tipo": "Hogar"}, {"nombre": "YPF", "moneda": "ARS", "tipo": "Hogar"}], "monedas": ["ARS", "USD", "AUD", "EUR"], "filasGrilla": 15, "ok": true};
 /* Datos de ejemplo de las tres vistas nuevas, coherentes con el catalogo de arriba.
    Los recurrentes viven MUTABLES en memoria para que guardar/borrar/volcar se sientan de
    verdad dentro de una misma sesion de pruebas; los saldos son un snapshot verosimil con
@@ -1775,11 +1773,10 @@ window.google = { script: {
           }, 900);
         },
         // decision Franco 2026-08-25: el doble sigue al SHELL, no al backend. El shell paso a
-        // carga MULTIPLE de traspasos (v0.53.0) y llama registrarTraspasos; el singular
-        // registrarTraspaso sigue existiendo en 16_ShellService.js como una linea que delega
-        // en el plural, pero ya nadie lo invoca desde la interfaz, asi que no se dobla: un
-        // stub que nadie llama solo sirve para que la proxima auditoria lo confunda con
-        // cobertura -- que es exactamente lo que paso aca.
+        // carga MULTIPLE de traspasos (v0.53.0) y llama registrarTraspasos; los endpoints
+        // singulares (registrarMovimiento/registrarTraspaso) se retiraron del backend el
+        // 2026-08-29 por tener CERO llamadores. Un stub que nadie llama solo sirve para que
+        // la proxima auditoria lo confunda con cobertura -- que es exactamente lo que paso aca.
         registrarTraspasos: function (lista) {
           setTimeout(function () {
             exito({ ok: true, mensaje: 'Listo. Registraste ' + lista.length + ' traspaso(s). ' +
@@ -1851,7 +1848,6 @@ window.google = { script: {
             exito({ ok: true,
                     periodo: MESES_DOBLE[d.mes - 1] + ' ' + d.anio,
                     activos: activos.length,
-                    pausados: RECURRENTES_DOBLE.length - activos.length,
                     totalPorMoneda: total,
                     previasPropias: 0,
                     otrasDelMes: { base: 12, manual: 1 } });
@@ -1961,6 +1957,16 @@ function loader(v, txt) {
 // CATALOGO PEREZOSO
 // ============================================
 
+/**
+ * Guard de los botones "Agregar" cuando el catalogo no cargo (ok:false o failure): sin esto,
+ * el click tiraba un TypeError mudo sobre catalogo.monedas y en recurrentes quedaba ademas
+ * un bloque a medio armar en el DOM (el appendChild ocurria antes del throw).
+ */
+function avisoSinCatalogo() {
+    mostrarError('El Plan de Cuentas no cargo, asi que no se puede armar el formulario. ' +
+        'Volve al inicio y entra de nuevo a la vista para reintentar.');
+}
+
 function asegurarCatalogo(cuando) {
     if (catalogo) { cuando(catalogo); return; }
     loader(true, 'Leyendo el Plan de Cuentas');
@@ -2008,11 +2014,15 @@ function hoyISO() {
         '-' + String(d.getDate()).padStart(2, '0');
 }
 
-/** Convierte lo que se tipea ("12.400,50" o "12400.50") al numero que espera el backend. */
+/** Convierte lo que se tipea ("12.400,50", "500.000" o "12400.50") al numero que espera el
+ *  backend. El punto SIN coma tambien es separador de miles cuando el texto matchea el
+ *  patron inequivoco es-AR (grupos de tres): '500.000' es quinientos mil, no 500 -- leerlo
+ *  como 500 generaba en conciliacion un ajuste gigante y falso contra el saldo del banco. */
 function aNumero(txt) {
     var t = String(txt == null ? '' : txt).trim();
     if (t === '') return '';
     if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+    else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
     var n = Number(t);
     return isNaN(n) ? '' : n;
 }
@@ -2218,6 +2228,7 @@ var PLANTILLA_BLOQUE =
  * cambia obliga a borrarlo, que es peor que tipearlo.
  */
 function agregarBloqueMovimiento() {
+    if (!catalogo) { avisoSinCatalogo(); return; }
     var lista = document.getElementById('movLista');
     var previos = lista.querySelectorAll('.bloque');
     if (previos.length >= cupoMaximo()) return;
@@ -2369,9 +2380,11 @@ function guardarMovimientos() {
             nota: b.querySelector('.b-nota').value
         });
     });
+    // El catalogo NO se invalida al guardar: nada de lo que el cliente consume cambio (el
+    // backend escribe en la grilla, el ledger y los bloques TC, nunca en el Plan de Cuentas;
+    // el ABM reemplaza el modal entero, asi que sus cambios llegan con catalogo nuevo).
     enviar('registrarMovimientos', lista, ['movBtnGuardar'], function () {
         document.getElementById('movLista').innerHTML = '';
-        catalogo = null;   // las filas libres cambiaron: se relee al volver a entrar
         irAVista('home');
     });
 }
@@ -2433,6 +2446,7 @@ function prepararTraspaso() {
 }
 
 function agregarBloqueTraspaso() {
+    if (!catalogo) { avisoSinCatalogo(); return; }
     var lista = document.getElementById('trasLista');
     var previos = lista.querySelectorAll('.bloque');
     var medios = nombresDeMedio();
@@ -2579,7 +2593,6 @@ function guardarTraspasos() {
     });
     enviar('registrarTraspasos', lista, ['trasBtnGuardar'], function () {
         document.getElementById('trasLista').innerHTML = '';
-        catalogo = null;
         irAVista('home');
     });
 }
@@ -2619,11 +2632,14 @@ var PLANTILLA_PROYECCION =
         '<select class="moneda p-moneda" aria-label="Moneda de esta proyeccion"></select>' +
         '</span>' +
         '</label>' +
-        '<label class="f c3">' +
+        // El Mes lleva c4 (>=190px a 660 de vista-form): con c3 el render es-AR
+        // "septiembre de 2026" cortaba justo el anio, el dato riesgoso cuando en
+        // diciembre el default salta a enero del anio siguiente. 4+4+4 = 12.
+        '<label class="f c4">' +
         '<span class="rot">Mes</span>' +
         '<input class="form-input p-mes" type="month">' +
         '</label>' +
-        '<label class="f c5">' +
+        '<label class="f c4">' +
         '<span class="rot">Cuenta</span>' +
         '<span class="combo"><input class="form-input p-cuenta" list="dlCuentas" ' +
         'autocomplete="off" placeholder="Buscar cuenta"></span>' +
@@ -2659,11 +2675,16 @@ function mesProximoISO() {
     return m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0');
 }
 
-/** 'sep 2026' para el resumen del bloque. Cosmetico y del cliente: la clave la valida el backend. */
+/** 'sep 2026' para el resumen del bloque. Cosmetico y del cliente: la clave la valida el
+ *  backend. Si el input type=month degrado a texto libre (Safari/Firefox) y lo tipeado no es
+ *  una clave valida, se devuelve el texto CRUDO: mostrar 'Invalid Date' o un mes corrido por
+ *  rollover de Date ('2026-13' -> ene 2027) prometia un mes que el guardado iba a negar. */
 function mesCortoCliente(clave) {
     if (!clave) return '';
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(clave))) return String(clave);
     var p = String(clave).split('-');
     var f = new Date(Number(p[0]), Number(p[1]) - 1, 1);
+    if (isNaN(f.getTime())) return String(clave);
     return f.toLocaleDateString('es-AR', { month: 'short', year: 'numeric' });
 }
 
@@ -2679,6 +2700,7 @@ function esCuentaDeIngreso(cuenta) {
  * deducir la moneda, asi que arranca en la primera de MONEDAS_DISPONIBLES.
  */
 function agregarBloqueProyeccion() {
+    if (!catalogo) { avisoSinCatalogo(); return; }
     var lista = document.getElementById('proyLista');
     var previos = lista.querySelectorAll('.bloque');
     if (previos.length >= cupoMaximo()) return;
@@ -2801,7 +2823,6 @@ function guardarProyecciones() {
     });
     enviar('registrarProyecciones', lista, ['proyBtnGuardar'], function () {
         document.getElementById('proyLista').innerHTML = '';
-        // NO se anula el catalogo: esta vista no toca la grilla de Cargas.
         irAVista('home');
     });
 }
@@ -2984,6 +3005,7 @@ function segActivo(btn) {
 }
 
 function agregarBloqueRecurrente() {
+    if (!catalogo) { avisoSinCatalogo(); return; }
     document.querySelectorAll('#recLista .bloque').forEach(function (o) {
         resumirRecurrente(o);
         o.dataset.estado = 'resumen';
@@ -3008,8 +3030,10 @@ function resumirRecurrente(b) {
     var monto = aNumero(v('.r-monto'));
     b.querySelector('.bloque-punto').dataset.activo = v('.r-activo');
     b.querySelector('.bloque-cuenta').textContent = v('.r-nombre') || 'Sin nombre';
+    // Punto medio como en toda la casa (resumirBloque): el guion chocaba con nombres de
+    // cuenta que ya llevan guion y se leia como tres campos.
     b.querySelector('.bloque-meta').textContent =
-        [v('.r-cuenta'), v('.r-dia') ? 'dia ' + v('.r-dia') : ''].filter(Boolean).join(' - ');
+        [v('.r-cuenta'), v('.r-dia') ? 'dia ' + v('.r-dia') : ''].filter(Boolean).join(' \u00b7 ');
     var caja = b.querySelector('.bloque-monto');
     caja.dataset.vacio = monto ? '0' : '1';
     caja.innerHTML = (monto ? escapar(monto.toFixed(2).replace('.', ','))
@@ -3044,7 +3068,9 @@ function guardarRecurrenteUI(btn) {
         nota: b.querySelector('.r-nota').value,
         activo: b.querySelector('.r-activo').value
     };
-    enviar('guardarRecurrente', d, ['recBtnVolcar'], cargarRecurrentes);
+    // Viaja tambien el boton apretado (elemento, no id: los botones por bloque no tienen id):
+    // el overlay tapa el mouse pero no el teclado, y dos Enter rapidos eran dos upserts.
+    enviar('guardarRecurrente', d, ['recBtnVolcar', btn], cargarRecurrentes);
 }
 
 /**
@@ -3069,7 +3095,9 @@ function borrarRecurrenteUI(btn) {
         }, 4000);
         return;
     }
-    enviar('borrarRecurrente', b.querySelector('.r-nombre').value.trim(), ['recBtnVolcar'],
+    // El boton apretado viaja como elemento: un segundo Enter despues del primer borrado
+    // llegaba tarde y devolvia 'No existe un recurrente llamado ...' como error falso.
+    enviar('borrarRecurrente', b.querySelector('.r-nombre').value.trim(), ['recBtnVolcar', btn],
         cargarRecurrentes);
 }
 
@@ -3368,7 +3396,6 @@ function guardarConciliacion() {
     });
     enviar('registrarConciliacion', lista, ['concBtnGuardar'], function () {
         saldosConc = null;
-        catalogo = null;   // los ajustes pasaron por la grilla: las filas libres cambiaron
         irAVista('home');
     });
 }
@@ -3393,7 +3420,7 @@ function procesarLote() {
     google.script.run
         .withSuccessHandler(function (r) {
             loader(false);
-            if (r && r.ok) { mostrarOk('Listo. Se proceso lo que habia en la hoja de Cargas.'); catalogo = null; }
+            if (r && r.ok) { mostrarOk('Listo. Se proceso lo que habia en la hoja de Cargas.'); }
             else { mostrarError('No se pudo procesar: ' + ((r && r.error) || 'error desconocido')); }
         })
         .withFailureHandler(function (err) {
@@ -3413,9 +3440,11 @@ function procesarLote() {
  * movimientos, y en un ledger eso es un duplicado que despues hay que ir a buscar a mano.
  */
 function enviar(fn, datos, botones, alSalirBien) {
+    // `botones` acepta ids Y elementos: los botones por bloque de recurrentes no tienen id,
+    // y sin deshabilitar el boton apretado, dos Enter con el foco puesto eran dos viajes.
     var deshabilitar = function (v) {
-        botones.forEach(function (id) {
-            var b = document.getElementById(id);
+        botones.forEach(function (bt) {
+            var b = typeof bt === 'string' ? document.getElementById(bt) : bt;
             if (b) b.disabled = v;
         });
     };
@@ -3434,7 +3463,10 @@ function enviar(fn, datos, botones, alSalirBien) {
         .withSuccessHandler(function (r) {
             if (contesto) return;
             cerrar();
-            if (r && r.ok) { mostrarOk(r.mensaje || 'Listo.'); alSalirBien(); }
+            // alSalirBien PRIMERO: los callbacks navegan con irAVista, que limpia el aviso
+            // en el mismo tick -- con el orden invertido, el mensaje de exito del backend
+            // (con semantica real: totales, advertencias) se borraba sin un solo frame.
+            if (r && r.ok) { alSalirBien(); mostrarOk(r.mensaje || 'Listo.'); }
             else if (r && r.problemas) { mostrarError(r.problemas.join(' ')); }
             else { mostrarError((r && r.error) || 'No se pudo guardar.'); }
         })
