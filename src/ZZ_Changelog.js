@@ -3,6 +3,14 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-29] v0.59.1 - Las cuatro puertas de navegacion que faltaban para la botonera.
+ * - El mapeo de botones por hoja encontro que no existian navigateToPlanDeCuentas,
+ *   navigateToRegistros, navigateToTiposDeCambio ni navigateToMiradaInteranual: sin ellas,
+ *   cuatro hojas canonicas no podian tener boton "Ir a...". Una linea cada una, leyendo de
+ *   SHEETS y no de NAV_CONFIG (la regla de navigateToPresupuesto: el nombre de una hoja
+ *   propia pertenece al SSOT, dos constantes para un mismo nombre es como se desincronizan
+ *   las cosas). TIPOS_CAMBIO y su alias de grafia vieja quedan cubiertos por el getter.
+ *
  * [2026-08-29] v0.59.0 - Pasada de correccion adversarial: 17 defectos cazados y arreglados.
  * - Metodo: cuatro lentes (backend/datos, contrato con el ABM, cliente/UI, catalogo muerto)
  *   produjeron 31 hallazgos con escenario reproducible; un juez adversarial intento refutar

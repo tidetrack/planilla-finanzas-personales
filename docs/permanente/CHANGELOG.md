@@ -9,6 +9,16 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## v0.59.1 - Las cuatro puertas que faltaban (2026-08-29)
+
+El mapeo de botones por hoja encontro que cuatro hojas canonicas no tenian funcion "Ir a..."
+asignable a un dibujo. Se agregan `navigateToPlanDeCuentas`, `navigateToRegistros`,
+`navigateToTiposDeCambio` y `navigateToMiradaInteranual` — una linea cada una, leyendo de
+`SHEETS` por la regla de `navigateToPresupuesto`.
+
 ---
 
 ## v0.59.0 - Pasada de correccion adversarial (2026-08-29)

@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 59,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-29',
- releaseName: 'v0.59.0 - Pasada de correccion adversarial: 17 defectos cazados y arreglados',
+ releaseName: 'v0.59.1 - Las cuatro puertas de navegacion que faltaban para la botonera',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,9 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.59.1 (2026-08-29) - Las cuatro puertas de navegacion que faltaban para la botonera
++ navigateToPlanDeCuentas, navigateToRegistros, navigateToTiposDeCambio y navigateToMiradaInteranual: una linea cada una, para asignar a los dibujos "Ir a..." de las hojas. Leen de SHEETS (regla de navigateToPresupuesto): el nombre de una hoja propia pertenece al SSOT, no se duplica en NAV_CONFIG.
+
 v0.59.0 (2026-08-29) - Pasada de correccion adversarial: 17 defectos cazados y arreglados
 - Cuatro lentes adversariales sobre el shell completo encontraron 31 hallazgos; cada uno paso por un juez que intento refutarlo; 17 se confirmaron y arreglaron, cada arreglo con su assert nuevo (22 secciones del banco, 2 mutaciones probadas en rojo).
 - Los mas serios: las tandas pisaban filas ocupadas de la grilla si habia huecos; una fecha de maniana pasaba la validacion por parseo UTC; procesarCargasDesdeShell escribia sin lock; conciliar con filas manuales pendientes generaba ajustes falsos que persistian; aNumero leia "500.000" como 500 (un saldo con punto de miles = ajuste gigante y falso); el volcado de recurrentes fallaba-abierto con montos rotos en la hoja.

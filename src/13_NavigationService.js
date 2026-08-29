@@ -83,6 +83,43 @@ function navigateToDataEntry() {
  navigateToSheet(NAV_CONFIG.SHEETS.DATA_ENTRY);
 }
 
+// decision Franco 2026-08-29: las cuatro puertas que faltaban para completar la botonera de
+// dibujos (una por hoja canonica sin funcion "Ir a..."). Leen de SHEETS y NO de
+// NAV_CONFIG.SHEETS, por la misma regla que navigateToPresupuesto: son hojas propias del
+// sistema, su nombre pertenece al SSOT de hojas; dos constantes para un mismo nombre es
+// exactamente como se desincronizan las cosas.
+/**
+ * Navega a la hoja "Plan de Cuentas"
+ * Asignar esta función a botón de navegación "Plan de Cuentas"
+ */
+function navigateToPlanDeCuentas() {
+ navigateToSheet(SHEETS.PLAN_CUENTAS);
+}
+
+/**
+ * Navega a la hoja "Registros"
+ * Asignar esta función a botón de navegación "Registros"
+ */
+function navigateToRegistros() {
+ navigateToSheet(SHEETS.REGISTROS);
+}
+
+/**
+ * Navega a la hoja "Tipos de Cambio"
+ * Asignar esta función a botón de navegación "Tipos de Cambio"
+ */
+function navigateToTiposDeCambio() {
+ navigateToSheet(SHEETS.TIPOS_CAMBIO);
+}
+
+/**
+ * Navega a la hoja "Mirada Interanual"
+ * Asignar esta función a botón de navegación "Mirada Interanual"
+ */
+function navigateToMiradaInteranual() {
+ navigateToSheet(SHEETS.MIRADA_INTERANUAL);
+}
+
 // ============================================
 // FUNCIÓN AUXILIAR DE NAVEGACIÓN
 // ============================================
