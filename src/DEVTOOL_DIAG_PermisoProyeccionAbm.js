@@ -58,12 +58,20 @@
  * paso de este diagnostico va en try/catch PROPIO, para que un solo paso que falle (por ejemplo
  * `Session.getActiveUser()` sin permiso) no tape la lectura de los demas.
  *
- * @see src/DEVTOOL_ProyeccionAbm.js (listarPeriodosProyeccion, _leerTodasFilasPa)
+ * [AGREGADO EL MISMO DIA -- TAMANIO DEL PAYLOAD]
+ * El paso 5 ahora tambien loguea `JSON.stringify(resultado).length`. Motivo: el sospechoso
+ * "la RESPUESTA es demasiado grande para el canal" (crudasFilas, con ~370 filas detras) se puede
+ * medir gratis desde ACA -- invocada directo, `listarPeriodosProyeccion()` arma exactamente el
+ * mismo objeto que google.script.run tendria que serializar, solo que se queda en el servidor y
+ * nunca cruza el canal. Es una linea, y separa "cientos de KB" (el tamanio importa) de "unos pocos
+ * KB" (el tamanio no explica nada, hay que seguir mirando el canal).
+ *
+ * @see src/DEVTOOL_ProyeccionAbm.js (listarPeriodosProyeccion, _leerTodasFilasPa, pingProyeccionAbm)
  * @see src/DEVTOOL_PresupuestoBase.js (_preflightPb)
  * @see src/UI_AbmProyeccionElaborada.html (la unica llamada real que falla, disparada desde el navegador)
  * @see docs/permanente/ARNES_TIDETRACK.md
  *
- * @version 0.1.0 (temporal, no se versiona el sistema por esto -- ver commits chore(diag) previos)
+ * @version 0.1.1 (temporal, no se versiona el sistema por esto -- ver commits chore(diag) previos)
  * @since 2026-08-25
  * @lastModified 2026-08-25
  */
@@ -145,10 +153,40 @@ function _DIAG_diagnosticarPermisoProyeccionAbm() {
         log('listarPeriodosProyeccion() invocada DIRECTO (sin pasar por google.script.run): OK -- ' +
             resultado.grupos.guardado.length + ' grupo(s) guardado, ' +
             resultado.grupos.base.length + ' grupo(s) base.');
+        // 5b. TAMANIO DEL PAYLOAD -- pedido puntual: separar "el canal esta roto" de "la RESPUESTA
+        // de esta funcion es demasiado grande o tiene algo que no serializa" sin escribir todavia
+        // ninguna linea de UI. Invocada directo el resultado NUNCA viaja por el canal (se queda en
+        // el servidor), asi que este numero es el mismo que veria google.script.run si tuviera que
+        // mandarlo -- estimarlo ahora es gratis. Una medicion local con datos mock (7 grupos base,
+        // ~370 filas, la misma forma real) dio ~5KB / 123 nodos, contra los 1723 bytes / 85 nodos
+        // que el Shell (otra sesion) midio como caso exitoso -- si esta linea confirma ese orden de
+        // magnitud en produccion, el tamanio del payload queda descartado como sospechoso.
+        const json = JSON.stringify(resultado);
+        log('JSON.stringify(listarPeriodosProyeccion()).length: ' + json.length + ' caracteres.');
     } catch (e) {
         log('listarPeriodosProyeccion() invocada DIRECTO: ERROR -- ' + e.message);
         log('stack completo:');
         log(e.stack || '(sin stack disponible)');
+    }
+
+    // PASO 6 - BISECCION IDA / VUELTA.
+    // Lee la huella que pingProyeccionAbm() deja al ENTRAR, y la borra para dejar el instrumento
+    // en cero. El orden de la medicion es: (1) correr este DIAG -- limpia; (2) abrir el modal --
+    // el ping sale solo; (3) correr este DIAG de nuevo -- y mirar si hay huella.
+    try {
+        const props6 = PropertiesService.getDocumentProperties();
+        const huella = props6.getProperty('ping_abm_ultimo');
+        if (huella) {
+            log('HUELLA DEL PING: SI, sellada ' + new Date(Number(huella)).toISOString() + '.');
+            log('  -> la llamada LLEGO al servidor y la funcion CORRIO. El fallo esta en la VUELTA.');
+        } else {
+            log('HUELLA DEL PING: NO hay.');
+            log('  -> si acabas de abrir el modal, la llamada NUNCA SALIO del cliente: falla la IDA.');
+        }
+        props6.deleteProperty('ping_abm_ultimo');
+        log('  (huella borrada: la proxima medicion arranca en cero)');
+    } catch (e6) {
+        log('PASO 6 (huella del ping): ERROR -- ' + e6.message);
     }
 
     log('=== FIN DIAG ===');

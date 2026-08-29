@@ -3,6 +3,12 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-29] v0.58.0 - Merge: las seis funciones del shell y los fixes del ABM conviven.
+ * - Confluyen v0.56.0 (las tres vistas nuevas del shell) y v0.57.x (los fixes del ABM de
+ *   Proyecciones: DOCTYPE, reintentos, huella del ping). Esta vez git SI marco conflicto en
+ *   01_Version.js -- a diferencia del line-merge silencioso de la v0.55.1 -- y el guard de
+ *   coherencia verifico el resultado en las cuatro fuentes.
+ *
  * [2026-08-27] v0.56.0 - El shell completa sus seis funciones: Proyeccion, Recurrentes y Conciliacion.
  * - PROYECCION NUEVA: carga de proyecciones sueltas directo a la hoja Proyeccion, sin pasar
  *   por la hoja Presupuesto. Bloques repetibles como Movimiento, mes con input type=month
@@ -51,6 +57,106 @@
  * - El doble de pruebas estaba desincronizado: el shell ya cargaba traspasos en lote
  *   (registrarTraspasos) y el doble solo implementaba el singular, asi que en el entorno
  *   local el boton de guardar traspasos no hacia nada y parecia un bug de la interfaz.
+ * [2026-08-25] v0.57.1 - El modal moria por 90 lineas de comentario antes del DOCTYPE.
+ * ! CAUSA RAIZ, despues de descartar todo lo demas midiendo. UI_AbmProyeccionElaborada.html tenia
+ *   90 lineas de cabecera ANTES del <!DOCTYPE html>, que quedaba en la linea 93. Eso mete al
+ *   navegador en quirks mode y el puente que Apps Script inyecta para google.script.run no queda
+ *   montado. El modal ABRE PERFECTO -- titulo, estilos, banner -- y CUALQUIER llamada al servidor
+ *   muere con "error en el servidor al leer desde el almacenamiento, PERMISSION_DENIED", que no
+ *   tiene que ver ni con permisos ni con almacenamiento.
+ * ! LO QUE SE DESCARTO ANTES, y cada descarte costo un deploy: (1) timing -- tres reintentos con
+ *   espera creciente, 12 s en total, fallan igual; (2) gesto del usuario -- el boton "Reintentar"
+ *   falla igual, y eso tambien mata la hipotesis de activacion; (3) tamanio del payload -- un ping
+ *   que devuelve dos constantes y no lee nada falla igual, y ademas se verifico que armarGrupo()
+ *   NUNCA copia crudasFilas a la respuesta; (4) la funcion y los datos -- invocada directo desde
+ *   el menu devuelve sus 7 grupos sin chistar.
+ * + La cabecera pasa a vivir ADENTRO del <head>, con una nota que dice por que no puede volver.
+ * + GUARD NUEVO devtools/probar_doctype_modales.js: ningun .html servido por HtmlService puede
+ *   tener nada antes del DOCTYPE. Excluye UI_SharedStyles.html porque es un fragmento que se
+ *   incluye dentro de otro documento, no un documento. Probado por mutacion.
+ * ! LECCION: los otros dos modales del repo tienen el DOCTYPE en la linea 1 y por eso nunca lo
+ *   sufrieron. La diferencia entre el que fallaba y los que andaban era UNA LINEA de posicion, y
+ *   ninguna herramienta la miraba.
+ *
+ * [2026-08-25] v0.57.0 - Proyecciones Elaboradas: ping antes del listado, para aislar canal de respuesta.
+ * - Medido en produccion despues de v0.56.0: los 3 reintentos con espera creciente de
+ *   listarPeriodosProyeccion() FALLARON TODOS ("los 3 intentos fallaron (10764 ms)"). Ese dato
+ *   refuta que fuera una demora fija de negociacion del canal que un reintento alcanzara a cubrir,
+ *   pero deja abiertas DOS hipotesis que un solo dato no separa: (a) el canal google.script.run de
+ *   este modal esta roto para CUALQUIER llamada, o (b) el canal esta bien y lo que falla es
+ *   especifico de listarPeriodosProyeccion() -- su tamanio, algo en su respuesta que no serializa.
+ *   Confundirlas lleva a arreglar lo que no es: reintentar mas no arregla (a), y tocar el canal
+ *   (mover el disparo, esperar un gesto) no arregla (b).
+ * + pingProyeccionAbm() (DEVTOOL_ProyeccionAbm.js, nueva): NO lee nada -- no toca SpreadsheetApp
+ *   ni PropertiesService, devuelve siempre el mismo objeto minimo (un string y un numero). El
+ *   modal la llama PRIMERO, con el MISMO backoff de 3 intentos (0/600/1800ms) que ya tenia el
+ *   listado, para comparar manzanas con manzanas. Si el ping TAMBIEN se agota, el canal esta roto
+ *   para cualquier llamada y NO se intenta el listado -- se ahorran otros ~10s de espera al pedo,
+ *   porque el diagnostico ya es concluyente. Si el ping anda, recien ahi arranca el ciclo de
+ *   listarPeriodosProyeccion(), sin tocar su logica de reintentos existente.
+ * + La linea de diagnostico del pie ahora reporta las DOS mediciones -- ejemplos reales:
+ *   "Canal: ping OK (123 ms) - listado OK, intento 1/3 (89 ms)",
+ *   "Canal: ping OK (140 ms) - listado FALLO (10764 ms)",
+ *   "Canal: ping FALLO (10764 ms)". El historial de localStorage (ultimas 8 aperturas) guarda un
+ *   codigo compacto por apertura -- PX (ping agotado), P<n>L<n> (ambos ok), P<n>LX (ping ok,
+ *   listado agotado) -- y LS_KEY_DIAG sube a "tt_diagAbmProyeccion_v2" porque la forma de la
+ *   entrada cambio (antes {intento,ms,error} suelto, ahora {ping,listado}).
+ * + DEVTOOL_DIAG_PermisoProyeccionAbm.js suma el paso 5b: loguea
+ *   JSON.stringify(listarPeriodosProyeccion()).length invocada DIRECTO (el mismo objeto que
+ *   google.script.run tendria que serializar si viajara por el canal, medido gratis porque
+ *   invocada directo nunca cruza ese canal). Motivo del paso: revisando armarGrupo() (la funcion
+ *   interna que arma cada grupo del listado) se confirmo que `crudasFilas` -- el array de filas
+ *   crudas con fecha/monto de cada mes, el sospechoso textual del encargo -- se usa SOLO para
+ *   calcular `monedas` y `totales`, pero NUNCA se copia al objeto `grupo` que la funcion retorna.
+ *   Una medicion local (mock con la MISMA forma que el DIAG midio en produccion: 370 filas
+ *   repartidas en 7 grupos base, 0 guardado) dio un payload de ~5KB / 123 nodos -- del mismo orden
+ *   que el caso exitoso que midio el Shell en otra sesion (1723 bytes / 85 nodos, factor x3), muy
+ *   lejos de los "cientos de KB" o "dos-tres ordenes de magnitud" que sugeria la hipotesis del
+ *   tamanio. El bisect sugerido ("la misma estructura pero sin crudasFilas") no aplica: el campo
+ *   ya no estaba en la respuesta, asi que dio el MISMO payload byte por byte.
+ * ! Con este hallazgo la hipotesis "la respuesta es demasiado grande" queda debilitada
+ *   especificamente para listarPeriodosProyeccion() (no hay crudasFilas que trimear ahi). El
+ *   paso 5b mide el numero REAL en produccion antes de descartar nada del todo -- la medicion
+ *   local es fuerte pero no reemplaza medir sobre los datos reales. El ping sigue siendo la forma
+ *   correcta de separar "canal roto entero" de "problema de contenido, no de tamanio" si el
+ *   numero real tambien resulta chico.
+ *
+ * [2026-08-25] v0.56.0 - Proyecciones Elaboradas: reintentos ante el PERMISSION_DENIED fantasma al abrir.
+ * - El listado del ABM "Proyecciones Elaboradas" (UI_AbmProyeccionElaborada.html) fallaba SIEMPRE
+ *   al abrir con "Se produjo un error en el servidor al leer desde el almacenamiento. Codigo de
+ *   error PERMISSION_DENIED" -- mensaje enganoso: el camino de lectura (listarPeriodosProyeccion
+ *   -> _preflightPb -> _leerTodasFilasPa) es SpreadsheetApp puro, cero PropertiesService, y los
+ *   mismos datos se leen bien desde el menu (DEVTOOL_DIAG_PermisoProyeccionAbm.js, agregado en
+ *   este mismo release, ya habia descartado dato/funcion rotos midiendo Session, PropertiesService
+ *   y la funcion invocada directo).
+ * - Hipotesis de trabajo, sostenida por un dato medido de otra sesion (16_ShellService.js): el
+ *   canal google.script.run -- que el iframe de googleusercontent.com negocia contra
+ *   script.google.com -- no esta listo cuando dispara DOMContentLoaded, y Google reporta esa
+ *   falta de canal como PERMISSION_DENIED en vez de un error de timing. El Shell pide su catalogo
+ *   por el MISMO canal, MISMA cuenta (start.tidetrack@gmail.com via francodiazpizarro@gmail.com),
+ *   MISMA planilla, y responde en ~537ms SIEMPRE que sale DESPUES de un gesto del usuario -- nunca
+ *   al abrir. Eso descarta canal roto y, en gran medida, cuenta equivocada; no descarta si es
+ *   demora fija de negociacion o una carrera (la llamada de este modal, a diferencia de la del
+ *   Shell, compite con la apertura del propio modal).
+ * - Se corrige con 3 reintentos de listarPeriodosProyeccion() con espera creciente (inmediato,
+ *   ~600ms, ~1800ms -- backoff x3) antes de mostrar error al usuario. 600ms es un margen comodo
+ *   sobre el ~537ms medido del Shell; 1800ms cubre negociaciones mas lentas sin que la espera
+ *   total (2.4s de backoff + 3 round-trips) se sienta como un modal roto. La carga SIGUE siendo
+ *   automatica -- no se degrado a "apretar un boton para cargar".
+ * + Boton "Reintentar" en el banner de error para cuando los 3 intentos fallan: antes el usuario
+ *   quedaba en un callejon sin salida (solo cerrar el modal entero y volver a abrirlo).
+ * + Instrumentacion para saber si la hipotesis es correcta: una linea discreta en el pie del
+ *   modal mas un historial en localStorage (ultimas 8 aperturas, degrada sin romper nada si
+ *   localStorage no esta disponible) mostrando en que intento entro cada apertura. Patron siempre
+ *   igual = demora fija de negociacion; patron que varia = carrera; TODAS agotando los 3 intentos
+ *   = no era timing, hay que mirar del lado de la cuenta/permiso. Nada de esto se envia a ningun
+ *   lado -- vive entero en el navegador (consola + localStorage).
+ * ! Se evaluo mover el disparo de DOMContentLoaded a window.onload (la hipotesis: el canal podria
+ *   estar mas maduro ahi) pero se descarto: el modal carga una webfont externa
+ *   (fonts.googleapis.com) y 'onload' espera tambien a que esa fuente termine de bajar. Un exito
+ *   ahi no distinguiria "se arreglo el canal" de "se espero a que bajara una tipografia" sin medir
+ *   el tiempo de la fuente por separado -- esa medicion no se hizo, asi que quedarse en
+ *   DOMContentLoaded con reintentos es mas honesto que un arreglo que funciona sin saber por que.
  *
  * [2026-08-25] v0.55.1 - El merge dejo dos patch, y tres numeros de version distintos.
  * - El merge entre las dos lineas de trabajo (el shell y el ABM de Proyecciones) dejo en

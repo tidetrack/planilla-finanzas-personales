@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 56,
+ minor: 58,
  patch: 0,
 
  /**
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-08-25',
- releaseName: 'v0.56.0 - El shell completa sus seis funciones: Proyeccion, Recurrentes y Conciliacion',
+ releaseDate: '2026-08-29',
+ releaseName: 'v0.58.0 - Merge: las seis funciones del shell y los fixes del ABM conviven',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,9 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.58.0 (2026-08-29) - Merge: las seis funciones del shell y los fixes del ABM conviven
+* Confluyen las dos lineas de trabajo: v0.56.0 (Proyeccion, Recurrentes y Conciliacion en el shell) y v0.57.x (DOCTYPE del ABM Proyecciones, reintentos y diagnostico del canal). Sin cambios de codigo propios: solo la reconciliacion de version, con el guard de coherencia en verde.
+
 v0.56.0 (2026-08-27) - El shell completa sus seis funciones: Proyeccion, Recurrentes y Conciliacion
 + Proyeccion nueva: cargar proyecciones sueltas ("el mes que viene gasto X en tal cosa") directo a la hoja Proyeccion, en bloques repetibles como Movimiento, con TCs congelados y nota sellada que el ABM de Proyecciones Elaboradas reconoce. Aditiva: nunca borra lo que el mes ya tenia.
 + Gastos recurrentes (src/17_RecurrentesService.js, NUEVO): las subscripciones viven en una hoja oculta "Recurrentes" (SSOT en Config, creada al primer uso), con ABM en el shell (alta/edicion por upsert, pausa, borrado en dos pasos) y un volcado EXPLICITO al mes elegido, idempotente: re-volcar un mes reemplaza el volcado anterior, jamas duplica, y no toca lo que vino del presupuesto.
@@ -46,6 +49,23 @@ v0.55.2 (2026-08-25) - Una sola flecha por combo, y el servidor local simula el 
 - Franco reporto dos flechas juntas en "Sale de". La segunda la dibuja Chrome para todo input con datalist (::-webkit-calendar-picker-indicator) y la revela en hover: por eso el campo quieto se veia bien. NO se apaga con display:none -- ese pseudo-elemento ES el boton que abre la lista, medido: sin el, el click derecho del campo deja de desplegar. Se vuelve invisible y se estira sobre los mismos 30px del chevron dibujado, asi el click cae donde el ojo espera.
 - El servidor local ahora muestra el shell DENTRO de un modal simulado de Sheets de 900x700 exactos (iframe), con la geometria leida de SHELL_GEOMETRIA, no escrita a mano. Si la ventana es mas chica se escala todo el dialogo con transform: adentro sigue midiendo 900x700 y el breakpoint no se cruza. La vista a pantalla completa queda en /shell.html.
 - El doble de pruebas gano registrarTraspasos (plural): la carga multiple de traspasos existia en el shell y el doble solo tenia el singular, asi que el boton no hacia nada en el entorno local.
+v0.57.1 (2026-08-25) - El modal moria por 90 lineas de comentario antes del DOCTYPE
+! UI_AbmProyeccionElaborada.html dejaba el DOCTYPE en la linea 93. El navegador entra en quirks mode y el puente que Apps Script inyecta para google.script.run no queda montado: el modal abre perfecto y CUALQUIER llamada al servidor muere con un PERMISSION_DENIED que no habla ni de permisos ni de almacenamiento.
+! Se descartaron antes, midiendo: timing (3 reintentos, 12 s), gesto del usuario (el boton Reintentar falla igual), tamanio del payload (un ping de dos constantes falla igual) y la funcion (invocada directo devuelve sus 7 grupos).
++ La cabecera pasa adentro del head. Guard nuevo devtools/probar_doctype_modales.js, probado por mutacion.
+
+v0.57.0 (2026-08-25) - Proyecciones Elaboradas: ping antes del listado, para aislar canal de respuesta
++ Medido en produccion despues de v0.56.0: los 3 reintentos con espera creciente de listarPeriodosProyeccion() FALLARON TODOS (10764 ms) -- refuta que fuera una demora fija de negociacion del canal, pero deja abiertas dos hipotesis sin separar: el canal de este modal esta roto para cualquier llamada, o el canal esta bien y el problema es especifico de esa funcion/su respuesta.
++ pingProyeccionAbm() (DEVTOOL_ProyeccionAbm.js, nueva): no lee nada, no toca SpreadsheetApp ni PropertiesService, devuelve siempre el mismo objeto minimo (string + numero). El modal la llama PRIMERO, con el mismo backoff de 3 intentos. Si se agota, el canal esta roto para cualquier llamada y no se intenta el listado (ahorra ~10s de espera al pedo); si anda, recien ahi se dispara el ciclo de listarPeriodosProyeccion(), sin tocar su logica de reintentos.
++ La linea de diagnostico del pie ahora reporta las DOS mediciones ("Canal: ping OK (123 ms) - listado FALLO (10764 ms)" / "Canal: ping FALLO (10764 ms)"), y el historial de localStorage guarda un codigo compacto por apertura (PX / P<n>L<n> / P<n>LX). LS_KEY_DIAG sube a v2 por el cambio de forma de la entrada.
++ DEVTOOL_DIAG_PermisoProyeccionAbm.js suma el paso 5b: loguea JSON.stringify(listarPeriodosProyeccion()).length invocada directo (el mismo objeto que google.script.run tendria que serializar, sin cruzar el canal). Motivo: revisando armarGrupo() se confirmo que crudasFilas NUNCA sale de la funcion -- se usa solo para calcular monedas/totales, el grupo retornado no la incluye. Una medicion local con la misma forma real (370 filas, 7 grupos base, 0 guardado) dio ~5KB / 123 nodos, del mismo orden que el caso exitoso del Shell (1723 bytes / 85 nodos) -- lejos de los "cientos de KB" que la hipotesis del tamanio sugeria. El paso 5b mide el numero REAL en produccion antes de descartar nada.
+! Con ese hallazgo, la hipotesis de "la respuesta es demasiado grande" queda debilitada para listarPeriodosProyeccion() especificamente (no hay crudasFilas que trimear: el bisect "misma forma sin crudasFilas" da exactamente el mismo payload, porque el campo ya no estaba). El ping sigue siendo la forma correcta de confirmar si el canal esta roto entero o si el problema esta en el contenido de la respuesta (no en su tamanio).
+
+v0.56.0 (2026-08-25) - Proyecciones Elaboradas: reintentos ante el PERMISSION_DENIED fantasma al abrir
+- El listado de "Proyecciones Elaboradas" (UI_AbmProyeccionElaborada.html) fallaba SIEMPRE al abrir con "Se produjo un error en el servidor al leer desde el almacenamiento. Codigo de error PERMISSION_DENIED", pese a que el camino de lectura es SpreadsheetApp puro (cero PropertiesService) y los mismos datos se leen bien desde el menu (DEVTOOL_DIAG_PermisoProyeccionAbm.js ya habia descartado dato/funcion rotos). Se corrige con 3 reintentos de listarPeriodosProyeccion() con espera creciente (inmediato, ~600ms, ~1800ms) antes de mostrar error -- la carga sigue siendo automatica, no se movio detras de un boton.
++ Boton "Reintentar" en el banner de error para cuando los 3 intentos fallan: antes el usuario quedaba en un callejon sin salida (solo recargar el modal entero cerrandolo y abriendolo de nuevo).
++ Instrumentacion para saber si la hipotesis de timing/carrera es correcta: linea discreta en el pie del modal mas un historial en localStorage de las ultimas 8 aperturas, mostrando en que intento entro cada una. Patron siempre igual = demora fija de negociacion del canal; patron que varia = carrera; TODAS agotando los 3 intentos = no era timing, hay que mirar del lado de la cuenta/permiso.
+! Se evaluo mover el disparo de DOMContentLoaded a window.onload (la hipotesis: el canal google.script.run podria estar mas maduro ahi) pero se descarto: el modal carga una webfont externa (fonts.googleapis.com) y 'onload' espera tambien a que esa fuente termine de bajar, asi que un exito ahi no distinguiria "se arreglo el canal" de "se espero a que bajara una tipografia". Sin medir el tiempo de la fuente por separado, quedarse en DOMContentLoaded con reintentos es mas honesto que un arreglo que funciona por un motivo que no se entiende.
 
 v0.55.1 (2026-08-25) - El merge dejo dos patch, y tres numeros de version distintos
 - El merge de las dos lineas de trabajo dejo en 01_Version.js DOS lineas patch seguidas: patch: 0 (del release v0.55.0) y patch: 1 (que venia de v0.53.1). Git no marco conflicto porque son lineas distintas: las conservo las dos.

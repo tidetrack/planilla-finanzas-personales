@@ -1,46 +1,109 @@
-<!--
-  UI_AbmProyeccionElaborada.html
-  ABM (Listar + Corregir + Borrar) de lo guardado en la hoja-BD "Proyeccion".
-
-  [CONCEPTO DE NEGOCIO]
-  Franco, textual: "en el menu deberiamos poder hacer el ABM de proyecciones elaboradas".
-  "Proyeccion" recibe filas por DOS caminos -- el promedio historico automatico
-  (DEVTOOL_PresupuestoBase.js, marca "Presupuesto base historico") y el guardado deliberado desde
-  la hoja "Presupuesto" (DEVTOOL_PresupuestoGuardar.js, marca "Presupuesto guardado") -- y hasta
-  este modal no habia forma de revisar, corregir ni borrar lo que quedo escrito sin abrir la hoja
-  a mano y leer filas crudas. Este modal es esa pantalla.
-
-  Alcance decidido (no un CRUD completo por simetria, "menos superficie bien pensada"):
-    - Alta: NO EXISTE ACA. Ya existe -- se elabora en la hoja "Presupuesto" y se guarda con
-      "Guardar Proyeccion" (menu tidetrack Dev). Reconstruir esa logica en un modal duplicaria
-      superficie peligrosa sobre una BD de produccion; el banner de arriba del modal redirige ahi.
-    - Modificacion: SOLO el monto, SOLO en filas "guardado a mano". Las filas de presupuesto base
-      son un promedio automatico -- editarlas a mano las dejaria con una Nota que miente sobre su
-      origen. El gate real vive en el servidor (DEVTOOL_ProyeccionAbm.js), esto es una segunda
-      barrera de UX, no la unica.
-    - Baja: por periodo completo (clave+origen), con respaldo y reversion inmediata (una sola
-      accion revertible a la vez, se pierde al hacer otro cambio -- avisado en el propio dialogo
-      de confirmacion).
-
-  [FUNDAMENTO TEORICO / ADMINISTRATIVO]
-  Principios de diseno (docs/permanente/PRINCIPIOS_DISENO.md): multi-moneda siempre rotulada
-  (nunca se suman monedas distintas en un mismo total, ver DEVTOOL_ProyeccionAbm.js), estados
-  explicitos de carga/vacio/error/exito, coherencia con el Design System de UI_SharedStyles.html.
-  El caso "cero proyecciones guardadas a mano" es el estado REAL de produccion hoy (todas las
-  filas de "Proyeccion" son de origen base) y tiene un mensaje propio, nunca una tabla vacia sin
-  explicacion.
-
-  @see src/DEVTOOL_ProyeccionAbm.js (capa de datos: listarPeriodosProyeccion,
-       detalleFilasPeriodoProyeccion, eliminarPeriodoProyeccion, revertirBajaProyeccionAbm,
-       actualizarMontoFilaProyeccion, revertirEdicionMontoProyeccion)
-  @see src/UI_AbmPlanCuentas.html (patron de modal HtmlService que este archivo sigue)
-  @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
-  @version 0.52.0
-  @since 2026-08-25
--->
 <!DOCTYPE html>
 <html>
 <head>
+    <!--
+      decision Franco 2026-08-25: este bloque VIVE ADENTRO DEL <head>, y no antes del DOCTYPE,
+      porque ahi estaba y rompia el modal entero. Un archivo servido por HtmlService que empieza
+      con 90 lineas de comentario deja el <!DOCTYPE html> en la linea 93: el navegador entra en
+      quirks mode y el puente que Apps Script inyecta para google.script.run no queda montado. El
+      sintoma no se parece en nada a la causa -- la pantalla se ve perfecta y CUALQUIER llamada al
+      servidor falla con "PERMISSION_DENIED al leer desde el almacenamiento", que no tiene que ver
+      ni con permisos ni con almacenamiento. Los otros dos modales del repo (UI_AbmPlanCuentas.html
+      y UI_Shell.html) tienen el DOCTYPE en la linea 1 y por eso nunca lo sufrieron.
+      NO mover este comentario arriba del DOCTYPE.
+    -->
+    <!--
+      UI_AbmProyeccionElaborada.html
+      ABM (Listar + Corregir + Borrar) de lo guardado en la hoja-BD "Proyeccion".
+
+      [CONCEPTO DE NEGOCIO]
+      Franco, textual: "en el menu deberiamos poder hacer el ABM de proyecciones elaboradas".
+      "Proyeccion" recibe filas por DOS caminos -- el promedio historico automatico
+      (DEVTOOL_PresupuestoBase.js, marca "Presupuesto base historico") y el guardado deliberado desde
+      la hoja "Presupuesto" (DEVTOOL_PresupuestoGuardar.js, marca "Presupuesto guardado") -- y hasta
+      este modal no habia forma de revisar, corregir ni borrar lo que quedo escrito sin abrir la hoja
+      a mano y leer filas crudas. Este modal es esa pantalla.
+
+      Alcance decidido (no un CRUD completo por simetria, "menos superficie bien pensada"):
+        - Alta: NO EXISTE ACA. Ya existe -- se elabora en la hoja "Presupuesto" y se guarda con
+          "Guardar Proyeccion" (menu tidetrack Dev). Reconstruir esa logica en un modal duplicaria
+          superficie peligrosa sobre una BD de produccion; el banner de arriba del modal redirige ahi.
+        - Modificacion: SOLO el monto, SOLO en filas "guardado a mano". Las filas de presupuesto base
+          son un promedio automatico -- editarlas a mano las dejaria con una Nota que miente sobre su
+          origen. El gate real vive en el servidor (DEVTOOL_ProyeccionAbm.js), esto es una segunda
+          barrera de UX, no la unica.
+        - Baja: por periodo completo (clave+origen), con respaldo y reversion inmediata (una sola
+          accion revertible a la vez, se pierde al hacer otro cambio -- avisado en el propio dialogo
+          de confirmacion).
+
+      [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+      Principios de diseno (docs/permanente/PRINCIPIOS_DISENO.md): multi-moneda siempre rotulada
+      (nunca se suman monedas distintas en un mismo total, ver DEVTOOL_ProyeccionAbm.js), estados
+      explicitos de carga/vacio/error/exito, coherencia con el Design System de UI_SharedStyles.html.
+      El caso "cero proyecciones guardadas a mano" es el estado REAL de produccion hoy (todas las
+      filas de "Proyeccion" son de origen base) y tiene un mensaje propio, nunca una tabla vacia sin
+      explicacion.
+
+      [INCIDENTE 2026-08-25 -- PERMISSION_DENIED al abrir]
+      El listado (unica llamada a `listarPeriodosProyeccion()`, disparada en DOMContentLoaded) fallaba
+      siempre con "Se produjo un error en el servidor al leer desde el almacenamiento. Codigo de error
+      PERMISSION_DENIED" -- mensaje enganoso: la funcion es SpreadsheetApp puro, cero
+      PropertiesService, y los mismos datos se leen bien desde el menu (ver
+      DEVTOOL_DIAG_PermisoProyeccionAbm.js, que descarta dato/funcion rotos). Hipotesis de trabajo: el
+      canal google.script.run (que el iframe de googleusercontent.com negocia contra
+      script.google.com) todavia no esta listo cuando dispara DOMContentLoaded, y Google reporta esa
+      falta de canal como PERMISSION_DENIED en vez de un error de timing. La sostiene un dato medido:
+      el Shell (16_ShellService.js, otra sesion) pide su catalogo por el MISMO canal, MISMA cuenta,
+      MISMA planilla, y responde en ~537ms SIEMPRE que sale DESPUES de un gesto del usuario -- nunca
+      al abrir. Eso descarta que el canal este roto en este contenedor, y en gran medida que sea la
+      cuenta (start.tidetrack@gmail.com vs francodiazpizarro@gmail.com, ver DEVTOOL_DIAG): con la
+      MISMA cuenta, llamando DESPUES de un gesto, anda. Lo que NO se descarta es si es demora fija de
+      negociacion o una carrera contra esa negociacion (la llamada de este modal, a diferencia de la
+      del Shell, compite con la apertura del propio modal) -- por eso el diagnostico de mas abajo
+      guarda el intento ganador de CADA apertura, no solo si hubo reintento.
+      No se movio el disparo a `window.onload`: este modal carga una webfont externa
+      (fonts.googleapis.com, ver <head>) y 'onload' espera tambien a que esa fuente termine de bajar.
+      Si el error desaparece por mudar a 'onload', no se puede distinguir "se arreglo el canal" de "se
+      espero a que bajara una tipografia" sin medir el tiempo de la fuente aparte -- esa medicion no
+      se hizo, asi que se prefirio quedarse en DOMContentLoaded y resolver con reintentos (inmediato,
+      ~600ms, ~1800ms de espera creciente) mas un boton "Reintentar" si los tres fallan. El intento
+      ganador (o el agotamiento de los tres) queda en una linea discreta del pie del modal y en
+      localStorage (ultimas 8 aperturas), para poder ver a ojo si el patron es fijo (siempre el mismo
+      intento -> demora fija) o varia (carrera).
+
+      [CONTINUACION 2026-08-25 -- EXPERIMENTO DECISIVO: PING ANTES DEL LISTADO]
+      Medido en produccion despues de desplegar lo de arriba: LOS TRES INTENTOS DE
+      listarPeriodosProyeccion() FALLARON (10764 ms) -- refuta que fuera una demora fija de
+      negociacion que el reintento alcanzara a cubrir, pero deja abiertas dos hipotesis que ese unico
+      dato no separa: el canal de ESTE modal esta roto para cualquier llamada, o el canal esta bien y
+      lo que falla es especifico de listarPeriodosProyeccion() (su tamanio, algo en su respuesta que
+      no serializa). Confundirlas lleva a arreglar lo que no es.
+      Se agrega pingProyeccionAbm() (DEVTOOL_ProyeccionAbm.js): no lee nada, no toca SpreadsheetApp ni
+      PropertiesService, devuelve siempre el mismo objeto minimo. El modal la llama PRIMERO, con el
+      MISMO backoff de 3 intentos que ya tenia el listado (comparar manzanas con manzanas). Si el ping
+      se agota tambien, el canal esta roto para cualquier llamada y NO tiene sentido intentar
+      listarPeriodosProyeccion() detras de un canal ya demostrado muerto -- cada intento mas son otros
+      ~2.4s de espera para nada, asi que se corta ahi. Si el ping anda, recien entonces se dispara el
+      ciclo de listado (su propio backoff de 3 intentos, sin tocar esa logica). La linea de diagnostico
+      del pie ahora reporta las DOS mediciones ("Canal: ping OK (123 ms) - listado FALLO (10764 ms)"),
+      y el historial de localStorage guarda un codigo compacto por apertura (ver registrarDiagnostico).
+      Dato que acota el sospechoso del tamanio ANTES de escribir este experimento: `armarGrupo()`
+      (DEVTOOL_ProyeccionAbm.js) usa `crudasFilas` solo para calcular `monedas`/`totales` -- el objeto
+      que arma NUNCA incluye `crudasFilas`. Una medicion local con la misma forma que el DIAG midio en
+      produccion (370 filas, 7 grupos base) dio ~5KB / 123 nodos, del mismo orden que el caso exitoso
+      del Shell (1723 bytes / 85 nodos) -- lejos de "cientos de KB". El DIAG (paso 5b,
+      DEVTOOL_DIAG_PermisoProyeccionAbm.js) mide el numero real en produccion antes de asumir nada.
+
+      @see src/DEVTOOL_ProyeccionAbm.js (capa de datos: pingProyeccionAbm, listarPeriodosProyeccion,
+           detalleFilasPeriodoProyeccion, eliminarPeriodoProyeccion, revertirBajaProyeccionAbm,
+           actualizarMontoFilaProyeccion, revertirEdicionMontoProyeccion)
+      @see src/DEVTOOL_DIAG_PermisoProyeccionAbm.js (diagnostico que descarto dato/funcion rotos +
+           paso 5b, tamanio real del payload)
+      @see src/UI_AbmPlanCuentas.html (patron de modal HtmlService que este archivo sigue)
+      @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
+      @version 0.57.0
+      @since 2026-08-25
+    -->
     <base target="_top">
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <?!= include('UI_SharedStyles'); ?>
@@ -180,9 +243,14 @@
         .estado-vacio { padding: 10px 2px 4px; color: var(--text-secondary); font-size: 13px; }
 
         .pie-modal {
-            display: flex; justify-content: flex-end; margin-top: 20px; padding-top: 14px;
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            margin-top: 20px; padding-top: 14px;
             border-top: 1px solid var(--border-color);
         }
+        /* Linea discreta de diagnostico del canal google.script.run -- ver cabecera, INCIDENTE
+           2026-08-25. Se muestra despues de cada carga (exito o agotamiento de reintentos), nunca
+           antes: no hay nada que diagnosticar todavia. */
+        #diagLinea { font-size: 11px; color: var(--text-secondary); }
     </style>
 </head>
 <body>
@@ -208,6 +276,9 @@
     <div id="errorGeneral" class="alert alert-error hidden">
         <strong>No se pudo leer "Proyeccion":</strong>
         <span id="errorGeneralTexto"></span>
+        <div style="margin-top: 10px;">
+            <button type="button" class="btn btn-secondary btn-mini" onclick="cargarListado()">Reintentar</button>
+        </div>
     </div>
 
     <div id="cuerpoListado" class="hidden">
@@ -221,6 +292,7 @@
     </div>
 
     <div class="pie-modal">
+        <span id="diagLinea" class="hidden"></span>
         <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cerrar</button>
     </div>
 </div>
@@ -230,6 +302,28 @@
     // listado (que se hace despues de CADA mutacion, para nunca mostrar un total desactualizado).
     var abiertos = {};
     var ultimoRevert = null; // { tipo: 'baja' | 'edicion' }
+
+    // ============================================
+    // REINTENTOS DEL CANAL google.script.run -- ver cabecera, INCIDENTE 2026-08-25 y su
+    // continuacion (experimento decisivo: ping antes del listado)
+    // ============================================
+    // 3 intentos con espera creciente antes de rendirse: inmediato, ~600ms, ~1800ms (backoff x3).
+    // 600ms es un margen comodo por encima del ~537ms que mide el Shell para el mismo canal
+    // llamando despues de un gesto -- si la demora es de negociacion fija, un solo reintento a
+    // esa escala deberia alcanzar. 1800ms es el tercer escalon por si la negociacion es mas lenta
+    // (cuenta multi-sesion, red mas lenta): da margen sin que la espera total (2.4s de backoff +
+    // 3 round-trips) se sienta como un modal roto. El MISMO backoff se reusa para el ciclo de
+    // pingProyeccionAbm() (intentarPing) y para el de listarPeriodosProyeccion() (intentarCargaListado):
+    // son dos ciclos SEPARADOS, cada uno con su propio contador de intentos, corridos en secuencia
+    // (ping primero, listado solo si el ping tuvo exito) -- comparar sus resultados solo tiene
+    // sentido si miden con la misma vara.
+    var REINTENTOS_ESPERA_MS = [0, 600, 1800];
+    var LS_KEY_DIAG = 'tt_diagAbmProyeccion_v2'; // v2: la entrada ahora tiene {ping, listado}, no {intento,ms,error} suelto
+    var HIST_MAX = 8; // aperturas guardadas -- alcanza para ver el patron (fijo vs. carrera) a ojo
+
+    var intentoActual = 0;
+    var tsCicloInicio = 0;
+    var diagPing = null; // { ok, intento, ms } -- resultado del ciclo de ping de ESTA apertura
 
     document.addEventListener('DOMContentLoaded', cargarListado);
 
@@ -283,22 +377,165 @@
     // CARGA DEL LISTADO
     // ============================================
 
+    // Punto de entrada publico: lo llama tanto DOMContentLoaded como el boton "Reintentar" del
+    // banner de error (arranca TODO de nuevo, desde el ping, no solo el listado).
     function cargarListado() {
-        document.getElementById('loader').classList.remove('hidden');
         document.getElementById('errorGeneral').classList.add('hidden');
+        diagPing = null;
+        intentoActual = 0;
+        tsCicloInicio = performance.now();
+        intentarPing();
+    }
+
+    // ============================================
+    // CICLO 1: PING -- ver cabecera, "EXPERIMENTO DECISIVO". No lee nada; separa "el canal esta
+    // roto" de "el problema es de listarPeriodosProyeccion() o de su respuesta".
+    // ============================================
+    function intentarPing() {
+        intentoActual++;
+        document.getElementById('loader').classList.remove('hidden');
+        google.script.run
+            .withSuccessHandler(function () {
+                var ms = Math.round(performance.now() - tsCicloInicio);
+                diagPing = { ok: true, intento: intentoActual, ms: ms };
+                // El ping tuvo exito: arranca el ciclo del listado real, con SU PROPIO contador
+                // de intentos y su propio cronometro (no comparten estado con el ciclo de ping).
+                intentoActual = 0;
+                tsCicloInicio = performance.now();
+                intentarCargaListado();
+            })
+            .withFailureHandler(function (err) {
+                var ms = Math.round(performance.now() - tsCicloInicio);
+                if (intentoActual < REINTENTOS_ESPERA_MS.length) {
+                    var espera = REINTENTOS_ESPERA_MS[intentoActual];
+                    console.log('[ABM Proyeccion] ping intento ' + intentoActual + ' fallo a los ' + ms +
+                        'ms (' + err.message + '). Reintentando en ' + espera + 'ms...');
+                    setTimeout(intentarPing, espera);
+                    return;
+                }
+                // Se agotaron los 3 intentos de un ping que NO LEE NADA: el canal de este modal
+                // esta roto para CUALQUIER llamada. No tiene sentido intentar
+                // listarPeriodosProyeccion() detras de un canal ya demostrado muerto -- el
+                // diagnostico ya es concluyente, y cada intento mas suma ~2.4s de espera al pedo.
+                diagPing = { ok: false, intento: intentoActual, ms: ms };
+                registrarDiagnostico(null);
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('cuerpoListado').classList.add('hidden');
+                document.getElementById('errorGeneral').classList.remove('hidden');
+                document.getElementById('errorGeneralTexto').textContent =
+                    'El canal fallo incluso para un ping que no lee nada (' + err.message + '). ' +
+                    'No es un problema de listarPeriodosProyeccion(): es el canal de este modal.';
+            })
+            .pingProyeccionAbm();
+    }
+
+    // ============================================
+    // CICLO 2: LISTADO REAL -- solo se dispara si el ciclo de ping (arriba) tuvo exito.
+    // ============================================
+    function intentarCargaListado() {
+        intentoActual++;
+        document.getElementById('loader').classList.remove('hidden');
         google.script.run
             .withSuccessHandler(function (data) {
+                var ms = Math.round(performance.now() - tsCicloInicio);
+                registrarDiagnostico({ intento: intentoActual, ms: ms, error: false });
                 document.getElementById('loader').classList.add('hidden');
                 document.getElementById('cuerpoListado').classList.remove('hidden');
                 renderListadoCompleto(data);
             })
             .withFailureHandler(function (err) {
+                var ms = Math.round(performance.now() - tsCicloInicio);
+                if (intentoActual < REINTENTOS_ESPERA_MS.length) {
+                    var espera = REINTENTOS_ESPERA_MS[intentoActual];
+                    console.log('[ABM Proyeccion] listado intento ' + intentoActual + ' fallo a los ' + ms +
+                        'ms (' + err.message + '). Reintentando en ' + espera + 'ms...');
+                    setTimeout(intentarCargaListado, espera);
+                    return;
+                }
+                // Se agotaron los 3 intentos del listado, pero el PING (arriba) SI funciono: el
+                // canal esta bien, el problema es especifico de listarPeriodosProyeccion() o de
+                // su respuesta -- recien aca es un error de verdad para el usuario.
+                registrarDiagnostico({ intento: intentoActual, ms: ms, error: err.message });
                 document.getElementById('loader').classList.add('hidden');
                 document.getElementById('cuerpoListado').classList.add('hidden');
                 document.getElementById('errorGeneral').classList.remove('hidden');
                 document.getElementById('errorGeneralTexto').textContent = err.message;
             })
             .listarPeriodosProyeccion();
+    }
+
+    // ============================================
+    // DIAGNOSTICO DE CANAL -- linea discreta + historial entre aperturas (ver cabecera)
+    // ============================================
+    // No es telemetria enviada a ningun lado: vive entera en este navegador (consola +
+    // localStorage). Sirve solo para que Franco, mirando la planilla, pueda distinguir "siempre
+    // entra en el mismo intento" (demora fija de negociacion) de "el intento que funciona varia"
+    // (carrera) -- y para el caso limite: si TODAS las aperturas agotan los 3 intentos, no era
+    // timing, hay que mirar del lado de la cuenta/permiso.
+
+    function leerHistorialDiag() {
+        try {
+            var raw = localStorage.getItem(LS_KEY_DIAG);
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return null; // localStorage no disponible en este contexto -- se degrada sin romper nada
+        }
+    }
+
+    function guardarHistorialDiag(hist) {
+        try {
+            localStorage.setItem(LS_KEY_DIAG, JSON.stringify(hist.slice(-HIST_MAX)));
+        } catch (e) {
+            // sin persistencia entre aperturas -- esta apertura igual queda en consola y en pantalla
+        }
+    }
+
+    /**
+     * Une el resultado del ciclo de ping (`diagPing`, siempre presente cuando se llega aca) con
+     * el del ciclo de listado que recien se resolvio -- exito o agotamiento de sus 3 intentos.
+     * `listadoInfo`: null si el ping se agoto (el listado NUNCA se llego a intentar, ver
+     * intentarPing), o `{ intento, ms, error }` -- `error` es `false` en exito, o el mensaje del
+     * servidor si se agotaron los 3 intentos del listado.
+     */
+    function registrarDiagnostico(listadoInfo) {
+        var entrada = { ping: diagPing, listado: listadoInfo, ts: new Date().toISOString() };
+        console.log('[ABM Proyeccion] diagnostico de esta apertura:', entrada);
+
+        var hist = leerHistorialDiag();
+        if (hist) {
+            hist.push(entrada);
+            guardarHistorialDiag(hist);
+        }
+        renderDiagLinea(entrada, hist);
+    }
+
+    // Codigo compacto por apertura para el historial: 'PX' = ping agotado (listado nunca se
+    // intento); 'P<n>L<n>' = ping ok en el intento n, listado ok en el intento n; 'P<n>LX' = ping
+    // ok, listado agotado. Ver mas abajo los ejemplos que arma renderDiagLinea con esto.
+    function codigoAperturaDiag(entrada) {
+        if (!entrada.ping.ok) return 'PX';
+        var base = 'P' + entrada.ping.intento;
+        if (!entrada.listado) return base; // no deberia pasar (ping ok siempre dispara el listado), defensivo
+        return base + (entrada.listado.error ? 'LX' : ('L' + entrada.listado.intento));
+    }
+
+    function renderDiagLinea(entrada, hist) {
+        var el = document.getElementById('diagLinea');
+        var pingTxt = entrada.ping.ok
+            ? ('ping OK (' + entrada.ping.ms + ' ms)')
+            : ('ping FALLO (' + entrada.ping.ms + ' ms)');
+
+        var linea = 'Canal: ' + pingTxt;
+        if (entrada.listado) {
+            linea += entrada.listado.error
+                ? (' - listado FALLO (' + entrada.listado.ms + ' ms)')
+                : (' - listado OK, intento ' + entrada.listado.intento + '/3 (' + entrada.listado.ms + ' ms)');
+        }
+        if (hist && hist.length > 1) {
+            linea += ' · ultimas aperturas: ' + hist.map(codigoAperturaDiag).join('-');
+        }
+        el.textContent = linea;
+        el.classList.remove('hidden');
     }
 
     function renderListadoCompleto(data) {

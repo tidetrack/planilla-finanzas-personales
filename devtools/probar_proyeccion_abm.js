@@ -2,7 +2,7 @@
  * devtools/probar_proyeccion_abm.js
  * Banco de pruebas de DEVTOOL_ProyeccionAbm.js.
  *
- * Seis partes:
+ * Siete partes:
  * 0. Integridad de los fuentes (sin bytes de control).
  * 1. Helpers de clave/mes/nota: _fechaDesdeClavePa, _mesLabelPa, _partesNotaGuardadoPa.
  * 2. Totales por bloque y moneda (_totalesPorBloquePa): nunca suma monedas distintas entre si,
@@ -17,9 +17,12 @@
  * 6. actualizarMontoFilaProyeccion / revertirEdicionMontoProyeccion: el gate de seguridad contra
  *    filas PB_MARCA, la validacion de monto (incluida la trampa de Number('')===0), y el
  *    roundtrip editar->revertir exacto.
+ * 7. pingProyeccionAbm (v0.57.0): forma constante, payload trivial, cero dependencia de
+ *    SpreadsheetApp -- el separador del experimento "canal roto entero" vs. "problema de
+ *    listarPeriodosProyeccion() o su respuesta" (ver UI_AbmProyeccionElaborada.html).
  *
  * USO:  node devtools/probar_proyeccion_abm.js
- * @version 0.52.0
+ * @version 0.53.0
  * @since 2026-08-25
  */
 const fs = require('fs'), vm = require('vm'), path = require('path');
@@ -71,7 +74,7 @@ vm.runInContext(
     '_escribirAlPieProyeccionPg,_preflightPb,_borrarGeneradasPb,' +
     '_fechaDesdeClavePa,_mesLabelPa,_partesNotaGuardadoPa,_leerTodasFilasPa,_filasDelPeriodoPa,' +
     '_totalesPorBloquePa,_ordenMonedasPa,_monedasEnFilasPa,_montoValidoPa,_respaldarFilasPa,' +
-    'listarPeriodosProyeccion,detalleFilasPeriodoProyeccion,eliminarPeriodoProyeccion,' +
+    'pingProyeccionAbm,listarPeriodosProyeccion,detalleFilasPeriodoProyeccion,eliminarPeriodoProyeccion,' +
     'revertirBajaProyeccionAbm,actualizarMontoFilaProyeccion,revertirEdicionMontoProyeccion});',
     ctx);
 
@@ -480,6 +483,61 @@ console.log('\n=== 6. actualizarMontoFilaProyeccion y revertirEdicionMontoProyec
     lanzo = false;
     try { ctx.actualizarMontoFilaProyeccion(99999, 5); } catch (e) { lanzo = true; }
     ok(lanzo, 'un numero de fila fuera del rango vivo tira');
+}
+
+// ============================================================================
+// 7. pingProyeccionAbm -- experimento de aislamiento del canal google.script.run (v0.57.0)
+// ============================================================================
+console.log('\n=== 7. pingProyeccionAbm ===');
+{
+    // Sin ninguna spreadsheet activa (ssActual null, la anterior seccion no la dejo puesta):
+    // si pingProyeccionAbm tocara SpreadsheetApp de cualquier forma, esto ya explotaria.
+    ssActual = null;
+
+    // La huella del ping SI se prueba: se le da un almacen de mentira y se verifica que la selle.
+    // Es la pieza que biseca ida vs vuelta, asi que un banco que la esquivara dejaria sin cubrir
+    // justo el instrumento del que va a depender el diagnostico.
+    const almacen = {};
+    propsActual = {
+        setProperty: function (k, v) { almacen[k] = v; return this; },
+        getProperty: function (k) { return Object.prototype.hasOwnProperty.call(almacen, k) ? almacen[k] : null; },
+        deleteProperty: function (k) { delete almacen[k]; return this; },
+        getKeys: function () { return Object.keys(almacen); }
+    };
+
+    const r1 = ctx.pingProyeccionAbm();
+    ok(typeof almacen['ping_abm_ultimo'] === 'string' && Number(almacen['ping_abm_ultimo']) > 0,
+       'sella la huella "ping_abm_ultimo" al entrar (dio ' + JSON.stringify(almacen['ping_abm_ultimo']) + ')');
+
+    // Y si el almacen falla, el ping tiene que responder IGUAL: el instrumento no rompe lo que mide.
+    propsActual = { setProperty: function () { throw new Error('almacen caido'); } };
+    const rSinAlmacen = ctx.pingProyeccionAbm();
+    ok(rSinAlmacen && rSinAlmacen.mensaje === 'pong',
+       'con el almacen caido el ping responde igual, no se lleva puesto el canal que esta midiendo');
+    propsActual = {
+        setProperty: function (k, v) { almacen[k] = v; return this; },
+        getProperty: function (k) { return Object.prototype.hasOwnProperty.call(almacen, k) ? almacen[k] : null; },
+        deleteProperty: function (k) { delete almacen[k]; return this; },
+        getKeys: function () { return Object.keys(almacen); }
+    };
+
+    ok(r1 && typeof r1 === 'object', 'devuelve un objeto');
+    ok(typeof r1.mensaje === 'string' && r1.mensaje.length > 0, 'tiene un campo string no vacio, dio ' + JSON.stringify(r1.mensaje));
+    ok(typeof r1.ts === 'number' && isFinite(r1.ts), 'tiene un campo numero finito, dio ' + r1.ts);
+
+    // Constante entre llamadas EN LA FORMA (mismas claves, mismo tipo) -- el "ts" en si puede
+    // variar (es un timestamp), lo que tiene que ser constante es que NO dependa de ningun estado
+    // de la planilla: llamarlo dos veces seguidas sin tocar nada da la misma forma.
+    const r2 = ctx.pingProyeccionAbm();
+    ok(Object.keys(r1).sort().join(',') === Object.keys(r2).sort().join(','),
+       'dos llamadas seguidas devuelven exactamente las mismas claves, dio ' +
+       Object.keys(r1).sort().join(',') + ' vs ' + Object.keys(r2).sort().join(','));
+    ok(r1.mensaje === r2.mensaje, 'el campo string es literal-constante entre llamadas (no depende de nada), dio "' + r1.mensaje + '" vs "' + r2.mensaje + '"');
+
+    // El payload en si es minimo -- esto es justo lo que lo hace util como separador: si ESTO
+    // falla por el canal, no puede ser "la respuesta es demasiado grande".
+    const bytes = JSON.stringify(r1).length;
+    ok(bytes < 100, 'el payload del ping es trivial (<100 caracteres), dio ' + bytes);
 }
 
 // ============================================================================

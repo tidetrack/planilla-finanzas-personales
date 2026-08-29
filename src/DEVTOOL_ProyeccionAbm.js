@@ -103,10 +103,38 @@
  * algoritmo (escribir, `flush`, releer, verificar fila por fila, ocultar) con esa unica variable
  * cambiada -- no una reinvencion.
  *
+ * ============================================================================
+ * [INCIDENTE 2026-08-25 -- EXPERIMENTO DECISIVO: CANAL ENTERO VS. ESTA FUNCION/RESPUESTA]
+ * ============================================================================
+ * v0.56.0 le agrego 3 reintentos con espera creciente a `listarPeriodosProyeccion()` desde el
+ * modal (ver UI_AbmProyeccionElaborada.html) contra un PERMISSION_DENIED reproducible al abrir.
+ * Medido en produccion: LOS TRES INTENTOS FALLARON (10764 ms) -- eso refuta que sea una demora
+ * fija de negociacion del canal que un reintento alcance a cubrir, pero deja abiertas DOS
+ * hipotesis distintas que un solo dato no separa: (a) el canal `google.script.run` de ESTE modal
+ * esta roto para CUALQUIER llamada, o (b) el canal esta bien y lo que falla es especifico de
+ * `listarPeriodosProyeccion()` -- su tamanio, algo en su respuesta que no serializa. Confundir las
+ * dos lleva a arreglar lo que no es: reintentar mas tampoco arregla (a), y cambiar el canal
+ * (mover el disparo, esperar un gesto) no arregla (b).
+ * `pingProyeccionAbm()` (mas abajo) es el separador: no lee nada, no llama a `SpreadsheetApp` ni a
+ * ninguna API, devuelve siempre el mismo objeto minimo. El modal la llama PRIMERO. Si el ping
+ * TAMBIEN falla, es (a) y esta funcion queda descartada como sospechosa. Si el ping anda y
+ * `listarPeriodosProyeccion()` sigue fallando, es (b) -- y ahi el primer sospechoso es el TAMANIO:
+ * `listarPeriodosProyeccion()` arma sus grupos leyendo `crudasFilas` de cada mes (potencialmente
+ * cientos de filas con fecha y montos), aunque -- verificado releyendo `armarGrupo` mas abajo --
+ * `crudasFilas` en si NUNCA sale de la funcion: se usa solo para calcular `monedas` y `totales`,
+ * el objeto `grupo` que se retorna no la incluye. Una medicion local (mock con la MISMA forma que
+ * el DIAG en produccion: 370 filas, 7 grupos base, 0 guardado) dio un payload de apenas ~5KB / 123
+ * nodos -- del mismo orden que el caso exitoso que midio el Shell (1723 bytes / 85 nodos), no dos
+ * o tres ordenes de magnitud mas grande. Si el DIAG confirma ese orden en produccion (ver el nuevo
+ * paso 5b de DEVTOOL_DIAG_PermisoProyeccionAbm.js, `JSON.stringify(resultado).length`), el tamanio
+ * queda descartado como sospechoso PARA ESTA FUNCION -- haria falta mirar contenido, no tamanio.
+ *
  * @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
  * @see DEVTOOL_PresupuestoGuardar.js
  * @see DEVTOOL_PresupuestoBase.js
- * @version 0.52.0
+ * @see DEVTOOL_DIAG_PermisoProyeccionAbm.js (paso 5b: tamanio real del payload en produccion)
+ * @see UI_AbmProyeccionElaborada.html (llama pingProyeccionAbm() antes de listarPeriodosProyeccion())
+ * @version 0.53.0
  * @since 2026-08-25
  * @lastModified 2026-08-25
  */
@@ -328,6 +356,42 @@ function _respaldarFilasPa(ss, hojaProy, filas, sello) {
 // ============================================
 // PUBLICAS -- consumidas via google.script.run desde 11_UIService.js (appscript-ui)
 // ============================================
+
+/**
+ * Ping trivial para el experimento de aislamiento del canal `google.script.run` (ver cabecera:
+ * INCIDENTE 2026-08-25). NO toca `SpreadsheetApp`, `PropertiesService` ni ninguna API externa --
+ * no lee absolutamente nada, siempre devuelve el mismo objeto minimo y constante. El modal la
+ * llama PRIMERO, antes de `listarPeriodosProyeccion()`: si este ping tambien falla via
+ * `google.script.run`, el canal de este modal esta roto para CUALQUIER llamada y
+ * `listarPeriodosProyeccion()` no tiene nada que ver; si el ping anda y el listado sigue
+ * fallando, el canal esta bien y el problema es especifico de esa funcion o de su respuesta.
+ */
+// decision Franco 2026-08-25: el ping deja una HUELLA del lado del servidor antes de devolver
+// nada. Sirve para bisecar el fallo del canal sin depender de ningun gesto: si la huella aparece,
+// la llamada LLEGO y la funcion CORRIO, y el problema esta en el viaje de VUELTA (respuesta,
+// serializacion, canal de retorno). Si no aparece, la llamada nunca salio del cliente y el
+// problema esta en la IDA -- y entonces lo que devuelva la funcion es irrelevante.
+// La huella la lee Y LA BORRA el DIAG (DEVTOOL_DIAG_PermisoProyeccionAbm.js), para que cada
+// medicion empiece en cero: leer la marca de la corrida anterior seria concluir "llego" cuando
+// no llego.
+const PA_PROP_HUELLA_PING = 'ping_abm_ultimo';
+
+function pingProyeccionAbm() {
+    // El instrumento NO puede romper lo que mide: si escribir la huella fallara, el ping tiene
+    // que llegar igual a devolver su respuesta, porque lo que se esta midiendo es el canal y no
+    // el almacenamiento. El riesgo de tragarse el error -- leer "no hay huella" y concluir "no
+    // llego" cuando en realidad si llego y fallo la escritura -- lo cubre el DIAG por otro lado:
+    // su paso 2 verifica de forma independiente que PropertiesService sea accesible, y hoy
+    // reporta 36 propiedades guardadas. Si ese paso dijera que no es accesible, la huella no
+    // seria concluyente y hay que decirlo antes de interpretar nada.
+    try {
+        PropertiesService.getDocumentProperties()
+            .setProperty(PA_PROP_HUELLA_PING, String(new Date().getTime()));
+    } catch (e) {
+        Logger.log('[pingProyeccionAbm] no se pudo sellar la huella: ' + e.message);
+    }
+    return { mensaje: 'pong', ts: Date.now() };
+}
 
 /**
  * Agrupa TODAS las filas de "Proyeccion" en dos poblaciones (guardado/base). Solo lectura.

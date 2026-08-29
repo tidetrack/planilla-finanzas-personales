@@ -8,8 +8,63 @@ Historial de versiones y cambios significativos del proyecto.
 > Este archivo refleja los releases principales para lectura humana rapida.
 
 
+---
 
+## v0.58.0 - Merge: las seis funciones del shell y los fixes del ABM conviven (2026-08-29)
 
+Confluyen las dos lineas de trabajo: **v0.56.0** (Proyeccion, Recurrentes y Conciliacion en el
+shell) y **v0.57.x** de la otra sesion (DOCTYPE del ABM Proyecciones, reintentos del canal y la
+huella del ping para bisecar ida/vuelta). Sin cambios de codigo propios — solo la
+reconciliacion de version. Esta vez git **si** marco conflicto en `01_Version.js`, a diferencia
+del line-merge silencioso de la v0.55.1, y el guard de coherencia verifico el resultado.
+
+---
+
+## v0.57.1 - El modal moria por 90 lineas de comentario antes del DOCTYPE (2026-08-25)
+
+`UI_AbmProyeccionElaborada.html` tenia 90 lineas de cabecera antes del `<!DOCTYPE html>`, que
+quedaba en la linea 93. El navegador entra en quirks mode y el puente que Apps Script inyecta para
+`google.script.run` no queda montado: el modal abre perfecto y cualquier llamada al servidor muere
+con un `PERMISSION_DENIED` que no tiene que ver ni con permisos ni con almacenamiento.
+
+Antes de encontrarlo se descartaron, midiendo: el timing (tres reintentos, 12 s), el gesto del
+usuario (el boton Reintentar falla igual), el tamanio del payload (un ping que devuelve dos
+constantes falla igual) y la funcion (invocada directo devuelve sus 7 grupos). Los otros dos
+modales del repo tienen el DOCTYPE en la linea 1 y por eso nunca lo sufrieron: la diferencia era
+una linea de posicion, y ninguna herramienta la miraba. Ahora la mira
+`devtools/probar_doctype_modales.js`.
+
+---
+
+## Proyecciones Elaboradas - ping antes del listado, para aislar canal de respuesta (v0.57.0, 2026-08-25)
+
+Continuacion de v0.56.0: los 3 reintentos con espera creciente que ese release le agrego a
+`listarPeriodosProyeccion()` **fallaron los tres, medido en produccion** ("los 3 intentos
+fallaron (10764 ms)"). Ese dato refuta que fuera una demora fija de negociacion del canal, pero
+deja abiertas dos hipotesis sin separar: el canal `google.script.run` de este modal esta roto
+para cualquier llamada, o el canal esta bien y el problema es especifico de esa funcion o de su
+respuesta. Confundirlas lleva a arreglar lo que no es.
+
+**El experimento decisivo.** `pingProyeccionAbm()` (`DEVTOOL_ProyeccionAbm.js`, nueva) no lee
+nada -- no toca `SpreadsheetApp` ni `PropertiesService`, siempre devuelve el mismo objeto minimo
+(un string y un numero). El modal la llama PRIMERO, con el mismo backoff de 3 intentos que ya
+tenia el listado. Si el ping tambien se agota, el canal esta roto para cualquier llamada y no se
+intenta el listado (se ahorran otros ~10s de espera al pedo, porque el diagnostico ya es
+concluyente). Si el ping anda, recien ahi arranca el ciclo de `listarPeriodosProyeccion()`. La
+linea de diagnostico del pie del modal ahora muestra las dos mediciones (`Canal: ping OK (123 ms)
+- listado FALLO (10764 ms)` / `Canal: ping FALLO (10764 ms)`), y el historial de `localStorage`
+(ultimas 8 aperturas) guarda un codigo compacto por apertura.
+
+**Un hallazgo que cambia el peso de la hipotesis del tamanio.** `DEVTOOL_DIAG_PermisoProyeccionAbm.js`
+suma un paso que loguea `JSON.stringify(listarPeriodosProyeccion()).length` invocada directo (el
+mismo objeto que viajaria por el canal, medido gratis). Revisando el codigo se confirmo que
+`crudasFilas` -- el array de filas con fecha y montos que era el sospechoso textual del encargo --
+se usa solo para calcular `monedas`/`totales` dentro de la funcion, pero **nunca sale** en el
+objeto `grupo` que `listarPeriodosProyeccion()` retorna. Una medicion local con la misma forma que
+midio el DIAG en produccion (370 filas, 7 grupos base, 0 guardado) dio un payload de ~5KB / 123
+nodos -- del mismo orden que el caso exitoso que otra sesion midio para el Shell (1723 bytes / 85
+nodos), lejos de los "cientos de KB" que la hipotesis del tamanio sugeria. El paso nuevo del DIAG
+mide el numero REAL en produccion antes de dar esto por cerrado.
 
 
 
@@ -95,6 +150,32 @@ habian pisado. Quedaron acordadas dos reglas, mas un gate concreto que aporto la
 git log --oneline HEAD..origin/<rama-del-otro> -- src/   # vacio = no le debo nada
 git merge-base --is-ancestor <commit-desplegado> HEAD    # verdadero = el push solo agrega
 ```
+
+---
+
+## v0.56.0 - El ABM reintenta el canal en vez de rendirse (2026-08-25)
+
+El ABM de Proyecciones Elaboradas abria bien pero el listado nunca cargaba: `PERMISSION_DENIED`
+al leer "Proyeccion" desde `google.script.run`. Los mismos datos se leen perfecto desde el menu,
+y el camino de lectura no toca `PropertiesService` -- pese a que el mensaje de Google habla de
+"almacenamiento". Esa contradiccion es lo que hizo sospechar del canal y no del permiso.
+
+Lo que acota la sospecha es una medicion de la otra linea de trabajo: el shell llama por el MISMO
+canal, desde el MISMO tipo de modal, sobre la misma planilla y la misma cuenta, y responde en
+537 ms sin fallar nunca. La unica diferencia es CUANDO sale la llamada -- la del shell despues de
+un gesto del usuario, la del ABM en el `DOMContentLoaded`.
+
+El arreglo es tambien el experimento: la carga sigue siendo automatica, reintenta tres veces
+(inmediato, 600 ms, 1800 ms -- el 600 elegido por encima de los 537 medidos), y si los tres fallan
+muestra el error CON un boton "Reintentar", que antes no existia: el usuario quedaba sin salida.
+El pie del modal informa en que intento entro y guarda las ultimas ocho aperturas, para poder
+distinguir una demora fija de negociacion (siempre el mismo intento) de una carrera (el intento
+varia).
+
+NO se movio el disparo a `window.onload`, aunque era la sospecha inicial: el modal carga una
+webfont por `<link>`, y `onload` espera esa descarga. Si el error hubiera desaparecido ahi, no
+habria forma barata de saber si se arreglo el canal o si simplemente se espero a que bajara una
+tipografia. Un arreglo que funciona con la explicacion equivocada no es un arreglo.
 
 ---
 
