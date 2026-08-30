@@ -302,6 +302,76 @@
  * - PENDIENTE DECLARADO (lo toma la Etapa 3, duenia de UI_Shell.html): procesarLote() del
  *   cliente ignora r.mensaje y muestra un texto fijo, asi que por ESE camino el aviso de
  *   fallback llega al log pero no a la pantalla. Los otros tres caminos ya lo muestran.
+ * [2026-08-29] v0.62.0 - Los dos ABM hablan la lengua del shell, y su jerarquia se ve.
+ * - ACTA DE COORDINACION: este release toca UI_AbmProyeccionElaborada.html y
+ *   UI_AbmPlanCuentas.html, en la rama claude/sharp-meninsky-3797e3, mientras la sesion
+ *   principal (fix/abm-desplegable-entidad) trabaja la integracion de esos mismos dos ABM
+ *   como VISTAS del shell. Se acordo por canal directo entre sesiones: sus etapas 1-6 no
+ *   tocan estos dos archivos (recien aparecen en su etapa 7, y solo como retiro, despues de
+ *   un gate de verificacion de Franco). El unico punto de contacto es el trio de version y
+ *   changelog, donde el conflicto de merge ES el mecanismo buscado (como en v0.58.0).
+ * - SIN DESPLEGAR A PROPOSITO. Hay una decision pendiente de Franco, planteada por las dos
+ *   sesiones: (a) desplegar este restyle ahora y que la integracion lo absorba y descarte mas
+ *   tarde, o (b) dejarlo en la rama como respaldo y esperar a la integracion. Mientras no la
+ *   resuelva, targets.yaml NO se toca y no sale ningun deploy de esta rama.
+ * - EL PEDIDO, textual de Franco: "El plan de cuentas ABM no esta con el diseno". Era cierto
+ *   de los dos modales: el shell paso a la direccion "Corriente" en v0.60.0 (brandbook,
+ *   Poppins, liquid glass sobre lienzo blanco) y estos dos quedaron en el design system
+ *   anterior -- Google Sans, lienzo #eff2f9, azul #34475d, avisos con hex de Tailwind.
+ *   Abrir el shell y abrir un ABM se sentia como cambiar de producto.
+ * - EL DEFECTO DE FONDO ERA LA JERARQUIA, no la paleta. Proyecciones declaraba SEIS tamanos
+ *   (11/12/12.5/13/14/20) y Plan de Cuentas CUATRO (12/13/14/22), con ratios de ~1.04 a 1.08
+ *   entre vecinos: seis tamanos que se ven iguales no son una jerarquia, obligan a leer todo
+ *   con el mismo peso. Los dos pasan a la MISMA escala de cuatro pasos con ratio real --
+ *   11 -> 14 -> 18 -> 23 (x1.27 / x1.29 / x1.28) -- y el mes de cada tarjeta, que es lo que
+ *   identifica un periodo, sube de 14 a 18 mientras su eco baja a 11.
+ * - MEDIDO, NO DECLARADO: se renderizaron los dos modales fuera de Apps Script (doble del
+ *   servidor con la forma real del payload) y se enumeraron los font-size computados de todo
+ *   lo visible, con el detalle abierto, un monto en edicion y la confirmacion de baja
+ *   desplegada: exactamente {11, 14, 18, 23} en ambos, ratio minimo 1.273.
+ * - Los controles NO tienen metrica aparte: salen de la misma escala. Un boton a 13px al lado
+ *   de una celda a 14px reintroduce exactamente la planitud que se esta corrigiendo. En Plan
+ *   de Cuentas los tres controles de una fila miden ahora 40px identicos -- eran 43/47/56, la
+ *   cicatriz v0.49.0 (un select ignora line-height y calcula su alto con su metrica interna),
+ *   que se habia arreglado en el shell y nunca aca.
+ * - Se retiran los ultimos estilos en linea con color o tamano propio: los tres avisos de Plan
+ *   de Cuentas llevaban hex de Tailwind (#FEE2E2/#DC2626/#F87171, #FEF3C7/#B45309/#FCD34D) que
+ *   no pertenecen a la paleta, y ahora salen del semaforo de funcion; el "(Opcional)" del
+ *   rotulo y la nota al pie del detalle pasan a clases (.opcional, .nota-pie). De paso, la
+ *   modificacion de una cuenta se lee como ADVERTENCIA (ambar) y la baja como destructiva
+ *   (rojo), que es lo que cada una es.
+ * + meta charset EXPLICITO en los dos modales, portado del shell: HtmlService lo manda por
+ *   header y en la planilla se ve bien, pero sin la linea cualquier prueba local adivina
+ *   windows-1252 y rompe los acentos y el separador "·" de cada tarjeta. Encontrado en el
+ *   render local de este mismo release.
+ * ! CERO cambios de comportamiento: ninguna funcion, ningun endpoint, ningun id, ningun
+ *   handler, ningun payload. Los dos unicos toques al JS fueron literales de estilo que se
+ *   mudaron a una clase. Verificado con verificar_modales.py (los 4 modales), con
+ *   probar_doctype_modales.js, con probar_proyeccion_abm.js completo, y recorriendo a mano el
+ *   flujo entero de los dos modales contra un doble del servidor (listado, detalle, edicion
+ *   de monto, confirmacion de baja, seleccion de entidad, los dos modos, alta, modificacion,
+ *   baja y estado de exito).
+ * ! LECCION NUEVA, y costo una corrida en rojo: no se nombra la etiqueta de script en prosa,
+ *   ni siquiera dentro de un comentario HTML. El chequeo 2 de verificar_modales.py la busca
+ *   por regex sin entender comentarios, asi que tomo la cabecera entera del archivo como
+ *   codigo JavaScript y el modal "no parseaba". Queda anotado en la propia cabecera.
+ * ! HALLAZGO COLATERAL sobre el arnes, reportado a la otra sesion y ARREGLADO POR ELLA en
+ *   fix/abm-desplegable-entidad (no lo toque yo: no se edita un verificador mientras el otro
+ *   trabaja sobre el arnes). La RE_INCLUDE de verificar_modales.py no contemplaba el punto y
+ *   coma de la forma real `<?!= include('X'); ?>`. Era peor de lo que reporte: como LOS TRES
+ *   modales del repo escriben esa forma, la regex no matcheaba NINGUNO -- el include no se
+ *   resolvio nunca, en toda la vida del verificador, y sus cinco chequeos venian mirando cada
+ *   archivo sin su fragmento. Verde sobre medio archivo. Hoy no ocultaba nada porque
+ *   UI_SharedStyles es solo CSS, pero el proposito declarado de esa funcion es el caso "una
+ *   vista vive en su *_Vista.html y la consumen dos wrappers", que es justo la arquitectura
+ *   hacia la que va la unificacion del shell. Se descubrio porque el render local de este
+ *   release copiaba la misma regex y mostraba los modales sin ningun estilo compartido.
+ * ! POR ESO LA VERIFICACION DE ARRIBA SE REHIZO con el verificador ya corregido, antes de
+ *   dar por buena la palabra "verificado": los dos modales de este release pasan en verde con
+ *   la resolucion funcionando. Comprobado que la resolucion los alcanza de verdad y que el
+ *   verde no significa otra cosa -- el texto que se verifica pasa de 63064 a 71387 caracteres
+ *   en Proyecciones y de 35451 a 43774 en Plan de Cuentas (los 8323 de UI_SharedStyles, que
+ *   antes no entraban).
  *
  * [2026-08-29] v0.61.0 - El guardado deja de pisar lo ajeno y el ABM reconoce los cinco
  * origenes.
