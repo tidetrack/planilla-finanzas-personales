@@ -47,6 +47,112 @@ var SALDOS_CONC_DOBLE = {
     { medio: 'YPF', moneda: 'ARS', saldo: 3120 }
   ]
 };
+/* EL ABM DEL PLAN DE CUENTAS (vista 'cuentas'). Contrato DISTINTO al del resto del shell y
+   por eso se doble tal cual: getAbmFormData devuelve el objeto de dominios PELADO (sin ok),
+   getCategoryAccounts devuelve un ARRAY, y los tres de escritura devuelven {success:true} y
+   LANZAN ante cualquier rechazo -- que aca se simula llamando al handler de falla, porque el
+   doble responde por setTimeout y un throw no llegaria a ningun lado.
+   Las filas salen del catalogo real de arriba, con rowIndex igual al indice de la fila en la
+   tabla del Plan, que es lo que updateRow/deleteRow reciben. Mutan en memoria para que un
+   alta y su re-listado se sientan de verdad dentro de una misma sesion de pruebas. */
+var ABM_DOMINIOS_DOBLE = {
+  monedas: CATALOGO_REAL.monedas,
+  categoriasCuenta: ['Trabajo y negocio', 'Vehiculo', 'Salud', 'Alimentacion y social',
+                     'Hogar', 'Educacion', 'Deudas'],
+  tiposMedio: ['Hogar', 'Ahorros', 'Inversiones', 'Financiación']
+};
+var ABM_FILAS_DOBLE = (function () {
+  var cuenta = function (nombres, categoria) {
+    return nombres.map(function (n) {
+      return { nombre: n, moneda: '', proyecto: categoria, tipo: '' };
+    });
+  };
+  return {
+    INGRESOS: cuenta(CATALOGO_REAL.ingresos, 'Trabajo y negocio'),
+    GASTOS_FIJOS: cuenta(CATALOGO_REAL.fijos, 'Hogar'),
+    GASTOS_VARIABLES: cuenta(CATALOGO_REAL.variables, 'Alimentacion y social'),
+    MEDIOS_PAGO: CATALOGO_REAL.medios.map(function (m) {
+      return { nombre: m.nombre, moneda: m.moneda, proyecto: m.tipo, tipo: '' };
+    })
+  };
+})();
+/* PROYECCIONES ELABORADAS (vista 'proyecciones'). Contrato de DEVTOOL_ProyeccionAbm.js: en
+   exito devuelven el objeto de datos PELADO (sin campo ok) y en fallo LANZAN -- que aca se
+   simula llamando al handler de falla, porque el doble responde por setTimeout y un throw no
+   llegaria a ningun lado. Los datos imitan el estado REAL de produccion: mucho presupuesto
+   base, poco guardado a mano, un mes del shell y uno de recurrentes; y un grupo 'otros' con
+   clave 'sin-fecha' para poder mirar ese caso limite sin fabricarlo a mano.
+   Muta en memoria: borrar un periodo y deshacerlo se sienten de verdad en una misma sesion. */
+var PABM_MES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+  'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+function pabmMesLabelDoble(clave) {
+  var m = /^(\d{4})-(\d{2})$/.exec(clave || '');
+  if (!m) return 'Sin mes reconocible';
+  return PABM_MES_ES[Number(m[2]) - 1] + ' ' + m[1];
+}
+/* Cada fila del doble es una fila real de "Proyeccion": los totales y el detalle se DERIVAN
+   de estas filas, nunca se escriben a mano, para que una baja o una edicion muevan los dos. */
+var PROY_FILAS_DOBLE = (function () {
+  var filas = [];
+  var n = 100;
+  var poner = function (clave, origen, sello, cuenta, tipoCuenta, monto, moneda, notaLibre) {
+    filas.push({ fila: n++, clave: clave, origen: origen, sello: sello, cuenta: cuenta,
+                 tipoCuenta: tipoCuenta, tipo: tipoCuenta === 'Ingreso' ? 'Ingreso' : 'Egreso',
+                 monto: monto, moneda: moneda, notaLibre: notaLibre || '' });
+  };
+  var CLAVES_BASE = ['2026-09', '2026-10', '2026-11'];
+  CLAVES_BASE.forEach(function (clave, i) {
+    poner(clave, 'base', '2026-08-01_090000', 'Sueldo', 'Ingreso', 1850000 + i * 1000, 'ARS');
+    poner(clave, 'base', '2026-08-01_090000', 'Nafta', 'Gasto Fijo', 92000, 'ARS');
+    poner(clave, 'base', '2026-08-01_090000', 'Prepaga Salud', 'Gasto Fijo', 148000, 'ARS');
+    poner(clave, 'base', '2026-08-01_090000', 'Comidas', 'Gasto Variable', 310000, 'ARS');
+    poner(clave, 'base', '2026-08-01_090000', 'Viajes', 'Categoria Rara', 40000, 'ARS');
+  });
+  poner('2026-09', 'guardado', '2026-08-20_143012', 'Sueldo', 'Ingreso', 2100000, 'ARS');
+  poner('2026-09', 'guardado', '2026-08-20_143012', 'Alquiler', 'Gasto Fijo', 480000, 'ARS');
+  poner('2026-09', 'guardado', '2026-08-28_101500', 'Subscripciones', 'Gasto Fijo', 2.99, 'USD');
+  poner('2026-09', 'shell', 'shell_2026-08-29_181203445', 'Regalos', 'Gasto Variable', 65000,
+        'ARS', 'cumple de mama');
+  poner('2026-10', 'shell', 'shell_2026-08-29_181500', 'Viajes', 'Gasto Variable', 900, 'USD',
+        'pasaje Bariloche');
+  poner('2026-09', 'recurrentes', '2026-08-27_120000', 'Subscripciones', 'Gasto Fijo', 13999,
+        'ARS', 'Netflix');
+  poner('2026-09', 'recurrentes', '2026-08-27_120000', 'SportClub', 'Gasto Fijo', 42000, 'ARS',
+        'SportClub: debito automatico');
+  poner('sin-fecha', 'otros', null, 'Imprevistos', 'Gasto Variable', 15000, 'ARS');
+  return filas;
+})();
+var PROY_ORIGENES_DOBLE = ['guardado', 'shell', 'recurrentes', 'base', 'otros'];
+var PROY_PAPELERA_DOBLE = null;   // la ULTIMA baja, unica reversible (como el servidor)
+var PROY_EDICION_DOBLE = null;    // la ULTIMA edicion de monto
+function proyTotalesDoble(filas) {
+  var mapa = { 'Ingreso': 'ingresos', 'Gasto Fijo': 'fijos', 'Gasto Variable': 'variables' };
+  var acum = { ingresos: {}, fijos: {}, variables: {} }, otrasFilas = 0;
+  filas.forEach(function (f) {
+    var bloque = mapa[f.tipoCuenta];
+    if (!bloque) { otrasFilas++; return; }
+    acum[bloque][f.moneda] = (acum[bloque][f.moneda] || 0) + f.monto;
+  });
+  var orden = CATALOGO_REAL.monedas;
+  var arr = function (a) {
+    return Object.keys(a).sort(function (x, y) { return orden.indexOf(x) - orden.indexOf(y); })
+      .map(function (m) { return { moneda: m, monto: a[m] }; });
+  };
+  var union = {};
+  var bloques = [acum.ingresos, acum.fijos, acum.variables];
+  bloques.forEach(function (a) {
+    Object.keys(a).forEach(function (m) { union[m] = true; });
+  });
+  var neto = Object.keys(union).sort(function (x, y) { return orden.indexOf(x) - orden.indexOf(y); })
+    .map(function (m) {
+      return { moneda: m, monto: (acum.ingresos[m] || 0) - (acum.fijos[m] || 0) - (acum.variables[m] || 0) };
+    });
+  return { ingresos: arr(acum.ingresos), fijos: arr(acum.fijos), variables: arr(acum.variables),
+           neto: neto, otrasFilas: otrasFilas };
+}
+function proyDelGrupoDoble(clave, origen) {
+  return PROY_FILAS_DOBLE.filter(function (f) { return f.clave === clave && f.origen === origen; });
+}
 window.google = { script: {
   run: (function () {
     function cadena() {
@@ -153,16 +259,204 @@ window.google = { script: {
           }, 1200);
         },
         procesarCargasDesdeShell: function () {
-          setTimeout(function () { exito({ ok: true }); }, 700);
-        },
-        abrirAbmDesdeShell: function () {
           setTimeout(function () {
-            exito();
-            document.getElementById('shellLoader').classList.add('hidden');
-            document.getElementById('shellAviso').innerHTML =
-              '<div class="alert alert-ok">En la planilla real, esto reemplaza el modal por el ' +
-              'ABM del Plan de Cuentas. Aca no, para que puedas seguir comentando.</div>';
-          }, 400);
+            exito({ ok: true, mensaje: 'Listo. Se procesaron 3 fila(s) de la hoja de Cargas. ' +
+                    '(Entorno de pruebas: no se escribio en la planilla.)' });
+          }, 700);
+        },
+        // -- ABM del Plan de Cuentas: contrato {success}/throw, ver la nota de arriba --
+        getAbmFormData: function () {
+          setTimeout(function () { exito(JSON.parse(JSON.stringify(ABM_DOMINIOS_DOBLE))); }, 480);
+        },
+        getCategoryAccounts: function (entidad) {
+          setTimeout(function () {
+            if (!ABM_FILAS_DOBLE[entidad]) {
+              falla(new Error('Error al obtener cuentas: tabla desconocida: ' + entidad));
+              return;
+            }
+            exito(ABM_FILAS_DOBLE[entidad].map(function (f, i) {
+              return { rowIndex: i, nombre: f.nombre, moneda: f.moneda,
+                       proyecto: f.proyecto, tipo: f.tipo };
+            }));
+          }, 620);
+        },
+        saveAbmRecord: function (p) {
+          setTimeout(function () {
+            var filas = ABM_FILAS_DOBLE[p.entityType];
+            if (p.entityType === 'PROYECTOS') {
+              falla(new Error('La entidad "Proyectos" ya no se administra desde este ABM.'));
+              return;
+            }
+            if (!filas) { falla(new Error('Entidad desconocida: ' + p.entityType)); return; }
+            var nombre = String(p.nombre || '').trim();
+            if (nombre === '') { falla(new Error('El nombre es un campo obligatorio.')); return; }
+            var repetido = filas.some(function (f) {
+              return f.nombre.trim().toLowerCase() === nombre.toLowerCase();
+            });
+            if (repetido) {
+              falla(new Error('No es posible hacer este ajuste: La cuenta "' + nombre +
+                              '" ya existe en este modulo.'));
+              return;
+            }
+            filas.push({ nombre: nombre, moneda: p.monedaRelacionada || '',
+                         proyecto: p.proyectoRelacionado || '', tipo: '' });
+            exito({ success: true, entityType: p.entityType, nombre: nombre });
+          }, 800);
+        },
+        updateAbmRecord: function (p) {
+          setTimeout(function () {
+            var filas = ABM_FILAS_DOBLE[p.entityType];
+            if (!filas) { falla(new Error('Entidad desconocida: ' + p.entityType)); return; }
+            var i = parseInt(p.rowIndex, 10);
+            if (isNaN(i) || !filas[i]) {
+              falla(new Error('Falta el indice de la cuenta a modificar.'));
+              return;
+            }
+            var nombre = String(p.nombre || '').trim();
+            var choca = filas.some(function (f, j) {
+              return j !== i && f.nombre.trim().toLowerCase() === nombre.toLowerCase();
+            });
+            if (choca) {
+              falla(new Error('El nombre "' + nombre + '" ya existe en este modulo.'));
+              return;
+            }
+            filas[i] = { nombre: nombre, moneda: p.monedaRelacionada || '',
+                         proyecto: p.proyectoRelacionado || '', tipo: '' };
+            exito({ success: true, nombre: nombre, entityType: p.entityType });
+          }, 800);
+        },
+        deleteAbmRecord: function (p) {
+          setTimeout(function () {
+            var filas = ABM_FILAS_DOBLE[p.entityType];
+            var i = parseInt(p.rowIndex, 10);
+            if (!filas || isNaN(i) || !filas[i]) {
+              falla(new Error('Falta el indice de la cuenta a eliminar.'));
+              return;
+            }
+            filas.splice(i, 1);
+            exito({ success: true, entityType: p.entityType });
+          }, 800);
+        },
+        // -- Proyecciones Elaboradas: contrato "objeto pelado / throw", ver la nota de arriba --
+        listarPeriodosProyeccion: function () {
+          setTimeout(function () {
+            var grupos = {};
+            PROY_ORIGENES_DOBLE.forEach(function (origen) {
+              var porClave = {};
+              PROY_FILAS_DOBLE.forEach(function (f) {
+                if (f.origen !== origen) return;
+                if (!porClave[f.clave]) porClave[f.clave] = [];
+                porClave[f.clave].push(f);
+              });
+              var claves = Object.keys(porClave).filter(function (c) { return c !== 'sin-fecha'; })
+                .sort().reverse();
+              if (porClave['sin-fecha']) claves.push('sin-fecha');
+              grupos[origen] = claves.map(function (c) {
+                var filas = porClave[c];
+                var sellos = {};
+                filas.forEach(function (f) { if (f.sello) sellos[f.sello] = true; });
+                var lista = Object.keys(sellos).sort();
+                var totales = proyTotalesDoble(filas);
+                return { clave: c, mesLabel: pabmMesLabelDoble(c), nFilas: filas.length,
+                         corridas: lista.length,
+                         ultimoSello: lista.length ? lista[lista.length - 1] : null,
+                         totales: totales, otrasFilas: totales.otrasFilas };
+              });
+            });
+            exito({ grupos: grupos });
+          }, 900);
+        },
+        detalleFilasPeriodoProyeccion: function (clave, origen) {
+          setTimeout(function () {
+            if (PROY_ORIGENES_DOBLE.indexOf(origen) === -1) {
+              falla(new Error('origen invalido: "' + origen + '".'));
+              return;
+            }
+            var filas = proyDelGrupoDoble(clave, origen);
+            // Solo 'guardado' y 'shell' se editan: el mismo gate que aplica el servidor.
+            var editable = (origen === 'guardado' || origen === 'shell');
+            exito({ clave: clave, origen: origen, mesLabel: pabmMesLabelDoble(clave),
+                    filas: filas.map(function (f) {
+                      return { fila: f.fila, cuenta: f.cuenta, tipoCuenta: f.tipoCuenta,
+                               tipo: f.tipo, monto: f.monto, moneda: f.moneda, fecha: null,
+                               notaLibre: f.notaLibre, editable: editable };
+                    }),
+                    totales: proyTotalesDoble(filas) });
+          }, 620);
+        },
+        eliminarPeriodoProyeccion: function (clave, origen) {
+          setTimeout(function () {
+            var filas = proyDelGrupoDoble(clave, origen);
+            if (!filas.length) {
+              falla(new Error('No hay ninguna fila de "' + clave + '" (' + origen +
+                              ') para borrar: probablemente ya se borro. No se hizo nada.'));
+              return;
+            }
+            PROY_PAPELERA_DOBLE = { clave: clave, origen: origen, filas: filas };
+            PROY_FILAS_DOBLE = PROY_FILAS_DOBLE.filter(function (f) {
+              return !(f.clave === clave && f.origen === origen);
+            });
+            exito({ clave: clave, origen: origen, filasBorradas: filas.length,
+                    respaldo: 'Respaldo proyeccion abm 2026-08-29_120000' });
+          }, 1100);
+        },
+        revertirBajaProyeccionAbm: function () {
+          setTimeout(function () {
+            if (!PROY_PAPELERA_DOBLE) {
+              falla(new Error('No hay ninguna baja de este ABM para revertir.'));
+              return;
+            }
+            PROY_FILAS_DOBLE = PROY_FILAS_DOBLE.concat(PROY_PAPELERA_DOBLE.filas);
+            var previo = PROY_PAPELERA_DOBLE;
+            PROY_PAPELERA_DOBLE = null;
+            exito({ clave: previo.clave, origen: previo.origen,
+                    filasRepuestas: previo.filas.length });
+          }, 900);
+        },
+        actualizarMontoFilaProyeccion: function (fila, nuevoMonto) {
+          setTimeout(function () {
+            var f = null;
+            PROY_FILAS_DOBLE.forEach(function (x) { if (String(x.fila) === String(fila)) f = x; });
+            if (!f) { falla(new Error('La fila ' + fila + ' esta fuera del rango de datos vivo.')); return; }
+            if (f.origen === 'base') {
+              falla(new Error('Esta fila no es un guardado manual: las filas de presupuesto ' +
+                              'base se recalculan corriendo de nuevo ese modulo, no se editan a mano.'));
+              return;
+            }
+            if (f.origen === 'recurrentes') {
+              falla(new Error('Esta fila es un volcado de recurrentes: el monto se corrige en ' +
+                              'la vista de Recurrentes y se vuelve a volcar el mes.'));
+              return;
+            }
+            if (f.origen !== 'guardado' && f.origen !== 'shell') {
+              falla(new Error('No se reconoce el origen de esta fila: no se edita desde este ABM.'));
+              return;
+            }
+            var n = Number(nuevoMonto);
+            if (String(nuevoMonto).trim() === '' || !isFinite(n)) {
+              falla(new Error('El nuevo monto "' + nuevoMonto + '" no es un numero valido.'));
+              return;
+            }
+            PROY_EDICION_DOBLE = { fila: f.fila, montoAnterior: f.monto };
+            var anterior = f.monto;
+            f.monto = n;
+            exito({ fila: f.fila, cuenta: f.cuenta, clave: f.clave, origen: f.origen,
+                    moneda: f.moneda, montoAnterior: anterior, montoNuevo: n });
+          }, 900);
+        },
+        revertirEdicionMontoProyeccion: function () {
+          setTimeout(function () {
+            if (!PROY_EDICION_DOBLE) {
+              falla(new Error('No hay ninguna edicion de este ABM para revertir.'));
+              return;
+            }
+            var previo = PROY_EDICION_DOBLE;
+            PROY_EDICION_DOBLE = null;
+            PROY_FILAS_DOBLE.forEach(function (x) {
+              if (x.fila === previo.fila) x.monto = previo.montoAnterior;
+            });
+            exito({ fila: previo.fila, montoRestaurado: previo.montoAnterior });
+          }, 900);
         }
       };
       return api;
@@ -172,7 +466,12 @@ window.google = { script: {
      'registrarTraspasos','registrarProyecciones','obtenerSaldosConciliacion',
      'registrarConciliacion','obtenerRecurrentes','guardarRecurrente','borrarRecurrente',
      'estadoVolcadoRecurrentes','volcarRecurrentesAlMes',
-     'procesarCargasDesdeShell','abrirAbmDesdeShell'].forEach(function (m) {
+     'procesarCargasDesdeShell',
+     'getAbmFormData','getCategoryAccounts','saveAbmRecord','updateAbmRecord',
+     'deleteAbmRecord',
+     'listarPeriodosProyeccion','detalleFilasPeriodoProyeccion','eliminarPeriodoProyeccion',
+     'revertirBajaProyeccionAbm','actualizarMontoFilaProyeccion',
+     'revertirEdicionMontoProyeccion'].forEach(function (m) {
       r[m] = function () { var c = cadena(); return c[m].apply(c, arguments); };
     });
     return r;

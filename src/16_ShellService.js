@@ -43,9 +43,9 @@
  * comentario dice 1120, el codigo 1000 y el fragmento 1080.
  *
  * @see docs/permanente/ARNES_TIDETRACK.md seccion 7 (Fase 5 - Centro de Operaciones)
- * @version 0.47.0
+ * @version 0.63.0
  * @since 0.47.0
- * @lastModified 2026-08-24
+ * @lastModified 2026-08-29
  */
 
 // ============================================
@@ -74,7 +74,24 @@ const SHELL_VISTAS = [
     { id: 'traspaso', titulo: 'Traspaso nuevo', listo: true },
     { id: 'proyeccion', titulo: 'Proyeccion nueva', listo: true },
     { id: 'recurrentes', titulo: 'Gastos recurrentes', listo: true },
-    { id: 'conciliacion', titulo: 'Conciliacion', listo: true }
+    { id: 'conciliacion', titulo: 'Conciliacion', listo: true },
+    // decision Franco 2026-08-29: el ABM del Plan de Cuentas entra como vista del shell. Era
+    // el ultimo modal de uso diario con la piel vieja (Google Sans, lienzo navy) y con OTRAS
+    // dimensiones (520x750): clickear "Gestionar cuentas" en el Home REEMPLAZABA el modal de
+    // 900x700 por uno mas chico y de otro color, en el mismo gesto. Como vista hereda
+    // SHELL_GEOMETRIA y no hay dos pieles que mantener a la par.
+    { id: 'cuentas', titulo: 'Plan de Cuentas', listo: true },
+    // OJO: 'proyeccion' (singular) es la CARGA de una proyeccion nueva; 'proyecciones'
+    // (plural) es el ABM de lo ya guardado en la hoja-BD "Proyeccion". El par es deliberado
+    // -- los dos rotulos son los que Franco usa y renombrar la nocion costaria mas de lo que
+    // aclara -- y su unico riesgo es un typo en una puerta, que _abrirShell resuelve cayendo
+    // al Home en silencio: no rompe. El banco prueba LAS DOS puertas por separado.
+    // decision Franco 2026-08-29: el ABM de Proyecciones Elaboradas entra como vista del
+    // shell y absorbe UI_AbmProyeccionElaborada.html (720x680, piel vieja). Con eso se retira
+    // ademas la maquinaria de ping/reintentos/diagnostico del modal viejo: la causa raiz del
+    // PERMISSION_DENIED del 2026-08-25 quedo identificada (el DOCTYPE en la linea 93 metia el
+    // iframe en quirks mode) y el shell, con DOCTYPE en la linea 1, nunca la sufrio.
+    { id: 'proyecciones', titulo: 'Proyecciones Elaboradas', listo: true }
 ];
 
 /** La vista a la que se cae si alguien pide una que no existe. */
@@ -102,6 +119,12 @@ function abrirRecurrentes() { _abrirShell('recurrentes'); }
 
 /** Abre el Centro de Operaciones directo en "Conciliacion". */
 function abrirConciliacionNueva() { _abrirShell('conciliacion'); }
+
+/** Abre el Centro de Operaciones directo en el ABM del Plan de Cuentas. */
+function abrirPlanCuentas() { _abrirShell('cuentas'); }
+
+/** Abre el Centro de Operaciones directo en "Proyecciones Elaboradas" (ABM de lo guardado). */
+function abrirProyeccionesElaboradas() { _abrirShell('proyecciones'); }
 
 // ============================================
 // APERTURA
@@ -222,26 +245,18 @@ function obtenerCatalogoShell() {
     }
 }
 
-/**
- * Cierra el shell y abre el ABM del Plan de Cuentas.
- *
- * Apps Script no anida modales: showModalDialog reemplaza al que este abierto. Por eso
- * "Gestionar cuentas" no es una vista del shell todavia sino un salto al modal que ya existe
- * y ya funciona. Cuando el ABM se convierta en fragmento (contrato de la Fase 5) pasa a ser
- * una vista mas y esta funcion desaparece.
- */
-function abrirAbmDesdeShell() {
-    showAbmPlanCuentas();
-}
+// abrirAbmDesdeShell() se retiro el 2026-08-29, como su propio docstring anunciaba: "cuando
+// el ABM se convierta en fragmento pasa a ser una vista mas y esta funcion desaparece". El
+// Home ya no salta a otro modal; entra a la vista 'cuentas' con irAVista, sin round-trip.
 
 /**
  * Dispara el procesamiento del lote de la hoja de Cargas desde el shell.
  *
- * No duplica logica: llama al mismo procesarCargas de siempre. Es el unico lugar que congela
- * las cuatro cotizaciones y deduce el tipo de cuenta, y este repo ya dejo escrito por que no
+ * No duplica logica: llama al mismo pipeline de siempre. Es el unico lugar que congela las
+ * cuatro cotizaciones y deduce el tipo de cuenta, y este repo ya dejo escrito por que no
  * puede haber una segunda implementacion equivalente.
  *
- * @returns {{ok:boolean, error?:string}}
+ * @returns {{ok:boolean, mensaje?:string, error?:string}}
  */
 function procesarCargasDesdeShell() {
     // decision Franco 2026-08-29: bajo _conLock, como TODOS los endpoints de escritura del
@@ -249,10 +264,70 @@ function procesarCargasDesdeShell() {
     // en paralelo (doble append al ledger, o el clearContent de una borrando filas recien
     // sembradas por la otra) -- exactamente la carrera que el lock existe para evitar.
     // El catch de _conLock convierte cualquier excepcion en {ok:false, error}.
+    //
+    // decision Franco 2026-08-29: llama al NUCLEO, no a procesarCargas. procesarCargas es la
+    // entrada de MENU: alerta y se traga el error, asi que desde el shell el fallo quedaba
+    // invisible (alert detras del modal) y este endpoint devolvia ok:true sobre un lote que
+    // no entro. El nucleo lanza y el catch de _conLock lo convierte en {ok:false, error}.
     return _conLock(function () {
-        procesarCargas();
-        return { ok: true };
+        const resumen = _procesarCargasNucleo();
+        let mensaje = resumen.filas === 0
+            ? 'No habia nada para procesar en la hoja de Cargas.'
+            : 'Listo. Se procesaron ' + resumen.filas + ' fila(s) de la hoja de Cargas.';
+        mensaje += _avisoFallbacksTc(resumen.fallbacks);
+        return { ok: true, mensaje: mensaje };
     });
+}
+
+/**
+ * La traza de fallbacks de cotizacion, en texto, para pegar al mensaje de exito del shell.
+ *
+ * REGLA ESTRICTA 9: ningun fallback de la API de tipo de cambio se silencia. En el camino de
+ * menu eso lo cumple un toast; desde el shell el toast queda DETRAS del modal, asi que el
+ * aviso tiene que viajar en la respuesta y aparecer donde el usuario esta mirando.
+ *
+ * @param {{total:number, filasAfectadas:number, anclas:Array}} fallbacks resumen del nucleo
+ * @param {number} [filasAfectadas] override acumulado, para los procesos por tandas
+ * @returns {string} '' si no hubo fallbacks, o un aviso con espacio inicial
+ */
+function _avisoFallbacksTc(fallbacks, filasAfectadas) {
+    if (!fallbacks || !fallbacks.total) return '';
+    const filas = (filasAfectadas === undefined) ? fallbacks.filasAfectadas : filasAfectadas;
+    if (!filas) return '';
+    const anclas = (fallbacks.anclas || []).length;
+    return ' Aviso: ' + filas + ' fila(s) quedaron con el TC de otra fecha (' + anclas +
+        ' cotizacion(es) de dias sin publicacion). El detalle esta en el log.';
+}
+
+/**
+ * Explica, sin inventar un rollback que el codigo no tiene, en que estado quedo la carga
+ * cuando el pipeline lanza a mitad de un proceso por tandas.
+ *
+ * POR QUE ESTE MENSAJE EXISTE. La carga por tandas siembra en la grilla de Cargas y procesa,
+ * y repite. Si el pipeline falla en la tanda K: las tandas anteriores YA estan en el ledger,
+ * las filas de la tanda K quedaron ESCRITAS en la grilla sin procesar, y lo que faltaba nunca
+ * se escribio. Nada se deshace -- nunca se deshizo -- asi que el unico final honesto es
+ * decirle al operador donde quedo cada cosa antes de que reintente y duplique.
+ *
+ * @param {Error} e la excepcion del nucleo
+ * @param {{filasEscritas:number, hechos:number, restantes:number, unidad:string}} estado
+ *        filasEscritas: filas de la grilla que quedaron sin procesar (un traspaso son DOS).
+ *        hechos: items ya persistidos en el ledger. restantes: items nunca escritos.
+ * @returns {string} el texto del error para {ok:false, error}
+ */
+function _errorDeTandaCortada(e, estado) {
+    const msj = String(e && e.message ? e.message : e);
+    let t = 'El procesamiento fallo: ' + msj + ' ';
+    t += 'Quedaron ' + estado.filasEscritas + ' fila(s) escritas en la hoja de Cargas SIN procesar. ';
+    if (estado.hechos > 0) {
+        t += 'Los ' + estado.hechos + ' primeros ' + estado.unidad + ' ya entraron al ledger. ';
+    }
+    if (estado.restantes > 0) {
+        t += 'Los ' + estado.restantes + ' restantes no se escribieron. ';
+    }
+    t += 'No se deshizo nada: revisa la hoja de Cargas y corregi ahi antes de reintentar, ' +
+         'porque volver a cargar el lote entero duplicaria lo que ya entro.';
+    return t;
 }
 
 /**
@@ -503,7 +578,14 @@ function _nombresDeMedio() {
  * @returns {{ok:boolean, mensaje?:string, problemas?:Array<string>, error?:string}}
  */
 function registrarMovimientos(lista) {
-    return _conLock(function () { return _registrarMovimientosSinLock(lista); });
+    return _conLock(function () {
+        const r = _registrarMovimientosSinLock(lista);
+        if (!r.ok) return r;
+        // El aviso de fallbacks de TC ya viene pegado a `mensaje`. El campo propio `avisoTc`
+        // existe para el UNICO llamador interno que arma su mensaje aparte (la conciliacion)
+        // y no viaja al cliente: un campo que nadie lee es un campo que despues nadie entiende.
+        return { ok: true, mensaje: r.mensaje };
+    });
 }
 
 /**
@@ -513,6 +595,9 @@ function registrarMovimientos(lista) {
  * medir los saldos y escribir sus ajustes bajo EL MISMO lock: si registrarConciliacion llamara
  * a registrarMovimientos (que toma el suyo), el segundo tryLock podria fallar contra el primero.
  * Todo caller NUEVO tiene que envolverlo en _conLock; nunca llamarlo pelado desde un endpoint.
+ *
+ * Devuelve {ok, mensaje, avisoTc} en el exito. `avisoTc` es el mismo texto que ya viene pegado
+ * al final de `mensaje`, suelto para el llamador que redacta el suyo (la conciliacion).
  */
 function _registrarMovimientosSinLock(lista) {
         if (!Array.isArray(lista) || !lista.length) {
@@ -544,6 +629,11 @@ function _registrarMovimientosSinLock(lista) {
         const colIni = columnLetterToIndex(RANGES.CARGAS.start);
         let entraron = 0;
         let tandas = 0;
+        // Traza de fallbacks de TC acumulada entre tandas (Regla Estricta 9). `filasFallback`
+        // suma las filas de CADA tanda; `ultimosFallbacks` es el resumen de la ultima llamada,
+        // que ya trae el acumulado de anclas de toda la corrida (ver el contrato del nucleo).
+        let filasFallback = 0;
+        let ultimosFallbacks = null;
 
         while (entraron < lista.length) {
             const grilla = _estadoGrillaCargas(hojaCargas);
@@ -562,7 +652,25 @@ function _registrarMovimientosSinLock(lista) {
             // tercera, quedarian dos sueltas en la grilla.
             hojaCargas.getRange(grilla.filaHoja, colIni, filas.length, filas[0].length).setValues(filas);
             SpreadsheetApp.flush();
-            procesarCargas();
+
+            // decision Franco 2026-08-29: NUCLEO, no procesarCargas. Con la version de menu,
+            // un fallo del pipeline se alertaba detras del modal y el bucle seguia: la tanda
+            // fallida quedaba en la grilla, la vuelta siguiente encontraba menos filas libres
+            // y el usuario terminaba leyendo "la grilla quedo sin filas libres" -- un sintoma,
+            // no la causa. Ahora el fallo corta el bucle y se cuenta como lo que es.
+            try {
+                const resumenTanda = _procesarCargasNucleo();
+                filasFallback += resumenTanda.fallbacks.filasAfectadas;
+                ultimosFallbacks = resumenTanda.fallbacks;
+            } catch (e) {
+                logError('_registrarMovimientosSinLock: el pipeline fallo en la tanda ' + (tandas + 1), e);
+                return { ok: false, error: _errorDeTandaCortada(e, {
+                    filasEscritas: tanda.length,
+                    hechos: entraron,
+                    restantes: lista.length - entraron - tanda.length,
+                    unidad: 'movimientos'
+                }) };
+            }
 
             entraron += tanda.length;
             tandas++;
@@ -578,7 +686,8 @@ function _registrarMovimientosSinLock(lista) {
             : 'Listo. Cargaste ' + lista.length + ' movimientos' +
               (unaSolaMoneda ? ', ' + _plata(total, lista[0].moneda) + ' en total' : '') + '.';
         if (tandas > 1) mensaje += ' Se procesaron en ' + tandas + ' tandas.';
-        return { ok: true, mensaje: mensaje };
+        const avisoTc = _avisoFallbacksTc(ultimosFallbacks, filasFallback);
+        return { ok: true, mensaje: mensaje + avisoTc, avisoTc: avisoTc };
 }
 
 /** El catalogo de medios como mapa nombre -> {moneda, tipo}. Una sola lectura por lote. */
@@ -688,6 +797,8 @@ function registrarTraspasos(lista) {
 
         const colIni = columnLetterToIndex(RANGES.CARGAS.start);
         let hechos = 0, tandas = 0;
+        let filasFallback = 0;
+        let ultimosFallbacks = null;
         while (hechos < preparados.length) {
             const grilla = _estadoGrillaCargas(hojaCargas);
             // Se divide por PARES: una tanda nunca parte un traspaso al medio. Y sobre el
@@ -704,7 +815,23 @@ function registrarTraspasos(lista) {
             tanda.forEach(function (t) { filas.push(t.filas[0], t.filas[1]); });
             hojaCargas.getRange(grilla.filaHoja, colIni, filas.length, filas[0].length).setValues(filas);
             SpreadsheetApp.flush();
-            procesarCargas();
+            // Mismo motivo que en la carga de movimientos: el nucleo lanza y el fallo se
+            // cuenta, en vez de alertarse detras del modal y dejar el bucle corriendo.
+            // Aca las filas de la tanda son DOS por traspaso: media operacion sin procesar
+            // hace desaparecer plata, y el mensaje tiene que decirlo en filas de la grilla.
+            try {
+                const resumenTanda = _procesarCargasNucleo();
+                filasFallback += resumenTanda.fallbacks.filasAfectadas;
+                ultimosFallbacks = resumenTanda.fallbacks;
+            } catch (e) {
+                logError('registrarTraspasos: el pipeline fallo en la tanda ' + (tandas + 1), e);
+                return { ok: false, error: _errorDeTandaCortada(e, {
+                    filasEscritas: filas.length,
+                    hechos: hechos,
+                    restantes: preparados.length - hechos - tanda.length,
+                    unidad: 'traspasos'
+                }) };
+            }
             hechos += tanda.length;
             tandas++;
         }
@@ -725,6 +852,7 @@ function registrarTraspasos(lista) {
             if (capitalizan) mensaje += ' ' + capitalizan + ' de ellos capitalizan.';
             if (tandas > 1) mensaje += ' Se procesaron en ' + tandas + ' tandas.';
         }
+        mensaje += _avisoFallbacksTc(ultimosFallbacks, filasFallback);
         return { ok: true, mensaje: mensaje };
     });
 }
@@ -896,7 +1024,11 @@ function registrarProyecciones(lista) {
         // proposito: compartir la const cruzaria archivos en la carga alfabetica (cicatriz
         // v0.50.1). @see DEVTOOL_PresupuestoGuardar.js (_esNotaShellPg y el contrato de notas)
         if (hayPrevias) mensaje += ' Se suman a lo que ese mes ya tenia proyectado.';
-        mensaje += ' Estas proyecciones se ven y se borran desde el ABM de Proyecciones Elaboradas.';
+        // decision Franco 2026-08-29: el mensaje nombra la VISTA del shell, no un modal
+        // aparte -- desde v0.63.0 "Proyecciones Elaboradas" vive adentro de tidetrack -- y
+        // dice tambien "se corrigen", que es lo que la vista permite ademas de borrar.
+        mensaje += ' Estas proyecciones se ven, se corrigen y se borran desde Proyecciones ' +
+            'Elaboradas, en el inicio de tidetrack.';
         logSuccess('registrarProyecciones: ' + lista.length + ' fila(s) en "' + SHEETS.PROYECCION + '".');
         return { ok: true, mensaje: mensaje };
     });
@@ -1280,6 +1412,13 @@ function registrarConciliacion(lista) {
         }
 
         // El MISMO cuerpo que la carga de movimientos, bajo el lock que YA tenemos tomado.
+        //
+        // decision Franco 2026-08-29: por aca la conciliacion hereda el nucleo del pipeline.
+        // Antes, si el procesamiento fallaba, el alert quedaba detras del modal y la
+        // conciliacion seguia hasta la verificacion por relectura, que reportaba "quedo en X
+        // en vez de Y" -- un sintoma del fallo, no el fallo. Ahora el error de tanda cortada
+        // sube tal cual, ya redactado, diciendo que las filas de ajuste quedaron en la hoja
+        // de Cargas sin procesar. Es la verdad: aca tampoco hay rollback.
         const r = _registrarMovimientosSinLock(movs);
         if (!r.ok) return r;
 
@@ -1321,6 +1460,10 @@ function registrarConciliacion(lista) {
             });
             mensaje = 'Listo. Se cargaron ' + conciliados.length + ' ajustes: ' + partes.join(' | ');
         }
+        // Regla Estricta 9 tambien aca: los ajustes se fechan HOY, y un sabado la cotizacion
+        // del dia no existe -- el pipeline resuelve con la del viernes y eso queda congelado
+        // en el ledger. El aviso viaja con el mensaje de exito, no en un toast invisible.
+        mensaje += (r.avisoTc || '');
         logSuccess('registrarConciliacion: ' + conciliados.length + ' ajuste(s).');
         return { ok: true, mensaje: mensaje };
     });

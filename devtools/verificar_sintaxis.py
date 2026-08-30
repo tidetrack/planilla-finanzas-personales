@@ -34,6 +34,15 @@ Se verifica que ninguna clave del bloque VERSION este repetida, y que major.mino
 coincida con lo que dicen las otras tres fuentes que declaran el numero por su cuenta:
 releaseName, el changelog embebido y la entrada de arriba de ZZ_Changelog.js.
 
+[TERCERA VERIFICACION: CERO EMOJIS]
+Agregada el 2026-08-30. La Regla Estricta 6 prohibe emojis en codigo, UI, logs, commits y
+docs, y ningun banco la comprobaba: en src/ sobrevivian dos, uno de ellos en codigo que CORRE
+(logInfo emitia un U+FE0F suelto al principio de cada linea de log). Un emoji no rompe nada
+tecnicamente -- por eso ninguna verificacion de sintaxis lo ve --, que es justamente por que
+sobrevive anos. Se barren los rangos de pictogramas y dingbats mas el selector de variacion
+U+FE0F; las flechas tipograficas (U+2190-U+21FF) quedan fuera a proposito: se usan en la doc
+de asignacion de botones de 13_NavigationService.js y no son emojis.
+
 USO:  python3 devtools/verificar_sintaxis.py [archivo.js ...]
       Sin argumentos revisa todos los src/*.js.
       Sale 1 si alguno no parsea: sirve como gate pre-deploy.
@@ -46,6 +55,31 @@ import sys
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(RAIZ, 'src')
+
+# Pictogramas, dingbats, simbolos misc y el selector de variacion emoji. NO incluye las
+# flechas U+2190-U+21FF ni U+2B00-U+2BFF de bloque de flechas, que son tipografia legitima.
+EMOJI = re.compile(
+    '[\U0001F000-\U0001FAFF'   # pictogramas, emoticones, transporte, simbolos suplementarios
+    '\U0001F004\U0001F0CF'
+    '☀-➿'            # simbolos misc y dingbats
+    '️'                   # variation selector-16 (presentacion emoji)
+    '⭐⭕'             # estrella y circulo pesados
+    '〽〰™ℹ]'
+)
+
+
+def verificar_emojis(objetivos):
+    """Devuelve [(ruta, linea, caracter)] por cada emoji encontrado. Vacia = limpio."""
+    hallados = []
+    for ruta in objetivos:
+        try:
+            texto = open(ruta, encoding='utf-8').read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        for n, linea in enumerate(texto.split('\n'), 1):
+            for m in EMOJI.finditer(linea):
+                hallados.append((os.path.relpath(ruta, RAIZ), n, m.group()))
+    return hallados
 
 
 def verificar_version():
@@ -139,10 +173,22 @@ def main(argv):
             print('      %s' % detalle)
         return 1
 
+    emojis = verificar_emojis(objetivos)
+    if emojis:
+        print('Los %d archivo(s) parsean, PERO hay %d emoji(s) en src/ (Regla Estricta 6).'
+              % (len(objetivos), len(emojis)))
+        print('')
+        for ruta, linea, ch in emojis:
+            print('  %s:%d  %r (U+%04X)' % (ruta, linea, ch, ord(ch)))
+        print('')
+        print('La regla vale para codigo, UI, logs, commits y docs. Un emoji en un Logger.log')
+        print('viaja a la consola de Apps Script en cada ejecucion.')
+        return 1
+
     # La segunda verificacion solo tiene sentido sobre src/ entero, no sobre
     # una lista suelta de archivos pasada a mano.
     if len(argv) > 1:
-        print('Los %d archivos indicados parsean.' % len(objetivos))
+        print('Los %d archivos indicados parsean, y sin emojis.' % len(objetivos))
         return 0
 
     incoherencias = verificar_version()
@@ -157,8 +203,8 @@ def main(argv):
         print('que evita que dos sesiones se pisen queda mintiendo.')
         return 1
 
-    print('Los %d archivos de src/ parsean, y la version es coherente en las cuatro fuentes.'
-          % len(objetivos))
+    print('Los %d archivos de src/ parsean, sin emojis, y la version es coherente en las '
+          'cuatro fuentes.' % len(objetivos))
     return 0
 
 

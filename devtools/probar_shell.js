@@ -59,7 +59,12 @@ const ctx = {
         createHtmlOutputFromFile: () => ({ getContent: () => '' })
     },
     SpreadsheetApp: {
-        getUi: () => ({ showModalDialog: (h, titulo) => { if (ultimoModal) ultimoModal._titulo = titulo; } }),
+        // El alert se CUENTA: la regresion que este banco tiene que impedir es que un flujo
+        // del shell dispare UI nativa, que en un modal queda detras y el usuario no ve.
+        getUi: () => ({
+            showModalDialog: (h, titulo) => { if (ultimoModal) ultimoModal._titulo = titulo; },
+            alert: (t) => { ctx._alertas.push(String(t)); }
+        }),
         getActiveSpreadsheet: () => ({ getName: () => 'PLANILLA FINANZAS_v4 .WIP | Personal' })
     },
     PropertiesService: { getDocumentProperties: () => ({ getProperty: () => null, setProperty() {}, deleteProperty() {} }) },
@@ -73,8 +78,18 @@ const ctx = {
         if (!(clave in tablasFalsas)) throw new Error('tabla desconocida: ' + clave);
         return tablasFalsas[clave];
     },
-    showAbmPlanCuentas() { ctx._abmAbierto = true; },
-    procesarCargas() { if (ctx._procesarExplota) throw new Error('el lote fallo'); ctx._loteProcesado = true; },
+    // CONTRATO REAL del nucleo (06_RegistrosService.js, v0.61.1): LANZA ante cualquier fallo
+    // y devuelve {filas, fallbacks:{total, filasAfectadas, anclas}}. Antes este stub simulaba
+    // que procesarCargas lanzaba -- cosa que el real NUNCA hacia, porque alertaba y se tragaba
+    // el error --, asi que el verde de la seccion 8 no describia produccion. Ahora el stub y
+    // el modulo real dicen lo mismo, y el camino de menu se prueba aparte (seccion 24).
+    _procesarCargasNucleo() {
+        if (ctx._procesarExplota) throw new Error('el lote fallo');
+        ctx._loteProcesado = true;
+        return { filas: 1, fallbacks: ctx._fallbacksFalsos ||
+            { total: 0, filasAfectadas: 0, anclas: [] } };
+    },
+    _alertas: [],
     LockService: { getDocumentLock: () => ({ tryLock: () => !ctx._lockOcupado, releaseLock() {} }) }
 };
 vm.createContext(ctx);
@@ -90,7 +105,8 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/17_RecurrentesService.js'), 'utf8') +
     '\n;Object.assign(globalThis,{SHELL_VISTAS,SHELL_GEOMETRIA,SHELL_VISTA_DEFECTO,_abrirShell,' +
     'abrirTidetrack,abrirMovimientoNuevo,abrirTraspasoNuevo,abrirProyeccionNueva,' +
-    'abrirRecurrentes,abrirConciliacionNueva,obtenerCatalogoShell,abrirAbmDesdeShell,' +
+    'abrirRecurrentes,abrirConciliacionNueva,abrirPlanCuentas,abrirProyeccionesElaboradas,'+
+    'obtenerCatalogoShell,' +
     'procesarCargasDesdeShell,diagnosticarShell,_validarMovimiento,_estadoGrillaCargas,_filaDeCarga,_plata,TIPOS_RIQUEZA,columnLetterToIndex,RANGES,SHEETS,MENU_CONFIG,CUENTAS_NEUTRAS,MONEDAS_DISPONIBLES,' +
     'SHELL_CONC_TOLERANCIA,CUENTA_AJUSTE,CUENTA_ARRASTRE,REC_MARCA,REC_ACTIVO_SI,REC_ACTIVO_NO,REC_MESES});',
     ctx
@@ -144,7 +160,12 @@ seccion('2. Cada puerta de entrada abre SU vista');
 const PUERTAS = {
     abrirTidetrack: 'home', abrirMovimientoNuevo: 'movimiento', abrirTraspasoNuevo: 'traspaso',
     abrirProyeccionNueva: 'proyeccion', abrirRecurrentes: 'recurrentes',
-    abrirConciliacionNueva: 'conciliacion'
+    abrirConciliacionNueva: 'conciliacion', abrirPlanCuentas: 'cuentas',
+    // EL PAR SINGULAR/PLURAL, probado a proposito de a dos: 'proyeccion' es la CARGA y
+    // 'proyecciones' el ABM de lo guardado. Un typo en cualquiera de las dos puertas cae al
+    // Home en silencio (comportamiento deliberado de _abrirShell), asi que el unico lugar
+    // donde puede descubrirse el cruce es aca.
+    abrirProyeccionesElaboradas: 'proyecciones'
 };
 Object.keys(PUERTAS).forEach(function (fn) {
     ok(typeof ctx[fn] === 'function', fn + '() existe');
@@ -222,17 +243,29 @@ ok(cat && typeof cat === 'object' && !(cat instanceof Error),
     'ni siquiera una planilla caida hace lanzar a obtenerCatalogoShell');
 
 seccion('8. Las acciones devuelven resultado, no excepciones');
-ctx._loteProcesado = false; ctx._procesarExplota = false;
+ctx._loteProcesado = false; ctx._procesarExplota = false; ctx._alertas = [];
 let r = ctx.procesarCargasDesdeShell();
-ok(r.ok === true && ctx._loteProcesado === true, 'procesar delega en procesarCargas y avisa que salio bien');
+ok(r.ok === true && ctx._loteProcesado === true, 'procesar delega en el nucleo y avisa que salio bien');
+ok(/Se procesaron 1 fila\(s\)/.test(r.mensaje || ''),
+    'y el exito trae mensaje propio: el cliente puede contar lo que entro');
 ctx._procesarExplota = true;
 r = ctx.procesarCargasDesdeShell();
 ctx._procesarExplota = false;
 ok(r.ok === false && /el lote fallo/.test(r.error || ''),
     'si el lote falla devuelve {ok:false, error} en vez de lanzar');
-ctx._abmAbierto = false;
-ctx.abrirAbmDesdeShell();
-ok(ctx._abmAbierto === true, 'abrirAbmDesdeShell llama al ABM que ya existe, sin duplicarlo');
+ok(ctx._alertas.length === 0,
+    'y NO alerta: un alert nativo desde el shell queda detras del modal, invisible');
+// Regla Estricta 9: el fallback de cotizacion no se silencia. Desde el menu lo dice un toast;
+// desde el shell el toast queda tapado, asi que viaja en el mensaje de exito.
+ctx._fallbacksFalsos = { total: 3, filasAfectadas: 2, anclas: [{}, {}] };
+r = ctx.procesarCargasDesdeShell();
+ctx._fallbacksFalsos = null;
+ok(r.ok === true && /2 fila\(s\) quedaron con el TC de otra fecha/.test(r.mensaje || ''),
+    'el fallback de TC viaja en el mensaje de exito del shell (Regla Estricta 9)');
+// abrirAbmDesdeShell se retiro con la integracion del ABM al shell (v0.62.0): el Home ya no
+// salta a otro modal, entra a la vista 'cuentas' con irAVista y sin round-trip.
+ok(typeof ctx.abrirAbmDesdeShell === 'undefined',
+    'abrirAbmDesdeShell ya no existe: el salto de modal a modal desaparecio');
 
 seccion('9. ABRIR NO CUESTA NINGUN VIAJE AL SERVIDOR');
 // La regresion que motiva esta seccion: la primera v0.47.0 pedia el catalogo en el
@@ -335,6 +368,17 @@ ok(porId.traspaso.listo === true, 'traspaso: listo');
 ok(porId.proyeccion.listo === true && porId.recurrentes.listo === true &&
    porId.conciliacion.listo === true,
    'las tres vistas nuevas quedaron declaradas LISTAS (su backend existe y se prueba abajo)');
+ok(porId.cuentas && porId.cuentas.listo === true,
+   'cuentas: el ABM del Plan es una vista mas, declarada lista (v0.62.0)');
+ok(porId.cuentas.titulo === 'Plan de Cuentas',
+   'y su titulo es el mismo rotulo que el item de menu, para que la banda no contradiga la ruta');
+ok(porId.proyecciones && porId.proyecciones.listo === true,
+   'proyecciones: el ABM de lo ya guardado es una vista mas, declarada lista (v0.63.0)');
+ok(porId.proyecciones.titulo === 'Proyecciones Elaboradas',
+   'y su titulo es el rotulo exacto del item de menu');
+ok(porId.proyeccion.id !== porId.proyecciones.id &&
+   porId.proyeccion.titulo === 'Proyeccion nueva',
+   "el par 'proyeccion' (carga) / 'proyecciones' (ABM) convive con titulos que no se confunden");
 ok(/class="[^"]*b-monto/.test(HTML) && /class="[^"]*t-montoO/.test(HTML),
     'los dos formularios existen y los dos son bloques repetibles');
 ok(/enviar\('registrarMovimientos'/.test(HTML) && /enviar\('registrarTraspasos'/.test(HTML),
@@ -453,7 +497,12 @@ const nombres = (re, txt) => {
 const usadas = new Set([].concat(
     nombres(/\}\)\s*\.(\w+)\s*\(/g, HTML),
     nombres(/google\.script\.run\s*\.(\w+)\s*\(/g, HTML),
-    nombres(/enviar\(\s*'(\w+)'/g, HTML)));
+    // Los DOS despachos dinamicos por literal: enviar() para el contrato {ok} del shell y
+    // cuEnviar() para el contrato {success}/throw del ABM del Plan. Sin la segunda linea,
+    // saveAbmRecord/updateAbmRecord/deleteAbmRecord quedan fuera del cruce contra el doble --
+    // que es exactamente el drift que costo tres releases con registrarTraspasos.
+    nombres(/enviar\(\s*'(\w+)'/g, HTML),
+    nombres(/cuEnviar\(\s*'(\w+)'/g, HTML)));
 const listaDoble = DOBLE.match(/\[([^\]]*?)\]\.forEach/);
 const expuestas = new Set(
     (listaDoble ? listaDoble[1].match(/'(\w+)'/g) || [] : []).map((t) => t.slice(1, -1)));
@@ -642,14 +691,24 @@ ctx.getTableData = function (clave) {
     }
     return getTableDataBase19(clave);
 };
-// procesarCargas simulado de punta a punta: mueve la grilla de Cargas al ledger y la limpia
-// (lo que el real hace, reducido a lo que estas pruebas miden: el saldo resultante).
-ctx.procesarCargas = function () {
+// El NUCLEO del pipeline, simulado de punta a punta: mueve la grilla de Cargas al ledger y la
+// limpia (lo que el real hace, reducido a lo que estas pruebas miden: el saldo resultante).
+// Respeta el contrato real: lanza si ctx._nucleoExplota, y devuelve el resumen del lote.
+ctx._nucleoLlamadas = 0;
+ctx._procesarCargasNucleo = function () {
+    ctx._nucleoLlamadas++;
+    // Dos formas de romper: siempre, o recien en la N-esima tanda (para probar el corte a
+    // mitad de un lote, que es donde el estado de la grilla deja de ser obvio).
+    if (ctx._nucleoExplota ||
+        (ctx._nucleoExplotaEnLlamada && ctx._nucleoLlamadas === ctx._nucleoExplotaEnLlamada)) {
+        throw new Error('la cotizacion del dia no se pudo resolver');
+    }
     const cfgC = ctx.RANGES.CARGAS;
     const cIni = col19(cfgC.start);
     const nC = col19(cfgC.end) - cIni + 1;
     const grilla = hojaCargas19.getRange(cfgC.dataRow, cIni, cfgC.filas, nC).getValues();
     const ic = (k) => col19(cfgC.columns[k]) - cIni;
+    let filas = 0;
     grilla.forEach(function (f) {
         if (f[ic('monto')] === '' || f[ic('monto')] === null) return;
         const destino = hojaReg19.getLastRow() + 1;
@@ -657,8 +716,11 @@ ctx.procesarCargas = function () {
             filaLedger(f[ic('monto')], f[ic('tipo')], f[ic('cuenta')], f[ic('medio')],
                 f[ic('moneda')], new Date(String(f[ic('fecha')]) + 'T00:00:00'))
         ]);
+        filas++;
     });
     hojaCargas19.getRange(cfgC.dataRow, cIni, cfgC.filas, nC).clearContent();
+    return { filas: filas, fallbacks: ctx._fallbacksFalsos ||
+        { total: 0, filasAfectadas: 0, anclas: [] } };
 };
 
 // --- Proyeccion ---
@@ -692,8 +754,13 @@ ok(notaPg19.indexOf(ctx.PG_MARCA + ' ' + claveFut19 + ' shell_') === 0,
 ok(/ extra$/.test(notaPg19), 'la nota libre del usuario viaja al final, visible en la hoja');
 ok(/para (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) \d{4}\./.test(rp.mensaje),
     'el mensaje nombra el mes en castellano');
-ok(/ABM de Proyecciones Elaboradas/.test(rp.mensaje || ''),
-    'el mensaje dice DONDE se ven y se borran estas proyecciones: el ABM de Proyecciones Elaboradas');
+// v0.63.0: el rotulo dejo de ser "el ABM de X" y paso a ser la VISTA del shell, que ademas
+// permite CORREGIR, no solo ver y borrar. El mensaje lo dice con el rotulo exacto del item de
+// menu ("Proyecciones Elaboradas") y ubica la puerta ("en el inicio de tidetrack").
+ok(/se ven, se corrigen y se borran desde Proyecciones Elaboradas/.test(rp.mensaje || ''),
+    'el mensaje dice DONDE se ven, se corrigen y se borran: en Proyecciones Elaboradas');
+ok(!/ABM de Proyecciones Elaboradas/.test(rp.mensaje || ''),
+    'y ya NO habla de "el ABM": no hay un modal aparte al que mandar al usuario');
 
 // GUARD DE CONTRATO CRUZADO (retiro selectivo, 2026-08-29): el literal 'shell_' vive duplicado
 // a proposito en 16_ShellService.js (que lo escribe) y DEVTOOL_PresupuestoGuardar.js (que lo
@@ -848,8 +915,346 @@ ok(/quedan adentro del ajuste, sin detalle/.test(HTML),
 ok(/'mas' : 'menos'/.test(jsShell) && /entra como /.test(jsShell),
     'el semaforo de direccion dice ademas COMO entra el ajuste (Ingreso/Egreso)');
 // Conciliacion NO pasa por asegurarCatalogo: su preparador va en el mapa propio.
-ok(/VISTAS_CON_PREPARADOR_PROPIO = \{ conciliacion: prepararConciliacion \}/.test(HTML),
-    'prepararConciliacion no paga el costo del catalogo del Plan: mapa de preparadores propio');
+ok(/VISTAS_CON_PREPARADOR_PROPIO = \{ conciliacion: prepararConciliacion, cuentas: prepararCuentas,\s*\n?\s*proyecciones: prepararProyecciones \}/.test(HTML),
+    'conciliacion, cuentas y proyecciones no pagan el costo del catalogo del Plan: mapa de preparadores propio');
+
+// -- Plan de Cuentas (vista 'cuentas', v0.62.0) --
+ok(/id="vista-cuentas"/.test(HTML) && /id="cuEntidad"/.test(HTML) &&
+   /id="cuBtnGuardar"/.test(HTML) && /id="cuBtnBorrar"/.test(HTML),
+    'la vista cuentas tiene selector de entidad, boton de guardar y boton de eliminar');
+ok(/data-vista="cuentas" onclick="irAVista\('cuentas'\)"/.test(HTML),
+    'la tarjeta "Gestionar cuentas" del Home entra a la VISTA, ya no reemplaza el modal');
+ok(!/abrirAbm\(/.test(jsShell) && !/abrirAbmDesdeShell/.test(HTML),
+    'no queda rastro del salto de modal a modal: ni abrirAbm() en el cliente ni el endpoint');
+['INGRESOS', 'GASTOS_FIJOS', 'GASTOS_VARIABLES', 'MEDIOS_PAGO'].forEach(function (e) {
+    ok(new RegExp('value="' + e + '"').test(HTML), 'el selector ofrece ' + e);
+});
+ok(!/value="PROYECTOS"/.test(HTML),
+    'PROYECTOS NO se ofrece: esa tabla es hoy el catalogo de Categorias y el servidor la rechaza');
+ok(/id="dlAbmCuentas"/.test(HTML) && /list="dlAbmCuentas"/.test(HTML) &&
+   !/list="dlCuentas"[^>]*id="cuBuscar"/.test(HTML),
+    'el buscador usa su datalist PROPIO: dlCuentas mezcla entidades y no trae rowIndex');
+ok(/function cuEnviar\(/.test(jsShell) && /\[fn\]\(datos\)/.test(jsShell),
+    'la vista tiene sender propio: el contrato {success}/throw del ABM no cabe en enviar()');
+// El contrato del servidor NO se normalizo: los cinco endpoints siguen viviendo en
+// 11_UIService.js, sin wrapper en el shell que los traduzca a {ok}. Un wrapper ahi seria una
+// segunda implementacion del ABM, y la planilla los invoca tambien por su nombre original.
+const UISERVICE = leerSrc('src/11_UIService.js');
+['getAbmFormData', 'getCategoryAccounts', 'saveAbmRecord', 'updateAbmRecord',
+ 'deleteAbmRecord'].forEach(function (fn) {
+    ok(new RegExp('function ' + fn + '\\(').test(UISERVICE),
+        fn + ' sigue declarado en 11_UIService.js, intacto');
+    ok(!new RegExp('function ' + fn + '\\(').test(leerSrc('src/16_ShellService.js')),
+        'y el shell NO lo duplica ni lo envuelve');
+    ok(usadas.has(fn), 'el cliente llama a ' + fn + ' (endpoint reusado, cero backend nuevo)');
+    ok(new RegExp(fn + ': function').test(DOBLE),
+        'el doble implementa ' + fn + ' (metodo real, no solo whitelist)');
+});
+ok(/Confirmar baja/.test(HTML),
+    'la baja pide un segundo click sobre el mismo boton: dos pasos, sin dialogo nativo');
+// HINT VERAZ. updateRow escribe SOLO la fila del Plan: un renombre NO toca los movimientos ya
+// registrados. El modal viejo afirmaba lo contrario ("los cambios afectaran al historial").
+ok(/movimientos ya registrados conservan el nombre viejo/.test(HTML),
+    'el hint del renombre dice la verdad: el historial conserva el nombre viejo');
+ok(!/afectar/i.test((HTML.match(/id="cuHintRenombre"[\s\S]{0,240}/) || [''])[0]),
+    'y no quedo copiado el updateAlert del modal, que prometia una cascada que el codigo no hace');
+// EL ALIAS SE CONSERVA, no se borra: la botonera de dibujos publicada referencia
+// showAbmPlanCuentas POR NOMBRE y no es editable ni auditable desde el repo. Lo que se
+// verifica es que sea una linea que delega, no una segunda implementacion del modal.
+ok(/function showAbmPlanCuentas\(\)\s*\{\s*abrirPlanCuentas\(\);\s*\}/.test(UISERVICE),
+    'showAbmPlanCuentas quedo como alias de UNA linea hacia la puerta del shell');
+ok(!/createTemplateFromFile\('UI_AbmPlanCuentas'\)/.test(UISERVICE) &&
+   !/setWidth\(520\)/.test(UISERVICE),
+    'y ya no crea la plantilla del modal viejo ni declara sus 520x750: el HTML queda huerfano');
+ok(funcionesDeMenu(ctx.MENU_CONFIG.ITEMS, []).indexOf('showAbmPlanCuentas') === -1 &&
+   funcionesDeMenu(ctx.MENU_CONFIG.ITEMS, []).indexOf('abrirPlanCuentas') !== -1,
+    'el item de menu "Plan de Cuentas" apunta a la puerta nueva, no al alias');
+
+// -- Proyecciones Elaboradas (vista 'proyecciones', v0.63.0) --
+ok(/id="vista-proyecciones"/.test(HTML) && /id="pabmContenido"/.test(HTML),
+    'la vista proyecciones existe y su contenido lo pinta el JS (un solo contenedor vacio)');
+ok(/data-vista="proyecciones" onclick="irAVista\('proyecciones'\)"/.test(HTML),
+    'la tarjeta del Home entra a la vista, sin round-trip ni salto de modal');
+// EL STAGGER SE MIDE, NO SE LEE. La version anterior de este assert comprobaba dos reglas
+// con :nth-of-type, que cuenta entre HERMANOS DEL MISMO TAG: como cada .shell-cards viene
+// precedido por un .shell-sec, los grupos reales son los divs 2, 4, 6 y 8, la regla de la
+// cuarta tarjeta no matcheaba NUNCA y cinco de las ocho entraban con delay 0s. El assert
+// estaba en verde sobre CSS que no corria. Ahora se resuelve el delay de cada tarjeta
+// emparejando el data-grupo del contenedor con su posicion, que es lo que el navegador hace.
+{
+    const cuerpoHome = (HTML.match(/<div id="vista-home"[\s\S]*?\n        <\/div>\s*\n    <\/div>/) ||
+        [''])[0];
+    const grupos = [...cuerpoHome.matchAll(
+        /<div class="shell-cards[^"]*" data-grupo="(\d)">([\s\S]*?)\n        <\/div>/g)];
+    ok(grupos.length === 4,
+        'las cuatro secciones del Home declaran data-grupo (' + grupos.length + ' halladas)');
+    const reglas = {};
+    [...HTML.matchAll(
+        /#vista-home \[data-grupo="(\d)"\] \.shell-card(?::nth-child\((\d)\))? \{ animation-delay: ([\d.]+)s; \}/g)
+    ].forEach(m => { reglas[m[1] + ':' + (m[2] || '*')] = Number(m[3]); });
+    const delays = [];
+    grupos.forEach(function (g) {
+        const n = (g[2].match(/<button class="shell-card/g) || []).length;
+        for (let i = 1; i <= n; i++) {
+            const d = reglas[g[1] + ':' + i];
+            delays.push(d === undefined ? reglas[g[1] + ':*'] : d);
+        }
+    });
+    ok(delays.length === 8, 'el Home tiene ocho tarjetas (' + delays.length + ')');
+    ok(delays.every(d => typeof d === 'number'),
+        'las OCHO resuelven un animation-delay: ninguna se queda en 0s por un selector que no matchea');
+    ok(JSON.stringify(delays) === JSON.stringify([0.02, 0.06, 0.09, 0.12, 0.15, 0.18, 0.21, 0.24]),
+        'y el escalonado sigue el orden de lectura sin repetir ni saltear: ' + delays.join(' / '));
+}
+// La seccion "Revisar" tiene CUATRO tarjetas: en tres columnas la cuarta caia sola en una
+// fila huerfana y su titulo se partia en dos lineas (la unica caja mas alta del Home).
+ok(/<div class="shell-cards shell-cards--duo" data-grupo="3">/.test(HTML),
+    '"Revisar" va a dos columnas: 2x2, sin fila huerfana y con los cuatro titulos en una linea');
+ok(/\.shell-cards--duo \{ grid-template-columns: repeat\(auto-fit, minmax\(320px, 1fr\)\); \}/.test(HTML),
+    'y lo hace subiendo el piso de la columna, no fijando 2: por debajo de ~652px baja sola a una');
+['prepararProyecciones', 'pabmCargarListado', 'pabmRender', 'pabmTarjeta', 'pabmToggleDetalle',
+ 'pabmCargarDetalle', 'pabmRenderDetalle', 'pabmEditarMonto', 'pabmConfirmarEdicion',
+ 'pabmPedirBorrado', 'pabmConfirmarBorrado', 'pabmDeshacer', 'pabmErrorEnVista',
+ 'pabmFmtMonto', 'pabmFmtSello', 'pabmTotalDeFilas'].forEach(function (fn) {
+    ok(new RegExp('function ' + fn + '\\(').test(jsShell), fn + '() existe en el cliente');
+});
+// Los SEIS endpoints se consumen intactos: ninguno vive envuelto ni duplicado en el shell.
+['listarPeriodosProyeccion', 'detalleFilasPeriodoProyeccion', 'eliminarPeriodoProyeccion',
+ 'actualizarMontoFilaProyeccion', 'revertirBajaProyeccionAbm',
+ 'revertirEdicionMontoProyeccion'].forEach(function (fn) {
+    ok(usadas.has(fn), 'el cliente llama a ' + fn + ' (endpoint reusado, cero backend nuevo)');
+    ok(new RegExp(fn + ': function').test(DOBLE),
+        'el doble implementa ' + fn + ' (metodo real, no solo whitelist)');
+    ok(!new RegExp('function ' + fn + '\\(').test(leerSrc('src/16_ShellService.js')),
+        'y el shell NO lo duplica ni lo envuelve');
+});
+// LA MAQUINARIA DEL MODAL VIEJO NO SE PORTO. Su causa raiz (el DOCTYPE en la linea 93, que
+// metia al iframe en quirks mode) esta cerrada, y el shell ya demostro canal sano en el mismo
+// timing. Reintroducir backoff sin medir seria volver a tratar el sintoma.
+ok(!/pingProyeccionAbm/.test(HTML),
+    'la vista NO pinguea antes de listar: el experimento de aislamiento del canal termino');
+ok(!/REINTENTOS_ESPERA_MS/.test(HTML) && !/localStorage/.test(jsShell),
+    'ni backoff ni historial de diagnostico en localStorage: una llamada y un boton Reintentar');
+ok(/function prepararProyecciones\([\s\S]*?pabmCargarListado\(\)/.test(jsShell),
+    'el listado se pide al ENTRAR a la vista (preparador propio), no al abrir el shell');
+ok(/pabmAbiertos = \{\}/.test(jsShell) && /pabmUltimoRevert = null/.test(jsShell),
+    'y sin cache entre entradas: la carga de proyeccion y el volcado escriben en la misma BD');
+// El re-render completo tras cada mutacion es el contrato heredado del modal: nunca mostrar
+// un total viejo. Las tres mutaciones vuelven a pedir el listado entero.
+ok((jsShell.match(/pabmCargarListado\(\);/g) || []).length >= 4,
+    'toda mutacion re-pide el listado completo: jamas se pintan totales desactualizados');
+ok(/window\.alert/.test(jsShell) === false,
+    'cero dialogos nativos: el fallo de una edicion sale por mostrarError, no por alert');
+ok(/toLocaleString/.test(jsShell) === false,
+    'el formato de plata es el de la casa (toFixed + coma), no el toLocaleString del modal');
+ok(/aNumero\(crudo\)/.test(jsShell),
+    'el monto tipeado se parsea con aNumero(): acepta la coma decimal es-AR, que el modal rechazaba');
+ok(/Se puede deshacer justo /.test(HTML) && /por un total de/.test(HTML),
+    'la confirmacion de baja dice CUANTO se borra y que la reversion dura un solo cambio');
+ok(/PABM_MONEDAS_ORDEN\.indexOf/.test(jsShell),
+    'ese total se ordena por moneda y nunca suma monedas distintas entre si (ADR-003)');
+ok(/'guardado'/.test(jsShell) && /'shell'/.test(jsShell) && /'recurrentes'/.test(jsShell) &&
+   /'base'/.test(jsShell) && /'otros'/.test(jsShell),
+    'las cinco poblaciones del servidor tienen su seccion en la vista');
+ok(/siempre: true/.test(jsShell) && /siempre: false/.test(jsShell),
+    "la asimetria deliberada se conserva: 'guardado' y 'base' se ven aun vacias, las otras no");
+ok(/msgVacio/.test(jsShell),
+    'y las dos que se ven vacias traen su propio mensaje ("todo base, cero guardado" es produccion)');
+ok(/pabm-nota/.test(HTML),
+    'la nota libre del usuario se muestra APARTE del sello, bajo la cuenta');
+ok(/\.btn--mini, \.alert \.btn \{ height: 32px; padding: 0 12px; font-size: 12px; \}/.test(HTML),
+    'el boton chico mide 32px -- la misma altura que el de un aviso, que ahora es su otro ' +
+    'consumidor: una sola escala 38/32, sin el escalon intermedio de 30');
+ok(/\.alert \.btn \{ flex: 0 0 auto; align-self: center; \}/.test(HTML),
+    'y la regla propia de .alert .btn quedo solo con su colocacion: la altura ya no se ' +
+    'declara dos veces con dos valores distintos');
+// EL ALIAS SE CONSERVA, igual que showAbmPlanCuentas y por la misma razon.
+ok(/function showAbmProyeccionElaborada\(\)\s*\{\s*abrirProyeccionesElaboradas\(\);\s*\}/.test(UISERVICE),
+    'showAbmProyeccionElaborada quedo como alias de UNA linea hacia la puerta del shell');
+ok(!/createTemplateFromFile\('UI_AbmProyeccionElaborada'\)/.test(UISERVICE) &&
+   !/setWidth\(720\)/.test(UISERVICE),
+    'y ya no crea la plantilla del modal viejo ni declara sus 720x680: el HTML queda huerfano');
+ok(funcionesDeMenu(ctx.MENU_CONFIG.ITEMS, []).indexOf('showAbmProyeccionElaborada') === -1 &&
+   funcionesDeMenu(ctx.MENU_CONFIG.ITEMS, []).indexOf('abrirProyeccionesElaboradas') !== -1,
+    'el item de menu "Proyecciones Elaboradas" apunta a la puerta nueva, no al alias');
+// El icono duplicado de Conciliacion (era el mismo check que "Procesar Cargas", dos tarjetas
+// mas arriba): dos iconos iguales en la misma seccion no distinguen nada.
+ok(!/M20 6L9 17l-5-5/.test(HTML),
+    'Conciliacion dejo de usar un check casi identico al de Procesar Cargas');
+
+// ---- Correcciones del control adversarial del 2026-08-30 ----
+
+// (1) EL AVISO VIEJO NO SOBREVIVE A LA OPERACION SIGUIENTE. Ninguna de las cuatro mutaciones
+// limpiaba el aviso, asi que tras un error una operacion EXITOSA dejaba las dos cosas en
+// pantalla: el banner rojo viejo arriba y el verde de deshacer abajo. Se cubre en el embudo.
+{
+    const cuerpoCargar = (jsShell.match(/function pabmCargarListado\(\)\s*\{([\s\S]*?)\n\}/) ||
+        ['', ''])[1];
+    ok(/^\s*(?:\/\/[^\n]*\n\s*)*limpiarAviso\(\);/.test(cuerpoCargar),
+        'pabmCargarListado() arranca limpiando el aviso: es el embudo por el que pasan las ' +
+        'tres mutaciones, el Reintentar y el ingreso a la vista');
+}
+['pabmConfirmarEdicion', 'pabmConfirmarBorrado', 'pabmDeshacer'].forEach(function (fn) {
+    ok(new RegExp('function ' + fn + '\\([\\s\\S]*?pabmCargarListado\\(\\)').test(jsShell),
+        fn + '() vuelve por el embudo, asi que hereda esa limpieza sin repetir la linea');
+});
+// La misma familia en 'cuentas': los dos cambios de CONTEXTO dejaban el aviso viejo
+// describiendo otra entidad u otro modo.
+['cuCambioEntidad', 'cuSegModo'].forEach(function (fn) {
+    const cuerpo = (jsShell.match(new RegExp('function ' + fn + '\\([^)]*\\)\\s*\\{([\\s\\S]*?)\\n\\}')) ||
+        ['', ''])[1];
+    ok(/limpiarAviso\(\);/.test(cuerpo),
+        fn + '() limpia el aviso: cambiar de contexto no deja el mensaje anterior de rotulo');
+});
+
+// (2) LA COLUMNA DICE LO QUE ES. La celda imprime f.tipoCuenta -- la columna E de Registros --
+// y el rotulo heredado del modal decia "Categoria", que en la vista 'cuentas' de la MISMA
+// release significa el otro eje. Dos pantallas del shell contradiciendose en una palabra.
+ok(/<th>Cuenta<\/th><th>Tipo de cuenta<\/th>/.test(HTML),
+    'el detalle rotula la columna "Tipo de cuenta", el nombre literal de la columna E que muestra');
+ok(!/<th>Categoria<\/th>/.test(HTML),
+    'y no queda ningun encabezado "Categoria" sobre datos que no son categorias');
+
+// (3) LAS RUTAS DE LOS ESTADOS VACIOS SON REPRODUCIBLES. No existe ningun boton "Guardar
+// Proyeccion" en la hoja Presupuesto: el propio comentario de MENU_CONFIG lo dice. Se
+// verifica contra el submenu vivo, no contra el texto de memoria.
+{
+    const subGuardar = ctx.MENU_CONFIG.DEV_ITEMS.filter(
+        (x) => x.submenu === 'Presupuesto: guardar proyeccion')[0];
+    ok(!!subGuardar, 'el submenu "Presupuesto: guardar proyeccion" existe en MENU_CONFIG');
+    const rutaViva = ctx.MENU_CONFIG.DEV_MENU + ' > ' + subGuardar.submenu + ' > ' +
+        subGuardar.items.filter((i) => /Aplicar/.test(i.name || ''))[0].name;
+    ok(HTML.indexOf(rutaViva) !== -1,
+        'la vista deriva del menu la ruta literal "' + rutaViva + '"');
+    ok((HTML.match(new RegExp(rutaViva.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length >= 2,
+        'y la dicen las DOS menciones: el hint de cabecera y el vacio de "Guardado a mano"');
+}
+ok(!/Guardar Proyeccion" desde la hoja Presupuesto/.test(HTML) &&
+   !/\(Guardar Proyeccion, menu tidetrack Dev\)/.test(HTML),
+    'ya no queda ninguna derivacion a un boton "Guardar Proyeccion" que la hoja no tiene');
+
+// (4) UN NETO MIXTO NO SE IMPRIME CON DOS SIGNOS SEGUIDOS. Union por operador, no por ' + '.
+{
+    const fmt = new Function(
+        (jsShell.match(/function pabmFmtMonto[\s\S]*?\n\}/) || [''])[0] + '\n' +
+        (jsShell.match(/function pabmFmtLista[\s\S]*?\n\}/) || [''])[0] +
+        '\nreturn pabmFmtLista;')();
+    ok(fmt([{ monto: 1620000, moneda: 'ARS' }, { monto: -2.99, moneda: 'USD' }]) ===
+        '1620000,00 ARS - 2,99 USD',
+        'un neto mixto se lee "1620000,00 ARS - 2,99 USD", no "... + -2,99 USD"');
+    ok(fmt([{ monto: -5, moneda: 'ARS' }, { monto: 3, moneda: 'USD' }]) === '-5,00 ARS + 3,00 USD',
+        'el PRIMER item conserva su signo: un neto negativo sigue siendo negativo');
+    ok(fmt([]) === '—', 'la lista vacia sigue siendo un guion largo, nunca un cero');
+}
+
+// (5) ACORDEON Y EDICION SE OPERAN CON TECLADO. Eran <div onclick> y <span onclick>: sin
+// tabindex, sin role y sin estilo de foco, en la unica vista cuya funcion es corregir.
+ok(/<button type="button" class="pabm-head" aria-expanded="false" /.test(HTML),
+    'la cabecera de cada periodo es un <button> con aria-expanded, como .bloque-resumen');
+ok(/<button type="button" class="pabm-monto" onclick="pabmEditarMonto\(this\)">/.test(HTML),
+    'y el monto editable tambien es un <button>, no un <span> con onclick');
+ok(!/<div class="pabm-head"/.test(HTML) && !/<span class="pabm-monto"/.test(HTML),
+    'no queda ningun control de la vista fuera del orden de tabulacion');
+ok(/\.pabm-head:focus-visible \{ outline: 2px solid var\(--teal-tinta\)/.test(HTML) &&
+   /\.pabm-monto:focus-visible \{ outline: 2px solid var\(--teal-tinta\)/.test(HTML),
+    'los dos tienen el mismo anillo de foco que .bloque-resumen: cero color nuevo');
+ok(/headEl\.setAttribute\('aria-expanded', 'true'\)/.test(jsShell) &&
+   /headEl\.setAttribute\('aria-expanded', 'false'\)/.test(jsShell),
+    'aria-expanded lo mantiene sincronizado el toggle, no se queda mintiendo al plegar');
+
+// (6) UN MEDIO DE PAGO SIN MONEDA NO SALE DEL CLIENTE. Si getAbmFormData falla o vence su
+// tope, los desplegables quedan vacios y el backend acepta monedaRelacionada '' sin chistar:
+// una cuenta sin moneda rompe ADR-002 y el autocompletado de moneda por medio en Cargas.
+{
+    const cuerpoGuardar = (jsShell.match(/function cuGuardar\(\)\s*\{([\s\S]*?)\n\}/) || ['', ''])[1];
+    ok(/esMedio && !document\.getElementById\('cuMoneda'\)\.value/.test(cuerpoGuardar),
+        'cuGuardar corta si es un medio de pago y la moneda quedo vacia');
+    ok(cuerpoGuardar.indexOf('No se pudieron leer las monedas') <
+       cuerpoGuardar.indexOf('var payload'),
+        'y corta ANTES de armar el payload: el {monedaRelacionada:""} no llega a viajar');
+}
+
+// (7) CERO PALABRAS INTERNAS EN COPY DE USUARIO. El id de origen 'shell' es contrato con el
+// backend y se conserva; el ROTULO no, porque en la UI esta ventana se llama tidetrack.
+ok(!/'Manual del shell'/.test(jsShell) && !/\(manual del shell\)/.test(jsShell),
+    'ningun rotulo visible dice "shell", la palabra con la que el equipo llama a la ventana');
+ok(/titulo: 'Cargadas a mano en tidetrack'/.test(jsShell) &&
+   /origen: 'shell'/.test(jsShell),
+    'el rotulo cambio pero el id de origen "shell" queda intacto: es clave de contrato');
+
+// (8) LOS TRES SELECTS CONSERVAN SU FLECHA AL ENFOCARSE. La regla de foco de .f reescribia el
+// shorthand background y borraba la imagen; con appearance:none tampoco quedaba la nativa,
+// asi que el control quedaba SIN NINGUN indicador justo mientras se lo estaba usando. Es la
+// cicatriz v0.55.2 dada vuelta -- cero flechas en vez de dos -- y el guard de flechas de esta
+// misma seccion no la veia porque solo auditaba .combo.
+{
+    const reglaSelect = (HTML.match(
+        /\.f select\.form-input,\s*\n\.shell-acciones \.form-input \{([^}]*)\}/) || ['', ''])[1];
+    const focoSelect = (HTML.match(
+        /\.f select\.form-input:focus,\s*\n\.shell-acciones \.form-input:focus \{([^}]*)\}/) ||
+        ['', ''])[1];
+    ok(/appearance:\s*none/.test(reglaSelect) && /var\(--chevron\)/.test(reglaSelect),
+        'los <select> del shell apagan la flecha nativa y dibujan el chevron de la casa');
+    ok(/var\(--chevron\)/.test(focoSelect),
+        'y el foco repone la IMAGEN, no solo el color: un shorthand background la borra');
+    const offsets = [...(reglaSelect + focoSelect).matchAll(/right (\d+)px center/g)]
+        .map((m) => m[1]);
+    ok(offsets.length === 2 && offsets[0] === offsets[1],
+        'las dos reglas usan el MISMO offset: la ley "una sola flecha" dejo de estar escrita ' +
+        'dos veces con dos valores (' + offsets.join(' / ') + ')');
+    ok((HTML.match(/appearance: none; -webkit-appearance: none; -moz-appearance: none;/g) || [])
+            .length === 1,
+        'la ley "una sola flecha por combo" se declara UNA vez: la barra de acciones dejo de ' +
+        'tener su copia, que era la que podia divergir por separado (y divergio)');
+    ok((HTML.match(/var\(--chevron\)/g) || []).length === 3,
+        'y el chevron se referencia tres veces en total: base y foco del select, mas el combo');
+    ok(!/\.f select\.form-input:focus \{ background-color: #FFFFFF; \}/.test(HTML),
+        'y el parche que solo reponia el color quedo retirado');
+}
+
+// (9) EL CONFIRMAR DE UNA BAJA SE VE COMO UN BOTON. Vivia dentro de .pabm-conf, con el MISMO
+// var(--rojo-bg) de fondo: contraste de relleno 1.00:1 y su unico filo 1.37:1, mientras el
+// "Cancelar" de al lado era una pastilla blanca. En la unica accion irreversible de la vista
+// la jerarquia estaba invertida.
+ok(/\.btn--peligro, \.rec-borrar\[data-conf="1"\] \{\s*background: var\(--rojo-ink\); color: #FFFFFF;/
+        .test(HTML),
+    'el boton destructivo es SOLIDO (--rojo-ink sobre blanco: 5.89:1 de texto, 5.07:1 de ' +
+    'relleno contra el panel), y lo comparte con el estado armado de .rec-borrar');
+ok((HTML.match(/box-shadow: inset 0 0 0 1px rgba\(178,59,50,\.22\);/g) || []).length === 0,
+    'y no quedo ninguna segunda forma de pintar el mismo boton destructivo confirmado');
+
+// (10) EL SEGMENTADO NEUTRO LLEGA A AA. rgba(46,202,176,.14) sobre --tt-gris componia un
+// #D8F1F0 efectivo: 4.38:1 contra --teal-tinta a 12.5px/600, el mas flojo de los cuatro
+// estados presionados del mismo componente. El guard de paleta mira procedencia, no contraste.
+ok(/\[data-v="Editar"\] \{\s*background: #FFFFFF; color: var\(--teal-tinta\);/.test(HTML),
+    'el presionado neutro Crear/Editar es una pastilla BLANCA con los anillos teal: 5.18:1');
+ok(!/\[data-v="Crear"\],\s*\n\.seg button\[aria-pressed="true"\]\[data-v="Editar"\] \{\s*background: rgba/
+        .test(HTML),
+    'y ningun estado presionado del segmentado se pinta con un relleno translucido: los cuatro ' +
+    'apoyan sobre un fondo opaco con contraste medido');
+
+// (11) LA PIEL DE VIDRIO SE DECLARA UNA VEZ. Estaba escrita palabra por palabra en tres
+// reglas paralelas que habia que mantener sincronizadas a mano, y .pabm-meta/.pabm-chev eran
+// copias byte a byte de .bloque-meta/.chev-abrir.
+ok(/\.bloque, \.conc-card, \.pabm-card \{/.test(HTML),
+    'la piel de vidrio es UNA lista de selectores, no tres reglas identicas');
+ok((HTML.match(/box-shadow: inset 0 0 0 1px var\(--vidrio-borde\), var\(--vidrio-luz\), var\(--elev-agua\);/g)
+        || []).length === 2,
+    'el filo de vidrio queda en DOS reglas -- la tarjeta del Home y la lista compartida --, ' +
+    'no en cuatro copias sincronizadas a mano');
+['pabm-meta', 'pabm-chev', 'pabm-vacio', 'pabm-cargando'].forEach(function (cls) {
+    ok(!new RegExp('class="[^"]*\\b' + cls + '\\b').test(HTML) &&
+       !new RegExp('\\.' + cls + '[ ,{:]').test(HTML),
+        'la clase .' + cls + ' se retiro: redibujaba un componente que el shell ya tenia ' +
+        '(solo queda nombrada en el comentario que explica su retiro)');
+});
+ok(/<span class="bloque-meta">/.test(HTML) && /<svg class="chev-abrir"[\s\S]{0,400}M6 9l6 6 6-6/.test(HTML),
+    'la tarjeta de periodo consume .bloque-meta y .chev-abrir, los componentes de la casa');
+ok(/\.conc-hint--tenue \{ color: var\(--ink-3\); \}/.test(HTML) &&
+   /class="conc-hint conc-hint--tenue"/.test(HTML),
+    'y el parrafo auxiliar tenue es un modificador de .conc-hint, no dos clases nuevas');
+ok(/El detalle NO se anima como \.bloque-cuerpo/.test(HTML),
+    'la unica divergencia de motion que queda (el detalle no se pliega animado) tiene su razon inline');
 
 // -- El doble sigue al shell tambien en lo nuevo (la whitelist ya se cruzo en la 18;
 //    aca se fija que los OCHO endpoints nuevos esten de verdad implementados) --
@@ -973,8 +1378,8 @@ ok(notasProy19().length === notasAntes22 + 2,
 // las notas con sello 'shell_' (_esNotaShellPg). El mensaje ahora apunta al ABM.
 ok(!/Ojo:/.test(rp.mensaje || ''),
     'el mensaje ya NO advierte que Guardar Proyeccion reemplaza las puntuales: el retiro es selectivo');
-ok(/ABM de Proyecciones Elaboradas/.test(rp.mensaje || ''),
-    'y en su lugar dice donde se ven y se borran (ABM de Proyecciones Elaboradas)');
+ok(/Proyecciones Elaboradas, en el inicio de tidetrack/.test(rp.mensaje || ''),
+    'y en su lugar dice donde se ven, se corrigen y se borran (la vista del shell)');
 
 // -- (14) aNumero: el punto sin coma tambien es separador de miles cuando el patron es-AR
 //    es inequivoco. Se prueba la FUNCION REAL extraida del HTML, no una copia. --
@@ -1015,9 +1420,22 @@ ok(/function avisoSinCatalogo/.test(jsShell),
 ok((jsShell.match(/if \(!catalogo\) \{ avisoSinCatalogo\(\); return; \}/g) || []).length === 4,
     'movimiento, traspaso, proyeccion y recurrentes guardan la entrada si catalogo es null');
 
-// -- (16) El catalogo ya no se tira despues de cada guardado (solo la declaracion queda) --
-ok((jsShell.match(/catalogo = null/g) || []).length === 1,
-    'cero invalidaciones del catalogo por guardado: nada de lo que el cliente consume cambia al guardar');
+// -- (16) La regla EXACTA de invalidacion del catalogo (revisada en v0.62.0) --
+// Las CARGAS no invalidan: escriben en la grilla, el ledger y los bloques TC, nunca en el
+// Plan. Las MUTACIONES DEL PLAN si: sin eso, dar de alta una cuenta y pasar derecho a
+// "Movimiento nuevo" ofrecia los desplegables viejos, justo sin la cuenta recien creada.
+ok((jsShell.match(/catalogo = null/g) || []).length === 2,
+    'catalogo = null aparece dos veces: la declaracion y la invalidacion tras mutar el Plan');
+const cuTras = (jsShell.match(/function cuTrasMutacion\([\s\S]*?\n\}/) || [''])[0];
+ok(/catalogo = null/.test(cuTras) && /abmCuentas = \[\]/.test(cuTras) &&
+   /abmSeleccion = null/.test(cuTras),
+    'el exito de alta/cambio/baja del Plan tira el catalogo, la lista y la seleccion');
+['guardarMovimientos', 'guardarTraspasos', 'guardarProyecciones', 'guardarConciliacion',
+ 'guardarRecurrenteUI'].forEach(function (fn) {
+    const cuerpo = (jsShell.match(new RegExp('function ' + fn + '\\([\\s\\S]*?\\n\\}')) || [''])[0];
+    ok(cuerpo.length > 0 && !/catalogo = null/.test(cuerpo),
+        fn + ' NO invalida el catalogo: no toca el Plan de Cuentas');
+});
 
 // -- (24) Los campos de un bloque colapsado salen del orden de Tab --
 ok(/\.bloque\[data-estado="resumen"\] \.bloque-cuerpo > \.inner \{ visibility: hidden; \}/.test(HTML),
@@ -1054,8 +1472,9 @@ ok(!/Presupuesto la reemplaza\./.test(HTML),
     'el hint de proyeccion ya no promete que Guardar Proyeccion "la reemplaza" (dejo de ser cierto)');
 ok(/no la toca: conviven sumando/.test(HTML),
     'el hint dice la historia nueva: el guardado desde Presupuesto no toca lo cargado por menu');
-ok(/ABM de Proyecciones Elaboradas del menu/.test(HTML),
-    'el hint apunta al ABM con el rotulo exacto del item de MENU_CONFIG: "Proyecciones Elaboradas"');
+ok(/Proyecciones Elaboradas, aca en tidetrack/.test(HTML),
+    'el hint apunta a la VISTA con el rotulo exacto del item de MENU_CONFIG ("Proyecciones ' +
+    'Elaboradas") y dice que vive aca adentro, no en otro modal del menu');
 
 seccion('23. GUARD DE PALETA: el shell viste el brandbook, cero hex fuera de lista');
 // decision Franco 2026-08-29: "esta quedando buenisimo de UX pero no son los colores de la
@@ -1141,5 +1560,172 @@ ok(/fonts\.googleapis\.com\/css2\?family=Poppins/.test(HTML),
 ok(/--font-family:\s*'Poppins'/.test(cssPaleta),
     "--font-family arranca en 'Poppins': el * del design system la propaga a todo");
 
-console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (23 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+// LA SEGUNDA SUPERFICIE HTML DEL PRODUCTO. El shell no es la unica pantalla: hay HTML inline
+// con su propio <style> adentro de src/*.js (hoy solo la alerta de edicion multiple de
+// 14_EventHandlers.js). Esa alerta ya venia de dos redisenos atras con #dc3545 y League
+// Spartan, y la Etapa 5 la restyleo a mano -- pero nada la sostenia: el proximo retoque podia
+// volver a meter un hex inventado y los cinco bancos seguian en verde. Se audita con la MISMA
+// lista blanca y el MISMO metodo que el shell.
+// Se descartan los comentarios de bloque ANTES de buscar el <style>: ZZ_Changelog.js es un
+// unico /* */ gigante y habla de HTML, de <style> y de la League Spartan que se retiro --
+// documentar un color no es renderizarlo. Se auditan las superficies que SE PINTAN.
+const jsConEstilo = fs.readdirSync(path.join(RAIZ, 'src'))
+    .filter(f => f.endsWith('.js'))
+    .map(f => ({ archivo: 'src/' + f, fuente: leerSrc('src/' + f).replace(/\/\*[\s\S]*?\*\//g, '') }))
+    .filter(x => /<style>[\s\S]*?<\/style>/.test(x.fuente));
+ok(jsConEstilo.length > 0,
+    'hay al menos un src/*.js con <style> embebido para auditar (' +
+    jsConEstilo.map(x => x.archivo).join(', ') + ')');
+jsConEstilo.forEach(function (x) {
+    const bloques = (x.fuente.match(/<style>([\s\S]*?)<\/style>/g) || [])
+        .join('\n').replace(/%23/gi, '#');
+    const hexJs = [...new Set((bloques.match(/#[0-9a-fA-F]{3,8}\b/g) || []).map(normalizarHex))];
+    const intrusosJs = hexJs.filter(h => !(h in PALETA));
+    ok(intrusosJs.length === 0,
+        'cada hex del <style> de ' + x.archivo + ' esta en la lista blanca del brandbook' +
+        (intrusosJs.length ? ' -- INTRUSOS: ' + intrusosJs.join(', ') : ''));
+    const ternasJs = [...new Set(
+        (bloques.match(/rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}/g) || []).map(function (t) {
+            return '#' + t.match(/\d{1,3}/g)
+                .map(n => Number(n).toString(16).padStart(2, '0')).join('').toUpperCase();
+        })
+    )].filter(h => !(h in PALETA));
+    ok(ternasJs.length === 0,
+        'cada rgba()/rgb() del <style> de ' + x.archivo + ' deriva de la lista blanca' +
+        (ternasJs.length ? ' -- INTRUSAS: ' + ternasJs.join(', ') : ''));
+    const kwJs = [...new Set(
+        (bloques.replace(/url\([^)]*\)/g, 'url(_)')
+            .match(/[:\s,(](white|black|navy|gray|grey|silver|red|blue|green|yellow|orange|purple|pink|brown|cyan|magenta|teal|aqua|lime|maroon|olive|coral|salmon|ivory|beige|khaki|gold|azure|snow|linen)(?![\w-])/gi) || [])
+            .map(k => k.slice(1).toLowerCase())
+    )];
+    ok(kwJs.length === 0,
+        'ningun keyword CSS de color renderiza en el <style> de ' + x.archivo +
+        (kwJs.length ? ' -- INTRUSOS: ' + kwJs.join(', ') : ''));
+    ok(!/League Spartan/.test(bloques) && /Poppins/.test(bloques),
+        x.archivo + ' viste Poppins, no la League Spartan de dos redisenos atras');
+});
+
+seccion('24. El pipeline dejo de tragarse los errores: nucleo que lanza, menu que alerta');
+// EL DEFECTO QUE CIERRA ESTA SECCION. procesarCargas tenia el alert adentro y no relanzaba:
+// invocado desde el shell el aviso quedaba DETRAS del modal y el endpoint devolvia ok:true
+// sobre un lote que no entro, o el sintoma confuso "la grilla quedo sin filas libres" en la
+// tanda siguiente. Se probaron los tres caminos: nucleo que lanza, shell que lo convierte en
+// {ok:false} sin UI nativa, y menu que sigue alertando exactamente igual que siempre.
+
+// -- (a) El nucleo corta el lote y el error DICE en que estado quedo la grilla --
+const cfgC24 = ctx.RANGES.CARGAS;
+const cIni24 = col19(cfgC24.start);
+const nC24 = col19(cfgC24.end) - cIni24 + 1;
+hojaCargas19.getRange(cfgC24.dataRow, cIni24, cfgC24.filas, nC24).clearContent();
+const hoy24 = new Date();
+const iso24 = hoy24.getFullYear() + '-' + String(hoy24.getMonth() + 1).padStart(2, '0') +
+    '-' + String(hoy24.getDate()).padStart(2, '0');
+const movDe24 = (n) => ({ monto: n, tipo: 'Egreso', cuenta: 'Comidas', medio: 'Galicia',
+    moneda: 'ARS', fecha: iso24 });
+
+ctx._alertas = [];
+ctx._nucleoExplota = true;
+const ledgerAntes24 = hojaReg19.getLastRow();
+r = ctx.registrarMovimientos([movDe24(11), movDe24(22)]);
+ctx._nucleoExplota = false;
+ok(r.ok === false, 'si el pipeline falla, la carga devuelve {ok:false} -- no un "Listo" mentiroso');
+ok(/la cotizacion del dia no se pudo resolver/.test(r.error || ''),
+    'el error del pipeline llega TEXTUAL al cliente, no traducido a un sintoma');
+ok(/2 fila\(s\) escritas en la hoja de Cargas SIN procesar/.test(r.error || ''),
+    'y dice en que estado quedo la grilla: las filas sembradas siguen ahi');
+ok(/No se deshizo nada/.test(r.error || ''),
+    'sin inventar un rollback que el codigo nunca tuvo: lo declara');
+ok(ctx._alertas.length === 0, 'cero alerts nativos: desde el shell quedarian detras del modal');
+ok(hojaReg19.getLastRow() === ledgerAntes24, 'y el ledger no gano una sola fila');
+const grilla24 = ctx._estadoGrillaCargas(hojaCargas19);
+ok(grilla24.ocupadas === 2,
+    'las 2 filas del lote quedaron EN la grilla, tal como lo dice el mensaje (' +
+    grilla24.ocupadas + ' ocupadas)');
+hojaCargas19.getRange(cfgC24.dataRow, cIni24, cfgC24.filas, nC24).clearContent();
+
+// -- (b) Corte a MITAD de un lote por tandas: lo que entro, lo que no, y lo que quedo colgado --
+const lote24 = [];
+for (let i = 0; i < cfgC24.filas + 3; i++) lote24.push(movDe24(100 + i));
+ctx._nucleoLlamadas = 0;
+ctx._nucleoExplotaEnLlamada = 2;      // la primera tanda entra, la segunda revienta
+const ledgerAntesTanda24 = hojaReg19.getLastRow();
+r = ctx.registrarMovimientos(lote24);
+ctx._nucleoExplotaEnLlamada = 0;
+ok(r.ok === false, 'un corte en la segunda tanda tambien devuelve {ok:false}');
+ok(new RegExp('Los ' + cfgC24.filas + ' primeros movimientos ya entraron al ledger')
+        .test(r.error || ''),
+    'el mensaje nombra los que YA se persistieron: reintentar el lote entero los duplicaria');
+ok(/3 fila\(s\) escritas en la hoja de Cargas SIN procesar/.test(r.error || ''),
+    'y cuantas quedaron colgadas en la grilla');
+ok(hojaReg19.getLastRow() - ledgerAntesTanda24 === cfgC24.filas,
+    'el ledger gano exactamente la primera tanda, ni una fila mas');
+ok(ctx._alertas.length === 0, 'tampoco aca hay UI nativa');
+hojaCargas19.getRange(cfgC24.dataRow, cIni24, cfgC24.filas, nC24).clearContent();
+
+// -- (c) Traspasos: la unidad es el PAR, y el mensaje cuenta filas de grilla --
+ctx._nucleoExplota = true;
+r = ctx.registrarTraspasos([{ origen: 'Galicia', destino: 'Dolar Cash',
+    montoOrigen: 100, montoDestino: 0.1, fecha: iso24 }]);
+ctx._nucleoExplota = false;
+ok(r.ok === false && /2 fila\(s\) escritas/.test(r.error || ''),
+    'un traspaso cortado deja DOS filas en la grilla (las dos patas) y el mensaje lo dice');
+ok(ctx._alertas.length === 0, 'y sigue sin alertar');
+hojaCargas19.getRange(cfgC24.dataRow, cIni24, cfgC24.filas, nC24).clearContent();
+
+// -- (d) Conciliacion: hereda el nucleo por _registrarMovimientosSinLock --
+ctx._nucleoExplota = true;
+const scConc24 = ctx.obtenerSaldosConciliacion();
+const gal24 = scConc24.saldos.filter(x => x.medio === 'Galicia')[0];
+r = ctx.registrarConciliacion([{ medio: 'Galicia', saldoVisto: gal24.saldo,
+    saldoReal: gal24.saldo + 500 }]);
+ctx._nucleoExplota = false;
+ok(r.ok === false && /hoja de Cargas SIN procesar/.test(r.error || ''),
+    'la conciliacion propaga el mismo error explicado, en vez de "quedo en X en vez de Y"');
+ok(ctx._alertas.length === 0, 'y tampoco alerta');
+hojaCargas19.getRange(cfgC24.dataRow, cIni24, cfgC24.filas, nC24).clearContent();
+
+// -- (e) GUARD: ningun flujo del shell puede volver a llamar a la version de menu --
+const fuenteShell24 = leerSrc('src/16_ShellService.js');
+ok(!/^\s*procesarCargas\(\);\s*$/m.test(fuenteShell24),
+    'el shell ya NO llama a procesarCargas() (la entrada de menu, que alerta y se traga el error)');
+ok((fuenteShell24.match(/_procesarCargasNucleo\(/g) || []).length >= 3,
+    'los tres caminos de escritura del shell pasan por el nucleo');
+
+// -- (f) EL CAMINO DE MENU, sin tocar: atrapa, alerta y NO propaga --
+// Se carga el modulo real en un contexto propio (el banco del shell no lo carga) para probar
+// el wrapper contra el codigo de verdad, no contra una copia de sus mensajes.
+{
+    const alertasMenu = [];
+    const ctxMenu = {
+        console, Date, Math, Number, String, Array, Object, isFinite, JSON, RegExp, Error,
+        logError() {}, logInfo() {}, logSuccess() {},
+        Logger: { log() {} },
+        SpreadsheetApp: {
+            getActiveSpreadsheet: () => ({ getSheets: () => [], getSheetByName: () => null,
+                                           toast() {} }),
+            getUi: () => ({ alert: (t) => { alertasMenu.push(String(t)); } })
+        }
+    };
+    vm.createContext(ctxMenu);
+    vm.runInContext(
+        leerSrc('src/00_Config.js') + '\n' +
+        leerSrc('src/03_SheetManager.js') + '\n' +
+        leerSrc('src/06_RegistrosService.js') +
+        '\n;Object.assign(globalThis,{__procesarCargas: procesarCargas,' +
+        ' __nucleo: _procesarCargasNucleo, __MSJ: REG_MSJ_FALTAN_HOJAS});',
+        ctxMenu
+    );
+    // Sin hojas: el nucleo LANZA (antes era un alert + return silencioso).
+    let lanzo = false;
+    try { ctxMenu.__nucleo(); } catch (e) { lanzo = true; }
+    ok(lanzo === true, 'el nucleo LANZA cuando faltan las hojas, en vez de alertar y volver');
+    // El menu, en cambio, atrapa y alerta con el MISMO texto de siempre.
+    let propago = false;
+    try { ctxMenu.__procesarCargas(); } catch (e) { propago = true; }
+    ok(propago === false, 'procesarCargas() de menu NO propaga: el habito diario no cambia');
+    ok(alertasMenu.length === 1 && alertasMenu[0] === ctxMenu.__MSJ,
+        'y alerta textual "' + ctxMenu.__MSJ + '", sin el prefijo "Fallo en el procesamiento"');
+}
+
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (24 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
 process.exit(fallas === 0 ? 0 : 1);

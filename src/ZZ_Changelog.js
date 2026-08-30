@@ -3,6 +3,306 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-29] v0.63.1 - Los remanentes de afuera del shell hablan Corriente.
+ *
+ * >>> CORRECCIONES DEL 2026-08-30, ANTES DE DEPLOYAR (no consumen numero propio: el
+ *     v0.63.1 todavia no salio, asi que esto es la misma version arreglada, no una nueva).
+ *     Salen de un control adversarial sobre las cinco etapas de esta campana.
+ * - EL AVISO VIEJO SOBREVIVIA A LA OPERACION SIGUIENTE. En 'proyecciones' ninguna de las
+ *   cuatro mutaciones limpiaba el aviso: despues de un error, una operacion EXITOSA dejaba
+ *   las dos cosas en pantalla a la vez -- el banner rojo viejo arriba y el verde de deshacer
+ *   abajo -- hasta salir de la vista. Se resuelve con UNA linea en pabmCargarListado(), que
+ *   es el embudo por el que pasan las tres mutaciones, el Reintentar y el ingreso. La misma
+ *   familia, mas leve, en 'cuentas': cuCambioEntidad y cuSegModo son cambios de CONTEXTO y
+ *   dejaban el mensaje anterior de rotulo de otra cosa.
+ * - LA COLUMNA "CATEGORIA" NO MOSTRABA CATEGORIAS. El detalle de un periodo imprime
+ *   f.tipoCuenta -- la columna E de Registros: Ingreso / Gasto Fijo / Gasto Variable -- bajo
+ *   un encabezado heredado del modal que decia "Categoria". En la MISMA release la vista
+ *   'cuentas' usa esa palabra para el OTRO eje (Trabajo y negocio, Vehiculo, Salud): dos
+ *   pantallas del shell contradiciendose. Son dos ejes independientes (decision Franco
+ *   2026-08-20). Ahora el rotulo dice "Tipo de cuenta", el nombre literal de la columna.
+ * - DOS RUTAS QUE NO EXISTEN. El vacio de "Guardado a mano" y el hint de cabecera mandaban a
+ *   un boton "Guardar Proyeccion" de la hoja Presupuesto que NO existe -- el propio
+ *   comentario de MENU_CONFIG lo dice ("por ahora en tidetrack dev, luego va a tener su
+ *   boton"). Y es el mensaje que mas se lee de toda la vista, porque "todo base, cero
+ *   guardado" es el estado real de produccion. Ahora dicen la ruta literal y viva: menu
+ *   tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar. Es el mismo defecto que
+ *   esta version acababa de arreglar en el toast de 14_EventHandlers.js.
+ * - EL ACORDEON Y LA EDICION DE MONTO NO SE PODIAN OPERAR CON TECLADO. La cabecera de cada
+ *   periodo era un <div onclick> y el monto editable un <span onclick>: sin tabindex, sin
+ *   role, sin aria-expanded y sin estilo de foco, en la unica vista cuya funcion es revisar
+ *   y corregir. Los dos pasan a <button type="button"> con el mismo anillo de foco que
+ *   .bloque-resumen, que es de lo que copiaban. El JS no cambio.
+ * - UN MEDIO DE PAGO SIN MONEDA PODIA CREARSE. Si getAbmFormData falla o vence su tope de
+ *   15 s, la vista 'cuentas' queda usable con los desplegables VACIOS y el backend acepta
+ *   monedaRelacionada '' sin chistar: quedaba una caja sin moneda, que rompe ADR-002 y el
+ *   autocompletado de moneda por medio en Cargas. Guarda de tres lineas en cuGuardar, del
+ *   lado del cliente: el contrato del servidor no se toca. El modal viejo tenia el mismo
+ *   agujero, o sea que es heredado, no una regresion de esta campana.
+ * - LOS TRES SELECTS SE QUEDABAN SIN NINGUNA FLECHA AL ENFOCARSE. La cicatriz v0.55.2 dada
+ *   vuelta: la regla de foco de .f reescribia el shorthand background y borraba la imagen
+ *   del chevron, y con appearance:none la nativa tampoco estaba. El parche solo reponia el
+ *   color. Se unifica con la regla gemela de .shell-acciones -- eran dos copias de la misma
+ *   ley con dos offsets distintos -- y la imagen viaja en las dos reglas. El guard de
+ *   flechas del banco solo auditaba .combo: ahora tambien los <select>.
+ * - EL BOTON DE BORRAR ERA INVISIBLE COMO CONTROL. .btn--peligro pintaba var(--rojo-bg)
+ *   DENTRO de .pabm-conf, que tiene ese mismo fondo: relleno 1.00:1 y su unico filo 1.37:1,
+ *   mientras el "Cancelar" de al lado era una pastilla blanca que si se veia. En la unica
+ *   accion irreversible de la vista la jerarquia estaba dada vuelta. Ahora es SOLIDO
+ *   (--rojo-ink con texto blanco: 5.89:1 de texto y 5.07:1 de relleno, medido en el
+ *   navegador), el mismo par que ya usa el boton de cierre de la alerta de seguridad.
+ * - EL PRESIONADO NEUTRO DEL SEGMENTADO NO LLEGABA A AA. rgba(46,202,176,.14) sobre
+ *   --tt-gris componia un #D8F1F0 efectivo: 4.38:1 contra --teal-tinta a 12.5px/600, y el
+ *   mas flojo de los cuatro estados presionados del mismo componente (Ingreso 5.67, Egreso
+ *   5.07, ambar 6.73). Pasaba en verde igual porque el guard de paleta mira PROCEDENCIA de
+ *   color, no contraste. Pastilla blanca conservando los anillos teal: 5.18:1.
+ * - LA CASCADA DE ENTRADA DEL HOME ESTABA ROTA Y NADIE LO VEIA. Los selectores usaban
+ *   :nth-of-type, que cuenta entre HERMANOS DEL MISMO TAG: como cada .shell-cards viene
+ *   precedido por un .shell-sec, los grupos reales son los divs 2, 4, 6 y 8. Medido con
+ *   getComputedStyle: CINCO de las ocho tarjetas entraban con delay 0s y la regla de la
+ *   cuarta de "Revisar" no matcheaba nunca. Se cablea por data-grupo, que sobrevive a
+ *   cualquier reordenamiento, y el banco ahora RESUELVE el delay de las ocho en vez de
+ *   comprobar que dos lineas de CSS existan.
+ * - "REVISAR" PASA A DOS COLUMNAS. Con cuatro tarjetas en una grilla de tres, la cuarta
+ *   caia sola en una fila huerfana y era la unica tarjeta del Home con el titulo en dos
+ *   lineas (122px contra 104 de sus vecinas). Con el piso de columna en 320px quedan 2x2,
+ *   los cuatro titulos entran en una linea y la seccion espeja el ritmo de "Registrar".
+ *   Sigue siendo auto-fit: por debajo de ~652px baja sola a una columna.
+ * - UN NETO MIXTO SE IMPRIMIA CON DOS SIGNOS SEGUIDOS: "1620000,00 ARS + -2,99 USD". El
+ *   join no miraba el signo que el formateador ya habia escrito. Ahora el signo se lee en
+ *   el OPERADOR y el primer item conserva el suyo.
+ * - CUATRO CLASES QUE REDIBUJABAN COMPONENTES EXISTENTES. La piel de vidrio estaba escrita
+ *   palabra por palabra en TRES reglas paralelas (.bloque, .conc-card, .pabm-card);
+ *   .pabm-meta era byte a byte .bloque-meta, .pabm-chev era .chev-abrir, y .pabm-vacio y
+ *   .pabm-cargando eran dos variantes de .conc-hint. Se colapsan en listas de selectores y
+ *   un modificador. La unica divergencia que queda -- el detalle no se pliega animado como
+ *   .bloque-cuerpo -- lleva su razon inline: su contenido llega DESPUES de abrirlo.
+ * - .btn--mini INVENTABA UN ESCALON DE 30px donde ya habia uno de 32 (.alert .btn), y no
+ *   casaba con el input de 34 con el que convive. Pasa a 32 y .alert .btn se vuelve su
+ *   consumidor: una sola escala 38/32. Y .btn--peligro era copia exacta de
+ *   .rec-borrar[data-conf="1"]: ahora es una sola regla para los dos.
+ * - "MANUAL DEL SHELL" ERA COPY INTERNO. "shell" es como el equipo llama a la ventana; en
+ *   la UI se llama tidetrack. El rotulo pasa a "Cargadas a mano en tidetrack". El ID de
+ *   origen 'shell' NO se toca: es clave de contrato con el backend y con el sello de nota.
+ * - DOS EMOJIS VIVOS EN src/, contra la Regla Estricta 6. Uno estaba en codigo que CORRE:
+ *   logInfo emitia un U+FE0F suelto al principio de cada linea de log. Ninguno era de esta
+ *   campana (el del changelog viene de v0.6.1) y ningun banco los cazaba, que es por que
+ *   sobrevivieron. verificar_sintaxis.py suma el barrido de emojis sobre src/ para que no
+ *   vuelvan; las flechas tipograficas quedan fuera a proposito.
+ * - Y EL GUARD DE PALETA SE EXTIENDE A LA SEGUNDA SUPERFICIE HTML DEL PRODUCTO. El <style>
+ *   inline de 14_EventHandlers.js -- restyleado a mano en esta misma version -- no lo
+ *   auditaba nada: el proximo retoque podia volver a meter un #dc3545 y los cinco bancos
+ *   seguian en verde. Ahora pasa por la MISMA lista blanca, las mismas ternas rgba, los
+ *   mismos keywords y el mismo chequeo de tipografia que el shell.
+ *
+ * - LA ULTIMA PANTALLA CON PIEL VIEJA. La alerta de edicion multiple del Plan de Cuentas
+ *   (14_EventHandlers.js) venia de DOS redisenos atras: League Spartan, rojo #dc3545,
+ *   lienzo rosa #fdf2f2 y un titulo de dialogo que gritaba "Alerta de Seguridad Critica".
+ *   Sobrevivio a los dos cambios de direccion porque casi nadie la ve: solo aparece cuando
+ *   alguien pega o borra varias celdas del Plan a la vez. Ahora habla Corriente: Poppins,
+ *   el par rojo de FUNCION #B23B32/#FCEAE7 -- los mismos de la lista blanca que audita el
+ *   guard de paleta del shell, no un rojo nuevo --, titulo del dialogo en blanco como
+ *   16_ShellService.js, y el texto en la voz sobria de la casa en vez de la retorica de
+ *   "sistema de seguridad" y "integridad de la base de datos".
+ * - PERO CONSERVA 450x340, y es la UNICA excepcion. Todo el resto del sistema converge en
+ *   SHELL_GEOMETRIA (900x700). Esta no: no es una pantalla de flujo sino una interrupcion
+ *   de emergencia que dispara un trigger sobre una edicion accidental. Abrirla del tamano
+ *   del Centro de Operaciones la haria leer como una pantalla mas donde hay algo para
+ *   hacer, cuando lo unico que pide es cerrar y apretar Ctrl+Z. La excepcion esta comentada
+ *   en el codigo con su razon y whitelisteada, tambien comentada, en el assert DIMENSIONES
+ *   UNICAS del banco: es una excepcion declarada, no un olvido.
+ * - UN AVISO QUE MANDABA A NINGUNA PARTE. El toast de la rama de una sola celda decia
+ *   "ingresa desde la accion rapida > Gestionar Cuentas". No existe ningun menu llamado
+ *   "accion rapida", y "Gestionar cuentas" es el rotulo de una TARJETA adentro del shell,
+ *   no una entrada de menu: la ruta era irreproducible. Un aviso que bloquea al usuario y
+ *   despues lo deriva a un lugar inexistente lo deja sin salida. Ahora dice la ruta literal
+ *   y viva: menu tidetrack > Plan de Cuentas.
+ * - EL TOAST DE NAVEGACION SE APAGA. NAV_CONFIG.SHOW_TOAST_ON_NAVIGATE pasa a false: el
+ *   recuadro gris "Navegando a X" era ruido nativo post rediseno -- la hoja ya cambio
+ *   delante del usuario, que es su propio feedback, y ese recuadro no pertenece a ningun
+ *   lenguaje visual de la casa. Es una decision REVERSIBLE con un booleano: la rama del
+ *   toast en navigateToSheet queda intacta, no se borro codigo. Si Franco lo extrana,
+ *   vuelve poniendo true.
+ *
+ * [2026-08-29] v0.63.0 - Proyecciones Elaboradas entra al shell.
+ * - LA VISTA. El ABM de "Proyecciones Elaboradas" era el ultimo modal de uso diario fuera
+ *   del Centro de Operaciones: 720x680, piel vieja, y con una maquinaria de reintentos que
+ *   habia crecido alrededor de un fallo mal diagnosticado. Ahora es la vista 'proyecciones'
+ *   de SHELL_VISTAS y hereda SHELL_GEOMETRIA. El id convive con 'proyeccion' (singular, la
+ *   CARGA): el par es deliberado, esta comentado en SHELL_VISTAS y el banco prueba LAS DOS
+ *   puertas por separado, porque un typo cae al Home en silencio y nadie se entera.
+ * - CIERRE DEL INCIDENTE PERMISSION_DENIED, y retiro de lo que sobro. v0.56.0 le habia
+ *   puesto al modal tres reintentos con backoff; despues se le sumo un segundo ciclo de
+ *   ping para separar "el canal esta roto" de "falla esta funcion", una linea de
+ *   diagnostico y un historial de aperturas en localStorage. La causa raiz resulto ser el
+ *   DOCTYPE escrito en la LINEA 93 de ese archivo: el iframe entraba en quirks mode y el
+ *   puente hacia el servidor no se montaba. UI_Shell.html tiene el DOCTYPE en la linea 1 y
+ *   sus vistas (recurrentes, conciliacion) ya disparaban su primera llamada en el mismo
+ *   timing -- apertura directa por menu -- sin reproducirlo nunca. La vista nueva hace UNA
+ *   llamada, con tope de 15 s y un boton Reintentar en el estado de error. NO se reintrodujo
+ *   backoff: tratar un sintoma cuya causa ya se conoce es como se llego a la maquinaria que
+ *   se acaba de retirar.
+ * - CERO BACKEND NUEVO. Los seis endpoints de DEVTOOL_ProyeccionAbm.js
+ *   (listarPeriodosProyeccion, detalleFilasPeriodoProyeccion, eliminarPeriodoProyeccion,
+ *   actualizarMontoFilaProyeccion, revertirBajaProyeccionAbm, revertirEdicionMontoProyeccion)
+ *   se consumen INTACTOS. Su contrato es un TERCERO en la casa: devuelven el objeto de datos
+ *   PELADO (sin campo ok) y LANZAN ante cualquier rechazo -- ni el {ok} de enviar() ni el
+ *   {success} de cuEnviar(). Por eso la vista los llama directo, con withFailureHandler
+ *   obligatorio, y no se normalizo el servidor: ese contrato es previo a esta pantalla.
+ * - LO QUE SE PORTO, COMPLETO. Listado por mes con las CINCO poblaciones y su rotulo por
+ *   corrida (una corrida dice el verbo y el momento; varias, cuantas son y cual fue la
+ *   ultima); totales por bloque y moneda, nunca cruzados (ADR-003); el aviso de filas con
+ *   categoria no reconocida; detalle plegable con la nota libre del usuario mostrada APARTE
+ *   del sello (es lo que identifica "Netflix" entre tres filas de la misma cuenta); la nota
+ *   al pie que dice DONDE se corrige cada origen; correccion de monto inline; baja de dos
+ *   pasos que nombra el origen y dice CUANTA plata se borra; y deshacer de la ultima accion.
+ *   Se conserva la asimetria deliberada de las secciones: 'guardado' y 'base' se muestran
+ *   aun vacias con su mensaje propio (el caso "todo base, cero guardado" es el estado real
+ *   de produccion), las otras tres se ocultan enteras.
+ * - DOS MEJORAS DE FONDO SOBRE EL MODAL, no cosmeticas. (1) El monto tipeado se parsea con
+ *   aNumero() de la casa, que acepta la coma decimal es-AR: el modal usaba <input
+ *   type="number"> y "12.400,50" no entraba. (2) El fallo puntual de una edicion sale por
+ *   mostrarError del shell y no por window.alert -- adentro de un modal el dialogo nativo
+ *   puede quedar detras, que es la misma cicatriz que cerro v0.61.1 en el pipeline.
+ * - LA TARJETA VA EN "REVISAR", con tarjeta propia. Es la UNICA puerta para corregir o
+ *   borrar lo ya proyectado: esconderla detras de "Proyeccion nueva" hacia indescubrible el
+ *   borrado, y el mensaje de exito del backend ya mandaba ahi. Su naturaleza es revisar, que
+ *   es exactamente esa seccion. El stagger de entrada se corrio: la cuarta de "Revisar" a
+ *   0.21s y la de "Estructura" a 0.24s.
+ * - LOS DOS TEXTOS QUE MANDABAN AL MODAL cuentan ahora la historia nueva: el exito de
+ *   registrarProyecciones dice "se ven, se corrigen y se borran desde Proyecciones
+ *   Elaboradas, en el inicio de tidetrack" (antes decia solo "se ven y se borran", y hablaba
+ *   de un ABM aparte), y el hint del bloque de carga dice "aca en tidetrack". El rotulo es
+ *   el EXACTO del item de MENU_CONFIG, no una parafrasis.
+ * - CSS: ni un color nuevo. La tarjeta de periodo usa los tokens de vidrio EXACTOS de
+ *   .conc-card, la tabla del detalle reusa .conc-tabla/.num, el input de edicion reusa
+ *   .conc-real y la confirmacion de baja usa el par de funcion rojo ya declarado. Lo unico
+ *   nuevo de verdad es .btn--mini, un TAMANO (30px, cuerpo 12 -- el guard 17 prohibe
+ *   10.5px), que hacia falta para que Cancelar y Guardar quepan dentro de una celda. El
+ *   guard de paleta sigue en verde sin excepciones nuevas.
+ * - MENU Y BOTONERA. El item "Proyecciones Elaboradas" apunta a abrirProyeccionesElaboradas.
+ *   showAbmProyeccionElaborada SE CONSERVA como alias de una linea, por la misma razon que
+ *   showAbmPlanCuentas: la botonera de dibujos publicada lo referencia por NOMBRE y no es
+ *   editable ni auditable desde el repo. TAREA MANUAL PENDIENTE de Franco, sin plazo:
+ *   reasignar esos dibujos a abrirPlanCuentas y abrirProyeccionesElaboradas; recien despues
+ *   se pueden borrar los dos alias.
+ * - EL ICONO DUPLICADO. Conciliacion usaba en el Home un check casi identico al de "Procesar
+ *   Cargas", dos tarjetas mas arriba, en la MISMA seccion: dos iconos iguales no distinguen
+ *   nada. Pasa a dos columnas con un igual entre ellas -- emparejar dos lados, que es lo que
+ *   conciliar significa.
+ * - NADA SE BORRO TODAVIA. src/UI_AbmProyeccionElaborada.html queda huerfano,
+ *   pingProyeccionAbm queda sin consumidor y el DIAG temporal sigue en el menu Dev: los tres
+ *   se retiran en su propio commit, DESPUES de la verificacion en vivo. Si el
+ *   PERMISSION_DENIED reapareciera al abrir por menu -- el timing historico del incidente --
+ *   son exactamente las herramientas para diagnosticarlo, y borrarlas antes seria quedarse
+ *   sin instrumento justo cuando haria falta. La cabecera de DEVTOOL_ProyeccionAbm.js declara
+ *   ese estado: es backend VIVO de una pantalla de uso diario, no candidato a retiro, y su
+ *   prefijo DEVTOOL_ es historico (el archivo no se renombra: eso moveria su lugar en la
+ *   carga alfabetica de Apps Script, cicatriz v0.50.1).
+ *
+ * [2026-08-29] v0.62.0 - El Plan de Cuentas entra al shell.
+ * - LA VISTA. El ABM del Plan de Cuentas era el ultimo formulario de uso diario fuera del
+ *   Centro de Operaciones: modal propio de 520x750 con la piel vieja (Google Sans, lienzo
+ *   navy de UI_SharedStyles). Clickear "Gestionar cuentas" en el Home REEMPLAZABA el modal
+ *   de 900x700 por ese, mas chico y de otro color, en el mismo gesto -- Apps Script no anida
+ *   modales. Ahora es la vista 'cuentas' de SHELL_VISTAS y hereda SHELL_GEOMETRIA: las
+ *   dimensiones se siguen declarando UNA sola vez.
+ * - CERO BACKEND NUEVO. Los cinco endpoints de 11_UIService.js (getAbmFormData,
+ *   getCategoryAccounts, saveAbmRecord, updateAbmRecord, deleteAbmRecord) se reusan
+ *   INTACTOS. Su contrato es {success:true} en exito y THROW ante cualquier rechazo, que no
+ *   es el {ok:true|false} del resto del shell: por eso la vista tiene su propio sender,
+ *   cuEnviar(), calcado de enviar() salvo en como lee la respuesta. Con enviar(), un rechazo
+ *   de validacion ("esa cuenta ya existe", "falta el indice") caeria en withFailureHandler y
+ *   se leeria igual que una caida de red. NO se normalizo el servidor: esos endpoints los
+ *   invoca tambien la planilla y su contrato es previo a esta pantalla.
+ * - PREPARADOR PROPIO, no el catalogo del shell. La vista necesita el rowIndex de cada fila
+ *   del Plan y los tres dominios del ABM (monedas, categorias de cuenta, tipos de medio), y
+ *   nada de eso viaja en obtenerCatalogoShell. Reponerlo ahi le cobraria una lectura de hoja
+ *   extra a cada apertura de formulario de carga, que es justo lo que la poda de v0.59.0
+ *   retiro. Va en VISTAS_CON_PREPARADOR_PROPIO, junto a conciliacion.
+ * - INVALIDACION, con la regla exacta. Una MUTACION del Plan (alta, cambio o baja exitosos)
+ *   pone catalogo = null; una CARGA no, porque escribe en la grilla, el ledger y los bloques
+ *   TC, nunca en el Plan. Sin lo primero, dar de alta una cuenta y pasar derecho a
+ *   "Movimiento nuevo" ofrecia los desplegables viejos -- sin la cuenta que se acababa de
+ *   crear justamente para usarla. El comentario de UI_Shell.html que justificaba la
+ *   no-invalidacion ("el ABM reemplaza el modal entero, asi que sus cambios llegan con
+ *   catalogo nuevo") murio con esta integracion y se reescribio.
+ * - HINT VERAZ SOBRE EL RENOMBRE. El modal viejo decia "Modificacion: los cambios afectaran
+ *   al historial de esta cuenta". El codigo hace lo contrario: updateRow escribe SOLO la
+ *   fila del Plan, asi que los movimientos ya registrados conservan el nombre viejo. La
+ *   vista lo dice tal cual. No se invento la cascada.
+ * - COMPONENTES EXISTENTES, cero caja propia: .shell-form/.f para los campos, .seg para el
+ *   modo Crear/Editar, .combo + datalist PROPIO (dlAbmCuentas: dlCuentas mezcla los tres
+ *   bloques y no trae rowIndex), .shell-acciones para la barra, y la baja en dos pasos sobre
+ *   el mismo boton con desarme a los 4 s, el patron de Recurrentes -- nunca confirm(), que
+ *   adentro del iframe de HtmlService es poco fiable. Dos reglas CSS nuevas y ni un color
+ *   nuevo: el estado presionado NEUTRO del segmentado (Crear no es "bueno" ni Editar
+ *   "peligroso": teal de accion, no semaforo) y el chevron de la casa para un <select> de la
+ *   grilla. El guard de paleta sigue en verde sin excepciones.
+ * - PROYECTOS sigue fuera del selector y rechazado por el servidor: esa tabla es hoy el
+ *   catalogo de Categorias de Cuenta, y un alta agregaba una categoria mientras una baja
+ *   borraba una.
+ * - MENU Y BOTONERA. El item "Plan de Cuentas" apunta a abrirPlanCuentas. showAbmPlanCuentas
+ *   SE CONSERVA como alias de una linea: la botonera de dibujos publicada lo referencia por
+ *   NOMBRE y no es editable ni auditable desde el repo (los drawings con script asignado no
+ *   son accesibles ni por Sheets API ni por Apps Script), y un dibujo apuntando a una
+ *   funcion inexistente falla en silencio. TAREA MANUAL PENDIENTE de Franco, sin plazo:
+ *   reasignar esos dibujos a abrirPlanCuentas; recien despues se puede borrar el alias.
+ * - RETIROS. abrirAbmDesdeShell() se elimino, como su propio docstring anunciaba ("cuando el
+ *   ABM se convierta en fragmento pasa a ser una vista mas y esta funcion desaparece"), y
+ *   con ella el abrirAbm() del cliente y el stub del doble. src/UI_AbmPlanCuentas.html queda
+ *   HUERFANO pero no se borra todavia: se retira en su propio commit, despues de la
+ *   verificacion en vivo.
+ * - Ademas, del contrato de v0.61.1: procesarLote() del Home mostraba un texto fijo e
+ *   ignoraba r.mensaje, asi que el aviso de fallback de cotizacion (Regla Estricta 9) no
+ *   llegaba a la pantalla por ese camino. Ahora muestra el mensaje del backend.
+ * - EL BANCO: seccion 20 extendida con la vista nueva (selector sin PROYECTOS, datalist
+ *   propio, sender propio, endpoints intactos en 11_UIService.js y no duplicados en el
+ *   shell, baja en dos pasos, hint veraz, alias de una linea) y la regla de invalidacion
+ *   pasa a assert explicito: cuTrasMutacion tira catalogo/lista/seleccion, y los cinco
+ *   guardados de carga NO tocan el catalogo. El cruce doble-vs-shell aprendio a leer el
+ *   despacho dinamico de cuEnviar, para que los tres endpoints de escritura no queden fuera.
+ *
+ * [2026-08-29] v0.61.1 - El pipeline deja de tragarse los errores.
+ * - EL DEFECTO. procesarCargas tenia la interfaz nativa adentro (toasts + alert) y su catch
+ *   alertaba SIN relanzar. Desde el menu eso funciona. Desde el shell -- que es un
+ *   showModalDialog -- el alert queda DETRAS del dialogo, invisible, y procesarCargasDesdeShell
+ *   devolvia {ok:true}: el usuario leia "Listo" sobre un lote que no habia entrado al ledger.
+ *   En la carga por tandas el sintoma era peor: la tanda fallida quedaba en la grilla (el
+ *   clearContent nunca corrio), el bucle seguia, y dos vueltas despues el error que llegaba
+ *   era "La grilla de Cargas quedo sin filas libres" -- una consecuencia, no la causa.
+ * - EL CORTE. `_procesarCargasNucleo(opciones)` es el pipeline sin una sola linea de UI:
+ *   LANZA ante cualquier fallo (incluido el "faltan hojas", que antes era un alert + return)
+ *   y devuelve {filas, fallbacks:{total, filasAfectadas, anclas}}. `filas: 0` no es un fallo:
+ *   es "no habia nada que hacer". El toast de progreso viaja por callback (`onProgreso`)
+ *   porque la cantidad de filas validas recien se sabe despues de filtrar la grilla.
+ * - EL CAMINO DE MENU NO CAMBIA. procesarCargas() es ahora solo el wrapper: los cuatro toasts
+ *   y el alert quedan textuales, y el caso "faltan hojas" conserva su alert SIN el prefijo
+ *   "Fallo en el procesamiento" (era un return temprano, no una excepcion). Es el habito
+ *   diario de Franco: cualquier cambio ahi seria regresion, no mejora.
+ * - LOS CUATRO LLAMADORES DEL SHELL pasan al nucleo: procesarCargasDesdeShell, las tandas de
+ *   registrarMovimientos y de registrarTraspasos, y la conciliacion (que entra por
+ *   _registrarMovimientosSinLock). El fallo sale como {ok:false, error} sin UI nativa.
+ * - EL ESTADO SE CUENTA CON LA VERDAD. Si el pipeline corta a mitad de un lote por tandas, el
+ *   error dice cuantas filas quedaron ESCRITAS en la hoja de Cargas sin procesar, cuantos
+ *   items ya entraron al ledger y cuantos nunca se escribieron. NO se invento un rollback:
+ *   el codigo nunca lo tuvo. Se declara, porque reintentar el lote entero duplicaria lo que
+ *   ya entro -- y un traspaso cortado son DOS filas, no una (media operacion hace desaparecer
+ *   plata).
+ * - REGLA ESTRICTA 9 EN LAS DOS SUPERFICIES. El aviso de fallbacks de cotizacion existia solo
+ *   como toast, que desde el shell queda tapado. Ahora tambien es dato: se pega al mensaje de
+ *   exito de movimientos, traspasos y conciliacion (esta ultima fecha sus ajustes HOY, y un
+ *   sabado la cotizacion del dia no existe: se congela la del viernes).
+ * - EL BANCO MENTIA. probar_shell.js stubeaba `procesarCargas() { throw }`, cosa que el real
+ *   NUNCA hacia: el verde de su seccion 8 no describia produccion. El stub pasa al contrato
+ *   real y se agrega la seccion 24, probada por mutacion (quitar el catch de tandas pone 5
+ *   asserts en rojo): nucleo que corta, cero alerts nativos en los cuatro caminos del shell,
+ *   y el modulo de menu cargado DE VERDAD en un contexto propio para verificar que atrapa,
+ *   alerta textual y no propaga.
+ * - PENDIENTE DECLARADO (lo toma la Etapa 3, duenia de UI_Shell.html): procesarLote() del
+ *   cliente ignora r.mensaje y muestra un texto fijo, asi que por ESE camino el aviso de
+ *   fallback llega al log pero no a la pantalla. Los otros tres caminos ya lo muestran.
+ *
  * [2026-08-29] v0.61.0 - El guardado deja de pisar lo ajeno y el ABM reconoce los cinco
  * origenes.
  * - ACTA DE COORDINACION: este release toca DEVTOOL_PresupuestoGuardar.js,
@@ -3613,7 +3913,7 @@
  * - Creación de la hoja "Registros" como Data Lake inmutable y "Tipos de Cambio" como caché estructurado.
  * - `06_RegistrosService.js`: Se incorporó `procesarCargas()` para lectura en bloque de `I5:O19`, anexado a `Registros` y ordenamiento inteligente.
  * - `15_ExchangeRateApi.js`: Se añadió fetching de APIs externas con caché temporal en memoria. (DolarApi y Frankfurter) para ARS/USD/EUR/AUD.
- * - El menú de Tidetrack ganó el ítem `🔧 [Dev] Procesar Cargas`.
+ * - El menú de Tidetrack ganó el ítem `[Dev] Procesar Cargas`.
  *
  * ---
  *

@@ -31,7 +31,7 @@ function logError(message, context = {}) {
  * @param {string} message Mensaje informativo
  */
 function logInfo(message) {
- Logger.log('️ INFO: ' + message);
+ Logger.log('INFO: ' + message);
 }
 
 /**

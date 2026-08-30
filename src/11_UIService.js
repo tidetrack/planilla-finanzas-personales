@@ -2,9 +2,9 @@
  * 11_UIService.js
  * Servicio para gestión de interfaces de usuario (HTML Service)
  * 
- * @version 0.4.0
+ * @version 0.63.0
  * @since 0.4.0
- * @lastModified 2026-01-18
+ * @lastModified 2026-08-29
  */
 
 // [AGILE-VALOR] Punto de entrada para la UI de los módulos validados.
@@ -22,14 +22,18 @@ function include(filename) {
 // ============================================
 
 /**
- * Abre el gestor centralizado Multi-ABM del Plan de Cuentas
+ * ALIAS DE COMPATIBILIDAD hacia la vista 'cuentas' del shell.
+ *
+ * decision Franco 2026-08-29: la botonera de dibujos publicada en la planilla referencia esta
+ * funcion POR NOMBRE y no es editable ni auditable desde el repo (los drawings con script
+ * asignado no son accesibles ni por Sheets API ni por Apps Script). Un dibujo apuntando a una
+ * funcion inexistente falla en silencio o con un error criptico, asi que el nombre se conserva
+ * aunque el modal que abria (UI_AbmPlanCuentas, 520x750) ya no se use. Borrar recien despues
+ * de reasignar los dibujos en la planilla viva a abrirPlanCuentas.
+ *
+ * @see 16_ShellService.js (abrirPlanCuentas -> vista 'cuentas')
  */
-function showAbmPlanCuentas() {
- const html = HtmlService.createTemplateFromFile('UI_AbmPlanCuentas').evaluate()
- .setWidth(520)
- .setHeight(750);
- SpreadsheetApp.getUi().showModalDialog(html, ' ');
-}
+function showAbmPlanCuentas() { abrirPlanCuentas(); }
 
 /**
  * Obtiene los dominios para poblar los Selects del Pop-Up ABM.
@@ -264,17 +268,26 @@ function deleteAbmRecord(payload) {
 // sensacion de reducirla, que es peor que nada. Esas seis funciones ya viven como globales en
 // DEVTOOL_ProyeccionAbm.js (listarPeriodosProyeccion, detalleFilasPeriodoProyeccion,
 // eliminarPeriodoProyeccion, revertirBajaProyeccionAbm, actualizarMontoFilaProyeccion,
-// revertirEdicionMontoProyeccion) y UI_AbmProyeccionElaborada.html las llama DIRECTO. Lo unico
-// que si vale la pena aca es la DESCUBRIBILIDAD -- que quien audite este catalogo sepa donde
-// mirar -- y eso es este comentario, no seis funciones que solo reenvian argumentos.
-// @see DEVTOOL_ProyeccionAbm.js
+// revertirEdicionMontoProyeccion) y su consumidor las llama DIRECTO. Lo unico que si vale la
+// pena aca es la DESCUBRIBILIDAD -- que quien audite este catalogo sepa donde mirar -- y eso
+// es este comentario, no seis funciones que solo reenvian argumentos.
+//
+// decision Franco 2026-08-29: el consumidor de esas seis funciones es AHORA src/UI_Shell.html
+// (vista 'proyecciones', prefijo pabm*), no UI_AbmProyeccionElaborada.html: ese modal fue
+// absorbido por el shell en v0.63.0. El contrato del servidor no cambio ni una linea.
+// @see DEVTOOL_ProyeccionAbm.js @see UI_Shell.html (vista 'proyecciones')
 
 /**
- * Abre el ABM (listar/corregir/borrar) de lo guardado en la hoja-BD "Proyeccion".
+ * ALIAS DE COMPATIBILIDAD hacia la vista 'proyecciones' del shell.
+ *
+ * decision Franco 2026-08-29: misma razon que showAbmPlanCuentas -- la botonera de dibujos
+ * publicada en la planilla referencia esta funcion POR NOMBRE y no es editable ni auditable
+ * desde el repo (los drawings con script asignado no son accesibles ni por Sheets API ni por
+ * Apps Script), y un dibujo apuntando a una funcion inexistente falla en silencio o con un
+ * error criptico. El modal que abria (UI_AbmProyeccionElaborada, 720x680) fue absorbido por
+ * la vista 'proyecciones' del shell (v0.63.0). Borrar recien despues de reasignar los dibujos
+ * en la planilla viva a abrirProyeccionesElaboradas.
+ *
+ * @see 16_ShellService.js (abrirProyeccionesElaboradas -> vista 'proyecciones')
  */
-function showAbmProyeccionElaborada() {
- const html = HtmlService.createTemplateFromFile('UI_AbmProyeccionElaborada').evaluate()
- .setWidth(720)
- .setHeight(680);
- SpreadsheetApp.getUi().showModalDialog(html, ' ');
-}
+function showAbmProyeccionElaborada() { abrirProyeccionesElaboradas(); }

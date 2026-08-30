@@ -103,6 +103,15 @@ body {
 /* ---- EL DIALOGO. Ancho = el area de contenido. Alto = area + barra de
    titulo, porque en Sheets la barra va POR FUERA del setHeight. */
 .sim-dialogo {
+    /* decision Franco 2026-08-29: flex:0 0 auto es obligatorio, no cosmetico.
+       .sim-dialogo es un flex item de .sim-centro y flex-shrink vale 1 por
+       defecto: en una ventana angosta el item se ENCOGIA por debajo de
+       --sim-ancho y el overflow:hidden de abajo RECORTABA el iframe por la
+       derecha (medido: ventana 573px -> dialogo 313px sobre un iframe de
+       492px). El unico mecanismo de adaptacion permitido es el scale del JS,
+       que no reflowea el contenido; encogerse cruzaria el breakpoint de
+       UI_Shell.html y mostraria otro layout, que es lo que el marco evita. */
+    flex: 0 0 auto;
     width: var(--sim-ancho);
     height: calc(var(--sim-alto) + var(--sim-barra-alto));
     display: flex; flex-direction: column;
@@ -139,7 +148,12 @@ body {
     flex: 0 0 auto; display: block;
     width: var(--sim-ancho); height: var(--sim-alto);
     border: 0;
-    background: #eff2f9;   /* el lienzo del shell, para que no parpadee blanco */
+    /* decision Franco 2026-08-29: el lienzo pasa de #eff2f9 (gris del design
+       system navy, muerto desde Corriente) a #FFFFFF, que es el fondo real del
+       body del shell (src/UI_Shell.html, ultima capa del background). Mientras
+       el iframe carga, el marco debe mostrar el mismo color que va a aparecer:
+       con el gris viejo el arranque parpadeaba a un color que ya no existe. */
+    background: #FFFFFF;
 }
 
 /* ---- CERRADO. La x oculta el dialogo; el boton lo reabre RECARGANDO el

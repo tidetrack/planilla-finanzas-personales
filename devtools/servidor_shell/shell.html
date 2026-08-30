@@ -561,6 +561,13 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
     gap: 12px;
 }
+/* Seccion de CUATRO tarjetas ("Revisar"): dos columnas, no tres. Con minmax de
+   255px las cuatro caian 3+1 -- una fila huerfana --, y a 255 el rotulo
+   "Proyecciones Elaboradas" se partia en dos lineas: era la unica tarjeta del
+   Home mas alta que sus vecinas (122px contra 104). Con 320px de piso caben dos
+   por fila a 900px de shell, los cuatro titulos entran en una linea y la seccion
+   espeja el ritmo 2x2 de "Registrar". Por debajo de ~652px baja sola a una. */
+.shell-cards--duo { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
 .shell-card {
     position: relative; overflow: hidden;
     display: flex; align-items: center; gap: 14px;
@@ -710,6 +717,29 @@ body {
     box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,202,176,.22);
 }
 
+/* UNA SOLA FLECHA POR COMBO (v0.55.2), y ahora en UNA SOLA regla. La ley vivia
+   escrita dos veces -- aca y en la barra de acciones -- con dos offsets (11 y
+   10px) que podian divergir por separado. Y divergieron: esta copia perdia la
+   flecha JUSTO al enfocarse, porque .f .form-input:focus (0-3-0) le gana a
+   .f select.form-input (0-2-1) y su shorthand `background` resetea la imagen a
+   none; el parche solo reponia background-color. Con appearance:none tampoco
+   quedaba la nativa: el select se quedaba sin ningun indicador mientras el
+   usuario lo estaba usando -- la cicatriz v0.55.2 dada vuelta.
+   decision Franco 2026-08-30: la imagen viaja en las DOS reglas (base y foco) y
+   el offset es uno solo. Cero color nuevo: --tt-gris, --chevron y #FFFFFF. */
+.f select.form-input,
+.shell-acciones .form-input {
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    background: var(--tt-gris) var(--chevron) no-repeat right 11px center / 10px 7px;
+    cursor: pointer;
+}
+/* El foco repone la IMAGEN, no solo el color: un shorthand background la borra. */
+.f select.form-input:focus,
+.shell-acciones .form-input:focus {
+    background: #FFFFFF var(--chevron) no-repeat right 11px center / 10px 7px;
+}
+.f select.form-input { padding-right: 30px; }
+
 .f .form-input[type="date"] { padding-right: 8px; }
 .f .form-input[type="date"]::-webkit-calendar-picker-indicator {
     opacity: .55; cursor: pointer;
@@ -816,12 +846,18 @@ body {
    (formulario) y RESUMEN (una fila). El default es EDICION: si el JS del
    acordeon no corre, el formulario sigue siendo usable. Falla en seguro.
    ============================================================ */
-.bloque {
+/* LA PIEL DE VIDRIO, UNA SOLA VEZ. Las seis declaraciones estaban escritas tres
+   veces -- .bloque, .conc-card y .pabm-card -- palabra por palabra: tres reglas
+   paralelas que habia que mantener sincronizadas a mano. Cada vista deja abajo
+   solo su delta (margen, overflow, transicion). */
+.bloque, .conc-card, .pabm-card {
     background: var(--vidrio);
     -webkit-backdrop-filter: blur(10px) saturate(1.2);
     backdrop-filter: blur(10px) saturate(1.2);
     border-radius: var(--r-card);
     box-shadow: inset 0 0 0 1px var(--vidrio-borde), var(--vidrio-luz), var(--elev-agua);
+}
+.bloque {
     margin-bottom: 12px;
     transition: box-shadow .2s var(--mov);
 }
@@ -945,7 +981,12 @@ body {
    selector repite .bloque para ganarle en especificidad al tinte por tipo:
    un bloque vacio se muestra gris aunque su tipo diga Egreso. */
 .bloque .bloque-monto[data-vacio="1"] { color: var(--ink-3); font-weight: 500; }
-.bloque-resumen .chev-abrir { flex: 0 0 auto; color: var(--ink-3); }
+/* El chevron de cualquier acordeon del shell: el del bloque plegado y el de la
+   tarjeta de periodo de 'proyecciones'. La rotacion la aplica quien la necesite. */
+.chev-abrir {
+    flex: 0 0 auto; color: var(--ink-3);
+    transition: transform .2s var(--mov), color .2s var(--mov);
+}
 .bloque-resumen:hover .chev-abrir { color: var(--teal-tinta); }
 
 /* --- Cuerpo de edicion. Colapso con grid-template-rows 0fr -> 1fr. --- */
@@ -1081,19 +1122,18 @@ body {
 }
 /* Botones y selects de la barra NO se achican; el que cede es el resumen. */
 .shell-acciones .btn { flex: 0 0 auto; white-space: nowrap; }
+/* El chevron, appearance:none y el cursor los pone la regla unica de "una sola
+   flecha por combo" (seccion 5): aca queda SOLO el delta de la barra. */
 .shell-acciones .form-input {
     flex: 0 0 auto;
     width: auto;
     height: 34px; padding: 0 30px 0 10px;
     border: 0; border-radius: var(--r-input);
-    appearance: none; -webkit-appearance: none; -moz-appearance: none;
-    background: var(--tt-gris) var(--chevron) no-repeat right 10px center / 10px 7px;
     box-shadow: inset 0 0 0 1px rgba(30,42,51,.08);
     font: inherit; font-size: 12px; color: var(--ink-1);
-    cursor: pointer;
 }
 .shell-acciones .form-input:focus {
-    outline: none; background-color: #FFFFFF;
+    outline: none;
     box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,202,176,.22);
 }
 
@@ -1136,7 +1176,7 @@ body {
 }
 /* Un aviso con botones adentro (confirmacion inline del volcado, reintento). */
 .alert > span:first-of-type { flex: 1 1 auto; align-self: center; }
-.alert .btn { flex: 0 0 auto; align-self: center; height: 32px; padding: 0 14px; }
+.alert .btn { flex: 0 0 auto; align-self: center; }
 
 
 /* ============================================================
@@ -1159,28 +1199,44 @@ body {
     background: var(--ambar-ink);
     box-shadow: 0 0 0 3px var(--ambar-bg);
 }
+/* Modo Crear/Editar del Plan de Cuentas: el segmentado NO es un semaforo aca.
+   Crear no es "bueno" ni Editar "peligroso": son dos modos neutros. Se tine con
+   el teal de accion (anillos derivados de --tt-teal, mismas alfas .22/.25 que el
+   par ink/bg del semaforo) y la tinta es --teal-tinta, el unico teal legible.
+   decision Franco 2026-08-30: la pastilla es BLANCA, no rgba(46,202,176,.14).
+   Ese relleno, compuesto sobre --tt-gris, daba un #D8F1F0 efectivo y 4.38:1
+   contra --teal-tinta -- por debajo de AA para 12.5px/600, y el mas flojo de los
+   cuatro estados presionados del mismo componente (Ingreso 5.67, Egreso 5.07,
+   ambar 6.73). Sobre blanco son 5.18:1, alineado con los otros tres. El guard de
+   paleta mira procedencia, no contraste: pasaba en verde igual. */
+.seg button[aria-pressed="true"][data-v="Crear"],
+.seg button[aria-pressed="true"][data-v="Editar"] {
+    background: #FFFFFF; color: var(--teal-tinta);
+    box-shadow: 0 0 0 1px rgba(46,202,176,.22), inset 0 0 0 1px rgba(46,202,176,.25);
+}
 /* Pie de un bloque recurrente: Guardar y Borrar en fila, por bloque. */
 .bloque .rec-pie { flex-direction: row; align-items: center; gap: 10px; }
-.rec-borrar[data-conf="1"] {
-    background: var(--rojo-bg); color: var(--rojo-ink);
-    box-shadow: inset 0 0 0 1px rgba(178,59,50,.22);
-}
+/* El estado ARMADO de .rec-borrar se pinta con .btn--peligro (seccion 10): eran
+   dos reglas identicas con dos nombres para el mismo boton destructivo. */
+
 /* Hints de contexto de la conciliacion: viven fuera de la grilla .f. */
 .conc-hint {
     margin: 0 0 10px;
     font-size: 12.5px; line-height: 1.45; color: var(--ink-2);
 }
 .conc-hint.alerta { color: var(--ambar-ink); }
+/* Mismo parrafo auxiliar, un tono mas bajo: el vacio de una seccion y las lineas
+   de "Cargando..." / "Borrando...". Eran dos clases propias de la vista de
+   proyecciones que solo cambiaban el color y el margen de esta. */
+.conc-hint--tenue { color: var(--ink-3); }
+.pabm-detalle > .conc-hint:only-child,
+.pabm-borrar > .conc-hint:only-child { margin: 0; }
 
-/* La tabla de conciliacion, envuelta en tarjeta de vidrio. */
+/* La tabla de conciliacion, envuelta en tarjeta de vidrio (piel compartida en la
+   seccion 6). Delta propio: contenido ancho que scrollea DENTRO de su
+   contenedor -- por debajo de ~530px la tabla excedia la card y Estado quedaba
+   clipeado. */
 .conc-card {
-    background: var(--vidrio);
-    -webkit-backdrop-filter: blur(10px) saturate(1.2);
-    backdrop-filter: blur(10px) saturate(1.2);
-    border-radius: var(--r-card);
-    box-shadow: inset 0 0 0 1px var(--vidrio-borde), var(--vidrio-luz), var(--elev-agua);
-    /* Contenido ancho que scrollea DENTRO de su contenedor: por debajo de
-       ~530px la tabla excedia la card y Estado quedaba clipeado. */
     overflow-x: auto;
     overflow-y: hidden;
 }
@@ -1240,6 +1296,118 @@ body {
 }
 .conc-pill[data-dir="menos"] { background: var(--rojo-bg); color: var(--rojo-ink); }
 .conc-sub { display: block; margin-top: 3px; font-size: 11px; color: var(--ink-3); }
+
+/* ------------------------------------------------------------
+   VISTA 'proyecciones' (ABM de lo ya guardado en la BD Proyeccion).
+   CERO color nuevo: la tarjeta usa los tokens EXACTOS de .conc-card y el
+   resto sale de las tintas y del semaforo de funcion ya declarados. Lo unico
+   verdaderamente nuevo es .btn--mini, un tamano de boton (no un color) que
+   hacia falta para que Cancelar/Guardar quepan dentro de una celda de tabla.
+   ------------------------------------------------------------ */
+/* Boton chico. decision Franco 2026-08-30: 32px, la MISMA altura que el boton de
+   un aviso, no un escalon propio de 30. Con 30 la escala pasaba a 38/32/30, dos
+   pasos separados por 2px, y ademas no casaba con el input .conc-real (34px) con
+   el que convive en la edicion inline. .alert .btn es su otro consumidor: una
+   sola escala 38/32 en todo el shell. El guard 17 prohibe 10.5px: cuerpo 12px. */
+.btn--mini, .alert .btn { height: 32px; padding: 0 12px; font-size: 12px; }
+/* Borrar de verdad: el par de funcion rojo, nunca un rojo nuevo.
+   decision Franco 2026-08-30: SOLIDO (--rojo-ink de fondo, texto blanco), no el
+   relleno tenue. El confirmar de la baja vive DENTRO de .pabm-conf, que tiene el
+   mismo var(--rojo-bg): relleno contra panel 1.00:1 y su unico filo 1.37:1 --
+   invisible como control, y leyendo mas debil que el "Cancelar" blanco que tiene
+   al lado. En la unica accion irreversible de la vista la jerarquia estaba dada
+   vuelta. Solido da 5.89:1 de texto y 5.07:1 de relleno, y es el mismo par que
+   ya usa el boton de cierre de la alerta de 14_EventHandlers.js.
+   Lo consume tambien el estado ARMADO de .rec-borrar (recurrentes y cuentas):
+   era una copia byte a byte de la version tenue, con otro nombre. */
+.btn--peligro, .rec-borrar[data-conf="1"] {
+    background: var(--rojo-ink); color: #FFFFFF;
+    box-shadow: none;
+}
+.btn--peligro:hover:not(:disabled), .rec-borrar[data-conf="1"]:hover:not(:disabled) {
+    background: var(--rojo-ink);
+    box-shadow: 0 0 0 3px rgba(178,59,50,.22);
+}
+
+/* Hint de contexto con su boton al costado (mismo idioma que el aviso con botones). */
+.pabm-hint { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.pabm-hint .conc-hint { flex: 1 1 auto; margin: 0; }
+.pabm-hint .btn { flex: 0 0 auto; }
+/* El contador de una seccion NO va en versalita: es un numero, no un rotulo. */
+.shell-sec .cuenta {
+    text-transform: none; letter-spacing: 0.02em;
+    color: var(--ink-3); font-variant-numeric: tabular-nums;
+}
+/* Tarjeta de periodo: piel de vidrio compartida (seccion 6). Delta propio. */
+.pabm-card {
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+/* La cabecera es un <button> de verdad, como .bloque-resumen y como toda
+   .shell-card del Home: era un <div onclick> sin tabindex ni role, y desplegar
+   un periodo resultaba imposible sin mouse. El reset repite el de
+   .bloque-resumen porque un boton trae fondo, borde, fuente y centrado propios. */
+.pabm-head {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 12px 16px;
+    border: 0; background: transparent;
+    text-align: left; font: inherit; color: inherit; cursor: pointer;
+    transition: background-color .15s var(--mov);
+}
+.pabm-head:hover { background: rgba(46,202,176,.05); }
+.pabm-head:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: -2px; }
+.pabm-mes { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--ink-1); }
+/* El eco de la tarjeta (filas + sello) usa .bloque-meta, la misma clase del
+   resumen de un bloque: era byte a byte la misma declaracion con otro nombre.
+   El chevron usa .chev-abrir por lo mismo. */
+.pabm-card[data-abierto="1"] .chev-abrir { transform: rotate(180deg); color: var(--teal-tinta); }
+.pabm-totales {
+    display: flex; flex-wrap: wrap; gap: 4px 18px;
+    padding: 0 16px 12px;
+    font-size: 12px; color: var(--ink-2);
+}
+.pabm-totales b {
+    font-weight: 600; color: var(--ink-1);
+    font-variant-numeric: tabular-nums;
+}
+.pabm-card .alert { margin: 0 16px 12px; }
+/* Hairline superior: el mismo filo de las celdas de la tabla de conciliacion.
+   El detalle NO se anima como .bloque-cuerpo (grid-template-rows 0fr -> 1fr) a
+   proposito: su contenido llega DESPUES de abrirlo -- primero "Cargando..." y
+   despues la tabla entera --, asi que una transicion de altura correria dos
+   veces y la segunda desde un alto que nadie eligio. Es una divergencia con
+   razon, no un olvido. */
+.pabm-detalle { padding: 12px 16px 14px; box-shadow: inset 0 1px 0 rgba(30,42,51,.08); }
+.pabm-detalle .alert { margin: 0; }
+.pabm-nota { margin-top: 2px; font-size: 11px; line-height: 1.35; color: var(--ink-3); }
+.pabm-pie { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); }
+.pabm-borrar { margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(30,42,51,.15); }
+.pabm-conf {
+    padding: 11px 14px; border-radius: 14px;
+    background: var(--rojo-bg); color: var(--rojo-ink);
+    font-size: 12.5px; line-height: 1.45;
+}
+.pabm-conf p { margin: 0 0 9px; }
+.pabm-conf .btn + .btn { margin-left: 8px; }
+/* Edicion inline del monto: input .conc-real + los dos botones mini, a la derecha. */
+.pabm-edit {
+    display: inline-flex; align-items: center; justify-content: flex-end;
+    gap: 6px; flex-wrap: wrap;
+}
+.pabm-edit .conc-real { width: 118px; }
+/* Tambien un <button> de verdad: era un <span onclick> y corregir un monto no se
+   podia hacer con teclado. font: inherit resetea font-variant-numeric, asi que
+   los tabular-nums de .num se reponen explicitamente. */
+.pabm-monto {
+    display: inline-flex; align-items: center;
+    border: 0; background: transparent; color: inherit;
+    font: inherit; font-variant-numeric: tabular-nums;
+    cursor: pointer; border-radius: 8px; padding: 2px 4px; margin: -2px -4px;
+    transition: background-color .15s var(--mov);
+}
+.pabm-monto:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: -2px; }
+.pabm-monto:hover { background: rgba(46,202,176,.10); color: var(--teal-tinta); }
+.pabm-monto .lapiz { margin-left: 5px; opacity: .55; vertical-align: -1px; }
 
 
 /* ============================================================
@@ -1314,13 +1482,22 @@ body {
    ============================================================ */
 @keyframes vistaEntra { from { opacity: 0; transform: translateY(8px); } }
 #vista-home .shell-card { animation: vistaEntra 300ms var(--mov) both; }
-#vista-home .shell-cards:nth-of-type(1) .shell-card { animation-delay: 0.02s; }
-#vista-home .shell-cards:nth-of-type(2) .shell-card:nth-child(1) { animation-delay: 0.06s; }
-#vista-home .shell-cards:nth-of-type(2) .shell-card:nth-child(2) { animation-delay: 0.09s; }
-#vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(1) { animation-delay: 0.12s; }
-#vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(2) { animation-delay: 0.15s; }
-#vista-home .shell-cards:nth-of-type(3) .shell-card:nth-child(3) { animation-delay: 0.18s; }
-#vista-home .shell-cards:nth-of-type(4) .shell-card { animation-delay: 0.21s; }
+/* EL ESCALONADO SE CABLEA POR data-grupo, NO POR POSICION. Los selectores usaban
+   :nth-of-type, que cuenta entre HERMANOS DEL MISMO TAG: como cada .shell-cards
+   viene precedido por un .shell-sec, los cuatro grupos son los divs 2, 4, 6 y 8.
+   Medido en el navegador con getComputedStyle: cinco de las ocho tarjetas
+   entraban con delay 0s y la regla de la cuarta de "Revisar" no matcheaba nunca.
+   Con data-grupo el cableado sobrevive a cualquier reordenamiento del DOM. */
+#vista-home [data-grupo="1"] .shell-card { animation-delay: 0.02s; }
+#vista-home [data-grupo="2"] .shell-card:nth-child(1) { animation-delay: 0.06s; }
+#vista-home [data-grupo="2"] .shell-card:nth-child(2) { animation-delay: 0.09s; }
+#vista-home [data-grupo="3"] .shell-card:nth-child(1) { animation-delay: 0.12s; }
+#vista-home [data-grupo="3"] .shell-card:nth-child(2) { animation-delay: 0.15s; }
+#vista-home [data-grupo="3"] .shell-card:nth-child(3) { animation-delay: 0.18s; }
+/* La cuarta de "Revisar" (Proyecciones Elaboradas) entra despues de las tres de arriba y
+   antes que la de Estructura: el escalonado sigue el orden de lectura, no el del DOM. */
+#vista-home [data-grupo="3"] .shell-card:nth-child(4) { animation-delay: 0.21s; }
+#vista-home [data-grupo="4"] .shell-card { animation-delay: 0.24s; }
 
 
 /* ============================================================
@@ -1374,7 +1551,7 @@ body {
     <div id="vista-home" class="vista-ancha">
 
         <div class="shell-sec">Hoy</div>
-        <div class="shell-cards">
+        <div class="shell-cards" data-grupo="1">
             <button class="shell-card shell-card--hero" data-vista="movimiento"
                     onclick="irAVista('movimiento')">
                 <span class="ico" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24"
@@ -1391,7 +1568,7 @@ body {
         </div>
 
         <div class="shell-sec">Registrar</div>
-        <div class="shell-cards">
+        <div class="shell-cards" data-grupo="2">
             <button class="shell-card" data-vista="traspaso" onclick="irAVista('traspaso')">
                 <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -1421,7 +1598,7 @@ body {
         </div>
 
         <div class="shell-sec">Revisar</div>
-        <div class="shell-cards">
+        <div class="shell-cards shell-cards--duo" data-grupo="3">
             <button class="shell-card" data-listo="1" onclick="procesarLote()">
                 <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -1436,9 +1613,12 @@ body {
                      stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
             <button class="shell-card" data-vista="conciliacion" onclick="irAVista('conciliacion')">
+                <!-- Dos columnas y un igual entre ellas: emparejar dos lados. El check que
+                     habia era casi identico al de "Procesar Cargas", dos tarjetas mas arriba:
+                     dos iconos iguales en la misma seccion no distinguen nada. -->
                 <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                    stroke-linejoin="round"><path d="M5 4v16M19 4v16M9.5 10h5M9.5 14h5"/></svg></span>
                 <span class="txt">
                     <span class="t">Conciliacion</span>
                     <span class="d">Emparejar cada caja con lo que dice el banco.</span>
@@ -1461,16 +1641,35 @@ body {
                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
                      stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
+            <!-- decision Franco 2026-08-29: tarjeta PROPIA, y en "Revisar". Es la UNICA puerta
+                 para corregir o borrar lo ya proyectado: esconderla detras de "Proyeccion
+                 nueva" hacia indescubrible el borrado, y el mensaje de exito del backend ya
+                 manda aca. Su naturaleza es revisar, que es exactamente esta seccion. -->
+            <button class="shell-card" data-vista="proyecciones" onclick="irAVista('proyecciones')">
+                <!-- Barras con un lapiz encima: lo proyectado, y que se puede corregir. -->
+                <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round"><path d="M3 21h18M6 21v-7M11 21v-4M16 21v-9"/><path d="M15 8l4-4 2 2-4 4h-2z"/></svg></span>
+                <span class="txt">
+                    <span class="t">Proyecciones Elaboradas</span>
+                    <span class="d">Revisar, corregir un monto o borrar lo ya proyectado.</span>
+                </span>
+                <span class="pend"></span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
         </div>
 
         <div class="shell-sec">Estructura</div>
-        <div class="shell-cards">
-            <button class="shell-card" data-listo="1" onclick="abrirAbm()">
+        <div class="shell-cards" data-grupo="4">
+            <button class="shell-card" data-vista="cuentas" onclick="irAVista('cuentas')">
                 <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h11"/></svg></span>
                 <span class="txt">
                     <span class="t">Gestionar cuentas</span>
                     <span class="d">Alta, baja y cambio de nombre del Plan de Cuentas.</span>
                 </span>
+                <span class="pend"></span>
                 <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
         </div>
@@ -1551,18 +1750,115 @@ body {
         </div>
     </div>
 
+    <!-- ================= PROYECCIONES ELABORADAS (ABM) =================
+         Era un modal aparte de 720x680 (UI_AbmProyeccionElaborada.html) con la piel vieja y
+         con TRES intentos de reintento contra un PERMISSION_DENIED que resulto ser su propio
+         DOCTYPE en la linea 93 (quirks mode dejaba sin montar el puente hacia el servidor).
+         Aca es una vista mas: DOCTYPE en la linea 1, UNA llamada, tope de 15 s y un boton
+         Reintentar. Los seis endpoints de DEVTOOL_ProyeccionAbm.js se consumen INTACTOS.
+         vista-ancha y no vista-form: es un listado de revision con totales por moneda en fila,
+         no un formulario angosto. Sin barra .shell-acciones: no hay accion de lote -- el
+         "Volver" de la banda es la salida y cada tarjeta trae sus propias acciones.
+         TODO el contenido lo pinta el JS (patron pintarConciliacion): asi los estados
+         carga/error/vacio no pueden desincronizarse de un DOM estatico.
+         @see DEVTOOL_ProyeccionAbm.js -->
+    <div id="vista-proyecciones" class="vista-ancha hidden">
+        <div id="pabmContenido"></div>
+    </div>
+
+    <!-- ================= PLAN DE CUENTAS (ABM) =================
+         Era un modal aparte de 520x750 con la piel vieja. Aca es una vista mas: hereda
+         SHELL_GEOMETRIA y los componentes que ya existen (.shell-form/.f/.seg/.combo/
+         .shell-acciones), sin una sola caja propia. Los CINCO endpoints del servidor
+         (getAbmFormData, getCategoryAccounts, saveAbmRecord, updateAbmRecord,
+         deleteAbmRecord) se reusan TAL CUAL: esta integracion no toca el backend de datos.
+         @see 11_UIService.js -->
+    <div id="vista-cuentas" class="vista-form hidden">
+        <p class="conc-hint">El Plan de Cuentas es el catalogo: de aca salen los desplegables
+            de Cuenta y de Medio en toda la planilla.</p>
+
+        <!-- UNA sola grilla de 12 para toda la vista: los campos que no corresponden se ocultan
+             de a uno (.hidden) y la fila se recompone sola. Con tres .shell-form apilados el
+             hint de dos lineas del selector se comia el gap y chocaba con el rotulo de abajo:
+             el gap de la grilla solo separa CELDAS, no grillas hermanas. -->
+        <div class="shell-form">
+            <label class="f c6">
+                <span class="rot">Bloque del Plan</span>
+                <select class="form-input" id="cuEntidad" onchange="cuCambioEntidad()">
+                    <option value="">Elegi que gestionar</option>
+                    <option value="INGRESOS">Ingresos</option>
+                    <option value="GASTOS_FIJOS">Gastos fijos</option>
+                    <option value="GASTOS_VARIABLES">Gastos variables</option>
+                    <option value="MEDIOS_PAGO">Medios de pago</option>
+                    <!-- "Proyectos" NO se ofrece desde el 2026-08-20 y el servidor ademas lo
+                         RECHAZA explicitamente: RANGES.PROYECTOS apunta hoy al catalogo de
+                         Categorias de Cuenta, asi que un alta agregaba una categoria y una
+                         baja borraba una. Esa defensa se conserva tal cual. -->
+                </select>
+                <span class="hint" id="cuHintEntidad"></span>
+            </label>
+            <div class="f c6">
+                <span class="rot">Que queres hacer</span>
+                <div class="seg" role="group" aria-label="Modo del Plan de Cuentas">
+                    <button type="button" data-v="Crear" aria-pressed="true" onclick="cuSegModo(this)">Crear</button>
+                    <button type="button" data-v="Editar" aria-pressed="false" onclick="cuSegModo(this)">Editar</button>
+                </div>
+                <input type="hidden" id="cuModo" value="Crear">
+                <span class="hint"></span>
+            </div>
+
+            <label class="f c12 hidden" id="cuCampoBuscar">
+                <span class="rot">Cual</span>
+                <span class="combo"><input class="form-input" id="cuBuscar" list="dlAbmCuentas"
+                       autocomplete="off" placeholder="Buscar" oninput="cuElegirCuenta()"></span>
+                <span class="hint" id="cuHintBuscar">Tipea para filtrar y elegi una de la lista.</span>
+            </label>
+
+            <label class="f c6 hidden" id="cuCampoNombre">
+                <span class="rot" id="cuRotNombre">Nombre</span>
+                <input class="form-input" id="cuNombre" autocomplete="off" placeholder="Sueldo, Nafta, Comidas">
+                <span class="hint"></span>
+            </label>
+            <label class="f c3 hidden" id="cuCampoMoneda">
+                <span class="rot">Moneda</span>
+                <select class="form-input" id="cuMoneda"></select>
+                <span class="hint">La que suele usar</span>
+            </label>
+            <label class="f c6 hidden" id="cuCampoDominio">
+                <span class="rot" id="cuRotDominio">Categoria</span>
+                <select class="form-input" id="cuDominio"></select>
+                <span class="hint">Opcional</span>
+            </label>
+        </div>
+
+        <p class="conc-hint hidden" id="cuHintRenombre">Renombrar cambia solo el catalogo: los
+            movimientos ya registrados conservan el nombre viejo.</p>
+
+        <div class="shell-acciones">
+            <button class="btn btn-secondary rec-borrar hidden" id="cuBtnBorrar" onclick="cuBorrar(this)">Eliminar</button>
+            <span class="crece" id="cuResumen"></span>
+            <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
+            <button class="btn btn-primary" id="cuBtnGuardar" onclick="cuGuardar()">Crear</button>
+        </div>
+    </div>
+
 </main>
 
 <footer class="shell-foot">
     <span class="vivo">PLANILLA FINANZAS_v4 .WIP | Personal</span>
     <span class="spacer"></span>
-    <span class="ver">v0.60.0 local</span>
+    <span class="ver">v0.63.1 local</span>
 </footer>
 
 <!-- Los datalist son COMPARTIDOS por todos los bloques y se pueblan una sola vez: es lo que
      hace barato clonar un bloque, porque no arrastra el catalogo adentro. -->
 <datalist id="dlCuentas"></datalist>
 <datalist id="dlMedios"></datalist>
+<!-- El ABM tiene el suyo PROPIO y no reusa dlCuentas: aquel mezcla los tres bloques de
+     cuentas en un solo desplegable (util para cargar un movimiento, inservible para editar
+     una fila) y no trae el rowIndex, que es lo unico con lo que updateRow/deleteRow saben
+     que fila del Plan tocar. -->
+<datalist id="dlAbmCuentas"></datalist>
 
 <div class="shell-overlay hidden" id="shellLoader">
     <div class="shell-spinner"></div>
@@ -1618,6 +1914,112 @@ var SALDOS_CONC_DOBLE = {
     { medio: 'YPF', moneda: 'ARS', saldo: 3120 }
   ]
 };
+/* EL ABM DEL PLAN DE CUENTAS (vista 'cuentas'). Contrato DISTINTO al del resto del shell y
+   por eso se doble tal cual: getAbmFormData devuelve el objeto de dominios PELADO (sin ok),
+   getCategoryAccounts devuelve un ARRAY, y los tres de escritura devuelven {success:true} y
+   LANZAN ante cualquier rechazo -- que aca se simula llamando al handler de falla, porque el
+   doble responde por setTimeout y un throw no llegaria a ningun lado.
+   Las filas salen del catalogo real de arriba, con rowIndex igual al indice de la fila en la
+   tabla del Plan, que es lo que updateRow/deleteRow reciben. Mutan en memoria para que un
+   alta y su re-listado se sientan de verdad dentro de una misma sesion de pruebas. */
+var ABM_DOMINIOS_DOBLE = {
+  monedas: CATALOGO_REAL.monedas,
+  categoriasCuenta: ['Trabajo y negocio', 'Vehiculo', 'Salud', 'Alimentacion y social',
+                     'Hogar', 'Educacion', 'Deudas'],
+  tiposMedio: ['Hogar', 'Ahorros', 'Inversiones', 'Financiación']
+};
+var ABM_FILAS_DOBLE = (function () {
+  var cuenta = function (nombres, categoria) {
+    return nombres.map(function (n) {
+      return { nombre: n, moneda: '', proyecto: categoria, tipo: '' };
+    });
+  };
+  return {
+    INGRESOS: cuenta(CATALOGO_REAL.ingresos, 'Trabajo y negocio'),
+    GASTOS_FIJOS: cuenta(CATALOGO_REAL.fijos, 'Hogar'),
+    GASTOS_VARIABLES: cuenta(CATALOGO_REAL.variables, 'Alimentacion y social'),
+    MEDIOS_PAGO: CATALOGO_REAL.medios.map(function (m) {
+      return { nombre: m.nombre, moneda: m.moneda, proyecto: m.tipo, tipo: '' };
+    })
+  };
+})();
+/* PROYECCIONES ELABORADAS (vista 'proyecciones'). Contrato de DEVTOOL_ProyeccionAbm.js: en
+   exito devuelven el objeto de datos PELADO (sin campo ok) y en fallo LANZAN -- que aca se
+   simula llamando al handler de falla, porque el doble responde por setTimeout y un throw no
+   llegaria a ningun lado. Los datos imitan el estado REAL de produccion: mucho presupuesto
+   base, poco guardado a mano, un mes del shell y uno de recurrentes; y un grupo 'otros' con
+   clave 'sin-fecha' para poder mirar ese caso limite sin fabricarlo a mano.
+   Muta en memoria: borrar un periodo y deshacerlo se sienten de verdad en una misma sesion. */
+var PABM_MES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+  'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+function pabmMesLabelDoble(clave) {
+  var m = /^(\d{4})-(\d{2})$/.exec(clave || '');
+  if (!m) return 'Sin mes reconocible';
+  return PABM_MES_ES[Number(m[2]) - 1] + ' ' + m[1];
+}
+/* Cada fila del doble es una fila real de "Proyeccion": los totales y el detalle se DERIVAN
+   de estas filas, nunca se escriben a mano, para que una baja o una edicion muevan los dos. */
+var PROY_FILAS_DOBLE = (function () {
+  var filas = [];
+  var n = 100;
+  var poner = function (clave, origen, sello, cuenta, tipoCuenta, monto, moneda, notaLibre) {
+    filas.push({ fila: n++, clave: clave, origen: origen, sello: sello, cuenta: cuenta,
+                 tipoCuenta: tipoCuenta, tipo: tipoCuenta === 'Ingreso' ? 'Ingreso' : 'Egreso',
+                 monto: monto, moneda: moneda, notaLibre: notaLibre || '' });
+  };
+  var CLAVES_BASE = ['2026-09', '2026-10', '2026-11'];
+  CLAVES_BASE.forEach(function (clave, i) {
+    poner(clave, 'base', '2026-08-01_090000', 'Sueldo', 'Ingreso', 1850000 + i * 1000, 'ARS');
+    poner(clave, 'base', '2026-08-01_090000', 'Nafta', 'Gasto Fijo', 92000, 'ARS');
+    poner(clave, 'base', '2026-08-01_090000', 'Prepaga Salud', 'Gasto Fijo', 148000, 'ARS');
+    poner(clave, 'base', '2026-08-01_090000', 'Comidas', 'Gasto Variable', 310000, 'ARS');
+    poner(clave, 'base', '2026-08-01_090000', 'Viajes', 'Categoria Rara', 40000, 'ARS');
+  });
+  poner('2026-09', 'guardado', '2026-08-20_143012', 'Sueldo', 'Ingreso', 2100000, 'ARS');
+  poner('2026-09', 'guardado', '2026-08-20_143012', 'Alquiler', 'Gasto Fijo', 480000, 'ARS');
+  poner('2026-09', 'guardado', '2026-08-28_101500', 'Subscripciones', 'Gasto Fijo', 2.99, 'USD');
+  poner('2026-09', 'shell', 'shell_2026-08-29_181203445', 'Regalos', 'Gasto Variable', 65000,
+        'ARS', 'cumple de mama');
+  poner('2026-10', 'shell', 'shell_2026-08-29_181500', 'Viajes', 'Gasto Variable', 900, 'USD',
+        'pasaje Bariloche');
+  poner('2026-09', 'recurrentes', '2026-08-27_120000', 'Subscripciones', 'Gasto Fijo', 13999,
+        'ARS', 'Netflix');
+  poner('2026-09', 'recurrentes', '2026-08-27_120000', 'SportClub', 'Gasto Fijo', 42000, 'ARS',
+        'SportClub: debito automatico');
+  poner('sin-fecha', 'otros', null, 'Imprevistos', 'Gasto Variable', 15000, 'ARS');
+  return filas;
+})();
+var PROY_ORIGENES_DOBLE = ['guardado', 'shell', 'recurrentes', 'base', 'otros'];
+var PROY_PAPELERA_DOBLE = null;   // la ULTIMA baja, unica reversible (como el servidor)
+var PROY_EDICION_DOBLE = null;    // la ULTIMA edicion de monto
+function proyTotalesDoble(filas) {
+  var mapa = { 'Ingreso': 'ingresos', 'Gasto Fijo': 'fijos', 'Gasto Variable': 'variables' };
+  var acum = { ingresos: {}, fijos: {}, variables: {} }, otrasFilas = 0;
+  filas.forEach(function (f) {
+    var bloque = mapa[f.tipoCuenta];
+    if (!bloque) { otrasFilas++; return; }
+    acum[bloque][f.moneda] = (acum[bloque][f.moneda] || 0) + f.monto;
+  });
+  var orden = CATALOGO_REAL.monedas;
+  var arr = function (a) {
+    return Object.keys(a).sort(function (x, y) { return orden.indexOf(x) - orden.indexOf(y); })
+      .map(function (m) { return { moneda: m, monto: a[m] }; });
+  };
+  var union = {};
+  var bloques = [acum.ingresos, acum.fijos, acum.variables];
+  bloques.forEach(function (a) {
+    Object.keys(a).forEach(function (m) { union[m] = true; });
+  });
+  var neto = Object.keys(union).sort(function (x, y) { return orden.indexOf(x) - orden.indexOf(y); })
+    .map(function (m) {
+      return { moneda: m, monto: (acum.ingresos[m] || 0) - (acum.fijos[m] || 0) - (acum.variables[m] || 0) };
+    });
+  return { ingresos: arr(acum.ingresos), fijos: arr(acum.fijos), variables: arr(acum.variables),
+           neto: neto, otrasFilas: otrasFilas };
+}
+function proyDelGrupoDoble(clave, origen) {
+  return PROY_FILAS_DOBLE.filter(function (f) { return f.clave === clave && f.origen === origen; });
+}
 window.google = { script: {
   run: (function () {
     function cadena() {
@@ -1724,16 +2126,204 @@ window.google = { script: {
           }, 1200);
         },
         procesarCargasDesdeShell: function () {
-          setTimeout(function () { exito({ ok: true }); }, 700);
-        },
-        abrirAbmDesdeShell: function () {
           setTimeout(function () {
-            exito();
-            document.getElementById('shellLoader').classList.add('hidden');
-            document.getElementById('shellAviso').innerHTML =
-              '<div class="alert alert-ok">En la planilla real, esto reemplaza el modal por el ' +
-              'ABM del Plan de Cuentas. Aca no, para que puedas seguir comentando.</div>';
-          }, 400);
+            exito({ ok: true, mensaje: 'Listo. Se procesaron 3 fila(s) de la hoja de Cargas. ' +
+                    '(Entorno de pruebas: no se escribio en la planilla.)' });
+          }, 700);
+        },
+        // -- ABM del Plan de Cuentas: contrato {success}/throw, ver la nota de arriba --
+        getAbmFormData: function () {
+          setTimeout(function () { exito(JSON.parse(JSON.stringify(ABM_DOMINIOS_DOBLE))); }, 480);
+        },
+        getCategoryAccounts: function (entidad) {
+          setTimeout(function () {
+            if (!ABM_FILAS_DOBLE[entidad]) {
+              falla(new Error('Error al obtener cuentas: tabla desconocida: ' + entidad));
+              return;
+            }
+            exito(ABM_FILAS_DOBLE[entidad].map(function (f, i) {
+              return { rowIndex: i, nombre: f.nombre, moneda: f.moneda,
+                       proyecto: f.proyecto, tipo: f.tipo };
+            }));
+          }, 620);
+        },
+        saveAbmRecord: function (p) {
+          setTimeout(function () {
+            var filas = ABM_FILAS_DOBLE[p.entityType];
+            if (p.entityType === 'PROYECTOS') {
+              falla(new Error('La entidad "Proyectos" ya no se administra desde este ABM.'));
+              return;
+            }
+            if (!filas) { falla(new Error('Entidad desconocida: ' + p.entityType)); return; }
+            var nombre = String(p.nombre || '').trim();
+            if (nombre === '') { falla(new Error('El nombre es un campo obligatorio.')); return; }
+            var repetido = filas.some(function (f) {
+              return f.nombre.trim().toLowerCase() === nombre.toLowerCase();
+            });
+            if (repetido) {
+              falla(new Error('No es posible hacer este ajuste: La cuenta "' + nombre +
+                              '" ya existe en este modulo.'));
+              return;
+            }
+            filas.push({ nombre: nombre, moneda: p.monedaRelacionada || '',
+                         proyecto: p.proyectoRelacionado || '', tipo: '' });
+            exito({ success: true, entityType: p.entityType, nombre: nombre });
+          }, 800);
+        },
+        updateAbmRecord: function (p) {
+          setTimeout(function () {
+            var filas = ABM_FILAS_DOBLE[p.entityType];
+            if (!filas) { falla(new Error('Entidad desconocida: ' + p.entityType)); return; }
+            var i = parseInt(p.rowIndex, 10);
+            if (isNaN(i) || !filas[i]) {
+              falla(new Error('Falta el indice de la cuenta a modificar.'));
+              return;
+            }
+            var nombre = String(p.nombre || '').trim();
+            var choca = filas.some(function (f, j) {
+              return j !== i && f.nombre.trim().toLowerCase() === nombre.toLowerCase();
+            });
+            if (choca) {
+              falla(new Error('El nombre "' + nombre + '" ya existe en este modulo.'));
+              return;
+            }
+            filas[i] = { nombre: nombre, moneda: p.monedaRelacionada || '',
+                         proyecto: p.proyectoRelacionado || '', tipo: '' };
+            exito({ success: true, nombre: nombre, entityType: p.entityType });
+          }, 800);
+        },
+        deleteAbmRecord: function (p) {
+          setTimeout(function () {
+            var filas = ABM_FILAS_DOBLE[p.entityType];
+            var i = parseInt(p.rowIndex, 10);
+            if (!filas || isNaN(i) || !filas[i]) {
+              falla(new Error('Falta el indice de la cuenta a eliminar.'));
+              return;
+            }
+            filas.splice(i, 1);
+            exito({ success: true, entityType: p.entityType });
+          }, 800);
+        },
+        // -- Proyecciones Elaboradas: contrato "objeto pelado / throw", ver la nota de arriba --
+        listarPeriodosProyeccion: function () {
+          setTimeout(function () {
+            var grupos = {};
+            PROY_ORIGENES_DOBLE.forEach(function (origen) {
+              var porClave = {};
+              PROY_FILAS_DOBLE.forEach(function (f) {
+                if (f.origen !== origen) return;
+                if (!porClave[f.clave]) porClave[f.clave] = [];
+                porClave[f.clave].push(f);
+              });
+              var claves = Object.keys(porClave).filter(function (c) { return c !== 'sin-fecha'; })
+                .sort().reverse();
+              if (porClave['sin-fecha']) claves.push('sin-fecha');
+              grupos[origen] = claves.map(function (c) {
+                var filas = porClave[c];
+                var sellos = {};
+                filas.forEach(function (f) { if (f.sello) sellos[f.sello] = true; });
+                var lista = Object.keys(sellos).sort();
+                var totales = proyTotalesDoble(filas);
+                return { clave: c, mesLabel: pabmMesLabelDoble(c), nFilas: filas.length,
+                         corridas: lista.length,
+                         ultimoSello: lista.length ? lista[lista.length - 1] : null,
+                         totales: totales, otrasFilas: totales.otrasFilas };
+              });
+            });
+            exito({ grupos: grupos });
+          }, 900);
+        },
+        detalleFilasPeriodoProyeccion: function (clave, origen) {
+          setTimeout(function () {
+            if (PROY_ORIGENES_DOBLE.indexOf(origen) === -1) {
+              falla(new Error('origen invalido: "' + origen + '".'));
+              return;
+            }
+            var filas = proyDelGrupoDoble(clave, origen);
+            // Solo 'guardado' y 'shell' se editan: el mismo gate que aplica el servidor.
+            var editable = (origen === 'guardado' || origen === 'shell');
+            exito({ clave: clave, origen: origen, mesLabel: pabmMesLabelDoble(clave),
+                    filas: filas.map(function (f) {
+                      return { fila: f.fila, cuenta: f.cuenta, tipoCuenta: f.tipoCuenta,
+                               tipo: f.tipo, monto: f.monto, moneda: f.moneda, fecha: null,
+                               notaLibre: f.notaLibre, editable: editable };
+                    }),
+                    totales: proyTotalesDoble(filas) });
+          }, 620);
+        },
+        eliminarPeriodoProyeccion: function (clave, origen) {
+          setTimeout(function () {
+            var filas = proyDelGrupoDoble(clave, origen);
+            if (!filas.length) {
+              falla(new Error('No hay ninguna fila de "' + clave + '" (' + origen +
+                              ') para borrar: probablemente ya se borro. No se hizo nada.'));
+              return;
+            }
+            PROY_PAPELERA_DOBLE = { clave: clave, origen: origen, filas: filas };
+            PROY_FILAS_DOBLE = PROY_FILAS_DOBLE.filter(function (f) {
+              return !(f.clave === clave && f.origen === origen);
+            });
+            exito({ clave: clave, origen: origen, filasBorradas: filas.length,
+                    respaldo: 'Respaldo proyeccion abm 2026-08-29_120000' });
+          }, 1100);
+        },
+        revertirBajaProyeccionAbm: function () {
+          setTimeout(function () {
+            if (!PROY_PAPELERA_DOBLE) {
+              falla(new Error('No hay ninguna baja de este ABM para revertir.'));
+              return;
+            }
+            PROY_FILAS_DOBLE = PROY_FILAS_DOBLE.concat(PROY_PAPELERA_DOBLE.filas);
+            var previo = PROY_PAPELERA_DOBLE;
+            PROY_PAPELERA_DOBLE = null;
+            exito({ clave: previo.clave, origen: previo.origen,
+                    filasRepuestas: previo.filas.length });
+          }, 900);
+        },
+        actualizarMontoFilaProyeccion: function (fila, nuevoMonto) {
+          setTimeout(function () {
+            var f = null;
+            PROY_FILAS_DOBLE.forEach(function (x) { if (String(x.fila) === String(fila)) f = x; });
+            if (!f) { falla(new Error('La fila ' + fila + ' esta fuera del rango de datos vivo.')); return; }
+            if (f.origen === 'base') {
+              falla(new Error('Esta fila no es un guardado manual: las filas de presupuesto ' +
+                              'base se recalculan corriendo de nuevo ese modulo, no se editan a mano.'));
+              return;
+            }
+            if (f.origen === 'recurrentes') {
+              falla(new Error('Esta fila es un volcado de recurrentes: el monto se corrige en ' +
+                              'la vista de Recurrentes y se vuelve a volcar el mes.'));
+              return;
+            }
+            if (f.origen !== 'guardado' && f.origen !== 'shell') {
+              falla(new Error('No se reconoce el origen de esta fila: no se edita desde este ABM.'));
+              return;
+            }
+            var n = Number(nuevoMonto);
+            if (String(nuevoMonto).trim() === '' || !isFinite(n)) {
+              falla(new Error('El nuevo monto "' + nuevoMonto + '" no es un numero valido.'));
+              return;
+            }
+            PROY_EDICION_DOBLE = { fila: f.fila, montoAnterior: f.monto };
+            var anterior = f.monto;
+            f.monto = n;
+            exito({ fila: f.fila, cuenta: f.cuenta, clave: f.clave, origen: f.origen,
+                    moneda: f.moneda, montoAnterior: anterior, montoNuevo: n });
+          }, 900);
+        },
+        revertirEdicionMontoProyeccion: function () {
+          setTimeout(function () {
+            if (!PROY_EDICION_DOBLE) {
+              falla(new Error('No hay ninguna edicion de este ABM para revertir.'));
+              return;
+            }
+            var previo = PROY_EDICION_DOBLE;
+            PROY_EDICION_DOBLE = null;
+            PROY_FILAS_DOBLE.forEach(function (x) {
+              if (x.fila === previo.fila) x.monto = previo.montoAnterior;
+            });
+            exito({ fila: previo.fila, montoRestaurado: previo.montoAnterior });
+          }, 900);
         }
       };
       return api;
@@ -1743,7 +2333,12 @@ window.google = { script: {
      'registrarTraspasos','registrarProyecciones','obtenerSaldosConciliacion',
      'registrarConciliacion','obtenerRecurrentes','guardarRecurrente','borrarRecurrente',
      'estadoVolcadoRecurrentes','volcarRecurrentesAlMes',
-     'procesarCargasDesdeShell','abrirAbmDesdeShell'].forEach(function (m) {
+     'procesarCargasDesdeShell',
+     'getAbmFormData','getCategoryAccounts','saveAbmRecord','updateAbmRecord',
+     'deleteAbmRecord',
+     'listarPeriodosProyeccion','detalleFilasPeriodoProyeccion','eliminarPeriodoProyeccion',
+     'revertirBajaProyeccionAbm','actualizarMontoFilaProyeccion',
+     'revertirEdicionMontoProyeccion'].forEach(function (m) {
       r[m] = function () { var c = cadena(); return c[m].apply(c, arguments); };
     });
     return r;
@@ -1756,7 +2351,7 @@ window.google = { script: {
 // escapa. La otra hace escapado contextual de HTML y convierte cada comilla en su entidad, que
 // adentro de un script es un error de sintaxis -- y un error de sintaxis mata el archivo
 // entero. La forma que escapa SI es la correcta para texto que va al HTML, como el pie.
-var VISTAS = [{"id": "home", "titulo": "tidetrack", "listo": true}, {"id": "movimiento", "titulo": "Movimiento nuevo", "listo": true}, {"id": "traspaso", "titulo": "Traspaso nuevo", "listo": true}, {"id": "proyeccion", "titulo": "Proyeccion nueva", "listo": true}, {"id": "recurrentes", "titulo": "Gastos recurrentes", "listo": true}, {"id": "conciliacion", "titulo": "Conciliacion", "listo": true}];
+var VISTAS = [{"id": "home", "titulo": "tidetrack", "listo": true}, {"id": "movimiento", "titulo": "Movimiento nuevo", "listo": true}, {"id": "traspaso", "titulo": "Traspaso nuevo", "listo": true}, {"id": "proyeccion", "titulo": "Proyeccion nueva", "listo": true}, {"id": "recurrentes", "titulo": "Gastos recurrentes", "listo": true}, {"id": "conciliacion", "titulo": "Conciliacion", "listo": true}, {"id": "cuentas", "titulo": "Plan de Cuentas", "listo": true}, {"id": "proyecciones", "titulo": "Proyecciones Elaboradas", "listo": true}];
 var VISTA_INICIAL = 'home';
 var TIPOS_RIQUEZA_CLIENTE = ["Ahorros", "Inversiones"];
 
@@ -1766,7 +2361,14 @@ var VISTAS_CON_CATALOGO = { movimiento: prepararMovimiento, traspaso: prepararTr
     proyeccion: prepararProyeccion, recurrentes: prepararRecurrentes };
 // Conciliacion no necesita el catalogo del Plan: mide los saldos con su propio viaje, cada
 // vez que se entra. Va en un mapa aparte para no cobrarle el costo de asegurarCatalogo.
-var VISTAS_CON_PREPARADOR_PROPIO = { conciliacion: prepararConciliacion };
+// El ABM del Plan tampoco: necesita rowIndex y los dominios del ABM (monedas, categorias de
+// cuenta, tipos de medio), y NADA de eso viaja en el catalogo -- reponerlo ahi le cobraria
+// una lectura de hoja extra a cada apertura de formulario de carga (poda v0.59.0).
+// Proyecciones Elaboradas tampoco: lee la hoja-BD Proyeccion con su propio viaje, cada vez
+// que se entra (la vista 'proyeccion' y el volcado de recurrentes escriben en esa misma BD:
+// cachear el listado entre entradas mostraria totales viejos).
+var VISTAS_CON_PREPARADOR_PROPIO = { conciliacion: prepararConciliacion, cuentas: prepararCuentas,
+    proyecciones: prepararProyecciones };
 
 // ============================================
 // ROUTER
@@ -2242,9 +2844,9 @@ function guardarMovimientos() {
             nota: b.querySelector('.b-nota').value
         });
     });
-    // El catalogo NO se invalida al guardar: nada de lo que el cliente consume cambio (el
-    // backend escribe en la grilla, el ledger y los bloques TC, nunca en el Plan de Cuentas;
-    // el ABM reemplaza el modal entero, asi que sus cambios llegan con catalogo nuevo).
+    // El catalogo NO se invalida al guardar: una carga escribe en la grilla, en el ledger y en
+    // los bloques TC, NUNCA en el Plan de Cuentas, que es lo unico que el catalogo trae. Las
+    // que si lo invalidan son las mutaciones del Plan (vista 'cuentas'): ver cuTrasMutacion.
     enviar('registrarMovimientos', lista, ['movBtnGuardar'], function () {
         document.getElementById('movLista').innerHTML = '';
         irAVista('home');
@@ -2516,8 +3118,8 @@ var PLANTILLA_PROYECCION =
         // Elaboradas" es el EXACTO del item de MENU_CONFIG (00_Config.js), no una parafrasis.
         '<span class="hint">Se guarda en la base Proyeccion con las cotizaciones del dia ' +
         'congeladas. Guardar despues el presupuesto entero de ese mes desde la hoja ' +
-        'Presupuesto no la toca: conviven sumando. Despues se puede revisar o borrar desde ' +
-        'el ABM de Proyecciones Elaboradas del menu.</span>' +
+        'Presupuesto no la toca: conviven sumando. Despues se revisa, corrige o borra desde ' +
+        'Proyecciones Elaboradas, aca en tidetrack.</span>' +
         '</label>' +
         '</div>' +
         '</div></div></div>' +
@@ -3269,26 +3871,856 @@ function guardarConciliacion() {
 }
 
 // ============================================
+// PLAN DE CUENTAS -- vista 'cuentas' (ABM)
+// ============================================
+//
+// El ABM que vivia en UI_AbmPlanCuentas.html (modal propio de 520x750, piel vieja), traido
+// al shell. Tres diferencias de fondo con aquel, ninguna cosmetica:
+//
+//   1. NO usa enviar(). Los cinco endpoints del ABM tienen OTRO contrato: devuelven
+//      {success:true} en exito y LANZAN ante cualquier rechazo, mientras enviar() espera
+//      {ok:true|false}. Con enviar(), un alta duplicada -- que el servidor rechaza lanzando
+//      -- caeria en withFailureHandler y se leeria igual que una caida de red. El sender de
+//      esta vista es cuEnviar, calcado de enviar() salvo en como lee la respuesta. NO se
+//      normaliza el servidor: esos endpoints los consume tambien la planilla y su contrato
+//      es previo a esta pantalla.
+//   2. NO come del catalogo perezoso del shell. Necesita el rowIndex de cada fila del Plan y
+//      los tres dominios del ABM, y ninguno viaja en obtenerCatalogoShell.
+//   3. Al terminar NO cierra el modal ni tapa la pantalla con un cartel de exito: se queda
+//      en la vista con el formulario limpio, porque dar de alta tres cuentas seguidas es el
+//      caso normal y el modal viejo cobraba dos clicks por cada una.
+
+var cuDominios = null;   // getAbmFormData: monedas, categoriasCuenta, tiposMedio. Una vez por sesion.
+var abmCuentas = [];     // getCategoryAccounts de la entidad elegida (trae rowIndex)
+var abmSeleccion = null; // la fila del Plan que se esta editando
+
+/** Rotulos por bloque: el mismo formulario dice cosas distintas segun que se gestiona. */
+var CU_ENTIDADES = {
+    INGRESOS: { nombre: 'Nombre de la cuenta', ejemplo: 'Sueldo, Tidetrack, Intereses',
+        hint: 'De donde entra la plata.' },
+    GASTOS_FIJOS: { nombre: 'Nombre de la cuenta', ejemplo: 'Alquiler, Prepaga, Nafta',
+        hint: 'Lo que se repite todos los meses.' },
+    GASTOS_VARIABLES: { nombre: 'Nombre de la cuenta', ejemplo: 'Comidas, Ropa, Viajes',
+        hint: 'Lo que cambia de mes a mes.' },
+    MEDIOS_PAGO: { nombre: 'Nombre del medio', ejemplo: 'Galicia, Efectivo, Dolar Cash',
+        hint: 'Cada caja donde vive la plata. Lleva moneda y tipo.' }
+};
+
+function prepararCuentas() {
+    abmCuentas = [];
+    abmSeleccion = null;
+    document.getElementById('cuEntidad').value = '';
+    cuLimpiarCampos();
+    cuPonerModo('Crear');
+    cuPintar();
+    cuAsegurarDominios();
+}
+
+/**
+ * Los tres dominios del ABM, una sola vez por sesion del shell. getAbmFormData NUNCA lanza:
+ * ante un fallo devuelve las listas vacias, asi que el formulario sigue siendo usable (el
+ * dominio es opcional en las cuatro entidades) y no se traba nada.
+ */
+function cuAsegurarDominios(cuando) {
+    if (cuDominios) { if (cuando) cuando(); return; }
+    loader(true, 'Leyendo el Plan de Cuentas');
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true; loader(false);
+        mostrarError('El Plan de Cuentas esta tardando mas de la cuenta. Volve al inicio y ' +
+            'entra de nuevo a la vista para reintentar.');
+    }, 15000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); };
+
+    google.script.run
+        .withSuccessHandler(function (d) {
+            if (contesto) return;
+            cerrar();
+            cuDominios = d || { monedas: [], categoriasCuenta: [], tiposMedio: [] };
+            cuLlenarDominios();
+            if (cuando) cuando();
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            cerrar();
+            mostrarError('No se pudieron leer las monedas y categorias: ' + err.message);
+        })
+        .getAbmFormData();
+}
+
+/** Puebla los dos selects de dominio. El tercero cambia de significado segun la entidad. */
+function cuLlenarDominios() {
+    if (!cuDominios) return;
+    var esMedio = document.getElementById('cuEntidad').value === 'MEDIOS_PAGO';
+    var mon = document.getElementById('cuMoneda');
+    mon.innerHTML = '';
+    (cuDominios.monedas || []).forEach(function (x) { mon.appendChild(opcion(x)); });
+
+    // Un mismo control para DOS ejes distintos: para una cuenta es su Categoria (para que se
+    // movio la plata) y para un medio es su Tipo (donde esta la plata). Hasta el 2026-08-20
+    // los dos se llenaban con la misma lista y se podia dejar un medio con tipo "Comidas".
+    var dom = document.getElementById('cuDominio');
+    var valor = dom.value;
+    dom.innerHTML = '';
+    dom.appendChild(opcion(''));
+    dom.firstChild.textContent = 'Ninguna';
+    (esMedio ? (cuDominios.tiposMedio || []) : (cuDominios.categoriasCuenta || []))
+        .forEach(function (x) { dom.appendChild(opcion(x)); });
+    dom.value = valor;
+}
+
+function cuSegModo(btn) {
+    // El aviso viejo describia la operacion anterior: dejarlo puesto mientras se cambia de
+    // modo lo convierte en el rotulo de otra cosa. Mismo motivo en cuCambioEntidad().
+    limpiarAviso();
+    cuPonerModo(btn.dataset.v);
+    // Cambiar de modo limpia lo tipeado: si no, pasar de Editar a Crear dejaba el formulario
+    // precargado con la cuenta que se venia editando y un alta se convertia en "esa cuenta ya
+    // existe" -- un rechazo del servidor por un dato que el usuario no puso.
+    cuLimpiarCampos();
+    abmSeleccion = null;
+    if (btn.dataset.v === 'Editar' && document.getElementById('cuEntidad').value) {
+        cuCargarLista();
+    }
+    cuPintar();
+}
+
+/** Deja los tres campos y el buscador como recien entrados. No toca entidad ni modo. */
+function cuLimpiarCampos() {
+    document.getElementById('cuNombre').value = '';
+    document.getElementById('cuBuscar').value = '';
+    document.getElementById('cuDominio').value = '';
+    var mon = document.getElementById('cuMoneda');
+    mon.value = mon.options.length ? mon.options[0].value : '';
+}
+
+function cuPonerModo(v) {
+    document.getElementById('cuModo').value = v;
+    document.querySelectorAll('#vista-cuentas .seg button').forEach(function (b) {
+        b.setAttribute('aria-pressed', b.dataset.v === v ? 'true' : 'false');
+    });
+}
+
+function cuCambioEntidad() {
+    limpiarAviso();
+    abmCuentas = [];
+    abmSeleccion = null;
+    llenarDatalist('dlAbmCuentas', [{ items: [] }]);
+    // El dominio se repuebla ANTES de limpiar: para un medio son los tipos y para una cuenta
+    // las categorias, y dejar el valor viejo escribiria un tipo en la columna de categoria.
+    cuLlenarDominios();
+    cuLimpiarCampos();
+    if (document.getElementById('cuModo').value === 'Editar' &&
+        document.getElementById('cuEntidad').value) {
+        cuCargarLista();
+    }
+    cuPintar();
+}
+
+/** Que se ve y que dice cada rotulo. Un solo lugar decide: no hay estado en el DOM. */
+function cuPintar() {
+    var ent = document.getElementById('cuEntidad').value;
+    var modo = document.getElementById('cuModo').value;
+    var cfg = CU_ENTIDADES[ent];
+    var esMedio = ent === 'MEDIOS_PAGO';
+    var editando = modo === 'Editar' && !!abmSeleccion;
+
+    document.getElementById('cuHintEntidad').textContent = cfg ? cfg.hint : '';
+    document.getElementById('cuRotNombre').textContent = cfg ? cfg.nombre : 'Nombre';
+    document.getElementById('cuNombre').placeholder = cfg ? cfg.ejemplo : '';
+    document.getElementById('cuRotDominio').textContent = esMedio ? 'Tipo' : 'Categoria';
+
+    var conCampos = !!ent && !(modo === 'Editar' && !abmSeleccion);
+    document.getElementById('cuCampoBuscar').classList.toggle('hidden', !ent || modo !== 'Editar');
+    document.getElementById('cuCampoNombre').classList.toggle('hidden', !conCampos);
+    document.getElementById('cuCampoMoneda').classList.toggle('hidden', !conCampos || !esMedio);
+    // La grilla es de 12: con Moneda en el medio, Categoria ocupa 3; sin ella, 6.
+    document.getElementById('cuCampoDominio').className =
+        (esMedio ? 'f c3' : 'f c6') + (conCampos ? '' : ' hidden');
+    document.getElementById('cuHintRenombre').classList.toggle('hidden', !editando);
+
+    var borrar = document.getElementById('cuBtnBorrar');
+    borrar.classList.toggle('hidden', !editando);
+    if (!editando) { borrar.dataset.conf = '0'; borrar.textContent = 'Eliminar'; }
+    document.getElementById('cuBtnGuardar').textContent = modo === 'Editar' ? 'Guardar cambios' : 'Crear';
+
+    var resumen = document.getElementById('cuResumen');
+    if (!ent) { resumen.textContent = 'Elegi un bloque del Plan para empezar.'; }
+    else if (modo === 'Editar' && !abmSeleccion) { resumen.textContent = 'Elegi cual queres tocar.'; }
+    else { resumen.textContent = ''; }
+}
+
+/** La lista de la entidad, con su rowIndex. Se pide al entrar en Editar y tras cada mutacion. */
+function cuCargarLista() {
+    var ent = document.getElementById('cuEntidad').value;
+    if (!ent) return;
+    var inp = document.getElementById('cuBuscar');
+    var placeholder = inp.placeholder;
+    inp.value = ''; inp.disabled = true; inp.placeholder = 'Buscando...';
+    abmCuentas = []; abmSeleccion = null;
+    loader(true, 'Leyendo las cuentas');
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true; loader(false);
+        inp.disabled = false; inp.placeholder = placeholder;
+        mostrarError('La lista de cuentas esta tardando mas de la cuenta. Proba de nuevo.');
+    }, 15000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); };
+
+    google.script.run
+        .withSuccessHandler(function (data) {
+            if (contesto) return;
+            cerrar();
+            abmCuentas = data || [];
+            llenarDatalist('dlAbmCuentas', [{ items: abmCuentas.map(function (c) { return c.nombre; }) }]);
+            inp.disabled = false; inp.placeholder = placeholder; inp.focus();
+            document.getElementById('cuHintBuscar').textContent =
+                abmCuentas.length + (abmCuentas.length === 1 ? ' cuenta' : ' cuentas') +
+                ' en este bloque. Tipea para filtrar.';
+            cuPintar();
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            cerrar();
+            // Sin esta rama el buscador queda deshabilitado diciendo "Buscando..." para
+            // siempre: el modo de falla exacto que costo cuatro dias en la v0.45.2.
+            inp.disabled = false; inp.placeholder = placeholder;
+            mostrarError('No se pudo leer la lista de cuentas: ' + err.message);
+        })
+        .getCategoryAccounts(ent);
+}
+
+/** Match case-insensitive, como el modal: el datalist devuelve el texto, no un id. */
+function cuElegirCuenta() {
+    var val = document.getElementById('cuBuscar').value.trim().toLowerCase();
+    var hallada = null;
+    abmCuentas.forEach(function (c) {
+        if (!hallada && String(c.nombre).trim().toLowerCase() === val) hallada = c;
+    });
+    if (!hallada) {
+        if (abmSeleccion) { abmSeleccion = null; cuPintar(); }
+        return;
+    }
+    abmSeleccion = hallada;
+    document.getElementById('cuNombre').value = hallada.nombre;
+    document.getElementById('cuMoneda').value = hallada.moneda || '';
+    document.getElementById('cuDominio').value = hallada.proyecto || '';
+    cuPintar();
+}
+
+function cuGuardar() {
+    var ent = document.getElementById('cuEntidad').value;
+    if (!ent) { mostrarError('Elegi primero que bloque del Plan queres gestionar.'); return; }
+    var modo = document.getElementById('cuModo').value;
+    if (modo === 'Editar' && !abmSeleccion) {
+        mostrarError('Elegi cual cuenta queres modificar.');
+        return;
+    }
+    var nombre = document.getElementById('cuNombre').value.trim();
+    if (nombre === '') { mostrarError('El nombre es obligatorio.'); return; }
+
+    var esMedio = ent === 'MEDIOS_PAGO';
+    // GUARDA CONTRA EL DOMINIO VACIO. Si getAbmFormData falla o vence su tope de 15 s, la
+    // vista queda usable con los desplegables vacios y el backend acepta monedaRelacionada
+    // '' sin chistar (11_UIService.js): quedaba un medio de pago SIN MONEDA, que rompe el
+    // supuesto de ADR-002 y el autocompletado de moneda por medio en Cargas. El modal viejo
+    // tenia el mismo agujero. Tres lineas del lado del cliente, cero cambio de contrato.
+    if (esMedio && !document.getElementById('cuMoneda').value) {
+        mostrarError('No se pudieron leer las monedas. Volve al inicio y entra de nuevo antes ' +
+            'de crear un medio de pago.');
+        return;
+    }
+    var payload = {
+        entityType: ent,
+        nombre: nombre,
+        monedaRelacionada: esMedio ? document.getElementById('cuMoneda').value : '',
+        proyectoRelacionado: document.getElementById('cuDominio').value,
+        rowIndex: modo === 'Editar' ? abmSeleccion.rowIndex : null
+    };
+    // Las dos ramas nombran su endpoint como LITERAL, no por ternario: es lo que deja al
+    // cruce doble-vs-shell del banco ver que se llama de verdad (el drift que colgo la
+    // pantalla un minuto entero cuando el doble se quedo con registrarTraspaso singular).
+    var botones = ['cuBtnGuardar', 'cuBtnBorrar'];
+    if (modo === 'Editar') {
+        cuEnviar('updateAbmRecord', payload, botones,
+            'Listo. Se actualizo "' + nombre + '" en el Plan de Cuentas.', cuTrasMutacion);
+    } else {
+        cuEnviar('saveAbmRecord', payload, botones,
+            'Listo. Se agrego "' + nombre + '" al Plan de Cuentas.', cuTrasMutacion);
+    }
+}
+
+/**
+ * Baja en DOS PASOS sobre el mismo boton, con desarme a los 4 s -- el patron de recurrentes.
+ * No hay confirm() nativo: adentro del iframe de HtmlService es poco fiable, y en un modal
+ * cualquier dialogo nativo puede quedar detras.
+ */
+function cuBorrar(btn) {
+    if (!abmSeleccion) { mostrarError('Elegi primero cual cuenta queres eliminar.'); return; }
+    if (btn.dataset.conf !== '1') {
+        btn.dataset.conf = '1';
+        btn.textContent = 'Confirmar baja';
+        window.setTimeout(function () {
+            btn.dataset.conf = '0';
+            btn.textContent = 'Eliminar';
+        }, 4000);
+        return;
+    }
+    btn.dataset.conf = '0';
+    btn.textContent = 'Eliminar';
+    var nombre = abmSeleccion.nombre;
+    cuEnviar('deleteAbmRecord',
+        { entityType: document.getElementById('cuEntidad').value, rowIndex: abmSeleccion.rowIndex },
+        ['cuBtnGuardar', btn],
+        'Listo. Se borro "' + nombre + '" del catalogo. Los movimientos ya registrados con ' +
+        'ese nombre siguen en el ledger.',
+        cuTrasMutacion);
+}
+
+/**
+ * Despues de un alta, un cambio o una baja EXITOSOS.
+ *
+ * INVALIDACION DEL CATALOGO: esta es la unica pantalla del shell que escribe en el Plan de
+ * Cuentas, asi que es la unica que tiene que tirar el catalogo perezoso. Sin esto, dar de
+ * alta una cuenta y pasar derecho a "Movimiento nuevo" ofrecia los desplegables viejos, sin
+ * la cuenta recien creada -- y el usuario acababa de crearla justamente para usarla.
+ */
+function cuTrasMutacion() {
+    catalogo = null;
+    abmCuentas = [];
+    abmSeleccion = null;
+    cuLimpiarCampos();
+    // La entidad y el modo NO se tocan: dar de alta tres cuentas del mismo bloque seguidas es
+    // el caso normal, y reiniciar el selector cobraba dos clicks por cada una.
+    if (document.getElementById('cuModo').value === 'Editar') { cuCargarLista(); }
+    cuPintar();
+}
+
+/**
+ * El sender de esta vista. Calcado de enviar() -- botones deshabilitados, tope de 60 s,
+ * withFailureHandler, alSalirBien ANTES de mostrarOk -- con UNA diferencia: lee el contrato
+ * de los endpoints del ABM, que devuelven {success:true} y LANZAN ante cualquier rechazo
+ * (nombre duplicado, entidad Proyectos, rowIndex ausente). Con enviar() esos rechazos, que
+ * son de validacion y tienen mensaje propio, se leerian como una caida del servidor.
+ */
+function cuEnviar(fn, datos, botones, mensajeOk, alSalirBien) {
+    var deshabilitar = function (v) {
+        botones.forEach(function (bt) {
+            var b = typeof bt === 'string' ? document.getElementById(bt) : bt;
+            if (b) b.disabled = v;
+        });
+    };
+    deshabilitar(true); loader(true, 'Guardando'); limpiarAviso();
+
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true; loader(false); deshabilitar(false);
+        mostrarError('La planilla esta tardando y no se pudo confirmar si el cambio entro. ' +
+            'Miralo en la hoja Plan de Cuentas antes de repetirlo.');
+    }, 60000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); deshabilitar(false); };
+
+    google.script.run
+        .withSuccessHandler(function (r) {
+            if (contesto) return;
+            cerrar();
+            // alSalirBien PRIMERO, mostrarOk despues: el mismo orden que enviar(), por la
+            // misma cicatriz -- cualquier cosa que navegue o limpie borraria el aviso en el
+            // mismo tick.
+            alSalirBien(r || {});
+            mostrarOk(mensajeOk);
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            // El servidor manda el motivo real ("ya existe", "falta el indice"): se muestra
+            // TEXTUAL, sin envolverlo en un "no se pudo guardar" que lo esconda.
+            cerrar();
+            mostrarError((err && err.message) ? err.message : 'No se pudo guardar el cambio.');
+        })[fn](datos);
+}
+
+// ============================================
+// PROYECCIONES ELABORADAS -- vista 'proyecciones' (ABM de lo ya guardado)
+// ============================================
+//
+// El ABM que vivia en UI_AbmProyeccionElaborada.html (modal propio de 720x680), traido al
+// shell. Cuatro diferencias de fondo con aquel:
+//
+//   1. SIN PING NI REINTENTOS. El modal hacia dos ciclos de tres intentos con backoff, mas
+//      una linea de diagnostico y un historial en localStorage, contra un PERMISSION_DENIED
+//      reproducible al abrir. La causa raiz resulto ser su propio DOCTYPE, escrito en la
+//      linea 93: el iframe entraba en quirks mode y el puente hacia el servidor no se
+//      montaba. El shell tiene el DOCTYPE en la linea 1 y sus vistas ya disparaban su primera
+//      llamada en el mismo timing (apertura directa por menu) sin reproducir el fallo. Aca
+//      hay UNA llamada, tope de 15 s y un boton Reintentar. NO reintroducir backoff sin medir.
+//   2. NO usa enviar() ni cuEnviar(). Estos endpoints devuelven el objeto de datos DIRECTO
+//      (sin campo ok) y LANZAN ante cualquier rechazo: el withFailureHandler es obligatorio y
+//      el contrato del servidor no se normaliza -- es previo a esta pantalla y no se toca.
+//   3. Sin dialogos nativos. El modal usaba window.alert para el fallo puntual de una
+//      edicion; aca va por mostrarError, como el resto del shell.
+//   4. Formato de la casa: fmtMonto con toFixed+coma (no Math.round+toLocaleString) y
+//      escapar() en vez de un escapeHtml propio.
+//
+// Prefijo pabm* en todo lo nuevo: el namespace proy* ya lo ocupa la vista de CARGA
+// ('proyeccion', singular). @see DEVTOOL_ProyeccionAbm.js
+
+var pabmAbiertos = {};       // claves 'origen:clave' de las tarjetas abiertas
+var pabmUltimoRevert = null; // { tipo: 'baja' | 'edicion', mensaje } -- una sola a la vez
+
+// Las cinco secciones, en el orden de presentacion del servidor (PA_ORIGENES). La asimetria
+// es DELIBERADA: 'guardado' y 'base' se muestran aun vacias con su mensaje propio (el caso
+// "todo base, cero guardado" es el estado real de produccion y hay que poder verlo); las
+// otras tres se ocultan enteras cuando llegan vacias, para no ensuciar la pantalla normal con
+// tres titulos sin contenido. El grupo 'otros' existe para que ninguna fila con marca sea
+// invisible: se lista y se puede borrar por mes.
+var PABM_SECCIONES = [
+    { origen: 'guardado', titulo: 'Guardado a mano', siempre: true,
+      sub: 'Decisiones deliberadas, guardadas desde la hoja Presupuesto.',
+      // LA RUTA LITERAL DE MENU_CONFIG, verificada contra 00_Config.js: no hay ningun boton
+      // "Guardar Proyeccion" en la hoja Presupuesto -- el propio comentario del submenu lo
+      // dice ("por ahora en tidetrack dev, luego va a tener su boton"). Este es el estado
+      // real de produccion, asi que es el mensaje que mas se lee de toda la vista.
+      msgVacio: 'Todavia no guardaste ninguna proyeccion a mano. Se guarda desde el menu ' +
+                'tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar.' },
+    // El id de origen 'shell' NO se toca: es clave de contrato con el backend y con el sello
+    // de la nota. El rotulo si, porque "shell" es una palabra interna: en la UI esta ventana
+    // se llama tidetrack.
+    { origen: 'shell', titulo: 'Cargadas a mano en tidetrack', siempre: false,
+      sub: 'Proyecciones puntuales cargadas desde la ventana de carga rapida.' },
+    { origen: 'recurrentes', titulo: 'Recurrentes', siempre: false,
+      sub: 'Volcado de la BD de Recurrentes. Los montos se corrigen alla y se vuelve a volcar.' },
+    { origen: 'base', titulo: 'Presupuesto base', siempre: true,
+      sub: 'Promedio historico automatico. No se edita a mano.',
+      msgVacio: 'No hay presupuesto base cargado. Se genera desde tidetrack Dev > Presupuesto ' +
+                'base (desde el historial).' },
+    { origen: 'otros', titulo: 'Otros', siempre: false,
+      sub: 'Filas con marca de proyeccion cuya nota no se reconoce del todo. Se pueden borrar por mes.' }
+];
+
+// Verbo por origen para el rotulo del sello: nunca atribuir corridas mixtas a un solo momento.
+var PABM_VERBO_SELLO = { guardado: 'guardado el', shell: 'cargada el',
+    recurrentes: 'volcado el', base: 'ultima corrida' };
+
+// Rotulo de cada origen en la confirmacion de baja: dice QUE se borra, no solo cuanto.
+var PABM_ROTULO_ORIGEN = { guardado: 'guardado a mano', shell: 'cargadas a mano en tidetrack',
+    recurrentes: 'recurrentes', base: 'presupuesto base', otros: 'origen no reconocido' };
+
+// Orden puramente de PRESENTACION (el mismo de MONEDAS_DISPONIBLES, 00_Config.js) para que el
+// total de la confirmacion de baja se lea siempre en el mismo orden que el resto. No es una
+// fuente de verdad nueva: el SSOT sigue siendo la constante de backend; esto solo ordena lo
+// que el servidor ya mando. Esta vista no carga el catalogo del shell, asi que no puede
+// leerlo de ahi.
+var PABM_MONEDAS_ORDEN = ['ARS', 'USD', 'AUD', 'EUR'];
+
+// ---- Formato ----
+
+/** La convencion del shell: toFixed(2) con coma decimal y el signo adelante. */
+function pabmFmtMonto(item) {
+    var n = Number(item.monto) || 0;
+    return (n < 0 ? '-' : '') + Math.abs(n).toFixed(2).replace('.', ',') + ' ' + item.moneda;
+}
+
+/**
+ * Varias monedas en una linea. El signo se lee en el OPERADOR, no pegado al numero: un neto
+ * mixto salia "1620000,00 ARS + -2,99 USD" porque el join no miraba lo que pabmFmtMonto ya
+ * habia escrito. El primero conserva su signo (puede ser un neto negativo); los siguientes
+ * entran con "+" o "-" y su valor absoluto.
+ */
+function pabmFmtLista(arr) {
+    if (!arr || !arr.length) return '\u2014';
+    var txt = pabmFmtMonto(arr[0]);
+    for (var i = 1; i < arr.length; i++) {
+        var n = Number(arr[i].monto) || 0;
+        txt += (n < 0 ? ' - ' : ' + ') +
+            pabmFmtMonto({ monto: Math.abs(n), moneda: arr[i].moneda });
+    }
+    return txt;
+}
+
+/** Suma por moneda, nunca cruzada: la confirmacion de baja dice CUANTA plata se borra. */
+function pabmTotalDeFilas(filas) {
+    var acum = {};
+    (filas || []).forEach(function (f) {
+        acum[f.moneda] = (acum[f.moneda] || 0) + Number(f.monto || 0);
+    });
+    var monedas = Object.keys(acum).sort(function (a, b) {
+        return PABM_MONEDAS_ORDEN.indexOf(a) - PABM_MONEDAS_ORDEN.indexOf(b);
+    });
+    return monedas.map(function (m) { return { moneda: m, monto: acum[m] }; });
+}
+
+/** Cubre el sello PG/REC ('yyyy-MM-dd_HHmmss') y el del shell ('shell_' + fecha + ms
+ *  opcionales). Si no matchea ninguno se devuelve crudo: mejor un sello feo que uno inventado. */
+function pabmFmtSello(sello) {
+    var m = /^(?:shell_)?(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})(\d{2})(?:\d{3})?$/.exec(sello || '');
+    if (!m) return sello || '';
+    return m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5];
+}
+
+// ---- Canal ----
+
+function prepararProyecciones() {
+    pabmAbiertos = {};
+    pabmUltimoRevert = null;
+    pabmCargarListado();
+}
+
+/**
+ * UNA llamada. Sin ping previo, sin reintentos automaticos: si falla, el sintoma queda visible
+ * en la vista con un boton Reintentar, que es informacion en vez de 2,4 s de espera muda.
+ * OJO CONTRATO: listarPeriodosProyeccion LANZA en fallo y su exito es {grupos} directo, sin
+ * campo ok -- por eso no hay chequeo de r.ok y el withFailureHandler es obligatorio.
+ */
+function pabmCargarListado() {
+    // EL EMBUDO UNICO de la vista: por aca pasan el ingreso, el Reintentar y las tres
+    // mutaciones. Limpiar el aviso aca cubre todos los caminos de exito de una sola vez.
+    // Sin esto, corregir un monto DESPUES de un error dejaba las dos cosas en pantalla a la
+    // vez -- el rojo viejo arriba y el verde de deshacer abajo -- hasta salir de la vista.
+    limpiarAviso();
+    document.getElementById('pabmContenido').innerHTML = '';
+    loader(true, 'Leyendo lo proyectado');
+    var contesto = false;
+    var tope = window.setTimeout(function () {
+        if (contesto) return;
+        contesto = true; loader(false);
+        pabmErrorEnVista('La lectura de lo proyectado esta tardando mas de la cuenta.');
+    }, 15000);
+    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); };
+
+    google.script.run
+        .withSuccessHandler(function (data) {
+            if (contesto) return;
+            cerrar();
+            pabmRender(data || {});
+        })
+        .withFailureHandler(function (err) {
+            if (contesto) return;
+            cerrar();
+            pabmErrorEnVista('No se pudo leer lo proyectado: ' + err.message);
+        })
+        .listarPeriodosProyeccion();
+}
+
+/** El error vive EN la vista, con Reintentar: un aviso suelto se pierde al navegar. */
+function pabmErrorEnVista(txt) {
+    var cont = document.getElementById('pabmContenido');
+    cont.innerHTML = '';
+    var alerta = document.createElement('div');
+    alerta.className = 'alert alert-error';
+    var s = document.createElement('span');
+    s.textContent = txt;
+    var b = document.createElement('button');
+    b.className = 'btn btn-secondary';
+    b.textContent = 'Reintentar';
+    b.onclick = pabmCargarListado;
+    alerta.appendChild(s);
+    alerta.appendChild(b);
+    cont.appendChild(alerta);
+}
+
+// ---- Render del listado ----
+
+function pabmRender(data) {
+    var grupos = data.grupos || {};
+    var html = '' +
+        '<div class="pabm-hint">' +
+            '<p class="conc-hint">Aca vive lo ya guardado en la base Proyeccion. Para proyectar ' +
+            'algo nuevo usa Proyeccion nueva; el presupuesto entero de un mes se guarda desde ' +
+            'el menu tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar.</p>' +
+            '<button type="button" class="btn btn-secondary btn--mini" ' +
+            'onclick="irAVista(\'proyeccion\')">Proyeccion nueva</button>' +
+        '</div>';
+
+    if (pabmUltimoRevert) {
+        html += '<div class="alert alert-ok"><span>' + escapar(pabmUltimoRevert.mensaje) + '</span>' +
+            '<button type="button" class="btn btn-secondary" onclick="pabmDeshacer(this)">Deshacer</button></div>';
+    }
+
+    PABM_SECCIONES.forEach(function (s) {
+        var lista = grupos[s.origen] || [];
+        if (!s.siempre && !lista.length) return;
+        html += '<div class="shell-sec">' + escapar(s.titulo) +
+            ' <span class="cuenta">(' + lista.length + ')</span></div>' +
+            '<p class="conc-hint">' + escapar(s.sub) + '</p>';
+        if (!lista.length) {
+            html += '<p class="conc-hint conc-hint--tenue">' + escapar(s.msgVacio || '') + '</p>';
+            return;
+        }
+        lista.forEach(function (g) { html += pabmTarjeta(g, s.origen); });
+    });
+
+    document.getElementById('pabmContenido').innerHTML = html;
+
+    // Re-render COMPLETO tras cada mutacion (contrato heredado: nunca mostrar totales viejos),
+    // con los detalles que estaban abiertos reabiertos y RECARGADOS.
+    Object.keys(pabmAbiertos).forEach(function (key) {
+        var corte = key.indexOf(':');
+        var origen = key.slice(0, corte), clave = key.slice(corte + 1);
+        var card = document.querySelector(
+            '.pabm-card[data-clave="' + clave + '"][data-origen="' + origen + '"]');
+        if (!card) { delete pabmAbiertos[key]; return; }
+        card.dataset.abierto = '1';
+        card.querySelector('.pabm-head').setAttribute('aria-expanded', 'true');
+        card.querySelector('.pabm-detalle').classList.remove('hidden');
+        pabmCargarDetalle(card, clave, origen);
+    });
+}
+
+function pabmTarjeta(g, origen) {
+    var meta = g.nFilas + ' fila(s)';
+    var verbo = PABM_VERBO_SELLO[origen];
+    if (verbo && g.corridas === 1) {
+        meta += ' · ' + verbo + ' ' + pabmFmtSello(g.ultimoSello);
+    } else if (verbo && g.corridas > 1) {
+        meta += ' · ' + g.corridas + ' corridas, ultima ' + pabmFmtSello(g.ultimoSello);
+    }
+    var t = g.totales || {};
+    var otras = g.otrasFilas > 0
+        ? '<div class="alert alert-warning"><span>' + g.otrasFilas +
+          ' fila(s) con categoria no reconocida no entran en estos totales.</span></div>'
+        : '';
+    return '' +
+        '<div class="pabm-card" data-clave="' + escapar(g.clave) + '" data-origen="' +
+                escapar(origen) + '" data-abierto="0">' +
+            // <button> de verdad, no un <div onclick>: es la convencion del shell
+            // (.bloque-resumen y toda .shell-card son botones) y sin ella el acordeon no se
+            // podia abrir con teclado. aria-expanded lo mantiene sincronizado el toggle.
+            '<button type="button" class="pabm-head" aria-expanded="false" ' +
+            'onclick="pabmToggleDetalle(this)">' +
+                '<span class="pabm-mes">' + escapar(g.mesLabel) + '</span>' +
+                '<span class="bloque-meta">' + escapar(meta) + '</span>' +
+                '<svg class="chev-abrir" width="15" height="15" viewBox="0 0 24 24" fill="none" ' +
+                'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+                'stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+            '</button>' +
+            '<div class="pabm-totales">' +
+                '<span>Ingresos: <b>' + escapar(pabmFmtLista(t.ingresos)) + '</b></span>' +
+                '<span>Fijos: <b>' + escapar(pabmFmtLista(t.fijos)) + '</b></span>' +
+                '<span>Variables: <b>' + escapar(pabmFmtLista(t.variables)) + '</b></span>' +
+                '<span>Neto: <b>' + escapar(pabmFmtLista(t.neto)) + '</b></span>' +
+            '</div>' +
+            otras +
+            '<div class="pabm-detalle hidden"></div>' +
+        '</div>';
+}
+
+// ---- Detalle por periodo ----
+
+function pabmToggleDetalle(headEl) {
+    var card = headEl.closest('.pabm-card');
+    var clave = card.dataset.clave, origen = card.dataset.origen;
+    var body = card.querySelector('.pabm-detalle');
+    if (!body.classList.contains('hidden')) {
+        body.classList.add('hidden');
+        card.dataset.abierto = '0';
+        headEl.setAttribute('aria-expanded', 'false');
+        delete pabmAbiertos[origen + ':' + clave];
+        return;
+    }
+    pabmAbiertos[origen + ':' + clave] = true;
+    card.dataset.abierto = '1';
+    headEl.setAttribute('aria-expanded', 'true');
+    body.classList.remove('hidden');
+    pabmCargarDetalle(card, clave, origen);
+}
+
+function pabmCargarDetalle(card, clave, origen) {
+    var body = card.querySelector('.pabm-detalle');
+    body.innerHTML = '<p class="conc-hint conc-hint--tenue">Cargando...</p>';
+    google.script.run
+        .withSuccessHandler(function (det) { body.innerHTML = pabmRenderDetalle(det, origen); })
+        .withFailureHandler(function (err) {
+            body.innerHTML = '<div class="alert alert-error"><span>' +
+                escapar(err.message) + '</span></div>';
+        })
+        .detalleFilasPeriodoProyeccion(clave, origen);
+}
+
+/** Nota al pie por origen: donde se corrige cada cosa, en vez de una tabla muda. */
+function pabmNotaPie(origen) {
+    if (origen === 'guardado' || origen === 'shell') return 'Toca un monto para corregirlo.';
+    if (origen === 'recurrentes') return 'Se corrigen desde la vista de Recurrentes y se vuelve a volcar el mes.';
+    if (origen === 'otros') return 'Origen no reconocido: solo se puede borrar el mes completo.';
+    return 'Presupuesto base: se recalcula corriendo de nuevo ese modulo, no se edita a mano.';
+}
+
+function pabmRenderDetalle(det, origen) {
+    var filas = det.filas || [];
+    var totalTxt = pabmFmtLista(pabmTotalDeFilas(filas));
+    return '' +
+        // La columna es f.tipoCuenta: la columna E de Registros (Ingreso / Gasto Fijo /
+        // Gasto Variable), NO la categoria. El modal viejo la rotulaba "Categoria" y en la
+        // misma release la vista 'cuentas' usa esa palabra para el OTRO eje (Trabajo y
+        // negocio, Vehiculo, Salud): dos pantallas del shell contradiciendose. Son dos ejes
+        // independientes -- decision Franco 2026-08-20 en 11_UIService.js --, asi que el
+        // rotulo dice el nombre literal de la columna que se esta mostrando.
+        '<table class="conc-tabla"><thead><tr><th>Cuenta</th><th>Tipo de cuenta</th>' +
+        '<th class="num">Monto</th></tr></thead><tbody>' +
+        filas.map(pabmFilaHtml).join('') +
+        '</tbody></table>' +
+        '<p class="pabm-pie">' + escapar(pabmNotaPie(origen)) + '</p>' +
+        '<div class="pabm-borrar">' +
+            '<button type="button" class="btn btn-secondary btn--mini pabm-abrir-conf" ' +
+            'onclick="pabmPedirBorrado(this)">Borrar este periodo</button>' +
+            '<div class="pabm-conf hidden">' +
+                '<p>Se van a borrar <b>' + filas.length + '</b> fila(s) de <b>' +
+                escapar(det.mesLabel) + '</b> (' + escapar(PABM_ROTULO_ORIGEN[origen] || origen) +
+                '), por un total de <b>' + escapar(totalTxt) + '</b>. Se puede deshacer justo ' +
+                'despues, pero no una vez que hagas otro cambio.</p>' +
+                '<button type="button" class="btn btn-secondary btn--mini" ' +
+                'onclick="pabmCancelarBorrado(this)">Cancelar</button>' +
+                '<button type="button" class="btn btn--mini btn--peligro" ' +
+                'onclick="pabmConfirmarBorrado(this)">Confirmar borrado</button>' +
+            '</div>' +
+        '</div>';
+}
+
+function pabmFilaHtml(f) {
+    // La notaLibre (la nota del shell, o el 'nombre[: nota]' del recurrente) va BAJO la
+    // cuenta: es lo que identifica "Netflix" entre tres filas de la misma cuenta.
+    var celdaCuenta = escapar(f.cuenta) +
+        (f.notaLibre ? '<div class="pabm-nota">' + escapar(f.notaLibre) + '</div>' : '');
+    if (!f.editable) {
+        return '<tr data-fila="' + f.fila + '"><td>' + celdaCuenta + '</td><td>' +
+            escapar(f.tipoCuenta) + '</td><td class="num">' +
+            escapar(pabmFmtMonto(f)) + '</td></tr>';
+    }
+    return '<tr data-fila="' + f.fila + '"><td>' + celdaCuenta + '</td><td>' +
+        escapar(f.tipoCuenta) + '</td>' +
+        '<td class="num pabm-celda-monto" data-monto="' + escapar(f.monto) +
+        '" data-moneda="' + escapar(f.moneda) + '">' +
+        pabmCeldaVista(f.monto, f.moneda) + '</td></tr>';
+}
+
+function pabmCeldaVista(monto, moneda) {
+    // <button>, no <span onclick>: corregir un monto es la razon de ser de esta vista y sin
+    // esto no habia forma de llegar al control con el teclado.
+    return '<button type="button" class="pabm-monto" onclick="pabmEditarMonto(this)">' +
+        escapar(pabmFmtMonto({ monto: Number(monto), moneda: moneda })) +
+        // Lapiz en SVG stroke, como TODOS los iconos del shell: un dingbat tipografico se
+        // renderiza distinto en cada sistema y ademas roza la regla de cero emojis.
+        '<svg class="lapiz" width="11" height="11" viewBox="0 0 24 24" fill="none" ' +
+        'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" ' +
+        'stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L20 8l-4-4L4 16z"/>' +
+        '</svg></button>';
+}
+
+// ---- Correccion de monto inline (el gate real sigue del lado del servidor) ----
+
+function pabmEditarMonto(spanEl) {
+    var celda = spanEl.closest('.pabm-celda-monto');
+    // Se prefilla con coma decimal porque aNumero() de la casa acepta el formato es-AR: el
+    // modal viejo usaba <input type="number"> y rechazaba la coma.
+    var valor = String(celda.dataset.monto).replace('.', ',');
+    celda.innerHTML = '<span class="pabm-edit">' +
+        '<input class="conc-real" inputmode="decimal" value="' + escapar(valor) + '">' +
+        '<button type="button" class="btn btn-secondary btn--mini" ' +
+        'onclick="pabmCancelarEdicion(this)">Cancelar</button>' +
+        '<button type="button" class="btn btn-primary btn--mini" ' +
+        'onclick="pabmConfirmarEdicion(this)">Guardar</button></span>';
+    celda.querySelector('input').focus();
+}
+
+function pabmCancelarEdicion(btn) {
+    var celda = btn.closest('.pabm-celda-monto');
+    celda.innerHTML = pabmCeldaVista(celda.dataset.monto, celda.dataset.moneda);
+}
+
+function pabmConfirmarEdicion(btn) {
+    var celda = btn.closest('.pabm-celda-monto');
+    var fila = celda.closest('tr').dataset.fila;
+    var crudo = celda.querySelector('input').value;
+    var nuevo = aNumero(crudo);
+    if (nuevo === '') {
+        mostrarError('"' + crudo + '" no es un monto valido.');
+        return;
+    }
+    celda.innerHTML = '<span class="conc-hint conc-hint--tenue">Guardando...</span>';
+    google.script.run
+        .withSuccessHandler(function (res) {
+            pabmUltimoRevert = { tipo: 'edicion', mensaje: 'Monto de "' + res.cuenta +
+                '" corregido a ' + pabmFmtMonto({ monto: res.montoNuevo, moneda: res.moneda }) + '.' };
+            pabmCargarListado();
+        })
+        .withFailureHandler(function (err) {
+            // El servidor manda el motivo real (fila no editable, monto invalido): TEXTUAL, y
+            // nunca por window.alert -- adentro de un modal el dialogo nativo queda detras.
+            celda.innerHTML = pabmCeldaVista(celda.dataset.monto, celda.dataset.moneda);
+            mostrarError(err.message);
+        })
+        .actualizarMontoFilaProyeccion(fila, nuevo);
+}
+
+// ---- Baja de un periodo, en dos pasos ----
+
+function pabmPedirBorrado(btn) {
+    btn.classList.add('hidden');
+    btn.closest('.pabm-borrar').querySelector('.pabm-conf').classList.remove('hidden');
+}
+
+function pabmCancelarBorrado(btn) {
+    var zona = btn.closest('.pabm-borrar');
+    zona.querySelector('.pabm-conf').classList.add('hidden');
+    zona.querySelector('.pabm-abrir-conf').classList.remove('hidden');
+}
+
+function pabmConfirmarBorrado(btn) {
+    var card = btn.closest('.pabm-card');
+    var clave = card.dataset.clave, origen = card.dataset.origen;
+    var mesLabel = card.querySelector('.pabm-mes').textContent;
+    var zona = btn.closest('.pabm-borrar');
+    zona.innerHTML = '<p class="conc-hint conc-hint--tenue">Borrando...</p>';
+    google.script.run
+        .withSuccessHandler(function (res) {
+            delete pabmAbiertos[origen + ':' + clave];
+            pabmUltimoRevert = { tipo: 'baja',
+                mensaje: res.filasBorradas + ' fila(s) de ' + mesLabel + ' borradas.' };
+            pabmCargarListado();
+        })
+        .withFailureHandler(function (err) {
+            zona.innerHTML = '<div class="alert alert-error"><span>' +
+                escapar(err.message) + '</span></div>';
+        })
+        .eliminarPeriodoProyeccion(clave, origen);
+}
+
+// ---- Deshacer (una sola accion pendiente, la ultima: es el contrato del servidor) ----
+
+function pabmDeshacer(btn) {
+    if (!pabmUltimoRevert) return;
+    var caja = btn.closest('.alert').querySelector('span');
+    caja.textContent = 'Deshaciendo...';
+    btn.disabled = true;
+    // El fallo NO tira el banner: el mensaje del servidor lo reemplaza, ahi mismo, para que
+    // se lea la razon (respaldo borrado, fila que ya no existe) sin perder el contexto.
+    if (pabmUltimoRevert.tipo === 'baja') {
+        google.script.run
+            .withSuccessHandler(function () { pabmUltimoRevert = null; pabmCargarListado(); })
+            .withFailureHandler(function (err) { caja.textContent = err.message; btn.disabled = false; })
+            .revertirBajaProyeccionAbm();
+    } else {
+        google.script.run
+            .withSuccessHandler(function () { pabmUltimoRevert = null; pabmCargarListado(); })
+            .withFailureHandler(function (err) { caja.textContent = err.message; btn.disabled = false; })
+            .revertirEdicionMontoProyeccion();
+    }
+}
+
+// ============================================
 // ACCIONES DEL HOME
 // ============================================
-
-function abrirAbm() {
-    loader(true, 'Abriendo el Plan de Cuentas');
-    google.script.run
-        .withSuccessHandler(function () { /* el modal se reemplaza solo */ })
-        .withFailureHandler(function (err) {
-            loader(false);
-            mostrarError('No se pudo abrir el Plan de Cuentas: ' + err.message);
-        })
-        .abrirAbmDesdeShell();
-}
 
 function procesarLote() {
     loader(true, 'Procesando la hoja de Cargas');
     google.script.run
         .withSuccessHandler(function (r) {
             loader(false);
-            if (r && r.ok) { mostrarOk('Listo. Se proceso lo que habia en la hoja de Cargas.'); }
+            // El mensaje viene del backend y trae la cuenta real de filas y, si lo hubo, el
+            // aviso de fallback de cotizacion (Regla Estricta 9). Un texto fijo aca lo tapaba.
+            if (r && r.ok) { mostrarOk(r.mensaje || 'Listo. Se proceso lo que habia en la hoja de Cargas.'); }
             else { mostrarError('No se pudo procesar: ' + ((r && r.error) || 'error desconocido')); }
         })
         .withFailureHandler(function (err) {

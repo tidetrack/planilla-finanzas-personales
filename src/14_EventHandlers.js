@@ -15,9 +15,9 @@
  *
  * @see 00_Config.js (SHEETS, NAV_CONFIG, HEADER_ROW, RANGES.CARGAS)
  *
- * @version 0.9.5
+ * @version 0.63.1
  * @since 0.1.0
- * @lastModified 2026-08-13
+ * @lastModified 2026-08-29
  */
 
 /**
@@ -71,37 +71,46 @@ function handlePlanCuentasEdit(e) {
             // No podemos revertir con exactitud múltiples celdas si tenían datos previos. 
             // Sugerimos al usuario hacer Ctrl+Z con una alerta intrusiva y visible.
             const ui = SpreadsheetApp.getUi();
-            // Intentar mostrar diálogo HTML personalizado con diseño institucional (rojo, tipografía correcta).
+            // Intentar mostrar diálogo HTML personalizado con el lenguaje Corriente.
             // NOTA: Requiere que onEdit sea un disparador instalable. En trigger simple fallará e irá al catch.
+            //
+            // decision Franco 2026-08-29: esta pantalla se restilea a Corriente (Poppins, par
+            // rojo de FUNCION #B23B32/#FCEAE7 de la lista blanca del brandbook, titulo del
+            // dialogo en blanco como el shell) pero CONSERVA su geometria propia 450x340: es
+            // la UNICA excepcion a SHELL_GEOMETRIA (900x700) en todo el sistema. Motivo: no es
+            // una pantalla de flujo sino una interrupcion de emergencia disparada por un
+            // trigger sobre una edicion accidental. Abrirla del tamano del Centro de
+            // Operaciones la haria leer como una pantalla mas donde hay que hacer algo, cuando
+            // lo unico que pide es cerrar y hacer Ctrl+Z. Queda whitelisteada, comentada, en
+            // el assert DIMENSIONES UNICAS de devtools/probar_shell.js.
             try {
                 const htmlOutput = HtmlService.createHtmlOutput(`
                     <!DOCTYPE html>
                     <html>
                     <head>
-                        <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;600&display=swap" rel="stylesheet">
+                        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
                         <style>
-                            body { font-family: 'League Spartan', sans-serif; background-color: #fdf2f2; padding: 20px; color: #2d3748; }
-                            .alert-container { border-left: 4px solid #dc3545; padding-left: 15px; }
-                            h2 { color: #dc3545; margin-top: 0; font-weight: 600; }
-                            p { font-size: 14px; line-height: 1.5; }
-                            .highlight { background-color: #fce8e8; padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #dc3545; }
-                            /* Botón simulado para consistencia visual, aunque el modal debe cerrarse con la X nativa */
-                            .btn-close { display: inline-block; margin-top: 15px; padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: 'League Spartan', sans-serif; font-weight: 600; text-align: center; width: 100%; box-sizing: border-box; }
+                            body { font-family: 'Poppins', 'DM Sans', 'Segoe UI', sans-serif; background: #FFFFFF; padding: 22px; color: #1E2A33; margin: 0; }
+                            .aviso { background: #FCEAE7; border-left: 3px solid #B23B32; border-radius: 12px; padding: 16px 18px; }
+                            h2 { color: #B23B32; margin: 0 0 10px; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+                            p { font-size: 13px; line-height: 1.55; color: #44576A; margin: 0 0 10px; }
+                            .tecla { background: #FFFFFF; border: 1px solid #B23B32; padding: 1px 7px; border-radius: 6px; font-weight: 600; color: #B23B32; }
+                            .btn-close { display: block; margin-top: 16px; padding: 11px 16px; background: #B23B32; color: #FFFFFF; border: none; border-radius: 10px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; text-align: center; width: 100%; box-sizing: border-box; }
                         </style>
                     </head>
                     <body>
-                        <div class="alert-container">
-                            <h2>Edición Múltiple Bloqueada</h2>
-                            <p>El sistema de seguridad ha detectado la alteración de múltiples celdas en el Plan de Cuentas.</p>
-                            <p>Para proteger la integridad de la base de datos, el sistema no puede restaurar esto masivamente de forma automática.</p>
-                            <p>Si esto fue un accidente, por favor cierra esta ventana e inmediatamente presiona <span class="highlight">Ctrl + Z</span> (Deshacer) en tu teclado.</p>
+                        <div class="aviso">
+                            <h2>Edicion multiple bloqueada</h2>
+                            <p>Se modificaron varias celdas del Plan de Cuentas a la vez. El sistema no puede restaurarlas de forma automatica.</p>
+                            <p>Si fue un accidente: cerra esta ventana y presiona <span class="tecla">Ctrl + Z</span> enseguida.</p>
+                            <p>Para cambiar el Plan de Cuentas, entra por el menu tidetrack &gt; Plan de Cuentas.</p>
                             <button class="btn-close" onclick="google.script.host.close()">Entendido</button>
                         </div>
                     </body>
                     </html>
                 `).setWidth(450).setHeight(340);
-                
-                ui.showModalDialog(htmlOutput, 'Alerta de Seguridad Crítica');
+
+                ui.showModalDialog(htmlOutput, '          ');
             } catch (error) {
                 // Fallback a alert limpio nativo (sin emojis) si se ejecuta desde el OnEdit simple
                 ui.alert(
@@ -116,9 +125,15 @@ function handlePlanCuentasEdit(e) {
             } else {
                 range.clearContent();
             }
+            // decision Franco 2026-08-29: el toast nombraba "la accion rapida > Gestionar
+            // Cuentas", una ruta que no existe: no hay ningun menu llamado "accion rapida", y
+            // "Gestionar cuentas" es el rotulo de una TARJETA adentro del Centro de
+            // Operaciones, no una entrada de menu. Un aviso que bloquea al usuario y despues
+            // lo manda a un lugar inexistente lo deja sin salida. La ruta real y literal es
+            // la entrada de MENU_CONFIG. @see 00_Config.js (MENU_CONFIG, 'Plan de Cuentas')
             e.source.toast(
-                'Bloqueado. Para proteger tus métricas, ingresá desde la acción rápida > Gestionar Cuentas.',
-                'Edición Directa Bloqueada',
+                'Bloqueado. Para cambiar el Plan de Cuentas, entra por el menu tidetrack > Plan de Cuentas.',
+                'Edicion directa bloqueada',
                 6
             );
         }

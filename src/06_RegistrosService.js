@@ -17,13 +17,32 @@
  * @see 00_Config.js (RANGES.CARGAS, RANGES.REGISTROS, RANGES.TC_*)
  * @see 03_SheetManager.js (getTableData, asegurarCapacidadFilas)
  *
- * @version 0.11.1
+ * @version 0.61.1
  * @since 0.1.0
- * @lastModified 2026-08-18
+ * @lastModified 2026-08-29
  */
+
+// decision Franco 2026-08-29: el pipeline se parte en DOS. Abajo `_procesarCargasNucleo`, que
+// no sabe que existe una interfaz: hace el trabajo, LANZA si algo falla y devuelve un resumen.
+// Arriba `procesarCargas`, que es solo la entrada de menu: pone los toasts y el alert.
+//
+// POR QUE. procesarCargas tenia la UI nativa adentro y ATRAGANTABA sus errores: el catch
+// alertaba y no relanzaba. Invocado desde el shell (un showModalDialog), ese alert queda
+// DETRAS del modal -- el usuario no lo ve -- y el endpoint devolvia ok:true sobre un lote que
+// habia fallado, o el error confuso "la grilla quedo sin filas libres" en la tanda siguiente
+// (porque el clearContent nunca corrio y la grilla seguia ocupada). Es decir: el shell podia
+// decir "Listo" sobre plata que no entro al ledger. Un endpoint no puede tener UI propia ni
+// tragarse un error; una entrada de menu si puede -- y la de menu queda igual que siempre.
+const REG_MSJ_FALTAN_HOJAS = 'Faltan configurar las hojas Cargas o Registros.';
 
 /**
  * Función maestra invocada desde el menú [Dev] o botón.
+ *
+ * Es la ENTRADA DE MENU y nada mas: envuelve a `_procesarCargasNucleo` y le pone la UI nativa
+ * (los toasts de progreso, aviso, exito y fallbacks, y el alert del catch). El habito diario
+ * de Franco pasa por aca, asi que sus mensajes se conservan textuales.
+ *
+ * Toda otra superficie -- el shell, la conciliacion, las tandas -- llama al NUCLEO, que lanza.
  *
  * MODO DE FALLA NUEVO desde el 2026-08-18 (v0.11.1), del habito diario y conviene conocerlo:
  * UNA SOLA FECHA FUTURA TIPEADA EN LA GRILLA ABORTA EL LOTE COMPLETO. fetchArsRate lanza ante
@@ -39,12 +58,74 @@
  */
 function procesarCargas() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    try {
+        // El toast de progreso lo dispara el nucleo por callback: sabe cuantas filas validas
+        // hay recien despues de leer y filtrar la grilla, y ese momento no se puede adivinar
+        // desde afuera sin leerla dos veces.
+        const resumen = _procesarCargasNucleo({
+            onProgreso: function (cuantas) {
+                ss.toast(`Procesando ${cuantas} registro(s)...`, 'Procesando', 5);
+            }
+        });
+
+        if (resumen.filas === 0) {
+            ss.toast('No hay transacciones completas para registrar.', 'Aviso', 3);
+            return;
+        }
+
+        if (resumen.fallbacks.total > 0) {
+            ss.toast(`${resumen.fallbacks.filasAfectadas} de ${resumen.filas} fila(s) quedaron con el TC de otra fecha ` +
+                     `(${resumen.fallbacks.anclas.length} cotizacion(es) de dias sin publicacion). Detalle en el log.`,
+                     'Registrado, con fallbacks de cotizacion', 8);
+        } else {
+            ss.toast(`Registrado exitosamente.`, '¡Éxito!', 4);
+        }
+
+    } catch (err) {
+        const msj = String(err && err.message ? err.message : err);
+        // decision Franco 2026-08-29: el caso "faltan hojas" alertaba SIN el prefijo "Fallo en
+        // el procesamiento" y sin logError, porque no era una excepcion sino un return
+        // temprano. Se conserva textual: el mensaje que el operador ya conoce no cambia
+        // porque adentro haya cambiado la plomeria.
+        if (msj === REG_MSJ_FALTAN_HOJAS) {
+            SpreadsheetApp.getUi().alert(msj);
+            return;
+        }
+        logError("Error al procesar Registros Batch", err);
+        SpreadsheetApp.getUi().alert(`Fallo en el procesamiento: ${msj}`);
+    }
+}
+
+/**
+ * El pipeline de Cargas -> Registros SIN una sola linea de interfaz.
+ *
+ * [CONTRATO]
+ * - LANZA ante cualquier fallo (hojas ausentes, cotizacion no resoluble, escritura). No
+ *   alerta, no toastea, no devuelve un booleano de error: quien llama decide como contarlo.
+ * - Devuelve {filas, fallbacks:{total, filasAfectadas, anclas}}. `filas: 0` NO es un fallo:
+ *   significa que la grilla no tenia ninguna fila con Monto (el caso "no hay nada que hacer").
+ * - `fallbacks` es la traza de la Regla Estricta 9 en forma de dato, para que el llamador la
+ *   pueda mostrar donde el usuario esta mirando. resumirFallbacksArs() acumula por EJECUCION
+ *   (no por llamada): en un proceso por tandas, `anclas` del ultimo llamado es el acumulado de
+ *   la corrida entera, mientras `filasAfectadas` es de esta tanda sola.
+ * - Todo-o-nada por lote: si lanza a mitad, NADA de este lote se escribio (el append va
+ *   despues del calculo completo) pero la grilla de Cargas queda tal cual estaba, con sus
+ *   filas sin procesar. No hay rollback porque nunca lo hubo: hay que mirarla.
+ *
+ * @param {{onProgreso?: function(number)}} [opciones] onProgreso recibe la cantidad de filas
+ *        validas apenas se filtra la grilla, para que una UI pueda avisar antes de la espera.
+ * @returns {{filas:number, fallbacks:{total:number, filasAfectadas:number, anclas:Array}}}
+ */
+function _procesarCargasNucleo(opciones) {
+    opciones = opciones || {};
+    const onProgreso = typeof opciones.onProgreso === 'function' ? opciones.onProgreso : function () {};
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
     const cargasSheet = ss.getSheetByName(RANGES.CARGAS.sheet);
     const registrosSheet = ss.getSheetByName(SHEETS.REGISTROS);
 
     if (!cargasSheet || !registrosSheet) {
-        SpreadsheetApp.getUi().alert('Faltan configurar las hojas Cargas o Registros.');
-        return;
+        throw new Error(REG_MSJ_FALTAN_HOJAS);
     }
 
     // 1. Leer la grilla de carga (equivalente a I5:O19, resuelto desde RANGES.CARGAS)
@@ -57,11 +138,11 @@ function procesarCargas() {
     // Validar y filtrar filas que tengan como mínimo un Monto cargado
     const validRows = cargasData.filter(row => row[0] !== '');
     if (validRows.length === 0) {
-        ss.toast('No hay transacciones completas para registrar.', 'Aviso', 3);
-        return;
+        // No es un fallo: no habia nada que hacer. Se devuelve el resumen en cero.
+        return { filas: 0, fallbacks: { total: 0, filasAfectadas: 0, anclas: [] } };
     }
 
-    ss.toast(`Procesando ${validRows.length} registro(s)...`, 'Procesando', 5);
+    onProgreso(validRows.length);
 
     // 2. Precargar las cachés de Tipos de Cambio
     const tcUsdData = getTableData('TC_USD');
@@ -84,116 +165,120 @@ function procesarCargas() {
 
     const FLOOR_DATE = new Date('2024-01-01T12:00:00Z');
 
-    try {
-        validRows.forEach((row, i) => {
-            // Fila: [Monto (0), Tipo (1), Cuenta (2), Medio (3), Moneda (4), Fecha (5), Nota (6)]
-            let rawDate = row[5];
-            if (!rawDate) rawDate = new Date();
+    validRows.forEach((row, i) => {
+        // Fila: [Monto (0), Tipo (1), Cuenta (2), Medio (3), Moneda (4), Fecha (5), Nota (6)]
+        let rawDate = row[5];
+        if (!rawDate) rawDate = new Date();
+        
+        let dateObj = new Date(rawDate);
+        if (isNaN(dateObj.getTime())) dateObj = new Date();
+        if (dateObj < FLOOR_DATE) dateObj = FLOOR_DATE;
+
+        const dateStr = formatDateISO(dateObj);
+
+        // Deducir Tipo de Cuenta (Ingreso, Gasto Fijo, Gasto Variable).
+        // Sin opciones: comportamiento identico al historico (ver deducirTipoCuenta).
+        const tipoCuenta = deducirTipoCuenta(row[2], catalogos);
+
+        // ARS Base
+        const tcArs = 1.0;
+
+        // TC Internacional (USD vía argentinadatos, AUD/EUR vía triangulación)
+        let tcUsd = cacheMap.USD[dateStr];
+        let tcAud = cacheMap.AUD[dateStr];
+        let tcEur = cacheMap.EUR[dateStr];
+        
+        if (!tcUsd || !tcAud || !tcEur) {
+            const arsRate = fetchArsRate(dateStr);
+            const intlRates = fetchInternationalRates(dateStr);
             
-            let dateObj = new Date(rawDate);
-            if (isNaN(dateObj.getTime())) dateObj = new Date();
-            if (dateObj < FLOOR_DATE) dateObj = FLOOR_DATE;
+            tcUsd = arsRate;
+            tcAud = arsRate / intlRates.AUD;
+            tcEur = arsRate / intlRates.EUR;
 
-            const dateStr = formatDateISO(dateObj);
-
-            // Deducir Tipo de Cuenta (Ingreso, Gasto Fijo, Gasto Variable).
-            // Sin opciones: comportamiento identico al historico (ver deducirTipoCuenta).
-            const tipoCuenta = deducirTipoCuenta(row[2], catalogos);
-
-            // ARS Base
-            const tcArs = 1.0;
-
-            // TC Internacional (USD vía argentinadatos, AUD/EUR vía triangulación)
-            let tcUsd = cacheMap.USD[dateStr];
-            let tcAud = cacheMap.AUD[dateStr];
-            let tcEur = cacheMap.EUR[dateStr];
+            cacheMap.USD[dateStr] = tcUsd;
+            cacheMap.AUD[dateStr] = tcAud;
+            cacheMap.EUR[dateStr] = tcEur;
             
-            if (!tcUsd || !tcAud || !tcEur) {
-                const arsRate = fetchArsRate(dateStr);
-                const intlRates = fetchInternationalRates(dateStr);
-                
-                tcUsd = arsRate;
-                tcAud = arsRate / intlRates.AUD;
-                tcEur = arsRate / intlRates.EUR;
-
-                cacheMap.USD[dateStr] = tcUsd;
-                cacheMap.AUD[dateStr] = tcAud;
-                cacheMap.EUR[dateStr] = tcEur;
-                
-                newTcUsdToAppend.push([dateObj, tcUsd]);
-                newTcAudToAppend.push([dateObj, tcAud]);
-                newTcEurToAppend.push([dateObj, tcEur]);
-            }
-
-            // Fila Destino: [Monto, Tipo, Cuenta, Tipo de Cuenta, Medio, Moneda, Fecha, Nota, TC_ARS, TC_USD, TC_AUD, TC_EUR]
-            registrosToAppend.push([
-                row[0], row[1], row[2], tipoCuenta, row[3], row[4], dateObj, row[6],
-                tcArs, tcUsd, tcAud, tcEur
-            ]);
-            fechasPorFila.push(dateStr);
-        });
-
-        // 3. Escribir nuevos TCs a la hoja de Tipos de Cambio (fila de datos segun RANGES.TC_*)
-        if (newTcUsdToAppend.length > 0) appendMassive('TC_USD', newTcUsdToAppend, RANGES.TC_USD.dataRow);
-        if (newTcAudToAppend.length > 0) appendMassive('TC_AUD', newTcAudToAppend, RANGES.TC_AUD.dataRow);
-        if (newTcEurToAppend.length > 0) appendMassive('TC_EUR', newTcEurToAppend, RANGES.TC_EUR.dataRow);
-
-        // 4. Escribir los registros en el ledger Registros (fila de datos segun RANGES.REGISTROS)
-        appendMassive('REGISTROS', registrosToAppend, RANGES.REGISTROS.dataRow);
-
-        // 5. Ordenar la hoja Registros por Fecha (columna H = indice absoluto 8), descendente.
-        // Layout vigente: datos en B:M = columnas 2..13 (12 columnas), desde RANGES.REGISTROS.dataRow.
-        // decision Franco 2026-08-13: el sort es best-effort. Los registros YA quedaron escritos
-        // en el paso 4; si el sort falla (celdas combinadas cruzando el rango) se loguea y se
-        // sigue: dejar caer todo el pipeline invitaria a re-ejecutarlo y duplicar el lote.
-        const dataRowReg = RANGES.REGISTROS.dataRow;
-        const lastRowReg = registrosSheet.getLastRow();
-        if (lastRowReg >= dataRowReg) {
-            try {
-                const rowCount = lastRowReg - dataRowReg + 1;
-                const baseFullRange = registrosSheet.getRange(dataRowReg, 2, rowCount, 12);
-                baseFullRange.sort({ column: 8, ascending: false });
-                // sort() es perezoso: el flush fuerza el error dentro de este try.
-                SpreadsheetApp.flush();
-            } catch (sortErr) {
-                logError('procesarCargas: sort omitido (posibles celdas combinadas en Registros)', sortErr);
-            }
+            newTcUsdToAppend.push([dateObj, tcUsd]);
+            newTcAudToAppend.push([dateObj, tcAud]);
+            newTcEurToAppend.push([dateObj, tcEur]);
         }
 
-        // 6. Limpiar la grilla de Cargas (solo las celdas utilizadas del lote)
-        // en lugar de limpiar todo I5:O19 iterando, podemos limpiar los valids
-        cargasRange.clearContent();
+        // Fila Destino: [Monto, Tipo, Cuenta, Tipo de Cuenta, Medio, Moneda, Fecha, Nota, TC_ARS, TC_USD, TC_AUD, TC_EUR]
+        registrosToAppend.push([
+            row[0], row[1], row[2], tipoCuenta, row[3], row[4], dateObj, row[6],
+            tcArs, tcUsd, tcAud, tcEur
+        ]);
+        fechasPorFila.push(dateStr);
+    });
 
-        // 7. Cierre de la traza de fallbacks de cotizacion del lote (Regla Estricta 9).
-        // decision Franco 2026-08-18: fetchArsRate loguea la PRIMERA vez que usa cada
-        // cotizacion ancla y acumula las repeticiones; este cierre las vuelca en una linea con
-        // el rango de fechas afectadas. Va DESPUES de escribir a proposito: los TC ya quedaron
-        // congelados en el ledger y lo que el operador necesita saber es cuantas filas se
-        // llevaron el TC de otra fecha, no si conviene abortar (abortar aca ya no es opcion).
-        //
-        // decision Franco 2026-08-18: el toast cuenta FILAS DEL LOTE, no llamadas a la API.
-        // resumirFallbacksArs().total cuenta resoluciones de cotizacion -- una por fecha
-        // distinta que hubo que ir a buscar --, asi que cinco movimientos de la misma fecha en
-        // fallback informaban "1 fila(s)". El operador no decide nada con la cantidad de
-        // llamadas; decide con cuantos de SUS registros quedaron con el TC de otro dia. Se
-        // cruzan las fechas del lote contra el set de fechas que cayeron en fallback.
-        const fallbacksTc = resumirFallbacksArs();
-        if (fallbacksTc.total > 0) {
-            const enFallback = {};
-            fallbacksTc.fechasPedidas.forEach(f => { enFallback[f] = true; });
-            const filasAfectadas = fechasPorFila.filter(f => enFallback[f] === true).length;
-            ss.toast(`${filasAfectadas} de ${registrosToAppend.length} fila(s) quedaron con el TC de otra fecha ` +
-                     `(${fallbacksTc.anclas.length} cotizacion(es) de dias sin publicacion). Detalle en el log.`,
-                     'Registrado, con fallbacks de cotizacion', 8);
-        } else {
-            ss.toast(`Registrado exitosamente.`, '¡Éxito!', 4);
+    // 3. Escribir nuevos TCs a la hoja de Tipos de Cambio (fila de datos segun RANGES.TC_*)
+    if (newTcUsdToAppend.length > 0) appendMassive('TC_USD', newTcUsdToAppend, RANGES.TC_USD.dataRow);
+    if (newTcAudToAppend.length > 0) appendMassive('TC_AUD', newTcAudToAppend, RANGES.TC_AUD.dataRow);
+    if (newTcEurToAppend.length > 0) appendMassive('TC_EUR', newTcEurToAppend, RANGES.TC_EUR.dataRow);
+
+    // 4. Escribir los registros en el ledger Registros (fila de datos segun RANGES.REGISTROS)
+    appendMassive('REGISTROS', registrosToAppend, RANGES.REGISTROS.dataRow);
+
+    // 5. Ordenar la hoja Registros por Fecha (columna H = indice absoluto 8), descendente.
+    // Layout vigente: datos en B:M = columnas 2..13 (12 columnas), desde RANGES.REGISTROS.dataRow.
+    // decision Franco 2026-08-13: el sort es best-effort. Los registros YA quedaron escritos
+    // en el paso 4; si el sort falla (celdas combinadas cruzando el rango) se loguea y se
+    // sigue: dejar caer todo el pipeline invitaria a re-ejecutarlo y duplicar el lote.
+    const dataRowReg = RANGES.REGISTROS.dataRow;
+    const lastRowReg = registrosSheet.getLastRow();
+    if (lastRowReg >= dataRowReg) {
+        try {
+            const rowCount = lastRowReg - dataRowReg + 1;
+            const baseFullRange = registrosSheet.getRange(dataRowReg, 2, rowCount, 12);
+            baseFullRange.sort({ column: 8, ascending: false });
+            // sort() es perezoso: el flush fuerza el error dentro de este try.
+            SpreadsheetApp.flush();
+        } catch (sortErr) {
+            logError('procesarCargas: sort omitido (posibles celdas combinadas en Registros)', sortErr);
         }
-        logSuccess(`Batch transfer completo: ${registrosToAppend.length} iteraciones procesadas.`);
-
-    } catch (err) {
-        logError("Error al procesar Registros Batch", err);
-        SpreadsheetApp.getUi().alert(`Fallo en el procesamiento: ${err.message}`);
     }
+
+    // 6. Limpiar la grilla de Cargas (solo las celdas utilizadas del lote)
+    // en lugar de limpiar todo I5:O19 iterando, podemos limpiar los valids
+    cargasRange.clearContent();
+
+    // 7. Cierre de la traza de fallbacks de cotizacion del lote (Regla Estricta 9).
+    // decision Franco 2026-08-18: fetchArsRate loguea la PRIMERA vez que usa cada
+    // cotizacion ancla y acumula las repeticiones; este cierre las vuelca en una linea con
+    // el rango de fechas afectadas. Va DESPUES de escribir a proposito: los TC ya quedaron
+    // congelados en el ledger y lo que el operador necesita saber es cuantas filas se
+    // llevaron el TC de otra fecha, no si conviene abortar (abortar aca ya no es opcion).
+    //
+    // decision Franco 2026-08-18: el toast cuenta FILAS DEL LOTE, no llamadas a la API.
+    // resumirFallbacksArs().total cuenta resoluciones de cotizacion -- una por fecha
+    // distinta que hubo que ir a buscar --, asi que cinco movimientos de la misma fecha en
+    // fallback informaban "1 fila(s)". El operador no decide nada con la cantidad de
+    // llamadas; decide con cuantos de SUS registros quedaron con el TC de otro dia. Se
+    // cruzan las fechas del lote contra el set de fechas que cayeron en fallback.
+    //
+    // decision Franco 2026-08-29: el conteo se hace ACA y viaja como dato; el toast quedo
+    // arriba, en la entrada de menu. El shell no puede usar un toast -- queda detras del
+    // modal -- pero la Regla Estricta 9 vale igual en las dos superficies: el fallback se
+    // cuenta siempre y el llamador lo pone donde el usuario este mirando.
+    const fallbacksTc = resumirFallbacksArs();
+    let filasAfectadas = 0;
+    if (fallbacksTc.total > 0) {
+        const enFallback = {};
+        fallbacksTc.fechasPedidas.forEach(f => { enFallback[f] = true; });
+        filasAfectadas = fechasPorFila.filter(f => enFallback[f] === true).length;
+    }
+    logSuccess(`Batch transfer completo: ${registrosToAppend.length} iteraciones procesadas.`);
+
+    return {
+        filas: registrosToAppend.length,
+        fallbacks: {
+            total: fallbacksTc.total,
+            filasAfectadas: filasAfectadas,
+            anclas: fallbacksTc.anclas
+        }
+    };
 }
 
 // ============================================

@@ -1,7 +1,29 @@
 /**
  * DEVTOOL_ProyeccionAbm.js
  * Capa de datos del ABM de "proyecciones elaboradas": ver, corregir y borrar lo que ya esta
- * guardado en la hoja-BD "Proyeccion", desde un modal del menu Tidetrack (no desde tidetrack Dev).
+ * guardado en la hoja-BD "Proyeccion", desde el menu Tidetrack (no desde tidetrack Dev).
+ *
+ * ============================================================================
+ * BACKEND VIVO DE LA VISTA 'proyecciones' DEL SHELL -- NO ES CANDIDATO A RETIRO (2026-08-29)
+ * ============================================================================
+ * El prefijo DEVTOOL_ del nombre de archivo es historico y enganoso: desde v0.63.0 este modulo
+ * es la capa de datos de una pantalla de USO DIARIO -- la vista 'proyecciones' del Centro de
+ * Operaciones (src/UI_Shell.html, prefijo pabm*), a la que se llega por el item de menu
+ * "Proyecciones Elaboradas" y por su tarjeta en la seccion "Revisar" del Home. Sus cinco
+ * endpoints publicos se consumen INTACTOS: la integracion al shell no toco una linea de este
+ * archivo salvo esta cabecera. El archivo NO se renombra: Apps Script evalua los archivos en
+ * orden alfabetico y renombrarlo mueve su posicion en esa carga (cicatriz v0.50.1).
+ *
+ * CIERRE DEL INCIDENTE PERMISSION_DENIED (2026-08-29). La causa raiz resulto NO ser este
+ * modulo ni el tamanio de su respuesta: era el DOCTYPE escrito en la linea 93 de
+ * UI_AbmProyeccionElaborada.html, que metia al iframe en quirks mode y dejaba sin montar el
+ * puente de google.script.run. UI_Shell.html tiene su DOCTYPE en la linea 1 y sus vistas ya
+ * disparaban su primera llamada en ese mismo timing sin reproducir el fallo. Con la vista
+ * nueva se retiro entera la maquinaria de reintentos/backoff/localStorage del modal: la vista
+ * hace UNA llamada, con tope de 15 s y un boton Reintentar en el estado de error.
+ * `pingProyeccionAbm()` se conserva por ahora SOLO como instrumento de diagnostico por si el
+ * sintoma reapareciera en la verificacion en vivo; se retira despues, junto con el DIAG.
+ * @see UI_Shell.html (vista 'proyecciones')
  *
  * [CONCEPTO DE NEGOCIO]
  * Franco, textual (encargo relayado por appscript-ui, coordinando la feature completa UI+backend):
@@ -165,8 +187,8 @@
  * @see DEVTOOL_PresupuestoGuardar.js
  * @see DEVTOOL_PresupuestoBase.js
  * @see DEVTOOL_DIAG_PermisoProyeccionAbm.js (paso 5b: tamanio real del payload en produccion)
- * @see UI_AbmProyeccionElaborada.html (llama pingProyeccionAbm() antes de listarPeriodosProyeccion())
- * @version 0.53.0
+ * @see UI_Shell.html (vista 'proyecciones': el consumidor vivo de los cinco endpoints)
+ * @version 0.63.0
  * @since 2026-08-25
  * @lastModified 2026-08-29
  */
@@ -463,8 +485,15 @@ function _respaldarFilasPa(ss, hojaProy, filas, sello) {
 /**
  * Ping trivial para el experimento de aislamiento del canal `google.script.run` (ver cabecera:
  * INCIDENTE 2026-08-25). NO toca `SpreadsheetApp`, `PropertiesService` ni ninguna API externa --
- * no lee absolutamente nada, siempre devuelve el mismo objeto minimo y constante. El modal la
- * llama PRIMERO, antes de `listarPeriodosProyeccion()`: si este ping tambien falla via
+ * no lee absolutamente nada, siempre devuelve el mismo objeto minimo y constante.
+ *
+ * 2026-08-29: SIN CONSUMIDOR. El modal que la llamaba primero ya no existe (lo absorbio la
+ * vista 'proyecciones' del shell, que hace UNA llamada y no pinguea), y el DIAG del menu Dev
+ * es lo unico que queda leyendo su huella. Se conserva viva a proposito hasta que la
+ * verificacion en vivo confirme que el sintoma no reaparece; despues se retira junto con el
+ * DIAG y con PA_PROP_HUELLA_PING.
+ *
+ * El modal la llamaba PRIMERO, antes de `listarPeriodosProyeccion()`: si este ping tambien falla via
  * `google.script.run`, el canal de este modal esta roto para CUALQUIER llamada y
  * `listarPeriodosProyeccion()` no tiene nada que ver; si el ping anda y el listado sigue
  * fallando, el canal esta bien y el problema es especifico de esa funcion o de su respuesta.

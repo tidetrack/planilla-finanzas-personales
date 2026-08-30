@@ -518,14 +518,25 @@ const MENU_CONFIG = {
         { name: 'Procesar Cargas', function: 'procesarCargas' },
         { separator: true },
         { seccion: 'ADMINISTRAR' },
-        { name: 'Plan de Cuentas', function: 'showAbmPlanCuentas' },
+        // decision Franco 2026-08-29: el item apunta a la PUERTA DEL SHELL, no al modal viejo.
+        // El ABM del Plan de Cuentas es desde hoy la vista 'cuentas' del Centro de Operaciones
+        // (900x700, lenguaje Corriente); showAbmPlanCuentas sobrevive como alias de una linea
+        // solo para la botonera de dibujos, que no es editable desde el repo.
+        // @see 16_ShellService.js (abrirPlanCuentas) @see 11_UIService.js (alias)
+        { name: 'Plan de Cuentas', function: 'abrirPlanCuentas' },
         // Franco, textual: "en el menu deberiamos poder hacer el ABM de proyecciones
         // elaboradas". Listar/corregir/borrar lo guardado en la hoja-BD "Proyeccion" (el
-        // promedio historico automatico de DEVTOOL_PresupuestoBase.js y lo guardado a mano
-        // desde "Presupuesto" via DEVTOOL_PresupuestoGuardar.js). Sin Alta: eso ya existe en
-        // la hoja Presupuesto + "Guardar Proyeccion" (tidetrack Dev), y el modal lo dice.
-        // @see DEVTOOL_ProyeccionAbm.js @see UI_AbmProyeccionElaborada.html
-        { name: 'Proyecciones Elaboradas', function: 'showAbmProyeccionElaborada' },
+        // promedio historico automatico de DEVTOOL_PresupuestoBase.js, lo guardado a mano
+        // desde "Presupuesto" via DEVTOOL_PresupuestoGuardar.js, lo cargado por el shell y
+        // el volcado de recurrentes). Sin Alta: eso ya existe en la hoja Presupuesto +
+        // "Guardar Proyeccion" (tidetrack Dev) y, para lo puntual, en "Proyeccion nueva".
+        // decision Franco 2026-08-29: el item apunta a la PUERTA DEL SHELL. Desde v0.63.0
+        // esto es la vista 'proyecciones' del Centro de Operaciones (900x700, lenguaje
+        // Corriente) y ya no un modal aparte; showAbmProyeccionElaborada sobrevive como
+        // alias de una linea solo para la botonera de dibujos, no editable desde el repo.
+        // @see 16_ShellService.js (abrirProyeccionesElaboradas) @see UI_Shell.html
+        // @see DEVTOOL_ProyeccionAbm.js (los cinco endpoints de datos, intactos)
+        { name: 'Proyecciones Elaboradas', function: 'abrirProyeccionesElaboradas' },
         // decision Franco 2026-08-26: el item entra RECIEN cuando la vista esta construida
         // (criterio de la decision 2026-08-24: "el shell los absorbe cuando cada vista este
         // construida, no antes"). La puerta abrirRecurrentes existia desde v0.47.0 sin menu.
@@ -926,6 +937,11 @@ const NAV_CONFIG = {
  ESPACIO_BLANCO_3: 'Espacio blanco 3',
  DATA_ENTRY: 'DATA-ENTRY'
  },
- SHOW_TOAST_ON_NAVIGATE: true,
+ // decision Franco 2026-08-29: el toast "Navegando a X" pasa a false. Post rediseno
+ // Corriente es ruido nativo: la hoja ya cambio delante del usuario, que es su propio
+ // feedback, y el recuadro gris de Sheets no pertenece a ningun lenguaje visual de la casa.
+ // REVERSIBLE con este booleano: navigateToSheet conserva intacta la rama del toast
+ // (13_NavigationService.js), no se borro codigo. Poner true lo devuelve.
+ SHOW_TOAST_ON_NAVIGATE: false,
  TOAST_DURATION: 2 // segundos
 };

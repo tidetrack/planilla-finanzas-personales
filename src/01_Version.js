@@ -5,15 +5,15 @@
  *
  * @version 0.11.5
  * @since 0.1.0
- * @lastModified 2026-08-25
+ * @lastModified 2026-08-30
  */
 
 // [AGILE-VALOR] Control de versiones esencial para el mantenimiento del entorno.
 
 const VERSION = {
  major: 0,
- minor: 61,
- patch: 0,
+ minor: 63,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-29',
- releaseName: 'v0.61.0 - El guardado deja de pisar lo ajeno y el ABM reconoce los cinco origenes',
+ releaseName: 'v0.63.1 - Los remanentes de afuera del shell hablan Corriente',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,53 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.63.1 (2026-08-29) - Los remanentes de afuera del shell hablan Corriente
+CORRECCIONES DEL 2026-08-30, ANTES DE DEPLOYAR (misma version arreglada, no consumen numero propio):
+- El aviso de error de la vista 'proyecciones' no se limpiaba NUNCA: tras un error, una operacion exitosa dejaba el banner rojo viejo arriba y el verde de deshacer abajo, a la vez. Se cubre en pabmCargarListado(), el embudo de las tres mutaciones. La misma familia en 'cuentas': cuCambioEntidad y cuSegModo tambien limpian.
+- La columna "Categoria" del detalle mostraba f.tipoCuenta (columna E de Registros: Ingreso / Gasto Fijo / Gasto Variable) y en la MISMA release la vista 'cuentas' usaba esa palabra para el otro eje. Pasa a "Tipo de cuenta", el nombre literal de la columna.
+- Dos mensajes mandaban a un boton "Guardar Proyeccion" de la hoja Presupuesto que NO existe. Ahora dicen la ruta viva: menu tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar.
+- El acordeon de periodo y el monto editable eran <div>/<span> con onclick: no se llegaba a ellos con teclado en la unica vista cuya funcion es corregir. Pasan a <button> con aria-expanded y el anillo de foco de .bloque-resumen.
+- Si getAbmFormData fallaba, la vista 'cuentas' dejaba crear un medio de pago SIN MONEDA (rompe ADR-002 y el autocompletado de moneda en Cargas). Guarda del lado del cliente en cuGuardar; el contrato del servidor no se toca.
+- Los tres selects se quedaban SIN NINGUNA flecha al enfocarse (la cicatriz v0.55.2 dada vuelta): el foco reescribia el shorthand background y borraba el chevron. Se unifica con la regla gemela de .shell-acciones y el guard de flechas del banco pasa a cubrir tambien los select.
+- El "Confirmar borrado" era invisible como control: mismo relleno que el panel rojo que lo contiene (1.00:1) y filo de 1.37:1, mas debil que el Cancelar de al lado. Pasa a solido --rojo-ink/blanco: 5.89:1 de texto, 5.07:1 de relleno.
+- El presionado neutro del segmentado Crear/Editar daba 4.38:1, por debajo de AA. Pastilla blanca con los anillos teal: 5.18:1. El guard de paleta mira procedencia de color, no contraste: pasaba en verde igual.
+- La cascada de entrada del Home estaba rota: :nth-of-type cuenta entre hermanos del mismo tag y cinco de las ocho tarjetas entraban con delay 0s. Se cablea por data-grupo y el banco RESUELVE los ocho delays en vez de leer dos lineas de CSS. Y "Revisar" pasa a 2x2: la cuarta tarjeta caia sola y era la unica con el titulo en dos lineas.
+- Un neto con monedas de signo opuesto se imprimia "1620000,00 ARS + -2,99 USD": el signo pasa al operador.
+* Se colapsan cuatro clases que redibujaban componentes existentes (la piel de vidrio estaba escrita tres veces; .pabm-meta era .bloque-meta; .pabm-chev era .chev-abrir; .pabm-vacio y .pabm-cargando eran .conc-hint). .btn--mini pasa de 30 a 32px, la altura que .alert .btn ya tenia, y .btn--peligro absorbe la copia exacta que era .rec-borrar[data-conf="1"].
+- "Manual del shell" era copy interno: pasa a "Cargadas a mano en tidetrack". El id de origen 'shell' NO se toca, es clave de contrato.
+- Dos emojis vivos en src/ contra la Regla Estricta 6, uno en codigo que corre (logInfo emitia un U+FE0F por linea de log). verificar_sintaxis.py suma el barrido de emojis, y el guard de paleta se extiende al <style> inline de 14_EventHandlers.js, que era la unica superficie del producto que no auditaba nadie.
+
+- La alerta de edicion multiple del Plan de Cuentas venia de DOS redisenos atras: League Spartan, rojo #dc3545, lienzo rosa y un titulo de dialogo que gritaba "Alerta de Seguridad Critica". Ahora viste Corriente: Poppins, el par rojo de FUNCION #B23B32/#FCEAE7 de la lista blanca del brandbook, titulo del dialogo en blanco como el shell, y el texto en la voz sobria de la casa.
+! La alerta CONSERVA su geometria 450x340: es la UNICA excepcion documentada a SHELL_GEOMETRIA (900x700) en todo el sistema. No es una pantalla de flujo sino una interrupcion de emergencia disparada por un trigger sobre una edicion accidental; abrirla del tamano del Centro de Operaciones la haria leer como un lugar donde hay que hacer algo, cuando lo unico que pide es cerrar y hacer Ctrl+Z. La excepcion queda comentada en el codigo y whitelisteada en el assert DIMENSIONES UNICAS del banco.
+- El toast de la edicion de una sola celda mandaba al usuario a "la accion rapida > Gestionar Cuentas": una ruta que no existe. No hay menu llamado "accion rapida", y "Gestionar cuentas" es el rotulo de una TARJETA adentro del shell. Un aviso que bloquea y despues deriva a un lugar inexistente deja al usuario sin salida. Ahora dice la ruta literal: menu tidetrack > Plan de Cuentas.
+- NAV_CONFIG.SHOW_TOAST_ON_NAVIGATE pasa a false: el toast "Navegando a X" era ruido nativo post rediseno -- la hoja ya cambio delante del usuario, que es su propio feedback. Decision REVERSIBLE con ese booleano: la rama del toast en navigateToSheet queda intacta, no se borro codigo.
+
+v0.63.0 (2026-08-29) - Proyecciones Elaboradas entra al shell
++ El ABM de Proyecciones Elaboradas deja de ser un modal aparte (720x680, piel vieja) y pasa a ser la vista 'proyecciones' del Centro de Operaciones. Con el se retira la maquinaria de reintentos que aquel modal habia acumulado: dos ciclos de tres intentos con backoff, una linea de diagnostico y un historial en localStorage, todo contra un PERMISSION_DENIED cuya causa raiz resulto ser su propio DOCTYPE en la linea 93 -- el iframe entraba en quirks mode y el puente hacia el servidor no se montaba. El shell tiene el DOCTYPE en la linea 1 y sus vistas ya disparaban su primera llamada en ese mismo timing sin fallar: aca hay UNA llamada, tope de 15 s y un boton Reintentar.
++ Se porta la pantalla entera: listado por mes con los cinco origenes (guardado a mano / manual del shell / recurrentes / presupuesto base / otros), cada uno con su rotulo por corrida, sus totales por moneda y su baja selectiva; detalle plegable fila por fila con la nota libre del usuario aparte del sello; correccion de monto inline; baja en dos pasos que dice CUANTA plata se borra, nunca sumando monedas distintas; y deshacer de la ultima accion.
++ CERO backend nuevo: los seis endpoints de DEVTOOL_ProyeccionAbm.js se consumen intactos. Su contrato es el objeto de datos pelado en exito y THROW en fallo, distinto del {ok} del shell y tambien del {success} del ABM del Plan: no se normalizo el servidor, se respeto tal cual con withFailureHandler obligatorio.
+* Dos mejoras sobre el modal viejo, no cosmeticas: el monto tipeado se parsea con aNumero() de la casa, que acepta la coma decimal es-AR (el modal usaba <input type="number"> y la rechazaba), y el fallo puntual de una edicion sale por el aviso del shell en vez de un window.alert, que adentro de un modal puede quedar detras.
++ Tarjeta propia en la seccion "Revisar" del Home, junto a Conciliacion y Procesar Cargas: es la UNICA puerta para corregir o borrar lo ya proyectado, y esconderla detras de "Proyeccion nueva" hacia indescubrible el borrado. Los dos mensajes que ya mandaban ahi (el exito de registrarProyecciones y el hint de la carga) se actualizaron para nombrar la vista.
+* El item de menu apunta a abrirProyeccionesElaboradas. showAbmProyeccionElaborada SE CONSERVA como alias de una linea, por la misma razon que showAbmPlanCuentas: la botonera de dibujos publicada lo referencia por nombre y no es editable desde el repo. TAREA MANUAL PENDIENTE de Franco, sin plazo: reasignar esos dibujos a las dos puertas nuevas; recien despues se pueden borrar los alias.
+- El icono de Conciliacion en el Home era casi identico al de Procesar Cargas, dos tarjetas mas arriba: dos check iguales en la misma seccion no distinguen nada. Ahora son dos columnas con un igual entre ellas.
+! Nada se borro todavia: UI_AbmProyeccionElaborada.html, pingProyeccionAbm y el DIAG temporal del menu Dev siguen vivos hasta despues de la verificacion en vivo -- si el PERMISSION_DENIED reapareciera, son las herramientas para diagnosticarlo.
+
+v0.62.0 (2026-08-29) - El Plan de Cuentas entra al shell
++ El ABM del Plan de Cuentas deja de ser un modal aparte y pasa a ser la vista 'cuentas' del Centro de Operaciones. Era el ultimo formulario de uso diario con la piel vieja (Google Sans, lienzo navy) y con OTRAS dimensiones: clickear "Gestionar cuentas" en el Home reemplazaba el modal de 900x700 por uno de 520x750 y de otro color, en el mismo gesto. Como vista hereda SHELL_GEOMETRIA y no hay dos pieles que mantener a la par.
++ Alta, cambio y baja de las cuatro entidades (Ingresos, Gastos fijos, Gastos variables, Medios de pago) con los componentes que ya existian: .shell-form/.f para los campos, .seg para el modo Crear/Editar, .combo + datalist propio para buscar, .shell-acciones para la barra. La baja es en dos pasos sobre el mismo boton, como en Recurrentes: cero dialogos nativos, que en un modal pueden quedar detras.
++ CERO backend nuevo: los cinco endpoints (getAbmFormData, getCategoryAccounts, saveAbmRecord, updateAbmRecord, deleteAbmRecord) se reusan intactos. Como su contrato es {success}/throw y no el {ok} del shell, la vista tiene su propio sender (cuEnviar), calcado de enviar(): asi un rechazo de validacion ("esa cuenta ya existe") llega con su mensaje real en vez de leerse como una caida de red.
+- HINT VERAZ sobre el renombre. El modal viejo prometia "los cambios afectaran al historial de esta cuenta" y eso NO es lo que el codigo hace: updateRow escribe solo la fila del Plan, asi que los movimientos ya registrados conservan el nombre viejo. La vista lo dice tal cual.
+- INVALIDACION DEL CATALOGO, con la regla exacta: una mutacion del Plan tira el catalogo perezoso del cliente; una carga no, porque no toca el Plan. Sin lo primero, dar de alta una cuenta y pasar derecho a "Movimiento nuevo" ofrecia los desplegables viejos -- justo sin la cuenta recien creada.
+* El item de menu "Plan de Cuentas" apunta a la puerta nueva (abrirPlanCuentas). showAbmPlanCuentas SE CONSERVA como alias de una linea: la botonera de dibujos publicada lo referencia por nombre y no es editable ni auditable desde el repo. TAREA MANUAL PENDIENTE de Franco, sin plazo: reasignar esos dibujos a abrirPlanCuentas; recien despues se puede borrar el alias.
+* abrirAbmDesdeShell() se retiro, como su propio docstring anunciaba. src/UI_AbmPlanCuentas.html queda huerfano pero no se borra todavia: se retira despues de la verificacion en vivo.
+
+v0.61.1 (2026-08-29) - El pipeline deja de tragarse los errores
+- DEFECTO CERRADO: procesarCargas tenia la UI nativa adentro y su catch alertaba sin relanzar. Invocado desde el shell (un modal), ese alert quedaba DETRAS del dialogo y el endpoint devolvia ok:true: el usuario podia leer "Listo" sobre un lote que no entro al ledger. En la carga por tandas era peor -- la tanda fallida quedaba en la grilla y la vuelta siguiente devolvia "la grilla quedo sin filas libres", un sintoma en lugar de la causa.
++ El pipeline se parte en dos: _procesarCargasNucleo() hace el trabajo, LANZA ante cualquier fallo y devuelve {filas, fallbacks}. procesarCargas() queda como entrada de MENU y solo le pone la UI: los toasts y el alert del catch, textuales -- incluido el "Faltan configurar las hojas Cargas o Registros." sin prefijo. El habito diario no cambia.
++ Los cuatro caminos del shell (procesar la hoja, movimientos, traspasos y conciliacion) pasan al nucleo: el fallo sale como {ok:false, error} y el error EXPLICA en que estado quedo todo -- cuantas filas quedaron escritas en la grilla sin procesar, cuantos items ya entraron al ledger y cuantos nunca se escribieron. No se invento un rollback: el codigo nunca lo tuvo y el mensaje lo declara, porque reintentar el lote entero duplicaria lo que ya entro.
++ Regla Estricta 9 sostenida en las dos superficies: el aviso de fallbacks de cotizacion viajaba en un toast que desde el shell quedaba tapado; ahora tambien viaja como dato y se pega al mensaje de exito de movimientos, traspasos y conciliacion (que fecha sus ajustes HOY: un sabado el TC del dia no existe).
+- El banco stubeaba procesarCargas como si LANZARA, cosa que el real nunca hacia: su verde no describia produccion. Seccion 24 nueva, con el contrato real y probada por mutacion: nucleo que corta, shell sin un solo alert nativo, y el camino de menu cargado de verdad para verificar que atrapa y no propaga.
+
 v0.61.0 (2026-08-29) - El guardado deja de pisar lo ajeno y el ABM reconoce los cinco origenes
 ! Cierra el hallazgo GRAVE diferido de v0.59.0, con autorizacion de Franco para tocar los modulos de la otra linea: re-correr Guardar Proyeccion desde la hoja Presupuesto ya NO retira las proyecciones cargadas por el menu ni el volcado de recurrentes. El retiro selectivo usa el MISMO criterio en los cuatro sitios (plan, chequeo post-retiro, verificacion y reversion), y estado/confirm/detalle anuncian exactamente lo que se toca y lo que convive.
 + El ABM de Proyecciones Elaboradas lista CINCO origenes como grupos propios (guardado a mano / manual del shell / recurrentes / presupuesto base / otros), cada uno con su total, su baja selectiva y su rotulo temporal por corrida. Con esto aparece el camino de UI que faltaba: quitar un volcado de recurrentes de un mes. La nota libre del usuario salio del sello y se muestra aparte. Payload acotado a lo que la pantalla pinta.
