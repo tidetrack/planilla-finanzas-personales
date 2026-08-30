@@ -124,9 +124,10 @@ function crearHojaFalsa(nombre, oculta) {
 }
 
 /** Fabrica un SpreadsheetApp-like con las hojas de NOMBRES_REALES, todas ocultas salvo las que se pidan visibles. */
-function crearSsFalso(nombresVisibles) {
+function crearSsFalso(nombresVisibles, nombresExtra) {
     nombresVisibles = nombresVisibles || [];
-    const hojas = NOMBRES_REALES.map(n => crearHojaFalsa(n, nombresVisibles.indexOf(n) === -1));
+    const hojas = NOMBRES_REALES.concat(nombresExtra || [])
+        .map(n => crearHojaFalsa(n, nombresVisibles.indexOf(n) === -1));
     return {
         getSheets: () => hojas,
         deleteSheet: (h) => { const i = hojas.indexOf(h); if (i === -1) throw new Error('hoja no encontrada'); hojas.splice(i, 1); }
@@ -162,9 +163,16 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_FormulerioV0111.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_AltaCuentas.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/MIGRACION_v031_Historico.js'), 'utf8') + '\n' +
+    // Los tres duenios de los patrones sumados el 2026-08-30. Se cargan de los archivos REALES:
+    // el modulo lee sus prefijos en runtime y un banco con su propia copia de un literal miente.
+    fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_ProyeccionAbm.js'), 'utf8') + '\n' +
+    fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_PresupuestoGuardar.js'), 'utf8') + '\n' +
+    fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_PresupuestoModo.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_PurgaRespaldos.js'), 'utf8') +
     '\n;Object.assign(globalThis,{FORM_PREFIJO_RESPALDO,ALTA_PREFIJO_RESPALDO,V031_PREFIJO_RESPALDO,' +
-    'PURGA_RESPALDOS_N_CONSERVAR,_purgaRespaldosPatrones,_purgaRespaldosEvaluar,' +
+    'PA_PREFIJO_RESPALDO,PG_PREFIJO_RESPALDO,PM_PREFIJO_RESPALDO,SHEETS,' +
+    'PURGA_RESPALDOS_N_CONSERVAR,PURGA_RESPALDOS_SELLO_REGEX,_purgaRespaldosEscapar,' +
+    '_purgaRespaldosPatrones,_purgaRespaldosEvaluar,' +
     '_purgaRespaldosValoresProtegidos});',
     ctx
 );
@@ -298,6 +306,110 @@ console.log('\n=== 6. Consistencia interna (ningun conteo se pierde) ===');
     ok(ev.aBorrar.length + ev.aConservar.length === ev.matcheadas.length,
         'aBorrar + aConservar = matcheadas (' + ev.aBorrar.length + ' + ' + ev.aConservar.length + ' = ' + ev.matcheadas.length + ')');
     ok(ev.aBorrar.every(it => !!it.hoja && !!it.nombre && !!it.patron), 'cada item de aBorrar trae la referencia a la hoja (para poder borrarla) y su patron/nombre (para reportar)');
+}
+
+
+console.log('\n=== 7. Los TRES patrones sumados el 2026-08-30 (PA, PG, PM) ===');
+// Los prefijos salen de las constantes REALES cargadas arriba, nunca retipeados aca.
+const NOMBRES_NUEVOS = [
+    ctx.PA_PREFIJO_RESPALDO + '2026-08-29_143512',          // HHmmss: el que el regex viejo NO agarraba
+    ctx.PA_PREFIJO_RESPALDO + '2026-08-29_143513',
+    ctx.PA_PREFIJO_RESPALDO + '2026-08-29_143514',
+    ctx.PA_PREFIJO_RESPALDO + '2026-08-29_143515',
+    ctx.PA_PREFIJO_RESPALDO + '2026-08-30_090000 (2)',      // con sufijo de colision
+    ctx.PG_PREFIJO_RESPALDO + '2026-08-28_101112',
+    ctx.PG_PREFIJO_RESPALDO + '2026-08-28_101113 (3)',
+    ctx.PM_PREFIJO_RESPALDO + '2026-08-27_1015',            // PM sella HHmm: entra por el mismo regex
+    ctx.SHEETS.RESPALDOS                                     // la boveda: NO es un respaldo fechado
+];
+{
+    propiedadesFalsas = {};
+    const ss = crearSsFalso([], NOMBRES_NUEVOS);
+    const ev = ctx._purgaRespaldosEvaluar(ss);
+    const porPatron = {};
+    ev.matcheadas.forEach(it => { porPatron[it.patron.etiqueta] = (porPatron[it.patron.etiqueta] || 0) + 1; });
+
+    ok(ctx._purgaRespaldosPatrones().length === 6, 'ahora son SEIS patrones, dio ' + ctx._purgaRespaldosPatrones().length);
+    ok(porPatron['Respaldo proyeccion abm'] === 5, '5 "Respaldo proyeccion abm" matchean (4 con sello HHmmss + 1 con colision): ' + porPatron['Respaldo proyeccion abm']);
+    ok(porPatron['Respaldo presupuesto guardar'] === 2, '2 "Respaldo presupuesto guardar" matchean: ' + porPatron['Respaldo presupuesto guardar']);
+    ok(porPatron['Respaldo presupuesto modo'] === 1, '1 "Respaldo presupuesto modo" (sello HHmm) matchea: ' + porPatron['Respaldo presupuesto modo']);
+
+    // LA BOVEDA NO ENTRA. No lleva sello, no matchea, no se lista ni se borra.
+    ok(!ev.matcheadas.some(it => it.nombre === ctx.SHEETS.RESPALDOS),
+        '"' + ctx.SHEETS.RESPALDOS + '" (la boveda) NO matchea NINGUN patron: es infraestructura viva, no un respaldo fechado');
+    ok(!ev.aBorrar.some(it => it.nombre === ctx.SHEETS.RESPALDOS), 'y por lo tanto jamas entra a aBorrar');
+
+    // La guarda de recencia sigue valiendo para los patrones nuevos: de las 5 de PA se conservan
+    // las 3 mas recientes y se borran 2.
+    const aBorrarPa = ev.aBorrar.filter(it => it.patron.etiqueta === 'Respaldo proyeccion abm');
+    ok(aBorrarPa.length === 5 - ctx.PURGA_RESPALDOS_N_CONSERVAR,
+        'de las 5 de PA se borran ' + (5 - ctx.PURGA_RESPALDOS_N_CONSERVAR) + ' (las 3 mas recientes se conservan), dio ' + aBorrarPa.length);
+}
+
+console.log('\n=== 8. DEFECTO 1 corregido: el regex de sello acepta HHmmss ===');
+{
+    // El regex VIEJO se reconstruye aca a proposito, para dejar registrado POR QUE se amplio:
+    // esta anclado con $, asi que un sello de 6 digitos dejaba 2 sobrantes y NO matcheaba nunca.
+    // Sumar PA/PG sin tocarlo habria dado un devtool diciendo "0 a borrar" sobre una planilla
+    // llena de basura: verde que afirma de mas.
+    const REGEX_VIEJO = '\\d{4}-\\d{2}-\\d{2}_\\d{4}';
+    const viejoPa = new RegExp('^' + ctx._purgaRespaldosEscapar(ctx.PA_PREFIJO_RESPALDO) +
+        '(' + REGEX_VIEJO + ')(?: \\(\\d+\\))?$');
+    const nombreHHmmss = ctx.PA_PREFIJO_RESPALDO + '2026-08-29_143512';
+    ok(!viejoPa.test(nombreHHmmss),
+        'con el regex VIEJO, "' + nombreHHmmss + '" NO matchea (2 digitos de sobra antes del $)');
+
+    const patrones = ctx._purgaRespaldosPatrones();
+    const patronPa = patrones.filter(p => p.etiqueta === 'Respaldo proyeccion abm')[0];
+    ok(patronPa.regex.test(nombreHHmmss), 'con el regex AMPLIADO si matchea');
+    ok(patronPa.regex.test(ctx.PA_PREFIJO_RESPALDO + '2026-08-29_1435'),
+        'y sigue matcheando un sello HHmm de 4 digitos (los tres patrones viejos no se rompen)');
+    ok(!patronPa.regex.test(ctx.PA_PREFIJO_RESPALDO + '2026-08-29_14351'),
+        'un sello de 5 digitos (ningun formato conocido) NO matchea: nada de heuristicas');
+
+    // Los tres patrones historicos siguen matcheando exactamente lo mismo que antes.
+    const patronForm = patrones.filter(p => p.etiqueta === 'Respaldo formulerio')[0];
+    ok(patronForm.regex.test('Respaldo formulerio 2026-08-19_1433'), 'Formulerio con HHmm sigue matcheando');
+    ok(patronForm.regex.test('Respaldo formulerio 2026-08-19_1433 (2)'), 'y con sufijo de colision tambien');
+}
+
+console.log('\n=== 9. DEFECTO 2 corregido: la guarda 1 mira ADENTRO de los valores JSON ===');
+{
+    // PA y PG guardan el nombre de la hoja en el campo `respaldo` de un OBJETO, no como valor
+    // pelado. Con el mapa viejo, esa hoja no quedaba protegida y la purga podia borrar justo la
+    // hoja a la que apunta el ultimo "revertir".
+    const hojaApuntada = ctx.PA_PREFIJO_RESPALDO + '2026-08-29_143512';
+    propiedadesFalsas = {
+        proyeccion_abm_edicion_previos: JSON.stringify({ respaldo: hojaApuntada, fila: 9, montoAnterior: 1, montoNuevo: 2 })
+    };
+    const mapa = ctx._purgaRespaldosValoresProtegidos();
+    ok(!!mapa[hojaApuntada] && mapa[hojaApuntada].indexOf('proyeccion_abm_edicion_previos') !== -1,
+        'una propiedad JSON con campo `respaldo` protege ESA hoja, dio ' + JSON.stringify(mapa[hojaApuntada] || null));
+
+    const ss = crearSsFalso([], NOMBRES_NUEVOS);
+    const ev = ctx._purgaRespaldosEvaluar(ss);
+    const item = ev.matcheadas.filter(it => it.nombre === hojaApuntada)[0];
+    ok(!!item && item.conservar === true && item.categoria === 'propiedad',
+        'y en la evaluacion completa queda conservada por categoria "propiedad", dio ' + (item && item.categoria));
+
+    // MUTACION: se saca la propiedad y la hoja tiene que volver a ser candidata (la guarda de
+    // recencia no la salva: es la MAS VIEJA de su patron).
+    propiedadesFalsas = {};
+    const evSin = ctx._purgaRespaldosEvaluar(crearSsFalso([], NOMBRES_NUEVOS));
+    ok(evSin.aBorrar.some(it => it.nombre === hojaApuntada),
+        'sin la propiedad, la misma hoja SI entra a aBorrar: la guarda se puede matar, o sea que mide algo');
+
+    // El valor pelado (los trece modulos historicos) sigue protegiendo igual.
+    propiedadesFalsas = { form_respaldo: 'Respaldo formulerio 2026-08-19_1433' };
+    const mapaPelado = ctx._purgaRespaldosValoresProtegidos();
+    ok(!!mapaPelado['Respaldo formulerio 2026-08-19_1433'],
+        'el valor CRUDO sigue protegiendo: el camino de los trece modulos historicos no se toco');
+
+    // Un valor que no es JSON no puede romper el mapa (JSON.parse lanza en la mayoria de ellos).
+    propiedadesFalsas = { basura: '{no es json', numero: '12345', vacio: '' };
+    let exploto = false;
+    try { ctx._purgaRespaldosValoresProtegidos(); } catch (e) { exploto = true; }
+    ok(!exploto, 'valores que no son JSON no rompen el mapa: el try/catch es obligatorio, no decorativo');
 }
 
 console.log('\n' + (fallas === 0 ? '===> SIN FALLAS' : '===> ' + fallas + ' FALLA(S)'));

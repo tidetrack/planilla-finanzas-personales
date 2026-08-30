@@ -15,6 +15,300 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.65.0 - El shell viste el brandbook Ed.03 y la vista de proyecciones deja de ser un muro (2026-08-30)
+
+### Recolor de marca: es un cambio de paleta, no un rediseno
+
+Franco entrego el **brandbook Ed. 03**, que supersede al anterior (aquel decia Poppins y teal
+`#2ECAB0`). La estructura del shell, el liquid glass y todos los componentes se conservan tal
+cual: lo que cambia son los tokens.
+
+La regla de oro del brandbook, textual, es la que ordena cada decision:
+
+> El navy es la voz, el cloud es el espacio. Todo lo demas se usa con cuidado.
+
+- **El navy `#182040` pasa a ser la voz.** Antes la accion era un degrade de menta y el navy no
+  existia en pantalla; ahora el boton primario es navy con texto blanco (15.92:1 calculado).
+- **El teal menta `#2ECAB0` sale del proyecto entero**, junto con sus tres derivados, el ink
+  `#1E2A33` con sus dos aclarados, el gris `#F4F7FA` y el durazno `#FFB380`. El guard de paleta
+  tiene una asercion inversa por cada uno: un recolor a medias, con la identidad vieja
+  sobreviviendo en un hover o en un data-URI, es la forma tipica en que una marca vuelve de a
+  poco.
+- **Entra `#2E6B7A` como acento editorial moderado**, no como color de accion: foco, hover,
+  hairlines, el punto del pie, el chip del hero y el hover del boton primario. Lo que era teal
+  por decoracion en su mayoria desaparecio; lo que era teal por accion es navy.
+- **Se retira el token `--teal-tinta`.** Existia porque la menta daba 1.86:1 sobre blanco y hacia
+  falta un teal oscurecido a mano para poder escribir con el. `#2E6B7A` da 6.00:1: el token
+  dejaba de tener razon, y dos nombres para un solo valor es la duplicacion que el repo persigue.
+
+### Los contrastes se calculan, no se declaran
+
+El guard de paleta miraba **procedencia**, y por eso dejaba pasar un par ilegible hecho con
+colores legales (paso el 2026-08-30 con el segmentado Crear/Editar). Ahora recalcula en cada
+corrida la luminancia relativa de los doce pares que de verdad se pintan uno sobre el otro.
+
+De ahi sale una regla dura que no es cosmetica: `--ink-3` (Navy 400 del brandbook) sobre Cloud da
+**4.34:1, por debajo de AA**, y ahi viven los placeholders. Por eso aparece **Paper `#FAFAFC`**
+como hueco de los inputs, donde da 4.54:1, y Cloud queda para los chips, cuyo contenido es ink-2.
+
+El semaforo se recalibro para convivir con el navy. El **rojo deja de ser inventado**: es Warn
+`#B84A3E` del brandbook. Es una decision fundada, no un descuido -- el brandbook lo reserva para
+"no hacer", y en esta planilla el egreso y la accion destructiva comparten exactamente ese
+registro de alarma; inventar un segundo rojo habria agregado un color al sistema para decir lo
+mismo. El riel del ambar es **Sand `#E8E3D5`**: la superficie calida de atencion pasa a ser un
+color de marca.
+
+### Tipografia
+
+Poppins sale, entra **DM Sans** con los cuatro pesos que declara el brandbook (300/400/500/700).
+Ojo con el 600: **DM Sans no lo trae**, asi que los 27 pesos 600 del rediseno anterior pasaron a
+500 -- dejarlos habria hecho que el navegador los sintetizara o los saltara a 700, distinto en
+cada sistema. Hay un guard que prohibe el 600 y otro que exige que todo peso usado sea uno de los
+cuatro.
+
+**JetBrains Mono no se toma**, con la razon escrita y su condicion de retiro. El brandbook la
+ofrece para datos y numeros, pero este shell ya tuvo un `--font-mono` que en la maquina de Franco
+resolvia a Courier New (cicatriz v0.49.0), y en las tablas densas de esta release el ancho de un
+mono empujaria columnas que ya scrollean. Se toma el dia que se mida ese ancho con la fuente
+cargada de verdad.
+
+La alerta de edicion multiple de `14_EventHandlers.js` -- la segunda superficie HTML del producto
+-- se recolorea en el mismo commit. Dejarla con la menta habria hecho que el recolor pasara en
+verde estando a medias.
+
+### La vista de proyecciones, en version densa
+
+El muro, medido antes de sacarlo: **795 caracteres** de prosa permanente antes del primer numero
+(un encabezado de 212 con dos rutas de menu, cinco parrafos `sub` y dos estados vacios). Y los
+cuatro totales de cada tarjeta tenian el mismo tamano, peso y color, asi que nada decia cual
+importaba: lo que Franco llamo "poca profundidad" no era falta de decoracion, era falta de
+jerarquia.
+
+La regla que ordeno el recorte:
+
+> El texto que explica DONDE se corrige algo no se muestra hasta que alguien intenta corregirlo.
+
+Toda la prosa era **preventiva**: le explicaba reglas a quien todavia no habia chocado con
+ninguna. Pasa a ser **reactiva** (aparece en el momento del bloqueo, que es cuando sirve) o se
+convierte en **dato** (un numero, un contador, un candado).
+
+| Antes | Ahora |
+|---|---|
+| Encabezado de 212 caracteres con dos rutas de menu | Una linea de datos: `Proyeccion . 23 filas . 4 meses . ultimo cambio 29/08/2026 18:15` |
+| Cinco parrafos `sub`, uno por seccion | El campo desaparece; queda un candado de 12px con su title |
+| Dos estados vacios de 133 y 103 caracteres | Una linea: `vacio` y un boton que revela la ruta al apretarlo |
+| Cuatro totales del mismo tamano y color | El neto en 18px/700 con su semaforo, los tres componentes en 11px tenue |
+| Nota al pie con cuatro variantes permanentes | El motivo del servidor, bajo la fila, al tocar un monto bloqueado |
+| Confirmacion de baja de 133 caracteres en tres lineas | Una linea |
+
+**Cuatro objetivos medibles, medidos de verdad** (seccion 25 del banco, nueva):
+
+- **O-1** el encabezado es una sola cadena y no pasa de 80 caracteres. Se **ejecuta** la funcion
+  real extraida del HTML con un dataset grande a proposito (1488 filas, 12 meses, sello del shell
+  con milisegundos) y da 67.
+- **O-2** ninguna cadena de prosa de la vista pasa de 120 caracteres. La lista blanca quedo
+  **vacia**, y esa es la noticia: las cuatro que lo superarian son los mensajes de bloqueo por
+  origen, y ya no viven en el cliente. Un guard verifica ademas que el cliente no las retipee.
+- **O-3** `PABM_SECCIONES` pierde el campo `sub` en las cinco entradas.
+- **O-4** la prosa permanente del estado normal: **de 795 a 123 caracteres**.
+
+O-4 tiene dientes: sumar constantes chicas no sirve de nada si manana alguien escribe un parrafo
+adentro de una funcion de render. `pabmRender`, `pabmTarjeta` y `pabmSeccionHtml` no pueden tener
+una sola frase propia, y el banco lo verifica sobre el codigo.
+
+### La mitad cliente de la edicion restringida y del modelo de recurrentes
+
+El gate real sigue siendo del servidor (v0.64.0). Lo que entra aca es que el cliente no invente su
+propia version ni de el ni de los mensajes:
+
+- La celda editable la decide el campo `editable` que manda el detalle, y la copia cliente del
+  gate viejo tiene su propia asercion inversa.
+- El monto no editable **sigue siendo un boton**, ahora con candado en vez de lapiz: antes la fila
+  no respondia al click y el usuario no sabia por que. El click muestra el `motivoNoEditable` del
+  servidor bajo esa fila, con la ruta exacta, y se va solo a los 6 segundos.
+- La baja bloqueada no dibuja el boton y dice el motivo del servidor, que es el mismo que aplica
+  el gate.
+
+En **Gastos recurrentes** se van el selector de mes/anio y el boton "Volcar a la proyeccion":
+el usuario ya no elige un mes. Entran los dos campos de vigencia por bloque (`type="month"`: la
+clave `YYYY-MM` sin parseo de texto libre), la linea de estado del horizonte, y un boton primario
+que aparece **solo si el horizonte quedo corto** -- cuando esta al dia no hay boton, porque no hay
+nada que hacer y no hay que fingir que si. Entrar a la vista es solo lectura: el preparador mide,
+nunca sincroniza.
+
+Si la sincronizacion (fase 2) falla, `enviar()` no lo trata como un fallo del guardado: dice las
+dos cosas y ofrece "Reintentar sincronizacion", con el markup de la confirmacion que se borro.
+
+### Lo que encontro el control adversarial, cerrado antes de desplegar
+
+**BLOQUEANTE.** El **deshacer de una edicion de monto** escribia por numero de fila absoluto sin
+comprobar que esa fila siguiera siendo la misma. Reproducido contra el mock: se edita la fila
+shell (45000 -> 50000), se corre un `deleteRows` sobre Proyeccion -- exactamente lo que hace
+`_borrarFilasRec` en cada sincronizacion -- y el deshacer **pisaba el monto de una fila del
+presupuesto base**, justo una de las poblaciones que el ABM se niega a dejar editar; dejaba la
+fila editada sin revertir, informaba exito y ademas borraba el respaldo, o sea que no quedaba con
+que reponer. El chequeo posterior no lo agarraba porque relee la misma celda que acaba de
+escribir.
+
+Ya existia, pero esta etapa lo volvia rutinario: `guardarRecurrente` y `borrarRecurrente`
+disparan la fase 2, que borra y reescribe hasta 12 meses de filas REC. "Corrijo un monto en
+Proyecciones Elaboradas, paso a Gastos recurrentes, guardo uno, vuelvo y toco Deshacer" es un
+camino de uso normal, y corrompia la BD en silencio.
+
+`revertirEdicionMontoProyeccion` compara ahora **Nota, Cuenta y Fecha** de la fila viva contra el
+respaldo (que ya trae la fila B:M entera) antes de escribir. Si no coincide lanza nombrando el
+desvio, no escribe una celda, y **no borra ni el respaldo ni la propiedad**: el usuario reintenta
+o mira a mano. `revertirBajaProyeccionAbm` se reviso con el mismo criterio y no lo necesita
+(repone al pie, no por numero de fila); queda dicho en su docstring.
+
+**El guard de paleta no miraba `src/UI_SharedStyles.html`**, que el shell incluye literalmente.
+Probado en rojo: con `--intruso-menta: #2ECAB0;` adentro, los tres verificadores seguian en verde.
+Y no era hipotetico: ese archivo traia una paleta entera de otra generacion y parte **renderizaba**
+-- sus scrollbars globales pintaban el pulgar `#CBD5E1` sobre el track `#eff2f9` en todo elemento
+con overflow salvo `.shell-scroll`, el unico que el shell redefine, y por eso la tabla de
+Conciliacion mostraba la barra gris de la generacion anterior. Dos cosas: el guard barre ahora
+**todos** los `.html` de `src/`, y UI_SharedStyles se reescribio de modo que **ahi ya no vive
+ningun color** (queda el reset, la familia como unico punto de cambio, y las scrollbars con el
+mismo tratamiento navy del shell).
+
+**Se borran `src/UI_AbmPlanCuentas.html` y `src/UI_AbmProyeccionElaborada.html`.** La afirmacion
+"el teal menta sale del proyecto entero" era falsa tal como estaba escrita: quedaban 5 apariciones
+de `#2ECAB0` y 4 de Poppins en el primero, 4 y 4 en el segundo, y clasp empuja todo `src/`. Los
+dos eran huerfanos desde v0.62.0 y v0.63.0, y su retiro estaba anunciado "despues de la
+verificacion en vivo", que ya ocurrio con v0.63.2 desplegada. Los alias `showAbmPlanCuentas` y
+`showAbmProyeccionElaborada` **se conservan**: la botonera de dibujos publicada los referencia por
+nombre. Hay un banco nuevo que prohibe el teal menta y Poppins en cualquier `.html` de `src/`.
+
+**Los dos campos de vigencia estaban angostos y Chrome los recortaba.** Medido en el navegador a
+900x700: en `c3` los `input[type=month]` quedaban en 146px y el control nativo en es-AR renderiza
+"mmmm de aaaa", asi que se leia "septiembre de 2(" y "noviembre de 20(", con el ano tapado por el
+icono del calendario. El usuario no podia leer la vigencia que acababa de fijar, que es el unico
+dato del que depende que un recurrente aparezca o no en la proyeccion. La fila pasa a **tercios**
+(Nota / Desde / Hasta en `c4`): 196px medidos, los dos valores enteros. Se agrega
+`min-width: 180px` como red, y se sacan los `placeholder` de los dos month -- Chrome los ignora en
+`type=month`, nunca se vieron.
+
+**El horizonte rodante no reconciliaba lo que quedo fuera de su ventana.** El modelo viejo dejaba
+volcar a cualquier mes entre 2024 y 2100, y esas filas seguian sumando en la proyeccion aunque la
+vigencia dijera otra cosa, sin que nada lo denunciara. `estadoHorizonteRecurrentes` informa ahora
+`sobrantes` y `mesesSobrantes`, y la vista lo dice con el camino de baja: "N filas en meses fuera
+del horizonte, hasta <mes> (se dan de baja desde Proyecciones Elaboradas)". **No se borran solas**
+-- borrar por iniciativa propia va contra el criterio del modulo -- ni cuentan como
+`desincronizado`, porque "Poner al dia" no las puede arreglar y seria un boton que miente.
+
+**`guardarRecurrente` ya no deja la BD cambiada en un `ok:false`.** Escribia la fila y despues
+verificaba la vigencia; si fallaba, devolvia el error con el recurrente ya en la hoja y sin correr
+la fase 2. Ahora deshace la escritura (repone la fila anterior si era edicion, quita el alta si
+era alta) y el mensaje dice en que estado quedo todo.
+
+**Se retiran `estadoVolcadoRecurrentes` y `volcarRecurrentesAlMes`**, con `_periodoValidoRec`,
+`REC_MSJ_PERIODO`, `_otrasDelMesRec`, sus stubs del doble y sus casos del banco. El comentario que
+los conservaba decia "mientras ese HTML siga llamandolos", y el shell ya no los llamaba: una razon
+falsa en el codigo es peor que la funcion muerta, porque el proximo que lea le va a creer.
+
+**Cabeceras de modulo.** `14_EventHandlers.js` se habia recoloreado entero y seguia fechado el
+2026-08-29; `00_Config.js` habia sumado `SHEETS.RESPALDOS`, `RANGES.RESPALDOS` y las dos columnas
+de vigencia y seguia en 2026-08-24. Se actualizan, y `verificar_sintaxis.py` suma un chequeo del
+mismo tipo que ya evita el drift de version: todo `src/*.js` modificado respecto de HEAD tiene que
+llevar `@lastModified` con el `releaseDate`, y falla con **mensaje propio** en vez de reusar el de
+la version, que mandaria a mirar `targets.yaml` sin motivo.
+
+**Honestidad sobre `insertSheet`:** no queda "ninguna" creacion de hoja, quedan **dos** caminos,
+los dos via `_conHojaActivaPreservada`, que el propio modulo describe como una mitigacion del
+parpadeo y no una garantia. Son `_asegurarHojaRecurrentes` en el primer guardado de un recurrente
+(Franco no lo va a ver, un cliente nuevo si) y `_asegurarBoveda`, que se paga una sola vez en la
+vida de la planilla y ya esta logueado. Ninguno de los dos es el defecto que Franco llamo pesimo
+-- una hoja por cada monto editado --, que esta cerrado y medido.
+
+### Estado y deuda
+
+El guard de transicion de recurrentes se reescribio a **tres estados** en vez de dos: la version
+anterior asumia que la UI nueva y el retiro de los endpoints transitorios caian en el mismo
+commit, y se habria puesto rojo en un estado sano. El repo queda en el **estado C**: la UI es la
+nueva y los dos transitorios se retiraron del backend en esta misma etapa, asi que no queda ningun
+camino de escritura sin UI que lo justifique.
+
+**Decision tomada sin Franco, para ratificar:** el borrado de los dos `.html` huerfanos. Las dos
+salidas limpias eran borrarlos o recolorearlos; se eligio borrar porque `01_Version.js` ya lo
+anunciaba dos veces y la verificacion en vivo que condicionaba el retiro ya ocurrio. `git` los
+tiene si hiciera falta volver.
+
+Bancos en verde: `verificar_sintaxis`, `verificar_modales`, `probar_shell` (26 secciones),
+`probar_proyeccion_abm`, `probar_presupuesto_guardar`, `probar_claves_duplicadas`,
+`probar_carga_apps_script` y `probar_purga_respaldos`. Las ocho vistas se miraron en el navegador
+sobre el servidor local, en el modal simulado de 900x700. El guard de paleta se probo **en rojo**
+con cuatro intrusos distintos (hex, rgba, keyword y familia tipografica), el guard de cabeceras
+tambien, y los guards de densidad con cinco.
+
+---
+
+## v0.64.0 - El respaldo deja de crear una hoja, y los recurrentes dejan de tener mes (2026-08-30)
+
+### La hoja auxiliar que aparecia al editar un monto (queja 1 de Franco)
+
+Al tipear un monto nuevo en **Proyecciones Elaboradas** y guardar, detras del modal aparecia una
+pestania `Respaldo proyeccion abm <sello>`, el grid de fondo saltaba a esa hoja, la pestania
+desaparecia sola y **el foco no volvia**. Tres sintomas, no uno: la pestania que parpadea, el
+salto de hoja que no se deshace, y la basura que se acumula. Uno por cada monto editado.
+
+La causa no era el `hideSheet` tardio: `insertSheet()` deja la hoja **visible y activa** por
+contrato de Apps Script, y el `flush()` de la verificacion garantiza que ese estado llegue al
+navegador. No se arregla moviendo lineas — hay que **no crear la hoja**.
+
+Entra `src/18_RespaldoService.js`, con dos niveles:
+
+| Tamano del respaldo | Soporte | Crea hoja |
+|---|---|---|
+| hasta 300 filas | `PropertiesService`, troceado en propiedades de 40 filas | no |
+| mas de 300 filas | la boveda: **una** hoja oculta reusada (`Respaldos tidetrack`) | solo la primera vez en la vida de la planilla |
+
+Medido, no estimado: **271 bytes** por respaldo de una fila contra **9 KB** de limite por
+propiedad (34x de margen), y 190 bytes por fila en volumen. Los grupos reales de la Proyeccion
+tienen entre 45 y 64 filas, asi que un mes entero no entra en una sola propiedad: el troceado no
+es opcional.
+
+La escritura es **atomica por contrato** — todos los trozos primero, el indice al final — y un
+respaldo nunca se trunca: si las propiedades no alcanzan, pasa entero a la boveda y el fallback
+se loguea.
+
+Ademas: `_respaldarFilasPg` recibe el mismo tratamiento en el mismo commit (era una copia literal
+del de PA), `_asegurarHojaRecurrentes` reordena su unica creacion de hoja, y
+`DEVTOOL_PurgaRespaldos.js` corrige **dos defectos** que habrian dado un verde que afirma de mas:
+el regex de sello no matcheaba `HHmmss`, y la guarda de proteccion no miraba adentro de los
+valores JSON — la purga podia borrar justo la hoja del ultimo "revertir".
+
+### Los recurrentes dejan de tener mes
+
+El recurrente se declara **una vez con su vigencia** (`Desde`/`Hasta`) y el sistema mantiene lleno
+un **horizonte rodante de 12 meses**. Se van el selector de mes/anio y el boton de volcado.
+
+Por que no "que las vistas sumen al vuelo": dar de baja Netflix en julio le sacaria Netflix a la
+proyeccion de enero a junio tambien. **Una proyeccion es el registro de lo que se decidio
+entonces, no una consulta al estado de hoy.** Invariante duro: la sincronizacion nunca escribe ni
+borra una fila con clave anterior al mes en curso.
+
+La sincronizacion es la **segunda fase** de guardar/pausar/borrar. Si falla (API de cotizaciones
+caida), el recurrente queda guardado igual y se avisa con la razon exacta y un reintento: nunca se
+pierde el dato por culpa de la API.
+
+### Edicion restringida por origen
+
+Solo se edita el monto de las filas **cargadas a mano en tidetrack**. Las guardadas desde la hoja
+Presupuesto dejan de editarse, por el mismo motivo por el que ya no se editan las del presupuesto
+base: **la marca de la nota es una afirmacion** y no puede quedar en pie con un valor que ya no la
+cumple. Cada mensaje de bloqueo nombra el lugar donde si se corrige, con la ruta literal de
+`MENU_CONFIG`.
+
+Queda anotada la deuda con nombre: "Guardar proyeccion" necesita su boton fuera del menu Dev.
+
+### Estado transitorio declarado
+
+`volcarRecurrentesAlMes` y `estadoVolcadoRecurrentes` siguen vivos como adaptadores finos hasta el
+commit que retire el selector de mes de la vista (vive en `UI_Shell.html`). Borrarlos antes
+dejaria el shell desplegado apretando un boton contra un endpoint inexistente.
+
+---
+
 ## v0.63.2 - El repo deja de llamarse igual que lo desplegado (2026-08-30)
 
 Cicatriz nueva, de la familia de la v0.55.1 pero por el otro lado: **aquella tenia cuatro

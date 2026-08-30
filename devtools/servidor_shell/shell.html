@@ -8,90 +8,70 @@
      Prestamo con tilde) salen rotos en la simulacion. Medido el 2026-08-27. -->
 <meta charset="utf-8">
 <!-- LA FUENTE SE CARGA DE VERDAD. UI_SharedStyles declara la familia pero sin este link no se
-     descarga nunca. Poppins es la familia del brandbook que fija la spec Corriente (2026-08-29);
-     los cuatro pesos 400/500/600/700 en subset latin. -->
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+     descarga nunca. decision Franco 2026-08-30: el brandbook Ed.03 reemplaza Poppins por DM Sans
+     con los cuatro pesos que declara (300/400/500/700). Ojo con el 600: DM Sans no lo tiene, asi
+     que todo peso 600 del rediseno anterior paso a 500 -- dejarlo habria hecho que el navegador
+     lo sintetizara o lo saltara a 700, distinto en cada sistema. -->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================
- * DESIGN SYSTEM CONSTANTS - TIDETRACK (GLOBAL)
+ * RESET Y FORMA COMPARTIDA - TIDETRACK
  * ============================================
+ *
+ * [CONCEPTO DE NEGOCIO]
+ * Fragmento que TODA pantalla HtmlService incluye antes de su propio <style>. Hoy su unico
+ * consumidor es src/UI_Shell.html (el Centro de Operaciones); los dos modales que lo compartian
+ * -- UI_AbmPlanCuentas.html y UI_AbmProyeccionElaborada.html -- fueron absorbidos por el shell y
+ * se borraron el 2026-08-30.
+ *
+ * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
+ * decision Franco 2026-08-30: ACA NO VIVE NINGUN COLOR. Este archivo declaraba una paleta entera
+ * de otra generacion (#34475d, #eff2f9, #e2e8f0, #5f6368, #c93232, #ffb300, #3B82F6, #CBD5E1,
+ * #94A3B8, #DC2626) y --font-family: 'Google Sans', y parte de esa paleta RENDERIZABA de verdad
+ * dentro del shell: las scrollbars globales pintaban el pulgar #CBD5E1 sobre el track #eff2f9 en
+ * todo elemento con scroll salvo .shell-scroll, que era el unico que el shell redefinia -- por
+ * eso la tabla de Conciliacion mostraba la barra gris de la generacion anterior. El guard de
+ * paleta del banco no miraba este archivo, asi que el recolor al brandbook Ed.03 podia declararse
+ * completo estando a medias.
+ *
+ * La salida no fue repintar cada token, sino sacar la decision de color de aca: el shell ya tiene
+ * su :root con la lista blanca del brandbook y redefine por su cuenta cada componente que usa
+ * (.btn, .btn-primary, .btn-secondary, .alert, .form-input, .hidden, body). Todo lo que quedaba
+ * en este archivo o estaba pisado por el shell o solo servia a los dos modales borrados. Lo que
+ * sobrevive es lo que de verdad se comparte: el reset, la familia tipografica como UN solo punto
+ * de cambio, y las scrollbars -- que ahora usan el mismo tratamiento del shell y por eso pintan
+ * igual en .shell-scroll y en cualquier otro contenedor con overflow.
+ *
+ * REGLA VIGENTE: si aca vuelve a aparecer un color, el guard de paleta (devtools/probar_shell.js,
+ * seccion 23) lo rechaza contra la lista blanca del brandbook, igual que al <style> del shell.
+ *
+ * @see src/UI_Shell.html (el unico consumidor: sus tokens de :root son la paleta real)
+ * @see devtools/probar_shell.js seccion 23 (el guard que audita este archivo)
  */
 
 :root {
- /* Color Palette */
- --primary-color: #34475d; /* Darkest, relevant blocks */
- --primary-dark: #2b3a4d; /* Slightly darker shade */
- --secondary-color: #6e7f8d;
- --secondary-hover: #5d6c78;
- --accent-color: #b5bfc6; /* Button para "botones seleccionados" */
- --accent-hover: #9eabb5;
- 
- /* Backgrounds */
- --bg-main: #eff2f9; /* Fondo de hojas / paneles */
- --bg-secondary: #FFFFFF;
- --bg-tertiary: #e2e8f0;
+ /* TIPOGRAFIA. Brandbook Ed.03: DM Sans, familia unica. El `*` de abajo la propaga a todo el
+  * documento, asi que redefinir este token es el unico gesto necesario para cambiarla entera.
+  * El shell la redeclara con la misma familia y sus fallbacks; se deja aca el default para que
+  * una pantalla futura que solo incluya este fragmento no caiga en la fuente del sistema.
+  * decision Franco 2026-08-25: NO hay --font-mono. Declaraba JetBrains Mono y Fira Code, ninguna
+  * instalada, asi que resolvia a Courier New -- cuya altura de x es ~0.42em contra ~0.53em de una
+  * grotesca. En un rotulo de 11px las minusculas median ~4,4px al lado de un control de 14px
+  * sans, y eso se lee como texto roto, no como jerarquia: fue la causa de las "distorciones de
+  * tamanos de letras". Un token que resuelve a algo que nadie eligio es una trampa: se saca. */
+ --font-family: 'DM Sans', 'Segoe UI', sans-serif;
 
- /* Texts */
- --text-main: #34475d;
- /* El color del CUERPO DE DATOS de la hoja: 4.136 celdas, el mas usado por lejos, y NO es
-  * negro puro (el default de Sheets es #000000, asi que si esta serializado es porque Franco
-  * lo puso a mano). Los numeros y el texto de tabla del shell van con este, no con --text-main,
-  * que es la tinta de la CHROME (titulos de bloque y headers). */
- --text-data: #39444d;
- /* decision Franco 2026-08-25: #6e7f8d daba 3.69:1 sobre el fondo de bloque #eff2f9 y
-  * 4.14:1 sobre blanco -- por debajo del minimo AA de 4.5:1 para texto normal. Se veia
-  * lavado, y "lavado" en un modal chico se lee como "sin terminar". #5f6368 -- el que usa
-  * pymes -- da 6.4:1 sobre blanco. */
- --text-secondary: #5f6368;
- --text-accent: #6e7f8d;
- --text-inverse: #FFFFFF;
-
- /* Semantic Colors
-  * decision Franco 2026-08-24: los tres colores de estado pasan a ser los MEDIDOS de la
-  * planilla, no los de Tailwind. Antes eran #10B981 / #EF4444 / #F59E0B, que no aparecen en
-  * ninguna celda de la hoja: un popup con esos verdes y rojos se lee como otro producto.
-  * Los de abajo son los que el codigo declaro canonicos el 2026-08-21 y los que viven
-  * LITERALES dentro de las formulas SPARKLINE de Inicio!F19:F22, con su riel al lado.
-  * @see DEVTOOL_InicioPresupuesto.js (IP_COLOR_VERDE / NARANJA / ROJO y sus fondos)
-  */
- --success: #356854;
- --success-bg: #e6f4ea;
- --danger: #c93232;
- --danger-bg: #fce8e6;
- --warning: #ffb300;
- --warning-bg: #fef7e0;
- --info: #3B82F6;
- --info-bg: #DBEAFE;
-
- /* Visual Styles */
- --border-color: #E2E8F0; /* Slate 200 */
+ /* GEOMETRIA Y MOVIMIENTO. Sin color: son medidas, y el shell las reusa o las redefine. */
  --border-radius-sm: 6px;
  --border-radius-md: 8px;
  --border-radius-lg: 12px;
  --border-radius-xl: 16px;
- 
- /* Shadows */
- --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
- --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
- --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-
- /* Fonts */
- --font-family: 'Google Sans', 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
- /* decision Franco 2026-08-25: se RETIRA --font-mono. Declaraba JetBrains Mono y Fira Code,
-  * ninguna de las dos instalada en macOS/Chrome, asi que en la practica resolvia a Courier
-  * New -- cuya altura de x es ~0.42em contra ~0.53em de una grotesca. Usado en un rotulo de
-  * 11px, las minusculas median ~4,4px al lado de un control de 14px sans, y eso se lee como
-  * texto roto, no como jerarquia. Fue la causa de las "distorciones de tamanos de letras".
-  * Un token que resuelve a algo que nadie eligio es una trampa para el que venga: se saca.
-  * Si algun dia hace falta mono de verdad, se carga la webfont primero. */
-
- /* Transitions */
  --transition-fast: 0.15s ease-in-out;
  --transition-normal: 0.25s ease-in-out;
 }
 
 /* ============================================
- * RESET & BASE COMPONENT STYLES
+ * RESET
  * ============================================
  */
 
@@ -103,201 +83,23 @@
 }
 
 body {
- background-color: var(--bg-main);
- color: var(--text-main);
  font-size: 14px;
  line-height: 1.5;
- padding: 16px;
  -webkit-font-smoothing: antialiased;
 }
 
-/* Layout */
-.container {
- max-width: 1200px;
- margin: 0 auto;
- width: 100%;
-}
-
-.container-xs { max-width: 480px; }
-.container-sm { max-width: 640px; }
-.container-md { max-width: 768px; }
-
-/* Utilities */
+/* Utilidad de esqueleto, no de piel: esconder no es una decision de color. */
 .hidden { display: none !important; }
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.text-danger { color: var(--danger); }
-.text-success { color: var(--success); }
-.text-muted { color: var(--text-secondary); }
-
-/* Dividers */
-hr.divider {
- border: 0;
- border-top: 1px solid var(--border-color);
- margin: 24px 0;
-}
 
 /* ============================================
- * FORMS & INPUTS
+ * SCROLLBARS
  * ============================================
- */
-
-.form-group {
- margin-bottom: 20px;
-}
-
-.form-label {
- display: block;
- font-weight: 500;
- margin-bottom: 8px;
- color: var(--primary-color);
- font-size: 13px;
- letter-spacing: 0.3px;
-}
-
-.form-input, .form-select {
- width: 100%;
- padding: 12px 14px;
- border: 1px solid var(--border-color);
- border-radius: var(--border-radius-md);
- font-size: 14px;
- color: var(--text-main);
- background-color: var(--bg-secondary);
- transition: all var(--transition-fast);
- box-shadow: var(--shadow-sm);
-}
-
-/* decision Franco 2026-08-25: el foco era un halo GRIS sobre fondo gris, o sea invisible.
- * Ahora es el mismo tratamiento que el de los botones -- un solo foco para todo el sistema,
- * como hace pymes. */
-.form-input:focus, .form-select:focus {
- outline: 2px solid var(--primary-color);
- outline-offset: 1px;
- border-color: var(--primary-color);
- box-shadow: none;
-}
-
-.form-input::placeholder {
- color: #94A3B8;
-}
-
-/* ============================================
- * BUTTONS
- * ============================================
- */
-
-.btn {
- display: inline-flex;
- align-items: center;
- justify-content: center;
- padding: 10px 18px;
- font-weight: 500;
- border-radius: var(--border-radius-md);
- cursor: pointer;
- border: none;
- font-size: 14px;
- transition: all var(--transition-fast);
- gap: 8px;
-}
-
-.btn:active {
- transform: translateY(1px);
-}
-
-.btn-primary {
- background-color: var(--primary-color);
- color: var(--text-inverse);
- box-shadow: var(--shadow-sm);
-}
-
-.btn-primary:hover {
- background-color: var(--primary-dark);
- box-shadow: var(--shadow-md);
-}
-
-.btn-secondary {
- background-color: var(--bg-secondary);
- color: var(--text-main);
- border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover {
- background-color: var(--bg-tertiary);
- border-color: #CBD5E1;
-}
-
-.btn-danger {
- background-color: var(--danger);
- color: var(--text-inverse);
-}
-
-.btn-danger:hover {
- background-color: #DC2626; /* Red 600 */
-}
-
-.btn-selected {
- background-color: var(--accent-color);
- color: var(--primary-color);
- border: 1px solid var(--accent-color);
- font-weight: 500;
-}
-
-.btn-selected:hover {
- background-color: var(--accent-hover);
- color: var(--primary-color);
-}
-
-.btn:disabled {
- opacity: 0.6;
- cursor: not-allowed;
- transform: none;
-}
-
-.form-actions {
- display: flex;
- justify-content: flex-end;
- gap: 12px;
-}
-
-/* ============================================
- * CARDS & PANELS
- * ============================================
- */
-
-.card {
- background-color: var(--bg-secondary);
- border-radius: var(--border-radius-lg);
- border: 1px solid var(--border-color);
- box-shadow: var(--shadow-sm);
- padding: 24px;
- margin-bottom: 24px;
-}
-
-/* ============================================
- * ALERTAS
- * ============================================
- * decision Franco 2026-08-24: fondo tenido y tinta, SIN franja de acento lateral.
- * La planilla no usa bordes en ningun lado -- no hay un solo setBorder en todo src/ y los
- * bloques se separan con una columna vacia, no con lineas -- asi que una barra de color de
- * 3px al costado se lee como de otro producto. El color del fondo ya dice todo lo que la
- * franja diria. Los pares fondo/tinta son los del semaforo medido de la hoja.
- */
-
-.alert {
- padding: 12px 15px;
- border-radius: var(--border-radius-sm);
- font-size: 13px;
- margin-bottom: 16px;
-}
-
-.alert-error { background-color: var(--danger-bg); color: var(--danger); }
-.alert-ok { background-color: var(--success-bg); color: var(--success); }
-.alert-warning { background-color: var(--warning-bg); color: #6d4d00; }
-.alert-info { background-color: var(--bg-main); color: var(--text-main); }
-
-/* ============================================
- * CUSTOM SCROLLBAR
- * ============================================
+ * decision Franco 2026-08-30: la regla es GLOBAL y usa el mismo tratamiento que .shell-scroll
+ * -- navy a baja alpha sobre track transparente. Antes el pulgar era #CBD5E1 y el track
+ * var(--bg-main) (#eff2f9), los dos de la generacion anterior, y aplicaban a TODO contenedor con
+ * scroll menos .shell-scroll: la tabla de Conciliacion (.conc-card, overflow-x: auto) mostraba
+ * una barra gris que no era de ninguna paleta vigente. Al derivar del navy, cualquier contenedor
+ * con overflow que aparezca manana ya nace con la barra correcta y sin regla propia.
  */
 
 ::-webkit-scrollbar {
@@ -306,16 +108,16 @@ hr.divider {
 }
 
 ::-webkit-scrollbar-track {
- background: var(--bg-main);
+ background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
- background: #CBD5E1;
+ background: rgba(24, 32, 64, .18);
  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
- background: #94A3B8;
+ background: rgba(24, 32, 64, .30);
 }
 
 </style>
@@ -323,60 +125,90 @@ hr.divider {
 <style>
 /* ============================================================
    SHELL -- Centro de Operaciones. 900x700 (16_ShellService.js:61).
-   Direccion "Corriente": liquid glass organico sobre lienzo blanco puro
-   (spec_final 2026-08-29, correccion de paleta de Franco). El marco del
-   dialogo de Google es blanco; el shell tambien: marco y shell se leen como
-   UNA superficie. La profundidad no la da un fondo gris: la dan tarjetas de
-   vidrio flotando sobre un agua apenas tenida (radiales teal/durazno 3-10%).
+   Direccion "Corriente" vestida con el BRANDBOOK Ed.03 (2026-08-30). La
+   estructura, el liquid glass y los componentes no se movieron: cambiaron los
+   tokens. El marco del dialogo de Google es blanco; el shell tambien (pedido
+   de Franco que se conserva): marco y shell se leen como UNA superficie.
 
-   REGLA DE PALETA (ley de Franco 2026-08-29): colores base #1E2A33, #2ECAB0,
-   #F4F7FA, #FFB380 y #FFFFFF. Todo tono intermedio es DERIVADO DECLARADO:
-   rgba() de un base, o un hex de la spec con su comentario de derivacion.
-   El guard de devtools/probar_shell.js (seccion 23) lo verifica en cada corrida.
+   REGLA DE ORO, textual del brandbook: "El navy es la voz, el cloud es el
+   espacio. Todo lo demas se usa con cuidado."
+   - El navy #182040 pasa a ser la VOZ: texto, wordmark y boton primario. Antes
+     la accion era un degrade de teal menta y el navy no existia.
+   - El teal #2ECAB0 SALE del proyecto entero. Entra #2E6B7A como acento
+     EDITORIAL moderado: foco, hover, hairlines, el punto del pie y el chip del
+     hero. Lo que era teal por DECORACION en su mayoria desaparecio; lo que era
+     teal por ACCION es ahora navy.
+   - #2E6B7A si puede ser texto sobre blanco (6.00:1 calculado), asi que el
+     token --teal-tinta de la paleta anterior (un teal oscurecido a mano para
+     poder escribir con el) dejo de existir: una sola entrada de teal.
+
+   REGLA DE PALETA: los hex vivos son los del brandbook y los tres pares de
+   funcion del semaforo. No hay tonos "a ojo": cada uno esta en la lista blanca
+   del guard de devtools/probar_shell.js (seccion 23), que pone el banco en rojo
+   ante cualquier hex, rgba() o keyword de color fuera de ella.
    La base viene de UI_SharedStyles (include de arriba); esto redefine lo que
    el shell necesita y NADA mas.
    ============================================================ */
 
 :root {
-    /* ---- MARCA (brandbook Tidetrack, los 4 + blanco) -------------------- */
-    --tt-ink:   #1E2A33;   /* texto primario, iconos hero, wordmark */
-    --tt-teal:  #2ECAB0;   /* SOLO accion y foco decorativo; NUNCA texto sobre blanco */
-    --tt-gris:  #F4F7FA;   /* superficies secundarias: huecos, rieles, chips, tags; NUNCA el lienzo */
-    --tt-peach: #FFB380;   /* decorativo: monograma, hairlines, radial calido; nunca texto */
+    /* ---- MARCA (brandbook Ed.03: primarios + neutros de uso moderado) ----
+       El navy es la voz y el cloud el espacio; el resto entra con cuidado. */
+    --tt-ink:   #182040;   /* Navy primario: logo, wordmark, texto, boton primario */
+    --tt-teal:  #2E6B7A;   /* Teal: acento editorial. Foco, hover, hairlines. Legible como texto (6.00:1) */
+    --tt-cloud: #F4F5F8;   /* Cloud: superficie de chips, tags y rieles. NUNCA el lienzo */
+    --tt-paper: #FAFAFC;   /* Paper: el hueco de los inputs. Ver la regla de ink-3, abajo */
+    --tt-sand:  #E8E3D5;   /* Sand: calido/papel. Riel de atencion y radial ambiente */
 
-    /* ---- TINTAS (AA verificadas, spec seccion 15) ----------------------- */
-    --ink-1: #1E2A33;      /* titulos, valores, montos. 14.64:1 sobre blanco */
-    --ink-2: #44576A;      /* ink aclarado para secundaria AA (7.45:1); deriva de --tt-ink */
-    --ink-3: #5A6B7C;      /* ink aclarado para placeholders y auxiliares (5.48:1); deriva de --tt-ink */
-    --teal-tinta: #0B7B69; /* teal oscurecido: el UNICO teal que puede ser texto (5.18:1); deriva de --tt-teal */
+    /* ---- TINTAS (contrastes CALCULADOS, no declarados de memoria) --------
+       REGLA DURA que ordena las dos superficies neutras: --ink-3 sobre Cloud
+       da 4.34:1, por debajo de AA. Por eso los huecos donde vive texto
+       auxiliar (placeholders, la pastilla "sin datos aun") usan --tt-paper,
+       donde da 4.54:1, y Cloud queda para los chips cuyo contenido es ink-2. */
+    --ink-1: #182040;      /* Navy: titulos, valores, montos.  15.92:1 sobre blanco */
+    --ink-2: #1E2A55;      /* Navy 700 del brandbook: texto cuerpo, labels.  13.84:1 sobre blanco */
+    --ink-3: #6B7290;      /* Navy 400 del brandbook: auxiliar y muted.  4.74:1 sobre blanco */
 
-    /* ---- SEMAFORO: colores DE FUNCION, no de marca (spec, pares ink/bg AA) --
-       Verde/rojo/ambar comunican estado (Ingreso/Egreso, ok/error/advertencia).
-       Cada par ink/bg es el verificado de la spec; los filos salen del mismo
-       ink en rgba .14-.25, nunca de un tono nuevo. */
-    --verde-ink: #0E6B4F;  /* verde de funcion, texto. 5.67:1 sobre su bg */
-    --verde-bg:  #DDF5EC;  /* riel del verde de funcion */
-    --rojo-ink:  #B23B32;  /* rojo de funcion, texto. 5.07:1 sobre su bg */
-    --rojo-bg:   #FCEAE7;  /* riel del rojo de funcion */
-    --ambar-ink: #7A4A10;  /* ambar de funcion, texto. 6.73:1 sobre su bg */
-    --ambar-bg:  #FFF1E2;  /* riel del ambar de funcion */
+    /* ---- SEMAFORO: colores DE FUNCION, no de marca (pares ink/bg AA) -----
+       El brandbook no legisla estado, solo marca: verde/rojo/ambar siguen
+       siendo funcion y por eso siguen fuera de los primarios. Lo que SI
+       cambio es su calibracion, para convivir con el navy en vez de con la
+       menta. Y el rojo dejo de ser inventado: es Warn #B84A3E del brandbook.
+       Es una decision, no un descuido -- el brandbook lo reserva para "no
+       hacer", y en esta planilla el egreso y la accion destructiva comparten
+       exactamente ese registro de alarma; inventar un segundo rojo para no
+       reusarlo habria agregado un color al sistema para decir lo mismo. */
+    --verde-ink: #1D6A4F;  /* verde de funcion, texto.  5.61:1 sobre su bg, 6.51:1 sobre blanco */
+    --verde-bg:  #E8F0ED;  /* riel del verde de funcion (10% de su ink sobre blanco) */
+    --rojo-ink:  #B84A3E;  /* Warn del brandbook.  4.62:1 sobre su bg, 5.14:1 sobre blanco */
+    --rojo-bg:   #F9F1F0;  /* riel del rojo de funcion (8% de su ink sobre blanco) */
+    --ambar-ink: #6B4A18;  /* ambar de funcion, texto.  6.26:1 sobre Sand, 8.02:1 sobre blanco */
+    --ambar-bg:  #E8E3D5;  /* Sand del brandbook: el riel calido de atencion es un color de marca */
 
     /* ---- VIDRIO --------------------------------------------------------- */
     --vidrio: linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.52));
-    --vidrio-borde: rgba(30,42,51,.07);
-    --vidrio-borde-hover: rgba(46,202,176,.38);
+    --vidrio-borde: rgba(24,32,64,.07);
+    --vidrio-borde-hover: rgba(46,107,122,.34);
     --vidrio-luz: inset 0 1px 0 rgba(255,255,255,.95);
-    --elev-agua: 0 14px 30px -16px rgba(46,202,176,.30), 0 3px 10px -4px rgba(30,42,51,.08);
-    --elev-agua-hover: 0 20px 40px -16px rgba(46,202,176,.38), 0 6px 16px -6px rgba(30,42,51,.10);
+    /* La sombra de color pasa de la menta al navy: con el teal oscuro la misma
+       alpha daba una mancha gris debajo de cada tarjeta en vez de profundidad. */
+    --elev-agua: 0 14px 30px -16px rgba(24,32,64,.18), 0 3px 10px -4px rgba(24,32,64,.08);
+    --elev-agua-hover: 0 20px 40px -16px rgba(24,32,64,.24), 0 6px 16px -6px rgba(24,32,64,.10);
 
     /* ---- TIPOGRAFIA ------------------------------------------------------
-       Poppins, familia unica (brandbook via spec Corriente). Se redefine
-       --font-family, que es el token que consume el `*` de UI_SharedStyles:
-       un solo punto de cambio propaga a todo. Los digitos se alinean con
-       font-variant-numeric, NUNCA con una segunda familia (cicatriz v0.49.0). */
-    --font-family: 'Poppins', 'DM Sans', 'Segoe UI', sans-serif;
+       DM Sans, familia UNICA (brandbook Ed.03). Se redefine --font-family, que
+       es el token que consume el `*` de UI_SharedStyles: un solo punto de
+       cambio propaga a todo.
+       decision Franco 2026-08-30: el brandbook ofrece ademas JetBrains Mono
+       "para datos y numeros" y NO se toma. Los digitos se siguen alineando con
+       font-variant-numeric, nunca con una segunda familia: es la cicatriz
+       v0.49.0 -- el shell ya tuvo un --font-mono que en la maquina de Franco
+       resolvia a Courier New y descuajeringaba los rotulos --, y en las tablas
+       densas de esta release el ancho de un mono empujaria columnas que ya
+       scrollean. Queda anotado como pendiente con su condicion: se toma el dia
+       que se mida el ancho de las columnas con la fuente cargada de verdad. */
+    --font-family: 'DM Sans', 'Segoe UI', sans-serif;
 
-    /* ---- GEOMETRIA Y MOVIMIENTO (spec: radios 12/18/22/999, una curva) -- */
+    /* ---- GEOMETRIA Y MOVIMIENTO (radios 12/18/22/999, una curva) --------- */
     --r-input: 12px;
     --r-card:  18px;
     --r-hero:  22px;
@@ -385,16 +217,16 @@ hr.divider {
     --mov: cubic-bezier(.22,.9,.36,1);
 
     /* Chevron propio para selects y combos. Data-URI porque el CSP del iframe
-       de HtmlService no deja traer un asset externo. El stroke %2344576A es
-       --ink-2 URL-encodeado (caret SVG ink-2, spec seccion 7). */
-    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%2344576A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5'/%3E%3C/svg%3E");
+       de HtmlService no deja traer un asset externo. El stroke %231E2A55 es
+       --ink-2 URL-encodeado. */
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%231E2A55' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5'/%3E%3C/svg%3E");
 }
 
 
 /* ============================================================
    1. ESQUELETO -- columna de altura fija: cabecera, scroll, acciones, pie.
-   El lienzo es BLANCO PURO con el agua ambiente encima: tres radiales fijos
-   al 3-10% de alpha. Regla de perimetro (spec): los centros viven fuera del
+   El lienzo es BLANCO PURO con el ambiente encima: dos radiales teal muy bajos
+   y uno Sand. Regla de perimetro: los centros viven fuera del
    encuadre y el tinte se disuelve antes de tocar el marco del dialogo de
    Google, que queda practicamente blanco y se funde con el shell.
    ============================================================ */
@@ -405,15 +237,18 @@ body {
     padding: 0;
     display: flex;
     flex-direction: column;
-    /* Los centros van MAS AFUERA que en la spec original (-14%/112% en vez de -6%/108%):
-       con los literales de la spec el tinte llegaba a 8.1% en la banda de 20px que toca el
-       marco blanco del dialogo de Google, y la regla de perimetro (<=6%) es el pedido
-       central de Franco -- fundirse con el marco -- asi que gana sobre los valores textuales.
-       Calculado, no a ojo: con estos centros los cuatro bordes quedan bajo 6%. */
+    /* Los centros viven FUERA del encuadre para que el tinte se disuelva antes de tocar el
+       marco blanco del dialogo de Google: fundirse con el marco es el pedido central de Franco
+       y sigue vigente.
+       Las alphas SE RECALCULARON con la paleta nueva y no se heredaron: el teal viejo era una
+       menta clarisima y el nuevo #2E6B7A es oscuro, asi que la misma alpha .10 dejaba de ser
+       "agua apenas tenida" y pasaba a ser una mancha gris sobre el lienzo. Baja a .06/.03.
+       El Sand va al reves: es tan claro que a .09 no se veia, y sube a .40 para que el calido
+       exista (a .40 sobre blanco compone #F6F4EE, un papel apenas tibio). */
     background:
-        radial-gradient(560px 340px at 88% -14%,  rgba(46,202,176,.10), transparent 65%),
-        radial-gradient(640px 420px at -12% 112%, rgba(255,179,128,.09), transparent 65%),
-        radial-gradient(420px 300px at 8% 30%,    rgba(46,202,176,.045), transparent 70%),
+        radial-gradient(560px 340px at 88% -14%,  rgba(46,107,122,.06), transparent 65%),
+        radial-gradient(640px 420px at -12% 112%, rgba(232,227,213,.40), transparent 65%),
+        radial-gradient(420px 300px at 8% 30%,    rgba(46,107,122,.03), transparent 70%),
         #FFFFFF;
     color: var(--ink-1);
     font-size: 13px;
@@ -430,7 +265,7 @@ body {
     overscroll-behavior: contain;   /* que el scroll no se escape a la planilla */
     padding: 20px 28px 22px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(30,42,51,.18) transparent;
+    scrollbar-color: rgba(24,32,64,.18) transparent;
     /* Columna flex: con poco contenido la barra de acciones de cada vista se
        apoya ABAJO (spec: "pegada abajo, sobre el pie") en vez de flotar a
        mitad del panel; con mucho contenido el sticky de la barra toma el
@@ -448,9 +283,9 @@ body {
 .shell-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
 .shell-scroll::-webkit-scrollbar-track { background: transparent; }
 .shell-scroll::-webkit-scrollbar-thumb {
-    background: rgba(30,42,51,.18); border-radius: var(--r-full);
+    background: rgba(24,32,64,.18); border-radius: var(--r-full);
 }
-.shell-scroll::-webkit-scrollbar-thumb:hover { background: rgba(30,42,51,.30); }
+.shell-scroll::-webkit-scrollbar-thumb:hover { background: rgba(24,32,64,.30); }
 
 /* Ancho POR NATURALEZA DE CONTENIDO: el Home respira ancho, el formulario
    se lee angosto. */
@@ -461,7 +296,7 @@ body {
 
 /* ============================================================
    2. CABECERA -- la banda navy DESAPARECE (spec seccion 4). 58px transparentes
-   sobre el mismo lienzo, cerrados por una hairline liquida teal-durazno que
+   sobre el mismo lienzo, cerrados por una hairline liquida teal-sand que
    se disuelve hacia la derecha. La marca es el monograma degrade + wordmark.
    ============================================================ */
 .shell-band {
@@ -480,24 +315,24 @@ body {
     content: ""; position: absolute; left: 28px; right: 28px; bottom: 0; height: 2px;
     border-radius: 2px;
     background: linear-gradient(90deg,
-        rgba(46,202,176,.55), rgba(255,179,128,.35) 34%, rgba(30,42,51,.05) 62%, transparent 92%);
+        rgba(46,107,122,.40), rgba(232,227,213,.70) 34%, rgba(24,32,64,.05) 62%, transparent 92%);
 }
 
-/* Monograma "tt.": vidrio tenido con el degrade teal-durazno de la marca. */
+/* Monograma "tt.": vidrio tenido con el degrade teal-sand de la marca. */
 .shell-mono {
     flex: 0 0 auto;
     width: 32px; height: 32px;
     display: grid; place-items: center;
     border-radius: 10px;
-    background: linear-gradient(135deg, rgba(46,202,176,.22), rgba(255,179,128,.20));
-    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08), var(--vidrio-luz);
+    background: linear-gradient(135deg, rgba(46,107,122,.16), rgba(232,227,213,.55));
+    box-shadow: inset 0 0 0 1px rgba(24,32,64,.08), var(--vidrio-luz);
     font-size: 12.5px; font-weight: 700; letter-spacing: -0.02em;
     color: var(--ink-1);
 }
 /* Wordmark en el Home; titulo de vista adentro. Mismo registro 15/600. */
 .shell-band h1 {
     margin: 0;
-    font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+    font-size: 15px; font-weight: 500; letter-spacing: -0.01em;
     line-height: 1.15; white-space: nowrap;
     color: var(--ink-1);
 }
@@ -514,33 +349,36 @@ body {
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     box-shadow: inset 0 0 0 1px var(--vidrio-borde), var(--vidrio-luz),
-                0 4px 12px -6px rgba(30,42,51,.12);
+                0 4px 12px -6px rgba(24,32,64,.12);
     color: var(--ink-2);
     font: inherit;
-    font-size: 12px; font-weight: 600;
+    font-size: 12px; font-weight: 500;
     cursor: pointer;
     transition: color .18s var(--mov), box-shadow .18s var(--mov),
                 transform .18s var(--mov);
 }
 .shell-volver:hover {
-    color: var(--teal-tinta);
-    box-shadow: inset 0 0 0 1px rgba(46,202,176,.40), var(--vidrio-luz),
-                0 4px 12px -6px rgba(30,42,51,.12);
+    color: var(--tt-teal);
+    box-shadow: inset 0 0 0 1px rgba(46,107,122,.40), var(--vidrio-luz),
+                0 4px 12px -6px rgba(24,32,64,.12);
     transform: translateX(-1px);
 }
 .shell-volver:active { transform: translateX(0); }
-.shell-volver:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 2px; }
+.shell-volver:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
 .shell-volver svg { width: 14px; height: 14px; flex: 0 0 auto; }
 
 
 /* ============================================================
-   3. ROTULO DE SECCION -- versalita ink-2 con estela teal que se apaga.
+   3. ROTULO DE SECCION -- versalita ink-2 con estela teal que se apaga. En la
+   vista 'proyecciones' la misma barra lleva ademas el candado del origen no
+   editable, el contador y el total de la seccion (order:1, del otro lado de la
+   estela).
    ============================================================ */
 .shell-sec {
     display: flex; align-items: center; gap: 10px;
     min-height: 14px;
     margin: 20px 0 10px;
-    font-size: 11px; font-weight: 600;
+    font-size: 11px; font-weight: 500;
     text-transform: uppercase; letter-spacing: 0.13em;
     color: var(--ink-2);
 }
@@ -548,7 +386,7 @@ body {
 .shell-sec::after {
     content: ""; flex: 1; height: 1px;
     background: linear-gradient(90deg,
-        rgba(46,202,176,.35), rgba(30,42,51,.05) 45%, transparent 85%);
+        rgba(46,107,122,.28), rgba(24,32,64,.05) 45%, transparent 85%);
 }
 
 
@@ -586,29 +424,29 @@ body {
     box-shadow: inset 0 0 0 1px var(--vidrio-borde-hover), var(--vidrio-luz), var(--elev-agua-hover);
 }
 .shell-card:active { transform: translateY(0); }
-.shell-card:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 2px; }
+.shell-card:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
 
-/* Chip de icono: hueco gris que en hover se tine de agua. */
+/* Chip de icono: hueco Cloud que en hover se tine con el teal editorial. */
 .shell-card .ico {
     flex: 0 0 auto;
     width: 38px; height: 38px;
     display: grid; place-items: center;
     border-radius: 12px;
-    background: var(--tt-gris);
-    box-shadow: inset 0 0 0 1px rgba(30,42,51,.05);
+    background: var(--tt-cloud);
+    box-shadow: inset 0 0 0 1px rgba(24,32,64,.05);
     color: var(--ink-2);
     transition: background-color .2s var(--mov), color .2s var(--mov),
                 box-shadow .2s var(--mov);
 }
 .shell-card:hover .ico {
-    background: rgba(46,202,176,.14);
-    color: var(--teal-tinta);
-    box-shadow: inset 0 0 0 1px rgba(46,202,176,.25);
+    background: rgba(46,107,122,.10);
+    color: var(--tt-teal);
+    box-shadow: inset 0 0 0 1px rgba(46,107,122,.25);
 }
 .shell-card .txt { display: block; min-width: 0; flex: 1 1 auto; }
 .shell-card .t {
     display: block;
-    font-size: 14px; font-weight: 600; letter-spacing: -0.1px;
+    font-size: 14px; font-weight: 500; letter-spacing: -0.1px;
     line-height: 1.3; color: var(--ink-1);
 }
 .shell-card .d {
@@ -616,13 +454,13 @@ body {
     font-size: 12.5px; line-height: 1.45; color: var(--ink-2);
 }
 /* CHEVRON PERSISTENTE (enmienda Clara): visible en reposo en ink-3, en hover
-   pasa a teal-tinta y avanza 3px. El hint de "esto se clickea" no desaparece. */
+   pasa al teal y avanza 3px. El hint de "esto se clickea" no desaparece. */
 .shell-card .chev {
     flex: 0 0 auto; margin-left: auto; align-self: center;
     color: var(--ink-3);
     transition: color .2s var(--mov), transform .2s var(--mov);
 }
-.shell-card:hover .chev { color: var(--teal-tinta); transform: translateX(3px); }
+.shell-card:hover .chev { color: var(--tt-teal); transform: translateX(3px); }
 
 /* Tarjeta pendiente: pill gris "sin datos aun", chevron oculto. El texto lo
    pone el CSS porque el span viaja vacio; si el loop de listo no corre, no
@@ -632,15 +470,15 @@ body {
     display: inline-block;
     position: absolute; top: 13px; right: 13px;
     padding: 2px 9px; border-radius: var(--r-full);
-    background: var(--tt-gris);
-    font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+    background: var(--tt-paper);
+    font-size: 10px; font-weight: 500; letter-spacing: 0.06em;
     color: var(--ink-3);
 }
 .shell-card[data-listo="0"] .pend::before { content: "sin datos aun"; }
 .shell-card[data-listo="0"] .chev { display: none; }
 
-/* --- Card HERO: la accion del dia. Radio 22, chip degrade teal con ICONO
-   EN INK (7.11:1; blanco sobre teal prohibido) y blob organico de agua. --- */
+/* --- Card HERO: la accion del dia. Radio 22, chip degrade teal->navy con
+   ICONO BLANCO (6.00:1) y blob organico de agua. --- */
 .shell-card--hero {
     gap: 16px;
     padding: 19px 20px;
@@ -650,23 +488,23 @@ body {
     content: ""; position: absolute; right: -30px; top: -70px;
     width: 200px; height: 170px;
     border-radius: 50%; pointer-events: none;
-    background: radial-gradient(closest-side, rgba(46,202,176,.14), transparent 72%);
+    background: radial-gradient(closest-side, rgba(46,107,122,.10), transparent 72%);
     filter: blur(18px);
     transition: transform .35s var(--mov);
 }
 .shell-card--hero:hover::after { transform: translateX(-16px) scale(1.08); }
 .shell-card--hero .ico {
     width: 44px; height: 44px; border-radius: 14px;
-    /* #29B89F: teal oscurecido para el tramo bajo del degrade del chip y el
-       boton primario; deriva de --tt-teal (spec seccion 6). */
-    background: linear-gradient(135deg, #2ECAB0, #29B89F);
-    color: var(--ink-1);
-    box-shadow: 0 8px 18px -8px rgba(46,202,176,.6);
+    /* EL UNICO LUGAR DECORATIVO donde el teal se usa lleno: el chip de la accion del dia.
+       Con el teal nuevo el icono pasa de ink a BLANCO -- ink sobre #2E6B7A da 2.65:1 y
+       seria ilegible; blanco da 6.00:1. El degrade cierra en navy, que es la voz. */
+    background: linear-gradient(135deg, #2E6B7A, #1E2A55);
+    color: #FFFFFF;
+    box-shadow: 0 8px 18px -8px rgba(24,32,64,.45);
 }
 .shell-card--hero:hover .ico {
-    /* #35D6BB: teal aclarado para el hover del degrade; deriva de --tt-teal. */
-    background: linear-gradient(135deg, #35D6BB, #2ECAB0);
-    color: var(--ink-1);
+    background: linear-gradient(135deg, #2E6B7A, #182040);
+    color: #FFFFFF;
 }
 .shell-card--hero .t { font-size: 16px; }
 
@@ -682,7 +520,7 @@ body {
 
 /* Label de campo: versalita chica ink-2 (spec seccion 3). */
 .f > .rot {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.09em;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.09em;
     text-transform: uppercase; color: var(--ink-2); line-height: 1.2;
 }
 /* min-height RESERVADO SIEMPRE: la fila con hint no puede ser mas alta que
@@ -693,8 +531,8 @@ body {
 }
 .f .hint.alerta { color: var(--ambar-ink); }
 
-/* INPUTS: hueco gris de 40px, radio 12, filo casi invisible. FOCO: fondo
-   blanco, filo teal, halo de agua. La altura la manda --alto-control: un
+/* INPUTS: hueco Paper de 40px, radio 12, filo casi invisible. FOCO: fondo
+   blanco, filo teal, halo teal. La altura la manda --alto-control: un
    select ignora line-height y un date trae su propio shadow DOM. */
 .f .form-input {
     width: 100%;
@@ -704,17 +542,17 @@ body {
     line-height: normal;
     font-size: 13.5px;
     color: var(--ink-1);
-    background: var(--tt-gris);
+    background: var(--tt-paper);
     border: 0;
     border-radius: var(--r-input);
-    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08), inset 0 1px 2px rgba(30,42,51,.05);
+    box-shadow: inset 0 0 0 1px rgba(24,32,64,.08), inset 0 1px 2px rgba(24,32,64,.05);
     transition: background-color .15s var(--mov), box-shadow .15s var(--mov);
 }
 .f .form-input::placeholder { color: var(--ink-3); }
 .f .form-input:focus {
     outline: none;
     background: #FFFFFF;
-    box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,202,176,.22);
+    box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,107,122,.22);
 }
 
 /* UNA SOLA FLECHA POR COMBO (v0.55.2), y ahora en UNA SOLA regla. La ley vivia
@@ -726,27 +564,41 @@ body {
    quedaba la nativa: el select se quedaba sin ningun indicador mientras el
    usuario lo estaba usando -- la cicatriz v0.55.2 dada vuelta.
    decision Franco 2026-08-30: la imagen viaja en las DOS reglas (base y foco) y
-   el offset es uno solo. Cero color nuevo: --tt-gris, --chevron y #FFFFFF. */
-.f select.form-input,
-.shell-acciones .form-input {
+   el offset es uno solo. Cero color nuevo: --tt-paper, --chevron y #FFFFFF.
+   El selector de la barra de acciones se retiro con los <select> de mes/anio de
+   recurrentes: era su unico consumidor y el modelo de horizonte rodante los
+   borro. Una regla sin consumidor es exactamente lo que el guard 31 persigue. */
+.f select.form-input {
     appearance: none; -webkit-appearance: none; -moz-appearance: none;
-    background: var(--tt-gris) var(--chevron) no-repeat right 11px center / 10px 7px;
+    background: var(--tt-paper) var(--chevron) no-repeat right 11px center / 10px 7px;
     cursor: pointer;
 }
 /* El foco repone la IMAGEN, no solo el color: un shorthand background la borra. */
-.f select.form-input:focus,
-.shell-acciones .form-input:focus {
+.f select.form-input:focus {
     background: #FFFFFF var(--chevron) no-repeat right 11px center / 10px 7px;
 }
 .f select.form-input { padding-right: 30px; }
 
-.f .form-input[type="date"] { padding-right: 8px; }
-.f .form-input[type="date"]::-webkit-calendar-picker-indicator {
+/* date Y month: son el mismo control con dos granularidades y traen el mismo icono nativo.
+   La regla decia solo [type="date"], asi que el Mes de la vista 'proyeccion' -- y ahora los dos
+   campos de vigencia de un recurrente -- mostraban el picker a opacidad plena, mas oscuro que
+   el chevron propio que tienen al lado en la misma fila. */
+.f .form-input[type="date"],
+.f .form-input[type="month"] { padding-right: 8px; }
+/* RED, no la solucion: el ancho lo da la grilla (los dos month viven en c4). Este min-width
+   evita que un cambio futuro de columnas los vuelva a angostar por debajo de lo que el control
+   nativo necesita para mostrar "mmmm de aaaa" entero en es-AR -- por debajo de ~180px Chrome
+   recorta el ano y no avisa. */
+.f .form-input[type="month"] { min-width: 180px; }
+.f .form-input[type="date"]::-webkit-calendar-picker-indicator,
+.f .form-input[type="month"]::-webkit-calendar-picker-indicator {
     opacity: .55; cursor: pointer;
     transition: opacity .15s var(--mov);
 }
-.f .form-input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: .9; }
-.f .form-input[type="date"]::-webkit-inner-spin-button { display: none; }
+.f .form-input[type="date"]:hover::-webkit-calendar-picker-indicator,
+.f .form-input[type="month"]:hover::-webkit-calendar-picker-indicator { opacity: .9; }
+.f .form-input[type="date"]::-webkit-inner-spin-button,
+.f .form-input[type="month"]::-webkit-inner-spin-button { display: none; }
 
 
 /* ------------------------------------------------------------
@@ -759,25 +611,25 @@ body {
     position: relative;
     display: flex; align-items: stretch;
     height: var(--alto-control);
-    background: var(--tt-gris);
+    background: var(--tt-paper);
     border-radius: var(--r-input);
-    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08), inset 0 1px 2px rgba(30,42,51,.05);
+    box-shadow: inset 0 0 0 1px rgba(24,32,64,.08), inset 0 1px 2px rgba(24,32,64,.05);
     transition: background-color .15s var(--mov), box-shadow .15s var(--mov);
 }
 .f .campo-monto:focus-within {
     background: #FFFFFF;
-    box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,202,176,.22);
+    box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,107,122,.22);
 }
 .f .campo-monto .pref {
     order: 1; flex: 0 0 auto;
     display: inline-flex; align-items: center; gap: 5px;
     padding: 0 10px 0 12px;
-    font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+    font-size: 12px; font-weight: 500; letter-spacing: 0.04em;
     color: var(--ink-2); pointer-events: none;
-    box-shadow: inset -1px 0 0 rgba(30,42,51,.08);   /* separador, no borde */
+    box-shadow: inset -1px 0 0 rgba(24,32,64,.08);   /* separador, no borde */
     transition: color .15s var(--mov);
 }
-.f .campo-monto:focus-within .pref { color: var(--teal-tinta); }
+.f .campo-monto:focus-within .pref { color: var(--tt-teal); }
 .f .campo-monto .pref::after {
     content: ""; display: inline-block;
     border-left: 3px solid transparent; border-right: 3px solid transparent;
@@ -793,14 +645,14 @@ body {
 .f .campo-monto .moneda:focus-visible {
     opacity: 1;
     background: #FFFFFF; color: var(--ink-1);
-    font-size: 11px; font-weight: 600;
-    outline: 2px solid var(--teal-tinta); outline-offset: -2px;
+    font-size: 11px; font-weight: 500;
+    outline: 2px solid var(--tt-teal); outline-offset: -2px;
 }
 .f .campo-monto .monto {
     order: 2; flex: 1 1 auto; min-width: 0; height: 100%;
     padding: 0 12px 0 10px; margin: 0;
     border: 0; background: transparent; box-shadow: none; outline: none;
-    font-size: 14px; font-weight: 600; letter-spacing: -0.2px;
+    font-size: 14px; font-weight: 500; letter-spacing: -0.2px;
     text-align: right; color: var(--ink-1);
     font-variant-numeric: tabular-nums;
 }
@@ -812,19 +664,19 @@ body {
 
 
 /* ------------------------------------------------------------
-   SEGMENTADO Egreso / Ingreso -- el semaforo (spec seccion 7). Riel gris,
+   SEGMENTADO Egreso / Ingreso -- el semaforo (spec seccion 7). Riel Cloud,
    opciones tenidas con su par ink/bg + inset ring del ink (enmienda Clara).
    ------------------------------------------------------------ */
 .seg {
     display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
     height: var(--alto-control); padding: 4px;
-    background: var(--tt-gris);
+    background: var(--tt-cloud);
     border-radius: var(--r-input);
-    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08), inset 0 1px 2px rgba(30,42,51,.05);
+    box-shadow: inset 0 0 0 1px rgba(24,32,64,.08), inset 0 1px 2px rgba(24,32,64,.05);
 }
 .seg button {
     border: 0; border-radius: 9px; cursor: pointer;
-    font: inherit; font-size: 12.5px; font-weight: 600;
+    font: inherit; font-size: 12.5px; font-weight: 500;
     background: transparent; color: var(--ink-2);
     transition: background-color .15s var(--mov), color .15s var(--mov),
                 box-shadow .15s var(--mov);
@@ -832,13 +684,13 @@ body {
 .seg button:hover { color: var(--ink-1); }
 .seg button[aria-pressed="true"][data-v="Egreso"] {
     background: var(--rojo-bg); color: var(--rojo-ink);
-    box-shadow: 0 0 0 1px rgba(178,59,50,.22), inset 0 0 0 1px rgba(178,59,50,.25);
+    box-shadow: 0 0 0 1px rgba(184,74,62,.22), inset 0 0 0 1px rgba(184,74,62,.25);
 }
 .seg button[aria-pressed="true"][data-v="Ingreso"] {
     background: var(--verde-bg); color: var(--verde-ink);
-    box-shadow: 0 0 0 1px rgba(14,107,79,.22), inset 0 0 0 1px rgba(14,107,79,.25);
+    box-shadow: 0 0 0 1px rgba(29,106,79,.22), inset 0 0 0 1px rgba(29,106,79,.25);
 }
-.seg button:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 1px; }
+.seg button:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 1px; }
 
 
 /* ============================================================
@@ -892,7 +744,7 @@ body {
 }
 /* COMBO FUERA DE CATALOGO (enmienda Clara): filo ambar + hint ambar. */
 .f input[data-fuera="1"] {
-    box-shadow: inset 0 0 0 1px rgba(122,74,16,.45), inset 0 1px 2px rgba(30,42,51,.05);
+    box-shadow: inset 0 0 0 1px rgba(107,74,24,.45), inset 0 1px 2px rgba(24,32,64,.05);
 }
 .f .aviso-fuera {
     font-size: 11px; color: var(--ambar-ink); margin-top: 2px;
@@ -905,16 +757,16 @@ body {
 }
 .bloque-num {
     flex: 1 1 auto;
-    font-size: 14px; font-weight: 600; letter-spacing: -0.1px;
+    font-size: 14px; font-weight: 500; letter-spacing: -0.1px;
     text-transform: none; color: var(--ink-1);
 }
 .bloque-num .n {
     display: inline-grid; place-items: center;
     width: 22px; height: 22px; margin-right: 9px; vertical-align: -5px;
     border-radius: 8px;
-    background: rgba(46,202,176,.14);
-    box-shadow: inset 0 0 0 1px rgba(46,202,176,.22);
-    color: var(--teal-tinta);
+    background: rgba(46,107,122,.10);
+    box-shadow: inset 0 0 0 1px rgba(46,107,122,.22);
+    color: var(--tt-teal);
     font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums;
 }
 /* BOTON QUITAR (enmienda Clara): 26px transparente, icono ink-3; hover rojo. */
@@ -928,7 +780,7 @@ body {
     transition: background-color .15s var(--mov), color .15s var(--mov);
 }
 .btn-quitar:hover { background: var(--rojo-bg); color: var(--rojo-ink); }
-.btn-quitar:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 1px; }
+.btn-quitar:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 1px; }
 
 /* --- Fila de resumen (acordeon plegado): una linea con el semaforo --- */
 .bloque-resumen {
@@ -941,13 +793,13 @@ body {
 }
 .bloque[data-estado="resumen"] .bloque-resumen { display: flex; }
 .bloque[data-estado="resumen"] .bloque-head { display: none; }
-.bloque-resumen:hover { background: rgba(46,202,176,.05); }
-.bloque-resumen:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: -2px; }
+.bloque-resumen:hover { background: rgba(46,107,122,.05); }
+.bloque-resumen:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: -2px; }
 
 .bloque-punto {
     flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%;
     background: var(--ink-2);
-    box-shadow: 0 0 0 3px rgba(30,42,51,.10);
+    box-shadow: 0 0 0 3px rgba(24,32,64,.10);
 }
 .bloque-punto[data-tipo="Ingreso"] {
     background: var(--verde-ink);
@@ -955,7 +807,7 @@ body {
 }
 .bloque-cuenta {
     flex: 0 1 auto; min-width: 0;
-    font-size: 13px; font-weight: 600; color: var(--ink-1);
+    font-size: 13px; font-weight: 500; color: var(--ink-1);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 /* El eco de lo HEREDADO (medio + fecha): 12 ink-3. */
@@ -968,13 +820,13 @@ body {
 /* Monto del resumen: 13/600 tenido por el semaforo segun el tipo del bloque. */
 .bloque-monto {
     flex: 0 0 auto; margin-left: auto;
-    font-size: 13px; font-weight: 600;
+    font-size: 13px; font-weight: 500;
     color: var(--ink-1); font-variant-numeric: tabular-nums;
 }
 .bloque[data-tipo="Egreso"] .bloque-monto { color: var(--rojo-ink); }
 .bloque[data-tipo="Ingreso"] .bloque-monto { color: var(--verde-ink); }
 .bloque-monto .u {
-    font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.06em;
     color: var(--ink-3); margin-left: 5px;
 }
 /* Sin dato es un guion largo, NUNCA un cero: no se inventa un parcial. El
@@ -987,7 +839,7 @@ body {
     flex: 0 0 auto; color: var(--ink-3);
     transition: transform .2s var(--mov), color .2s var(--mov);
 }
-.bloque-resumen:hover .chev-abrir { color: var(--teal-tinta); }
+.bloque-resumen:hover .chev-abrir { color: var(--tt-teal); }
 
 /* --- Cuerpo de edicion. Colapso con grid-template-rows 0fr -> 1fr. --- */
 .bloque-cuerpo {
@@ -1003,61 +855,63 @@ body {
 .bloque[data-estado="resumen"] .bloque-cuerpo > .inner { visibility: hidden; }
 .bloque-cuerpo .pad { padding: 12px 18px 16px; }
 
-/* Agregar: vidrio con borde punteado teal (spec seccion 7). */
+/* Agregar: vidrio con borde punteado teal. */
 .btn-agregar {
     display: flex; align-items: center; justify-content: center; gap: 8px;
     width: 100%; height: 44px; margin-top: 2px;
     /* borde de verdad y no box-shadow: el dashed no se dibuja con sombra, y
        box-sizing border-box (design system) evita que mueva el layout */
-    border: 1.5px dashed rgba(46,202,176,.45);
+    border: 1.5px dashed rgba(46,107,122,.38);
     border-radius: var(--r-card);
     background: rgba(255,255,255,.5);
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
-    color: var(--teal-tinta);
-    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    color: var(--tt-teal);
+    font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
     transition: background-color .18s var(--mov), border-color .18s var(--mov);
 }
-.btn-agregar:hover { background: rgba(46,202,176,.08); border-color: var(--tt-teal); }
+.btn-agregar:hover { background: rgba(46,107,122,.08); border-color: var(--tt-teal); }
 .btn-agregar:disabled {
     opacity: .5; cursor: default; background: rgba(255,255,255,.5);
-    border-color: rgba(30,42,51,.15);
+    border-color: rgba(24,32,64,.15);
 }
-.btn-agregar:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 2px; }
+.btn-agregar:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
 
 
 /* ============================================================
-   7. BOTONES (spec seccion 8). PRIMARIO: degrade teal con TEXTO INK
-   (7.11:1; blanco sobre teal prohibido). SECUNDARIO: vidrio.
+   7. BOTONES. PRIMARIO: degrade NAVY con texto blanco (15.92:1). Es el cambio
+   de fondo del recolor: la accion dejo de ser un degrade de menta y pasa a ser
+   la voz de la marca. El teal aparece SOLO en el hover, como acento editorial.
+   SECUNDARIO: vidrio, sin cambios de forma.
    ============================================================ */
 .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     height: 38px; padding: 0 20px;
     border: 0; border-radius: 12px;
-    font: inherit; font-size: 13px; font-weight: 600;
+    font: inherit; font-size: 13px; font-weight: 500;
     cursor: pointer;
     transition: background-color .18s var(--mov), box-shadow .18s var(--mov),
                 transform .18s var(--mov);
 }
-.btn:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 2px; }
+.btn:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
 /* DISABLED (enmienda Clara): opacity .5, sin sombra, cursor default, sin hover. */
 .btn:disabled { opacity: .5; cursor: default; transform: none; box-shadow: none; }
 
 .btn-primary {
-    /* #29B89F: teal oscurecido, tramo bajo del degrade; deriva de --tt-teal. */
-    background: linear-gradient(135deg, #2ECAB0, #29B89F);
-    color: var(--ink-1);
-    box-shadow: 0 8px 18px -8px rgba(46,202,176,.6), inset 0 1px 0 rgba(255,255,255,.35);
+    background: linear-gradient(135deg, #1E2A55, #182040);
+    color: #FFFFFF;
+    box-shadow: 0 8px 18px -8px rgba(24,32,64,.55), inset 0 1px 0 rgba(255,255,255,.18);
 }
 .btn-primary:hover:not(:disabled) {
-    /* #35D6BB: teal aclarado para el hover; deriva de --tt-teal. */
-    background: linear-gradient(135deg, #35D6BB, #2ECAB0);
-    box-shadow: 0 11px 22px -8px rgba(46,202,176,.7), inset 0 1px 0 rgba(255,255,255,.4);
+    /* El acento editorial entra JUSTO aca: el navy se abre hacia el teal al pasar el mouse.
+       Blanco sobre el tramo mas claro (#2E6B7A) sigue dando 6.00:1. */
+    background: linear-gradient(135deg, #2E6B7A, #1E2A55);
+    box-shadow: 0 11px 22px -8px rgba(24,32,64,.6), inset 0 1px 0 rgba(255,255,255,.22);
     transform: translateY(-1px);
 }
 .btn-primary:active:not(:disabled) {
     transform: translateY(0);
-    box-shadow: 0 8px 18px -8px rgba(46,202,176,.6), inset 0 1px 0 rgba(255,255,255,.35);
+    box-shadow: 0 8px 18px -8px rgba(24,32,64,.55), inset 0 1px 0 rgba(255,255,255,.18);
 }
 
 .btn-secondary {
@@ -1065,19 +919,19 @@ body {
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     color: var(--ink-1);
-    box-shadow: inset 0 0 0 1px rgba(30,42,51,.12), var(--vidrio-luz),
-                0 3px 10px -5px rgba(30,42,51,.12);
+    box-shadow: inset 0 0 0 1px rgba(24,32,64,.12), var(--vidrio-luz),
+                0 3px 10px -5px rgba(24,32,64,.12);
 }
 .btn-secondary:hover:not(:disabled) {
     background: #FFFFFF;
-    box-shadow: inset 0 0 0 1px rgba(30,42,51,.24), var(--vidrio-luz),
-                0 3px 10px -5px rgba(30,42,51,.12);
+    box-shadow: inset 0 0 0 1px rgba(24,32,64,.24), var(--vidrio-luz),
+                0 3px 10px -5px rgba(24,32,64,.12);
 }
 .btn-secondary:active:not(:disabled) { transform: translateY(1px); }
 
 
 /* ============================================================
-   8. BARRA DE ACCIONES -- vidrio pegado abajo, hairline superior de agua.
+   8. BARRA DE ACCIONES -- vidrio pegado abajo, hairline superior teal.
    Sticky full-bleed respecto del IFRAME, no del contenedor: calc(50% - 50vw)
    sangra desde el .vista-form centrado (max-width 660) hasta los bordes del
    modal a cualquier ancho (en HtmlService 100vw = ancho del modal y la
@@ -1097,7 +951,7 @@ body {
 .shell-acciones::before {
     content: ""; position: absolute; left: 28px; right: 28px; top: 0; height: 1px;
     background: linear-gradient(90deg,
-        transparent, rgba(46,202,176,.35) 30%, rgba(30,42,51,.06) 70%, transparent);
+        transparent, rgba(46,107,122,.28) 30%, rgba(24,32,64,.06) 70%, transparent);
 }
 /* Piso: sin backdrop-filter la barra queda opaca y sigue siendo legible. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -1113,29 +967,15 @@ body {
     margin-right: 4px;
 }
 .shell-acciones .total .rot {
-    font-size: 10px; font-weight: 600;
+    font-size: 10px; font-weight: 500;
     text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3);
 }
 .shell-acciones .total .val {
-    font-size: 14px; font-weight: 600; line-height: 1.25;
+    font-size: 14px; font-weight: 500; line-height: 1.25;
     color: var(--ink-1); font-variant-numeric: tabular-nums;
 }
-/* Botones y selects de la barra NO se achican; el que cede es el resumen. */
+/* Los botones de la barra NO se achican; el que cede es el resumen. */
 .shell-acciones .btn { flex: 0 0 auto; white-space: nowrap; }
-/* El chevron, appearance:none y el cursor los pone la regla unica de "una sola
-   flecha por combo" (seccion 5): aca queda SOLO el delta de la barra. */
-.shell-acciones .form-input {
-    flex: 0 0 auto;
-    width: auto;
-    height: 34px; padding: 0 30px 0 10px;
-    border: 0; border-radius: var(--r-input);
-    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08);
-    font: inherit; font-size: 12px; color: var(--ink-1);
-}
-.shell-acciones .form-input:focus {
-    outline: none;
-    box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,202,176,.22);
-}
 
 
 /* ============================================================
@@ -1151,7 +991,7 @@ body {
     animation: alertaEntra .18s var(--mov) both;
 }
 @keyframes alertaEntra { from { opacity: 0; transform: translateY(-4px); } }
-.alert b, .alert strong { font-weight: 600; }
+.alert b, .alert strong { font-weight: 700; }
 .alert::before {
     content: ""; flex: 0 0 auto;
     width: 16px; height: 16px; margin-top: 1px;
@@ -1161,17 +1001,17 @@ body {
 }
 .alert-error {
     background: var(--rojo-bg); color: var(--rojo-ink);
-    box-shadow: inset 0 0 0 1px rgba(178,59,50,.15);
+    box-shadow: inset 0 0 0 1px rgba(184,74,62,.15);
     --icono-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.8'/%3E%3Cpath d='M8.5 8.5l7 7M15.5 8.5l-7 7'/%3E%3C/svg%3E");
 }
 .alert-ok {
     background: var(--verde-bg); color: var(--verde-ink);
-    box-shadow: inset 0 0 0 1px rgba(14,107,79,.15);
+    box-shadow: inset 0 0 0 1px rgba(29,106,79,.15);
     --icono-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9.8'/%3E%3Cpath d='M7.5 12.5l3 3 6-6.5'/%3E%3C/svg%3E");
 }
 .alert-warning {
     background: var(--ambar-bg); color: var(--ambar-ink);
-    box-shadow: inset 0 0 0 1px rgba(122,74,16,.15);
+    box-shadow: inset 0 0 0 1px rgba(107,74,24,.15);
     --icono-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5L22 20H2z'/%3E%3Cpath d='M12 10v4.5M12 17.6v.4'/%3E%3C/svg%3E");
 }
 /* Un aviso con botones adentro (confirmacion inline del volcado, reintento). */
@@ -1185,11 +1025,11 @@ body {
 /* Estado Activo/Pausado del recurrente: pausado es ATENCION (ambar), no error. */
 .seg button[aria-pressed="true"][data-v="Si"] {
     background: var(--verde-bg); color: var(--verde-ink);
-    box-shadow: 0 0 0 1px rgba(14,107,79,.22), inset 0 0 0 1px rgba(14,107,79,.25);
+    box-shadow: 0 0 0 1px rgba(29,106,79,.22), inset 0 0 0 1px rgba(29,106,79,.25);
 }
 .seg button[aria-pressed="true"][data-v="No"] {
     background: var(--ambar-bg); color: var(--ambar-ink);
-    box-shadow: 0 0 0 1px rgba(122,74,16,.22), inset 0 0 0 1px rgba(122,74,16,.25);
+    box-shadow: 0 0 0 1px rgba(107,74,24,.22), inset 0 0 0 1px rgba(107,74,24,.25);
 }
 .bloque-punto[data-activo="Si"] {
     background: var(--verde-ink);
@@ -1200,19 +1040,19 @@ body {
     box-shadow: 0 0 0 3px var(--ambar-bg);
 }
 /* Modo Crear/Editar del Plan de Cuentas: el segmentado NO es un semaforo aca.
-   Crear no es "bueno" ni Editar "peligroso": son dos modos neutros. Se tine con
-   el teal de accion (anillos derivados de --tt-teal, mismas alfas .22/.25 que el
-   par ink/bg del semaforo) y la tinta es --teal-tinta, el unico teal legible.
-   decision Franco 2026-08-30: la pastilla es BLANCA, no rgba(46,202,176,.14).
-   Ese relleno, compuesto sobre --tt-gris, daba un #D8F1F0 efectivo y 4.38:1
-   contra --teal-tinta -- por debajo de AA para 12.5px/600, y el mas flojo de los
-   cuatro estados presionados del mismo componente (Ingreso 5.67, Egreso 5.07,
-   ambar 6.73). Sobre blanco son 5.18:1, alineado con los otros tres. El guard de
-   paleta mira procedencia, no contraste: pasaba en verde igual. */
+   Crear no es "bueno" ni Editar "peligroso": son dos modos neutros. Se tinen con
+   el teal editorial (anillos en las mismas alfas .22/.25 que los pares del
+   semaforo) y la tinta es --tt-teal.
+   decision Franco 2026-08-30: la pastilla es BLANCA, no un relleno translucido.
+   Con la paleta anterior ese relleno componia un #D8F1F0 efectivo de 4.38:1, por
+   debajo de AA, y era el mas flojo de los cuatro estados presionados del mismo
+   componente. Con la paleta del brandbook el teal sobre blanco da 6.00:1, el mas
+   alto de los cuatro (Ingreso 6.51, Egreso 5.14, ambar 8.02). El guard de paleta
+   mira procedencia, no contraste: un relleno flojo pasaba en verde igual. */
 .seg button[aria-pressed="true"][data-v="Crear"],
 .seg button[aria-pressed="true"][data-v="Editar"] {
-    background: #FFFFFF; color: var(--teal-tinta);
-    box-shadow: 0 0 0 1px rgba(46,202,176,.22), inset 0 0 0 1px rgba(46,202,176,.25);
+    background: #FFFFFF; color: var(--tt-teal);
+    box-shadow: 0 0 0 1px rgba(46,107,122,.22), inset 0 0 0 1px rgba(46,107,122,.25);
 }
 /* Pie de un bloque recurrente: Guardar y Borrar en fila, por bloque. */
 .bloque .rec-pie { flex-direction: row; align-items: center; gap: 10px; }
@@ -1246,34 +1086,34 @@ body {
     /* La spec pide 10.5/600, pero el guard 17 del banco prohibe 10.5px en todo
        el shell (Chrome redondea el subpixel distinto segun donde caiga la caja,
        cicatriz de esta campana): se queda en 11px hasta decision de Franco. */
-    font-size: 11px; font-weight: 600;
+    font-size: 11px; font-weight: 500;
     text-transform: uppercase; letter-spacing: 0.11em;
     color: var(--ink-2); text-align: left;
-    box-shadow: 0 1px 0 rgba(30,42,51,.08);
+    box-shadow: 0 1px 0 rgba(24,32,64,.08);
 }
 .conc-tabla td {
     padding: 10px 16px; vertical-align: middle;
-    box-shadow: 0 1px 0 rgba(30,42,51,.05);
+    box-shadow: 0 1px 0 rgba(24,32,64,.05);
     transition: background-color .15s var(--mov);
 }
 .conc-tabla tr:last-child td { box-shadow: none; }
-.conc-tabla tr:hover td { background: rgba(46,202,176,.05); }
+.conc-tabla tr:hover td { background: rgba(46,107,122,.05); }
 .conc-tabla .num { text-align: right; font-variant-numeric: tabular-nums; }
-.conc-medio { font-size: 13px; font-weight: 600; color: var(--ink-1); }
+.conc-medio { font-size: 13px; font-weight: 500; color: var(--ink-1); }
 .conc-tag {
     display: inline-block; margin-left: 6px; padding: 1px 7px;
     border-radius: var(--r-full);
-    font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
-    color: var(--ink-2); background: var(--tt-gris);
-    box-shadow: inset 0 0 0 1px rgba(30,42,51,.07);
+    font-size: 10px; font-weight: 500; letter-spacing: 0.06em;
+    color: var(--ink-2); background: var(--tt-cloud);
+    box-shadow: inset 0 0 0 1px rgba(24,32,64,.07);
 }
 .conc-sis { font-size: 13px; color: var(--ink-2); }
 .conc-real {
     width: 130px; height: 34px; padding: 0 10px;
     border: 0; border-radius: var(--r-input);
-    background: var(--tt-gris);
-    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08), inset 0 1px 2px rgba(30,42,51,.05);
-    font: inherit; font-size: 13px; font-weight: 600;
+    background: var(--tt-paper);
+    box-shadow: inset 0 0 0 1px rgba(24,32,64,.08), inset 0 1px 2px rgba(24,32,64,.05);
+    font: inherit; font-size: 13px; font-weight: 500;
     text-align: right; color: var(--ink-1);
     font-variant-numeric: tabular-nums;
     transition: background-color .15s var(--mov), box-shadow .15s var(--mov);
@@ -1281,13 +1121,13 @@ body {
 .conc-real::placeholder { color: var(--ink-3); font-weight: 400; }
 .conc-real:focus {
     outline: none; background: #FFFFFF;
-    box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,202,176,.22);
+    box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,107,122,.22);
 }
 .conc-estado { min-width: 132px; }
 .conc-dir { font-size: 12px; color: var(--ink-3); }
 .conc-pill {
     display: inline-block; padding: 3px 10px; border-radius: var(--r-full);
-    font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
+    font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
 }
 /* Verde = hay MAS de verdad que en la planilla (falta anotar un ingreso);
    rojo = la planilla dice mas de lo que hay (salio plata sin anotarse). */
@@ -1326,18 +1166,43 @@ body {
 }
 .btn--peligro:hover:not(:disabled), .rec-borrar[data-conf="1"]:hover:not(:disabled) {
     background: var(--rojo-ink);
-    box-shadow: 0 0 0 3px rgba(178,59,50,.22);
+    box-shadow: 0 0 0 3px rgba(184,74,62,.22);
 }
 
-/* Hint de contexto con su boton al costado (mismo idioma que el aviso con botones). */
-.pabm-hint { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
-.pabm-hint .conc-hint { flex: 1 1 auto; margin: 0; }
-.pabm-hint .btn { flex: 0 0 auto; }
+/* ENCABEZADO DE LA VISTA -- una linea de DATOS, no un parrafo (densidad 2026-08-30).
+   Reemplaza al .pabm-hint de 212 caracteres que explicaba dos rutas de menu a quien
+   todavia no habia chocado con ninguna regla. Los tres numeros salen de lo que
+   listarPeriodosProyeccion() ya devuelve: cero endpoints nuevos. */
+.pabm-encabezado {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 8px; min-height: 32px;
+}
+.pabm-resumen {
+    flex: 1 1 auto; min-width: 0;
+    font-size: 12.5px; color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pabm-encabezado .btn { flex: 0 0 auto; }
 /* El contador de una seccion NO va en versalita: es un numero, no un rotulo. */
 .shell-sec .cuenta {
     text-transform: none; letter-spacing: 0.02em;
     color: var(--ink-3); font-variant-numeric: tabular-nums;
 }
+/* EL TOTAL DE LA SECCION, al otro lado de la estela. La estela es el ::after de
+   .shell-sec, que como pseudo-elemento es el ULTIMO item flex: con order:1 el total
+   se va detras de ella y la linea queda "TITULO (n) ----- total", que es el orden de
+   lectura. Sin el order el total quedaria pegado al contador. */
+.shell-sec .pabm-sec-total {
+    order: 1;
+    text-transform: none; letter-spacing: 0.02em;
+    color: var(--ink-3); font-variant-numeric: tabular-nums;
+}
+.shell-sec .btn { order: 1; flex: 0 0 auto; }
+/* CANDADO DE ORIGEN NO EDITABLE. Es lo UNICO que sobrevive del campo `sub` de cada
+   seccion: la condicion de edicion deja de ser un parrafo y pasa a ser un icono de
+   12px con su title. Invisible como texto, disponible como ayuda. */
+.shell-sec .pabm-candado { flex: 0 0 auto; color: var(--ink-3); vertical-align: -1px; }
 /* Tarjeta de periodo: piel de vidrio compartida (seccion 6). Delta propio. */
 .pabm-card {
     margin-bottom: 10px;
@@ -1354,21 +1219,40 @@ body {
     text-align: left; font: inherit; color: inherit; cursor: pointer;
     transition: background-color .15s var(--mov);
 }
-.pabm-head:hover { background: rgba(46,202,176,.05); }
-.pabm-head:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: -2px; }
-.pabm-mes { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--ink-1); }
+.pabm-head:hover { background: rgba(46,107,122,.05); }
+.pabm-head:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: -2px; }
+.pabm-mes { flex: 0 0 auto; font-size: 14px; font-weight: 500; color: var(--ink-1); }
 /* El eco de la tarjeta (filas + sello) usa .bloque-meta, la misma clase del
    resumen de un bloque: era byte a byte la misma declaracion con otro nombre.
    El chevron usa .chev-abrir por lo mismo. */
-.pabm-card[data-abierto="1"] .chev-abrir { transform: rotate(180deg); color: var(--teal-tinta); }
-.pabm-totales {
-    display: flex; flex-wrap: wrap; gap: 4px 18px;
+.pabm-card[data-abierto="1"] .chev-abrir { transform: rotate(180deg); color: var(--tt-teal); }
+/* LA SEGUNDA FILA DE LA TARJETA. Antes eran cuatro pares "Rotulo: valor" con el
+   MISMO tamano, peso y color: nada decia cual de los cuatro importaba. Ahora el neto
+   es el unico numero grande y los tres componentes son su contexto.
+   La profundidad la dan el tamano (18 contra 11), el color (ink-1/semaforo contra
+   ink-3) y el espacio. Ni una caja nueva ni un color nuevo. */
+.pabm-linea {
+    display: flex; align-items: baseline; gap: 12px;
     padding: 0 16px 12px;
-    font-size: 12px; color: var(--ink-2);
 }
-.pabm-totales b {
-    font-weight: 600; color: var(--ink-1);
+.pabm-comp {
+    flex: 1 1 auto; min-width: 0;
+    font-size: 11px; line-height: 1.4; color: var(--ink-3);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pabm-neto {
+    flex: 0 0 auto; margin-left: auto;
+    font-size: 18px; font-weight: 700; line-height: 1.15;
+    letter-spacing: -0.3px;
+    color: var(--ink-1); font-variant-numeric: tabular-nums;
+}
+/* El signo se lee ANTES que el numero: el par de funcion que ya existe, sin tono nuevo. */
+.pabm-neto[data-signo="pos"] { color: var(--verde-ink); }
+.pabm-neto[data-signo="neg"] { color: var(--rojo-ink); }
+.pabm-neto .u {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.06em;
+    color: var(--ink-3); margin-left: 5px;
 }
 .pabm-card .alert { margin: 0 16px 12px; }
 /* Hairline superior: el mismo filo de las celdas de la tabla de conciliacion.
@@ -1377,11 +1261,11 @@ body {
    despues la tabla entera --, asi que una transicion de altura correria dos
    veces y la segunda desde un alto que nadie eligio. Es una divergencia con
    razon, no un olvido. */
-.pabm-detalle { padding: 12px 16px 14px; box-shadow: inset 0 1px 0 rgba(30,42,51,.08); }
+.pabm-detalle { padding: 12px 16px 14px; box-shadow: inset 0 1px 0 rgba(24,32,64,.08); }
 .pabm-detalle .alert { margin: 0; }
 .pabm-nota { margin-top: 2px; font-size: 11px; line-height: 1.35; color: var(--ink-3); }
 .pabm-pie { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); }
-.pabm-borrar { margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(30,42,51,.15); }
+.pabm-borrar { margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(24,32,64,.15); }
 .pabm-conf {
     padding: 11px 14px; border-radius: 14px;
     background: var(--rojo-bg); color: var(--rojo-ink);
@@ -1405,14 +1289,29 @@ body {
     cursor: pointer; border-radius: 8px; padding: 2px 4px; margin: -2px -4px;
     transition: background-color .15s var(--mov);
 }
-.pabm-monto:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: -2px; }
-.pabm-monto:hover { background: rgba(46,202,176,.10); color: var(--teal-tinta); }
+.pabm-monto:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: -2px; }
+.pabm-monto:hover { background: rgba(46,107,122,.08); color: var(--tt-teal); }
 .pabm-monto .lapiz { margin-left: 5px; opacity: .55; vertical-align: -1px; }
+/* MONTO NO EDITABLE. Sigue siendo un <button>: antes la fila simplemente no respondia
+   al click y el usuario no se enteraba de por que. El candado dice "esto se corrige en
+   otro lado" y el click revela DONDE, en una linea que se va sola. */
+.pabm-monto--fijo { cursor: help; }
+.pabm-monto--fijo:hover { background: transparent; color: var(--ink-3); }
+.pabm-monto--fijo .candado { opacity: .45; }
+.pabm-monto .candado { margin-left: 5px; opacity: .55; vertical-align: -1px; }
+/* La linea reactiva: aparece bajo la fila que se intento editar y se retira a los 6 s.
+   Es MAS informacion util que la nota al pie que reemplaza, y cero prosa permanente. */
+.pabm-motivo td {
+    padding: 6px 16px 10px;
+    font-size: 11.5px; line-height: 1.4; color: var(--ambar-ink);
+    background: var(--ambar-bg);
+    animation: alertaEntra .18s var(--mov) both;
+}
 
 
 /* ============================================================
-   11. PIE -- vidrio suave con la misma hairline de agua, desvanecida a la
-   derecha, y el punto de estado teal.
+   11. PIE -- vidrio suave con la misma hairline, desvanecida a la derecha,
+   y el punto de estado teal.
    ============================================================ */
 .shell-foot {
     flex: 0 0 auto;
@@ -1425,7 +1324,7 @@ body {
 .shell-foot::before {
     content: ""; position: absolute; left: 28px; right: 28px; top: 0; height: 1px;
     background: linear-gradient(90deg,
-        rgba(46,202,176,.30), rgba(30,42,51,.05) 50%, transparent 90%);
+        rgba(46,107,122,.24), rgba(24,32,64,.05) 50%, transparent 90%);
 }
 .shell-foot .spacer { flex: 1; }
 .shell-foot .vivo {
@@ -1438,7 +1337,7 @@ body {
     content: ""; flex: 0 0 auto;
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--tt-teal);
-    box-shadow: 0 0 0 3px rgba(46,202,176,.18);
+    box-shadow: 0 0 0 3px rgba(46,107,122,.18);
 }
 .shell-foot .ver {
     font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--ink-3);
@@ -1464,14 +1363,14 @@ body {
 @keyframes overlayEntra { from { opacity: 0; } }
 .shell-spinner {
     width: 28px; height: 28px; border-radius: 50%;
-    border: 1px solid rgba(30,42,51,.13);
+    border: 1px solid rgba(24,32,64,.13);
     border-top-color: var(--tt-teal);
     border-top-width: 2px;   /* el segmento teal pesa un pelo mas que el aro: se ve girar */
     animation: shell-spin 800ms linear infinite;
 }
 @keyframes shell-spin { to { transform: rotate(360deg); } }
 .shell-overlay .leyenda {
-    font-size: 11px; font-weight: 600;
+    font-size: 11px; font-weight: 500;
     text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-2);
 }
 
@@ -1726,18 +1625,26 @@ body {
     </div>
 
     <div id="vista-recurrentes" class="vista-form hidden">
+        <!-- LA UNICA LINEA DE PROSA DE LA VISTA, y es la consecuencia declarada del modelo:
+             la sincronizacion nunca escribe ni borra antes del mes en curso, pero el mes en
+             curso SI se reescribe. Quien quiera preservarlo pone Hasta = mes en curso. -->
+        <p class="conc-hint">Los cambios entran desde el mes en curso: lo ya proyectado en
+            meses pasados no se toca.</p>
         <div id="recLista"></div>
         <button type="button" class="btn-agregar" id="recAgregar" onclick="agregarBloqueRecurrente()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             Agregar recurrente
         </button>
+        <!-- EL SELECTOR DE MES SE FUE (v0.64.0). El recurrente se declara una vez con su
+             vigencia y el sistema mantiene lleno un horizonte rodante de 12 meses: el usuario
+             ya no elige un mes, ni aprieta "volcar". La barra queda con el estado del horizonte
+             a la izquierda y UN boton que aparece SOLO si el horizonte quedo corto -- cuando
+             esta al dia no hay nada que hacer y no hay que fingir que si. -->
         <div class="shell-acciones">
             <span class="crece" id="recResumen"></span>
-            <select class="form-input" id="recMes" aria-label="Mes a volcar"></select>
-            <select class="form-input" id="recAnio" aria-label="Anio a volcar"></select>
             <button class="btn btn-secondary" onclick="salirDeVista()">Cancelar</button>
-            <button class="btn btn-primary" id="recBtnVolcar" onclick="pedirVolcado()">Volcar a la proyeccion</button>
+            <button class="btn btn-primary hidden" id="recBtnSync" onclick="sincronizarRecurrentesUI()">Poner al dia la proyeccion</button>
         </div>
     </div>
 
@@ -1847,7 +1754,7 @@ body {
 <footer class="shell-foot">
     <span class="vivo">PLANILLA FINANZAS_v4 .WIP | Personal</span>
     <span class="spacer"></span>
-    <span class="ver">v0.63.1 local</span>
+    <span class="ver">v0.65.0 local</span>
 </footer>
 
 <!-- Los datalist son COMPARTIDOS por todos los bloques y se pueblan una sola vez: es lo que
@@ -1878,16 +1785,67 @@ var CATALOGO_REAL = {"ingresos": ["Tidetrack", "Umoh", "Ingresos Extra", "Intere
    Los recurrentes viven MUTABLES en memoria para que guardar/borrar/volcar se sientan de
    verdad dentro de una misma sesion de pruebas; los saldos son un snapshot verosimil con
    la moneda de cada medio del catalogo. La tolerancia es la del backend (SHELL_CONC_TOLERANCIA). */
+/* MODELO NUEVO (v0.64.0): cada recurrente lleva su vigencia 'YYYY-MM' ('' = desde siempre /
+   sin fin). El doble trae los tres casos que importan mirar en local: uno sin vigencia, uno
+   que arranca en un mes futuro y uno pausado con fecha de fin. */
 var RECURRENTES_DOBLE = [
   { nombre: 'Netflix', cuenta: 'Subscripciones', monto: 13999, moneda: 'ARS',
-    medio: 'NaranjaX', dia: 5, nota: '', activo: true },
+    medio: 'NaranjaX', dia: 5, nota: '', activo: true, desde: '', hasta: '' },
   { nombre: 'SportClub', cuenta: 'SportClub', monto: 42000, moneda: 'ARS',
-    medio: 'Galicia', dia: 1, nota: 'debito automatico', activo: true },
+    medio: 'Galicia', dia: 1, nota: 'debito automatico', activo: true,
+    desde: '2026-09', hasta: '' },
   { nombre: 'iCloud', cuenta: 'Subscripciones', monto: 2.99, moneda: 'USD',
-    medio: 'Dolar Galicia', dia: 28, nota: '', activo: false }
+    medio: 'Dolar Galicia', dia: 28, nota: '', activo: false, desde: '', hasta: '2027-03' }
 ];
-var MESES_DOBLE = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
-  'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+/* La ventana del horizonte del doble: 12 meses desde el mes en curso, igual que
+   REC_HORIZONTE_MESES del backend. `RECURRENTES_SYNC_DOBLE` es cuantos meses estan escritos:
+   arranca CORTO a proposito (10 de 12) para poder ver en local el estado "desincronizado" y su
+   boton, que es justo el que no se puede fabricar a mano en la planilla. */
+var REC_HORIZONTE_DOBLE = 12;
+var REC_MESES_ESCRITOS_DOBLE = 10;
+function recClavesVentanaDoble() {
+  var hoy = new Date(), claves = [];
+  for (var i = 0; i < REC_HORIZONTE_DOBLE; i++) {
+    var d = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
+    claves.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+  }
+  return claves;
+}
+function recCorreEnDoble(r, clave) {
+  if (!r.activo) return false;
+  if (r.desde && r.desde > clave) return false;
+  if (r.hasta && clave > r.hasta) return false;
+  return true;
+}
+function estadoHorizonteDoble() {
+  var claves = recClavesVentanaDoble();
+  var activos = RECURRENTES_DOBLE.filter(function (r) { return r.activo; });
+  var total = {};
+  activos.forEach(function (r) { total[r.moneda] = (total[r.moneda] || 0) + r.monto; });
+  var filas = 0, faltantes = [];
+  claves.forEach(function (c, i) {
+    var corren = RECURRENTES_DOBLE.filter(function (r) { return recCorreEnDoble(r, c); }).length;
+    if (i < REC_MESES_ESCRITOS_DOBLE) filas += corren;
+    else faltantes.push(c);
+  });
+  // Sobrantes: filas de recurrentes en meses POSTERIORES a la ventana, que el horizonte no
+  // toca. En el doble son fijas y a proposito distintas de cero: es un estado que en la planilla
+  // solo aparece si alguien volco a un mes lejano con el modelo viejo, y sin esto no se puede
+  // mirar el aviso en local.
+  var lejano = new Date();
+  lejano = new Date(lejano.getFullYear(), lejano.getMonth() + REC_HORIZONTE_DOBLE + 1, 1);
+  var claveLejana = lejano.getFullYear() + '-' + String(lejano.getMonth() + 1).padStart(2, '0');
+  return { ok: true,
+           ventana: { desde: claves[0], hasta: claves[claves.length - 1] },
+           activos: activos.length,
+           pausados: RECURRENTES_DOBLE.length - activos.length,
+           totalPorMoneda: total,
+           filasEnVentana: filas,
+           mesesFaltantes: faltantes,
+           sobrantes: 2,
+           mesesSobrantes: [claveLejana],
+           desincronizado: faltantes.length > 0 };
+}
 var SALDOS_CONC_DOBLE = {
   ok: true,
   tolerancia: 0.005,
@@ -1990,6 +1948,30 @@ var PROY_FILAS_DOBLE = (function () {
   return filas;
 })();
 var PROY_ORIGENES_DOBLE = ['guardado', 'shell', 'recurrentes', 'base', 'otros'];
+/* EDICION RESTRINGIDA POR ORIGEN (2026-08-30). Solo 'shell' se edita: es la unica poblacion
+   que no tiene un documento aguas arriba con el que pueda discrepar. Los cuatro mensajes son
+   copia LITERAL de PA_MSJ_NO_EDITABLE (DEVTOOL_ProyeccionAbm.js), porque el doble tiene que
+   mentir lo menos posible: probar_shell.js no los cruza, pero mirar la vista en local con un
+   texto distinto al de produccion es exactamente como se valida la pantalla equivocada. */
+var PA_MSJ_NO_EDITABLE_DOBLE = {
+  guardado: 'Esta fila viene de la hoja Presupuesto y su nota afirma que cerro contra ese total. ' +
+    'Se corrige en la hoja Presupuesto y se vuelve a guardar el mes: ' +
+    'tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar.',
+  recurrentes: 'Esta fila la mantiene la vista de Gastos recurrentes. ' +
+    'Se corrige en Gastos recurrentes: cambia el monto y la proyeccion se actualiza sola.',
+  base: 'Esta fila es del presupuesto base historico (un promedio automatico). ' +
+    'El presupuesto base se recalcula corriendo de nuevo ese modulo: ' +
+    'tidetrack Dev > Presupuesto base (desde el historial).',
+  otros: 'No se reconoce el origen de esta fila. Solo se puede borrar el mes completo.'
+};
+var PA_MSJ_BAJA_REC_DOBLE = 'Este mes lo mantiene la vista de Gastos recurrentes. Para que ' +
+  'deje de proyectarse, pausalo o ponele fecha de fin alli.';
+/* La baja de un mes de 'recurrentes' se bloquea DENTRO de la ventana del horizonte y se
+   permite fuera (historia congelada). Es el mismo criterio de _motivoBajaBloqueadaPa. */
+function proyBajaBloqueadaDoble(clave, origen) {
+  if (origen !== 'recurrentes') return '';
+  return recClavesVentanaDoble().indexOf(clave) === -1 ? '' : PA_MSJ_BAJA_REC_DOBLE;
+}
 var PROY_PAPELERA_DOBLE = null;   // la ULTIMA baja, unica reversible (como el servidor)
 var PROY_EDICION_DOBLE = null;    // la ULTIMA edicion de monto
 function proyTotalesDoble(filas) {
@@ -2077,7 +2059,8 @@ window.google = { script: {
             });
             var reg = { nombre: String(d.nombre || '').trim(), cuenta: d.cuenta, monto: d.monto,
                         moneda: d.moneda, medio: d.medio, dia: d.dia, nota: d.nota || '',
-                        activo: d.activo === 'Si' };
+                        activo: d.activo === 'Si',
+                        desde: String(d.desde || ''), hasta: String(d.hasta || '') };
             var mensaje;
             if (indice === -1) {
               RECURRENTES_DOBLE.push(reg);
@@ -2086,8 +2069,19 @@ window.google = { script: {
               RECURRENTES_DOBLE[indice] = reg;
               mensaje = 'Listo. Actualizaste "' + reg.nombre + '".';
             }
-            if (d.activo === 'No') mensaje += ' Quedo pausado: no entra en los proximos volcados.';
-            exito({ ok: true, mensaje: mensaje + ' (Entorno de pruebas.)' });
+            if (d.activo === 'No') mensaje += ' Quedo pausado: sale de los meses futuros.';
+            // FASE 2. El nombre "Fase2" en el recurrente dispara el camino que NO se puede
+            // provocar a mano: la escritura entro, la sincronizacion no. Sirve para mirar en
+            // local que el aviso con reintento aparece y que el recurrente NO se pierde.
+            if (/fase2/i.test(reg.nombre)) {
+              exito({ ok: true, mensaje: mensaje + ' (Entorno de pruebas.)',
+                      sincronizado: false,
+                      aviso: 'La proyeccion no se actualizo: la cotizacion del dia no se pudo ' +
+                             'resolver. El recurrente quedo guardado igual.' });
+              return;
+            }
+            REC_MESES_ESCRITOS_DOBLE = REC_HORIZONTE_DOBLE;
+            exito({ ok: true, mensaje: mensaje + ' (Entorno de pruebas.)', sincronizado: true });
           }, 700);
         },
         borrarRecurrente: function (nombre) {
@@ -2099,30 +2093,24 @@ window.google = { script: {
             if (RECURRENTES_DOBLE.length === antes) {
               exito({ ok: false, error: 'No existe un recurrente llamado "' + nombre + '".' });
             } else {
-              exito({ ok: true, mensaje: 'Listo. Se borro "' + nombre + '". Lo ya volcado a la ' +
-                      'proyeccion no se toca. (Entorno de pruebas.)' });
+              REC_MESES_ESCRITOS_DOBLE = REC_HORIZONTE_DOBLE;
+              exito({ ok: true, sincronizado: true,
+                      mensaje: 'Listo. Se borro "' + nombre + '". Lo proyectado en meses ' +
+                      'pasados no se toca. (Entorno de pruebas.)' });
             }
           }, 700);
         },
-        estadoVolcadoRecurrentes: function (d) {
-          setTimeout(function () {
-            var activos = RECURRENTES_DOBLE.filter(function (r) { return r.activo; });
-            var total = {};
-            activos.forEach(function (r) { total[r.moneda] = (total[r.moneda] || 0) + r.monto; });
-            exito({ ok: true,
-                    periodo: MESES_DOBLE[d.mes - 1] + ' ' + d.anio,
-                    activos: activos.length,
-                    totalPorMoneda: total,
-                    previasPropias: 0,
-                    otrasDelMes: { base: 12, manual: 1 } });
-          }, 600);
+        estadoHorizonteRecurrentes: function () {
+          // SOLO LECTURA: al entrar a la vista no se escribe nada, ni en el doble.
+          setTimeout(function () { exito(estadoHorizonteDoble()); }, 500);
         },
-        volcarRecurrentesAlMes: function (d) {
+        sincronizarRecurrentes: function () {
           setTimeout(function () {
-            var activos = RECURRENTES_DOBLE.filter(function (r) { return r.activo; });
-            exito({ ok: true, mensaje: 'Listo. Se volcaron ' + activos.length + ' recurrente(s) a ' +
-                    MESES_DOBLE[d.mes - 1] + ' ' + d.anio + '. (Entorno de pruebas: no se ' +
-                    'escribio en la planilla.)' });
+            REC_MESES_ESCRITOS_DOBLE = REC_HORIZONTE_DOBLE;
+            var e = estadoHorizonteDoble();
+            exito({ ok: true, mensaje: 'Listo. La proyeccion queda al dia hasta ' +
+                    e.ventana.hasta + ': ' + e.filasEnVentana + ' fila(s). (Entorno de pruebas: ' +
+                    'no se escribio en la planilla.)' });
           }, 1200);
         },
         procesarCargasDesdeShell: function () {
@@ -2240,9 +2228,12 @@ window.google = { script: {
               return;
             }
             var filas = proyDelGrupoDoble(clave, origen);
-            // Solo 'guardado' y 'shell' se editan: el mismo gate que aplica el servidor.
-            var editable = (origen === 'guardado' || origen === 'shell');
+            // Solo 'shell' se edita: el mismo gate que aplica el servidor.
+            var editable = (origen === 'shell');
             exito({ clave: clave, origen: origen, mesLabel: pabmMesLabelDoble(clave),
+                    editable: editable,
+                    motivoNoEditable: editable ? '' : PA_MSJ_NO_EDITABLE_DOBLE[origen],
+                    bajaBloqueada: proyBajaBloqueadaDoble(clave, origen),
                     filas: filas.map(function (f) {
                       return { fila: f.fila, cuenta: f.cuenta, tipoCuenta: f.tipoCuenta,
                                tipo: f.tipo, monto: f.monto, moneda: f.moneda, fecha: null,
@@ -2253,6 +2244,8 @@ window.google = { script: {
         },
         eliminarPeriodoProyeccion: function (clave, origen) {
           setTimeout(function () {
+            var bloqueada = proyBajaBloqueadaDoble(clave, origen);
+            if (bloqueada) { falla(new Error(bloqueada)); return; }
             var filas = proyDelGrupoDoble(clave, origen);
             if (!filas.length) {
               falla(new Error('No hay ninguna fila de "' + clave + '" (' + origen +
@@ -2263,8 +2256,10 @@ window.google = { script: {
             PROY_FILAS_DOBLE = PROY_FILAS_DOBLE.filter(function (f) {
               return !(f.clave === clave && f.origen === origen);
             });
+            // `respaldo` es un TOKEN (el sello), ya no un nombre de hoja: la boveda de
+            // respaldos (18_RespaldoService.js) puede resolverlo en propiedades o en la hoja.
             exito({ clave: clave, origen: origen, filasBorradas: filas.length,
-                    respaldo: 'Respaldo proyeccion abm 2026-08-29_120000' });
+                    respaldo: '2026-08-29_120000' });
           }, 1100);
         },
         revertirBajaProyeccionAbm: function () {
@@ -2285,18 +2280,11 @@ window.google = { script: {
             var f = null;
             PROY_FILAS_DOBLE.forEach(function (x) { if (String(x.fila) === String(fila)) f = x; });
             if (!f) { falla(new Error('La fila ' + fila + ' esta fuera del rango de datos vivo.')); return; }
-            if (f.origen === 'base') {
-              falla(new Error('Esta fila no es un guardado manual: las filas de presupuesto ' +
-                              'base se recalculan corriendo de nuevo ese modulo, no se editan a mano.'));
-              return;
-            }
-            if (f.origen === 'recurrentes') {
-              falla(new Error('Esta fila es un volcado de recurrentes: el monto se corrige en ' +
-                              'la vista de Recurrentes y se vuelve a volcar el mes.'));
-              return;
-            }
-            if (f.origen !== 'guardado' && f.origen !== 'shell') {
-              falla(new Error('No se reconoce el origen de esta fila: no se edita desde este ABM.'));
+            // El gate del SERVIDOR, no el del cliente: aunque la vista mande la edicion de una
+            // fila que pinto como no editable, aca se rechaza con el motivo de ese origen.
+            if (f.origen !== 'shell') {
+              falla(new Error(PA_MSJ_NO_EDITABLE_DOBLE[f.origen] ||
+                              PA_MSJ_NO_EDITABLE_DOBLE.otros));
               return;
             }
             var n = Number(nuevoMonto);
@@ -2332,7 +2320,7 @@ window.google = { script: {
     ['withSuccessHandler','withFailureHandler','obtenerCatalogoShell','registrarMovimientos',
      'registrarTraspasos','registrarProyecciones','obtenerSaldosConciliacion',
      'registrarConciliacion','obtenerRecurrentes','guardarRecurrente','borrarRecurrente',
-     'estadoVolcadoRecurrentes','volcarRecurrentesAlMes',
+     'estadoHorizonteRecurrentes','sincronizarRecurrentes',
      'procesarCargasDesdeShell',
      'getAbmFormData','getCategoryAccounts','saveAbmRecord','updateAbmRecord',
      'deleteAbmRecord',
@@ -2407,6 +2395,28 @@ function mostrarOk(t) {
         '<div class="alert alert-ok">' + escapar(t) + '</div>';
 }
 function limpiarAviso() { document.getElementById('shellAviso').innerHTML = ''; }
+/**
+ * Un aviso de ADVERTENCIA con un boton adentro. Es el markup que tenia la confirmacion del
+ * volcado (que se borro con el selector de mes): .alert.alert-warning + span + .btn. Cero CSS
+ * nuevo, cero color nuevo. Su consumidor real es la fase 2 de recurrentes: cuando el
+ * recurrente SI se guardo pero la proyeccion no se pudo actualizar, el fallo se muestra con su
+ * razon y con el reintento al lado -- nunca se silencia ni se sustituye por un default.
+ */
+function mostrarAvisoConAccion(texto, rotulo, accion) {
+    var caja = document.getElementById('shellAviso');
+    caja.innerHTML = '';
+    var alerta = document.createElement('div');
+    alerta.className = 'alert alert-warning';
+    var s = document.createElement('span');
+    s.textContent = texto;
+    var b = document.createElement('button');
+    b.className = 'btn btn-secondary';
+    b.textContent = rotulo;
+    b.onclick = accion;
+    alerta.appendChild(s);
+    alerta.appendChild(b);
+    caja.appendChild(alerta);
+}
 function escapar(t) {
     var d = document.createElement('div');
     d.textContent = String(t == null ? '' : t);
@@ -3298,13 +3308,21 @@ function guardarProyecciones() {
 }
 
 // ============================================
-// RECURRENTES -- ABM por bloque + volcado explicito al mes
+// RECURRENTES -- ABM por bloque + horizonte rodante con vigencia
 // ============================================
 //
 // Cada bloque es SU PROPIO registro (upsert por nombre en el backend), no parte de un lote:
-// por eso Guardar y Borrar viven en el bloque y no en la barra. La barra tiene lo unico que
-// opera sobre el conjunto: el volcado de los activos a un mes de la Proyeccion, que es
-// explicito y con confirmacion inline -- nunca un efecto oculto.
+// por eso Guardar y Borrar viven en el bloque y no en la barra.
+//
+// MODELO NUEVO (v0.64.0): el recurrente se declara UNA vez con su vigencia (Desde/Hasta) y el
+// backend mantiene lleno un horizonte de 12 meses hacia adelante. Se fueron el selector de
+// mes/anio, llenarPeriodoVolcado(), pedirVolcado(), mostrarConfirmacionVolcado() y el boton
+// "Volcar a la proyeccion": el usuario ya no elige un mes.
+// La sincronizacion es la SEGUNDA FASE de guardar/borrar, no un boton aparte. Si esa fase 2
+// falla, el backend devuelve ok:true + sincronizado:false + aviso, y el recurrente NO se pierde
+// por culpa de la API: enviar() muestra el aviso con un reintento (Regla Estricta 9).
+// La barra solo ofrece "Poner al dia la proyeccion" cuando el horizonte quedo corto de verdad
+// (desincronizado === true), que es la unica situacion en la que hay algo que hacer.
 
 var PLANTILLA_RECURRENTE =
         '<div class="bloque bloque--nuevo" data-estado="edicion" data-guardado="0">' +
@@ -3358,10 +3376,39 @@ var PLANTILLA_RECURRENTE =
         '<button type="button" data-v="No" aria-pressed="false" onclick="segActivo(this)">Pausado</button>' +
         '</div>' +
         '<input type="hidden" class="r-activo" value="Si">' +
+        // Pausar y poner fecha de fin NO son lo mismo, y la diferencia se dice una vez en
+        // cada campo en vez de en un parrafo: pausar sale de los meses futuros y es
+        // reversible; el Hasta es la baja de verdad.
+        '<span class="hint">Sale de los meses futuros</span>' +
         '</div>' +
-        '<label class="f c12">' +
+        // VIGENCIA. type="month" porque el backend guarda la clave 'YYYY-MM' y es exactamente
+        // lo que este control devuelve: cero parseo de texto libre en el medio. Donde no exista
+        // degrada a texto y el placeholder toma el relevo (mismo criterio que el Mes de la
+        // vista 'proyeccion'). Vacio NO es un default inventado: significa "desde siempre" y
+        // "sin fin", que es lo que hace que las filas ya cargadas sigan corriendo sin migrarlas.
+        // decision Franco 2026-08-30: la fila va en TERCIOS (4+4+4) y no en 6+3+3. Medido en
+        // Chrome a los 900x700 reales: con c3 los dos month quedaban en 146px y el control
+        // nativo en es-AR renderiza "mmmm de aaaa" -- se leia "septiembre de 2(" y "noviembre
+        // de 20(", con el ano tapado por el icono del calendario. El usuario no podia leer la
+        // vigencia que acababa de fijar, que es el unico dato del que depende que un recurrente
+        // aparezca o no en la proyeccion. En c4 cada campo queda en ~200px, que es lo que el
+        // control necesita en este locale. Los dos month van SIN placeholder: Chrome lo ignora
+        // en type="month" y muestra su propia mascara, asi que ese texto no se vio nunca; la
+        // pista real es el hint de abajo.
+        '<label class="f c4">' +
         '<span class="rot">Nota</span>' +
         '<input class="form-input r-nota" placeholder="Opcional" autocomplete="off">' +
+        '<span class="hint"></span>' +
+        '</label>' +
+        '<label class="f c4">' +
+        '<span class="rot">Desde</span>' +
+        '<input class="form-input r-desde" type="month" autocomplete="off">' +
+        '<span class="hint">Vacio = siempre</span>' +
+        '</label>' +
+        '<label class="f c4">' +
+        '<span class="rot">Hasta</span>' +
+        '<input class="form-input r-hasta" type="month" autocomplete="off">' +
+        '<span class="hint">Vacio = sin fin</span>' +
         '</label>' +
         '<div class="f c12 rec-pie">' +
         '<button type="button" class="btn btn-primary" onclick="guardarRecurrenteUI(this)">Guardar</button>' +
@@ -3372,7 +3419,6 @@ var PLANTILLA_RECURRENTE =
         '</div>';
 
 function prepararRecurrentes() {
-    llenarPeriodoVolcado();
     cargarRecurrentes();
 }
 
@@ -3414,7 +3460,7 @@ function pintarRecurrentes(recs) {
         div.dataset.estado = 'resumen';
     });
     renumerarRecurrentes();
-    actualizarResumenRecurrentes();
+    pedirEstadoHorizonte();
 }
 
 /** Arma un bloque; con `r` lo puebla desde la hoja, sin `r` es un alta vacia. */
@@ -3441,6 +3487,8 @@ function nuevoBloqueRecurrente(r) {
         div.querySelector('.r-medio').value = r.medio;
         div.querySelector('.r-dia').value = r.dia;
         div.querySelector('.r-nota').value = r.nota || '';
+        div.querySelector('.r-desde').value = r.desde || '';
+        div.querySelector('.r-hasta').value = r.hasta || '';
         ponerActivo(div, r.activo ? 'Si' : 'No');
     } else {
         // La moneda la decide el medio, como en toda la casa (ADR-002).
@@ -3469,9 +3517,11 @@ function ponerActivo(div, valor) {
     div.querySelector('.bloque-punto').dataset.activo = valor;
 }
 
+// El resumen de la barra NO se recalcula aca: describe el HORIZONTE, que es estado de la
+// planilla, y apretar Pausado todavia no cambio una sola celda. Se re-mide cuando la hoja
+// cambia de verdad (cargarRecurrentes tras un guardado, un borrado o una sincronizacion).
 function segActivo(btn) {
     ponerActivo(btn.closest('.bloque'), btn.dataset.v);
-    actualizarResumenRecurrentes();
 }
 
 function agregarBloqueRecurrente() {
@@ -3482,7 +3532,6 @@ function agregarBloqueRecurrente() {
     });
     var div = nuevoBloqueRecurrente(null);
     renumerarRecurrentes();
-    actualizarResumenRecurrentes();
     div.querySelector('.r-nombre').focus();
 }
 
@@ -3502,8 +3551,14 @@ function resumirRecurrente(b) {
     b.querySelector('.bloque-cuenta').textContent = v('.r-nombre') || 'Sin nombre';
     // Punto medio como en toda la casa (resumirBloque): el guion chocaba con nombres de
     // cuenta que ya llevan guion y se leia como tres campos.
-    b.querySelector('.bloque-meta').textContent =
-        [v('.r-cuenta'), v('.r-dia') ? 'dia ' + v('.r-dia') : ''].filter(Boolean).join(' \u00b7 ');
+    // La vigencia entra al eco SOLO cuando no es la de por defecto: un "desde siempre / sin
+    // fin" en cada bloque seria ruido en el 90% de las filas.
+    b.querySelector('.bloque-meta').textContent = [
+        v('.r-cuenta'),
+        v('.r-dia') ? 'dia ' + v('.r-dia') : '',
+        v('.r-desde') ? 'desde ' + mesCortoCliente(v('.r-desde')) : '',
+        v('.r-hasta') ? 'hasta ' + mesCortoCliente(v('.r-hasta')) : ''
+    ].filter(Boolean).join(' \u00b7 ');
     var caja = b.querySelector('.bloque-monto');
     caja.dataset.vacio = monto ? '0' : '1';
     caja.innerHTML = (monto ? escapar(monto.toFixed(2).replace('.', ','))
@@ -3516,14 +3571,69 @@ function renumerarRecurrentes() {
     });
 }
 
-function actualizarResumenRecurrentes() {
-    var activos = 0, pausados = 0;
-    document.querySelectorAll('#recLista .bloque .r-activo').forEach(function (x) {
-        if (x.value === 'Si') activos++; else pausados++;
+/**
+ * El estado del horizonte, en UNA linea, con lo que el backend ya midio. Es SOLO LECTURA: al
+ * entrar a la vista no se escribe una celda -- volcar como efecto de mirar seria exactamente el
+ * efecto oculto que este modelo vino a sacar.
+ * El boton primario aparece SOLO si desincronizado === true. Cuando esta al dia no hay boton:
+ * no hay nada que hacer y no hay que fingir que si.
+ */
+function pedirEstadoHorizonte() {
+    var caja = document.getElementById('recResumen');
+    var boton = document.getElementById('recBtnSync');
+    caja.textContent = 'Midiendo el horizonte...';
+    boton.classList.add('hidden');
+    google.script.run
+        .withSuccessHandler(function (r) {
+            if (!r || !r.ok) {
+                caja.textContent = 'No se pudo leer el estado del horizonte.';
+                return;
+            }
+            caja.textContent = textoHorizonteRecurrentes(r);
+            boton.classList.toggle('hidden', !r.desincronizado);
+        })
+        .withFailureHandler(function (err) {
+            caja.textContent = 'No se pudo leer el estado del horizonte: ' + err.message;
+        })
+        .estadoHorizonteRecurrentes();
+}
+
+/** Los nueve campos del payload tienen consumidor aca: es lo que exige el guard 21 del banco. */
+function textoHorizonteRecurrentes(r) {
+    var partes = [r.activos + (r.activos === 1 ? ' activo' : ' activos')];
+    if (r.pausados) partes.push(r.pausados + (r.pausados === 1 ? ' pausado' : ' pausados'));
+    var tot = r.totalPorMoneda || {};
+    Object.keys(tot).forEach(function (m) {
+        partes.push(Number(tot[m]).toFixed(2).replace('.', ',') + ' ' + m + ' por mes');
     });
-    document.getElementById('recResumen').textContent =
-        activos + ' activo' + (activos === 1 ? '' : 's') + ', ' +
-        pausados + ' pausado' + (pausados === 1 ? '' : 's') + '.';
+    var v = r.ventana || {};
+    if (r.desincronizado) {
+        // El aviso dice CUANTO falta y cuanto hay escrito: sin esos dos numeros "poner al dia"
+        // es un boton a ciegas.
+        var faltan = (r.mesesFaltantes || []).length;
+        partes.push('faltan ' + faltan + (faltan === 1 ? ' mes' : ' meses') +
+            ' (' + r.filasEnVentana + ' filas escritas)');
+    } else {
+        partes.push('proyectado hasta ' + mesCortoCliente(v.hasta));
+    }
+    // LO QUE QUEDO FUERA DEL HORIZONTE, hacia adelante. El modelo viejo dejaba volcar a
+    // cualquier mes hasta 2100, y esas filas siguen sumando en la proyeccion aunque la vigencia
+    // diga otra cosa: "Poner al dia" no las toca porque estan fuera de la ventana. Se nombra el
+    // mes mas lejano y el unico lugar donde se dan de baja, que es Proyecciones Elaboradas.
+    if (r.sobrantes) {
+        var lejanos = r.mesesSobrantes || [];
+        partes.push(r.sobrantes + (r.sobrantes === 1 ? ' fila' : ' filas') +
+            ' en meses fuera del horizonte, hasta ' + mesCortoCliente(lejanos[lejanos.length - 1]) +
+            ' (se dan de baja desde Proyecciones Elaboradas)');
+    }
+    return partes.join(' \u00b7 ');
+}
+
+/** El unico boton de conjunto que queda. Un click, sin elegir mes. */
+function sincronizarRecurrentesUI() {
+    // null y no undefined: el puente hacia el servidor no serializa undefined, y el endpoint
+    // no toma parametros (la ventana la decide el backend, no el cliente).
+    enviar('sincronizarRecurrentes', null, ['recBtnSync'], pedirEstadoHorizonte);
 }
 
 function guardarRecurrenteUI(btn) {
@@ -3536,11 +3646,13 @@ function guardarRecurrenteUI(btn) {
         medio: b.querySelector('.r-medio').value,
         dia: parseInt(b.querySelector('.r-dia').value, 10),
         nota: b.querySelector('.r-nota').value,
-        activo: b.querySelector('.r-activo').value
+        activo: b.querySelector('.r-activo').value,
+        desde: b.querySelector('.r-desde').value,
+        hasta: b.querySelector('.r-hasta').value
     };
     // Viaja tambien el boton apretado (elemento, no id: los botones por bloque no tienen id):
     // el overlay tapa el mouse pero no el teclado, y dos Enter rapidos eran dos upserts.
-    enviar('guardarRecurrente', d, ['recBtnVolcar', btn], cargarRecurrentes);
+    enviar('guardarRecurrente', d, ['recBtnSync', btn], cargarRecurrentes);
 }
 
 /**
@@ -3553,7 +3665,6 @@ function borrarRecurrenteUI(btn) {
     if (b.dataset.guardado !== '1') {
         b.remove();
         renumerarRecurrentes();
-        actualizarResumenRecurrentes();
         return;
     }
     if (btn.dataset.conf !== '1') {
@@ -3567,102 +3678,8 @@ function borrarRecurrenteUI(btn) {
     }
     // El boton apretado viaja como elemento: un segundo Enter despues del primer borrado
     // llegaba tarde y devolvia 'No existe un recurrente llamado ...' como error falso.
-    enviar('borrarRecurrente', b.querySelector('.r-nombre').value.trim(), ['recBtnVolcar', btn],
+    enviar('borrarRecurrente', b.querySelector('.r-nombre').value.trim(), ['recBtnSync', btn],
         cargarRecurrentes);
-}
-
-/** Los selects de periodo: meses en espanol (strings de UI) y el mes que viene por defecto. */
-function llenarPeriodoVolcado() {
-    var mesSel = document.getElementById('recMes');
-    var anioSel = document.getElementById('recAnio');
-    if (mesSel.options.length) return;
-    var MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
-        'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    MESES.forEach(function (nombre, i) {
-        var o = document.createElement('option');
-        o.value = String(i + 1);
-        o.textContent = nombre;
-        mesSel.appendChild(o);
-    });
-    var hoy = new Date();
-    var prox = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
-    for (var a = hoy.getFullYear(); a <= hoy.getFullYear() + 2; a++) {
-        var oa = document.createElement('option');
-        oa.value = String(a);
-        oa.textContent = String(a);
-        anioSel.appendChild(oa);
-    }
-    mesSel.value = String(prox.getMonth() + 1);
-    anioSel.value = String(prox.getFullYear());
-}
-
-/** Pide el estado del volcado y arma la confirmacion inline con los numeros reales. */
-function pedirVolcado() {
-    var mes = Number(document.getElementById('recMes').value);
-    var anio = Number(document.getElementById('recAnio').value);
-    loader(true, 'Midiendo el volcado');
-    var contesto = false;
-    var tope = window.setTimeout(function () {
-        if (contesto) return;
-        contesto = true; loader(false);
-        mostrarError('El estado del volcado esta tardando mas de la cuenta. Proba de nuevo.');
-    }, 15000);
-    var cerrar = function () { contesto = true; window.clearTimeout(tope); loader(false); };
-
-    google.script.run
-        .withSuccessHandler(function (r) {
-            if (contesto) return;
-            cerrar();
-            if (!r || !r.ok) { mostrarError((r && r.error) || 'No se pudo medir el volcado.'); return; }
-            if (!r.activos) { mostrarError('No hay recurrentes activos para volcar.'); return; }
-            mostrarConfirmacionVolcado(r, mes, anio);
-        })
-        .withFailureHandler(function (err) {
-            if (contesto) return;
-            cerrar();
-            mostrarError('No se pudo medir el volcado: ' + err.message);
-        })
-        .estadoVolcadoRecurrentes({ mes: mes, anio: anio });
-}
-
-function mostrarConfirmacionVolcado(r, mes, anio) {
-    var tot = r.totalPorMoneda || {};
-    var partes = Object.keys(tot).map(function (mon) {
-        return Number(tot[mon]).toFixed(2).replace('.', ',') + ' ' + mon;
-    });
-    var t = 'Se van a volcar ' + r.activos + ' recurrente' + (r.activos === 1 ? '' : 's') +
-        ' a ' + r.periodo + (partes.length ? ' por ' + partes.join(' | ') : '') + '.';
-    if (r.previasPropias) {
-        t += ' Reemplaza el volcado anterior de ese mes (' + r.previasPropias + ' filas).';
-    }
-    var otras = r.otrasDelMes || {};
-    if (otras.base || otras.manual) {
-        t += ' El mes ya tiene ' + (otras.base || 0) + ' fila(s) del presupuesto base y ' +
-            (otras.manual || 0) + ' del guardado manual: no se tocan, y se SUMAN a lo volcado.';
-    }
-
-    var caja = document.getElementById('shellAviso');
-    caja.innerHTML = '';
-    var alerta = document.createElement('div');
-    alerta.className = 'alert alert-warning';
-    var texto = document.createElement('span');
-    texto.textContent = t;
-    var confirmar = document.createElement('button');
-    confirmar.className = 'btn btn-primary';
-    confirmar.textContent = 'Confirmar volcado';
-    confirmar.onclick = function () {
-        enviar('volcarRecurrentesAlMes', { mes: mes, anio: anio }, ['recBtnVolcar'], function () {
-            cargarRecurrentes();   // queda en la vista: el volcado no es un cierre
-        });
-    };
-    var cancelar = document.createElement('button');
-    cancelar.className = 'btn btn-secondary';
-    cancelar.textContent = 'Cancelar';
-    cancelar.onclick = limpiarAviso;
-    alerta.appendChild(texto);
-    alerta.appendChild(confirmar);
-    alerta.appendChild(cancelar);
-    caja.appendChild(alerta);
 }
 
 // ============================================
@@ -4276,28 +4293,46 @@ var pabmUltimoRevert = null; // { tipo: 'baja' | 'edicion', mensaje } -- una sol
 // otras tres se ocultan enteras cuando llegan vacias, para no ensuciar la pantalla normal con
 // tres titulos sin contenido. El grupo 'otros' existe para que ninguna fila con marca sea
 // invisible: se lista y se puede borrar por mes.
+// ---- PROSA PERMANENTE DE LA VISTA (objetivo O-4 del rediseno denso) --------------------
+// TODO lo que se lee en pantalla en el estado normal de esta vista vive entre este marcador y
+// el de cierre. Antes eran 795 caracteres: un encabezado de 212 con dos rutas de menu, cinco
+// parrafos `sub` que le explicaban reglas a quien todavia no habia chocado con ninguna, y dos
+// estados vacios de 133 y 103. Todo eso era PREVENTIVO. La regla que ordeno el recorte:
+//
+//     el texto que explica DONDE se corrige algo no se muestra hasta que alguien
+//     intenta corregirlo.
+//
+// Lo que quedaba util paso a ser DATO (un numero, un contador, un candado) o REACTIVO (el
+// mensaje del servidor que aparece al tocar un monto que no se edita). El guard 25 de
+// devtools/probar_shell.js suma exactamente estas cadenas -- el mismo conjunto que daba 795,
+// sin los rotulos de seccion, que son etiquetas y tampoco contaban antes -- y exige <= 200.
+// Ademas exige que pabmRender, pabmTarjeta y pabmSeccionHtml no tengan prosa propia: el dia
+// que alguien vuelva a escribir un parrafo adentro de una funcion de render, el banco se pone
+// en rojo aunque la suma de aca siga chica.
+
+// Las cinco secciones. La asimetria es DELIBERADA: 'guardado' y 'base' se muestran aun vacias
+// (el caso "todo base, cero guardado" es el estado real de produccion y hay que poder verlo);
+// las otras tres se ocultan enteras cuando llegan vacias. El grupo 'otros' existe para que
+// ninguna fila con marca sea invisible: se lista y se puede borrar por mes.
+// EL CAMPO `sub` YA NO EXISTE (objetivo O-3). Lo unico que sobrevivia de el -- la condicion de
+// edicion -- es ahora `editable`, que se dibuja como un candado de 12px con su title.
 var PABM_SECCIONES = [
-    { origen: 'guardado', titulo: 'Guardado a mano', siempre: true,
-      sub: 'Decisiones deliberadas, guardadas desde la hoja Presupuesto.',
-      // LA RUTA LITERAL DE MENU_CONFIG, verificada contra 00_Config.js: no hay ningun boton
-      // "Guardar Proyeccion" en la hoja Presupuesto -- el propio comentario del submenu lo
-      // dice ("por ahora en tidetrack dev, luego va a tener su boton"). Este es el estado
-      // real de produccion, asi que es el mensaje que mas se lee de toda la vista.
-      msgVacio: 'Todavia no guardaste ninguna proyeccion a mano. Se guarda desde el menu ' +
-                'tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar.' },
-    // El id de origen 'shell' NO se toca: es clave de contrato con el backend y con el sello
-    // de la nota. El rotulo si, porque "shell" es una palabra interna: en la UI esta ventana
-    // se llama tidetrack.
-    { origen: 'shell', titulo: 'Cargadas a mano en tidetrack', siempre: false,
-      sub: 'Proyecciones puntuales cargadas desde la ventana de carga rapida.' },
-    { origen: 'recurrentes', titulo: 'Recurrentes', siempre: false,
-      sub: 'Volcado de la BD de Recurrentes. Los montos se corrigen alla y se vuelve a volcar.' },
-    { origen: 'base', titulo: 'Presupuesto base', siempre: true,
-      sub: 'Promedio historico automatico. No se edita a mano.',
-      msgVacio: 'No hay presupuesto base cargado. Se genera desde tidetrack Dev > Presupuesto ' +
-                'base (desde el historial).' },
-    { origen: 'otros', titulo: 'Otros', siempre: false,
-      sub: 'Filas con marca de proyeccion cuya nota no se reconoce del todo. Se pueden borrar por mes.' }
+    // `vacioRot` es el rotulo del boton del estado vacio y `vacioRuta` la ruta LITERAL de
+    // MENU_CONFIG que ese boton revela al apretarlo (probar_shell.js la cruza contra el config
+    // vivo: un banco con su propia copia de una ruta miente). La ruta ya no es un parrafo
+    // permanente; es la respuesta a un click.
+    { origen: 'guardado', titulo: 'Guardado a mano', siempre: true, editable: false,
+      vacioRot: 'Donde se guarda',
+      vacioRuta: 'tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar' },
+    // El id de origen 'shell' NO se toca: es clave de contrato con el backend y con el sello de
+    // la nota. El rotulo si, porque "shell" es una palabra interna: en la UI esta ventana se
+    // llama tidetrack. Es la UNICA poblacion editable desde 2026-08-30.
+    { origen: 'shell', titulo: 'Cargadas a mano en tidetrack', siempre: false, editable: true },
+    { origen: 'recurrentes', titulo: 'Recurrentes', siempre: false, editable: false },
+    { origen: 'base', titulo: 'Presupuesto base', siempre: true, editable: false,
+      vacioRot: 'Donde se genera',
+      vacioRuta: 'tidetrack Dev > Presupuesto base (desde el historial)' },
+    { origen: 'otros', titulo: 'Otros', siempre: false, editable: false }
 ];
 
 // Verbo por origen para el rotulo del sello: nunca atribuir corridas mixtas a un solo momento.
@@ -4308,12 +4343,63 @@ var PABM_VERBO_SELLO = { guardado: 'guardado el', shell: 'cargada el',
 var PABM_ROTULO_ORIGEN = { guardado: 'guardado a mano', shell: 'cargadas a mano en tidetrack',
     recurrentes: 'recurrentes', base: 'presupuesto base', otros: 'origen no reconocido' };
 
-// Orden puramente de PRESENTACION (el mismo de MONEDAS_DISPONIBLES, 00_Config.js) para que el
-// total de la confirmacion de baja se lea siempre en el mismo orden que el resto. No es una
-// fuente de verdad nueva: el SSOT sigue siendo la constante de backend; esto solo ordena lo
-// que el servidor ya mando. Esta vista no carga el catalogo del shell, asi que no puede
-// leerlo de ahi.
+// Los rotulos abreviados de la fila 2 de cada tarjeta. Tres letras cada uno: el neto es el
+// unico numero que tiene que leerse de lejos, y estos son su contexto.
+var PABM_ROT_COMPONENTE = { ingresos: 'Ing', fijos: 'Fij', variables: 'Var' };
+
+// Las piezas del encabezado y de los contadores, en un solo lugar contable.
+var PABM_ROT_TITULO   = 'Proyeccion';
+var PABM_ROT_FILA     = ' fila';
+var PABM_ROT_FILAS    = ' filas';
+var PABM_ROT_MES      = ' mes';
+var PABM_ROT_MESES    = ' meses';
+var PABM_ROT_CORRIDAS = ' corridas';
+var PABM_ROT_CAMBIO   = 'ultimo cambio ';
+var PABM_ROT_VACIO    = 'vacio';
+// El rotulo EXACTO de la tarjeta del Home, para que la unica accion del encabezado se llame
+// igual en los dos lados y no haya que adivinar que abre.
+var PABM_ROT_NUEVA    = 'Proyeccion nueva';
+
+// El title del candado de una seccion no editable. Es lo unico que queda del campo `sub`:
+// invisible como texto, disponible como ayuda. No suma a O-4 porque no se lee en pantalla; si
+// entra en O-2, que audita toda cadena de la vista.
+var PABM_CANDADO_TITULO = 'Este origen no se edita aca: toca un monto y te dice donde se corrige.';
+
+/**
+ * EL ENCABEZADO, EN UNA LINEA HECHA DE DATOS (objetivo O-1: una sola cadena, <= 80 caracteres).
+ * Los tres numeros salen de lo que listarPeriodosProyeccion() YA devuelve -- nFilas y
+ * ultimoSello por grupo --, asi que esta densidad no costo un endpoint ni un campo nuevo.
+ * Los meses se cuentan por clave distinta: el mismo mes en dos origenes es un mes, no dos.
+ */
+function pabmEncabezado(grupos) {
+    var filas = 0, meses = {}, sello = '';
+    PABM_SECCIONES.forEach(function (s) {
+        (grupos[s.origen] || []).forEach(function (g) {
+            filas += Number(g.nFilas) || 0;
+            meses[g.clave] = true;
+            if (g.ultimoSello && String(g.ultimoSello) > sello) sello = String(g.ultimoSello);
+        });
+    });
+    var n = Object.keys(meses).length;
+    var partes = [PABM_ROT_TITULO,
+        filas + (filas === 1 ? PABM_ROT_FILA : PABM_ROT_FILAS),
+        n + (n === 1 ? PABM_ROT_MES : PABM_ROT_MESES)];
+    if (sello) partes.push(PABM_ROT_CAMBIO + pabmFmtSello(sello));
+    return partes.join(' · ');
+}
+// ---- fin prosa permanente ---------------------------------------------------------------
+
+// Orden puramente de PRESENTACION (el mismo de MONEDAS_DISPONIBLES, 00_Config.js) para que los
+// totales se lean siempre en el mismo orden que el resto. No es una fuente de verdad nueva: el
+// SSOT sigue siendo la constante de backend; esto solo ordena lo que el servidor ya mando.
+// Esta vista no carga el catalogo del shell, asi que no puede leerlo de ahi.
 var PABM_MONEDAS_ORDEN = ['ARS', 'USD', 'AUD', 'EUR'];
+
+// El mensaje de bloqueo POR ORIGEN, tal como lo manda el servidor en `motivoNoEditable`. No se
+// retipea ni una palabra aca: la ruta de correccion es del backend (PA_MSJ_NO_EDITABLE, cruzado
+// contra MENU_CONFIG por probar_proyeccion_abm.js) y el cliente solo la muestra cuando alguien
+// toca un monto que no se edita. Viaja una vez por grupo, no por fila.
+var pabmMotivos = {};
 
 // ---- Formato ----
 
@@ -4323,6 +4409,13 @@ function pabmFmtMonto(item) {
     return (n < 0 ? '-' : '') + Math.abs(n).toFixed(2).replace('.', ',') + ' ' + item.moneda;
 }
 
+/** El mismo numero sin su moneda: la fila 2 de la tarjeta la escribe UNA sola vez, junto al
+ *  neto, en vez de repetirla cuatro veces como hacia el bloque de totales anterior. */
+function pabmFmtSinMoneda(n) {
+    var v = Number(n) || 0;
+    return (v < 0 ? '-' : '') + Math.abs(v).toFixed(2).replace('.', ',');
+}
+
 /**
  * Varias monedas en una linea. El signo se lee en el OPERADOR, no pegado al numero: un neto
  * mixto salia "1620000,00 ARS + -2,99 USD" porque el join no miraba lo que pabmFmtMonto ya
@@ -4330,7 +4423,7 @@ function pabmFmtMonto(item) {
  * entran con "+" o "-" y su valor absoluto.
  */
 function pabmFmtLista(arr) {
-    if (!arr || !arr.length) return '\u2014';
+    if (!arr || !arr.length) return '—';
     var txt = pabmFmtMonto(arr[0]);
     for (var i = 1; i < arr.length; i++) {
         var n = Number(arr[i].monto) || 0;
@@ -4338,6 +4431,25 @@ function pabmFmtLista(arr) {
             pabmFmtMonto({ monto: Math.abs(n), moneda: arr[i].moneda });
     }
     return txt;
+}
+
+/**
+ * Lo mismo, pero acotado a las `tope` monedas de mayor magnitud, con un "+N" que NO suma nada:
+ * avisa. El detalle esta a un click y ahi estan todas. ADR-003: jamas se cruzan monedas, ni
+ * siquiera para elegir cual mostrar -- el criterio es la magnitud de cada una por separado.
+ */
+function pabmFmtListaTope(arr, tope) {
+    if (!arr || !arr.length) return '—';
+    if (arr.length <= tope) return pabmFmtLista(arr);
+    var porMagnitud = arr.slice();
+    porMagnitud.sort(function (a, b) {
+        return Math.abs(Number(b.monto) || 0) - Math.abs(Number(a.monto) || 0);
+    });
+    var elegidas = porMagnitud.slice(0, tope);
+    elegidas.sort(function (a, b) {
+        return PABM_MONEDAS_ORDEN.indexOf(a.moneda) - PABM_MONEDAS_ORDEN.indexOf(b.moneda);
+    });
+    return pabmFmtLista(elegidas) + ' +' + (arr.length - tope);
 }
 
 /** Suma por moneda, nunca cruzada: la confirmacion de baja dice CUANTA plata se borra. */
@@ -4352,6 +4464,38 @@ function pabmTotalDeFilas(filas) {
     return monedas.map(function (m) { return { moneda: m, monto: acum[m] }; });
 }
 
+/** El neto de una seccion entera: la suma por moneda de los netos de sus meses. */
+function pabmNetoDeSeccion(lista) {
+    var acum = {};
+    (lista || []).forEach(function (g) {
+        (((g.totales || {}).neto) || []).forEach(function (x) {
+            acum[x.moneda] = (acum[x.moneda] || 0) + (Number(x.monto) || 0);
+        });
+    });
+    var monedas = Object.keys(acum);
+    monedas.sort(function (a, b) {
+        return PABM_MONEDAS_ORDEN.indexOf(a) - PABM_MONEDAS_ORDEN.indexOf(b);
+    });
+    return monedas.map(function (m) { return { moneda: m, monto: acum[m] }; });
+}
+
+/** La moneda de mayor magnitud de un neto, y cuantas quedan afuera. */
+function pabmDominante(arr) {
+    if (!arr || !arr.length) return { moneda: '', monto: 0, extra: 0 };
+    var top = arr[0];
+    arr.forEach(function (x) {
+        if (Math.abs(Number(x.monto) || 0) > Math.abs(Number(top.monto) || 0)) top = x;
+    });
+    return { moneda: top.moneda, monto: Number(top.monto) || 0, extra: arr.length - 1 };
+}
+
+/** El monto de `moneda` dentro de un bloque de totales, o 0 si ese bloque no la tiene. */
+function pabmMontoDe(arr, moneda) {
+    var n = 0;
+    (arr || []).forEach(function (x) { if (x.moneda === moneda) n = Number(x.monto) || 0; });
+    return n;
+}
+
 /** Cubre el sello PG/REC ('yyyy-MM-dd_HHmmss') y el del shell ('shell_' + fecha + ms
  *  opcionales). Si no matchea ninguno se devuelve crudo: mejor un sello feo que uno inventado. */
 function pabmFmtSello(sello) {
@@ -4360,11 +4504,22 @@ function pabmFmtSello(sello) {
     return m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5];
 }
 
+/** El candado de 12px, en SVG stroke como TODOS los iconos del shell. */
+function pabmCandadoSvg(clase, titulo) {
+    return '<svg class="' + clase + '" width="12" height="12" viewBox="0 0 24 24" fill="none" ' +
+        'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" ' +
+        (titulo ? 'aria-label="' + escapar(titulo) + '"><title>' + escapar(titulo) + '</title>'
+                : 'aria-hidden="true">') +
+        '<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/>' +
+        '<path d="M8 10.5V7.2a4 4 0 018 0v3.3"/></svg>';
+}
+
 // ---- Canal ----
 
 function prepararProyecciones() {
     pabmAbiertos = {};
     pabmUltimoRevert = null;
+    pabmMotivos = {};
     pabmCargarListado();
 }
 
@@ -4423,32 +4578,26 @@ function pabmErrorEnVista(txt) {
 
 // ---- Render del listado ----
 
+/**
+ * El estado NORMAL de la vista. Cero prosa propia: todo rotulo sale de las constantes de la
+ * zona de prosa permanente, y los dos bloques condicionales (el banner de deshacer y el aviso
+ * de filas no reconocidas) viven en sus propias funciones justamente porque no son el estado
+ * normal -- meterlos aca haria que el guard 25 los contara como si siempre estuvieran.
+ */
 function pabmRender(data) {
     var grupos = data.grupos || {};
     var html = '' +
-        '<div class="pabm-hint">' +
-            '<p class="conc-hint">Aca vive lo ya guardado en la base Proyeccion. Para proyectar ' +
-            'algo nuevo usa Proyeccion nueva; el presupuesto entero de un mes se guarda desde ' +
-            'el menu tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar.</p>' +
+        '<div class="pabm-encabezado">' +
+            '<span class="pabm-resumen">' + escapar(pabmEncabezado(grupos)) + '</span>' +
             '<button type="button" class="btn btn-secondary btn--mini" ' +
-            'onclick="irAVista(\'proyeccion\')">Proyeccion nueva</button>' +
-        '</div>';
-
-    if (pabmUltimoRevert) {
-        html += '<div class="alert alert-ok"><span>' + escapar(pabmUltimoRevert.mensaje) + '</span>' +
-            '<button type="button" class="btn btn-secondary" onclick="pabmDeshacer(this)">Deshacer</button></div>';
-    }
+            'onclick="irAVista(\'proyeccion\')">' + escapar(PABM_ROT_NUEVA) + '</button>' +
+        '</div>' +
+        pabmBannerRevert();
 
     PABM_SECCIONES.forEach(function (s) {
         var lista = grupos[s.origen] || [];
         if (!s.siempre && !lista.length) return;
-        html += '<div class="shell-sec">' + escapar(s.titulo) +
-            ' <span class="cuenta">(' + lista.length + ')</span></div>' +
-            '<p class="conc-hint">' + escapar(s.sub) + '</p>';
-        if (!lista.length) {
-            html += '<p class="conc-hint conc-hint--tenue">' + escapar(s.msgVacio || '') + '</p>';
-            return;
-        }
+        html += pabmSeccionHtml(s, lista);
         lista.forEach(function (g) { html += pabmTarjeta(g, s.origen); });
     });
 
@@ -4469,19 +4618,72 @@ function pabmRender(data) {
     });
 }
 
+/** El banner de deshacer: existe solo despues de una mutacion, y por eso no es estado normal. */
+function pabmBannerRevert() {
+    if (!pabmUltimoRevert) return '';
+    return '<div class="alert alert-ok"><span>' + escapar(pabmUltimoRevert.mensaje) + '</span>' +
+        '<button type="button" class="btn btn-secondary" onclick="pabmDeshacer(this)">Deshacer</button></div>';
+}
+
+/**
+ * LA SECCION EN UNA LINEA: titulo en versalita, candado si el origen no se edita, contador, la
+ * estela, y el total del bloque a la derecha. El total es la suma POR MONEDA de los netos de
+ * sus meses (ADR-003) acotada a dos monedas con un "+N": el detalle esta a un click.
+ * Vacia, la misma linea dice "vacio" y ofrece el boton que revela donde se genera ese origen.
+ */
+function pabmSeccionHtml(s, lista) {
+    var candado = s.editable ? '' : pabmCandadoSvg('pabm-candado', PABM_CANDADO_TITULO);
+    var cuenta = lista.length
+        ? lista.length + (lista.length === 1 ? PABM_ROT_MES : PABM_ROT_MESES)
+        : PABM_ROT_VACIO;
+    var derecha = lista.length
+        ? '<span class="pabm-sec-total">' +
+              escapar(pabmFmtListaTope(pabmNetoDeSeccion(lista), 2)) + '</span>'
+        : (s.vacioRot
+            ? '<button type="button" class="btn btn-secondary btn--mini" title="' +
+                  escapar(s.vacioRuta) + '" onclick="pabmMostrarRuta(this)">' +
+                  escapar(s.vacioRot) + '</button>'
+            : '');
+    return '<div class="shell-sec">' + escapar(s.titulo) + candado +
+        ' <span class="cuenta">' + escapar(cuenta) + '</span>' + derecha + '</div>';
+}
+
+/** La ruta de menu es la RESPUESTA A UN CLICK, no un parrafo que esta siempre puesto. */
+function pabmMostrarRuta(btn) {
+    var linea = document.createElement('span');
+    linea.className = 'pabm-sec-total';
+    linea.textContent = btn.getAttribute('title');
+    btn.parentNode.replaceChild(linea, btn);
+}
+
+/**
+ * LA TARJETA DE UN MES, en dos filas y sin una palabra de prosa.
+ *   Agosto 2026        12 filas . volcado el 29/08/2026 15:42                     v
+ *   Ing 820000,00 . Fij 410000,00 . Var 190000,00              220000,00 ARS
+ * El neto es el UNICO numero grande (18px/700) y lleva la moneda una sola vez; los tres
+ * componentes van en 11px tenue, con el rotulo abreviado y sin repetirla. Si el mes tiene mas
+ * de una moneda se muestra la de mayor magnitud y un "+N" pegado a la unidad.
+ */
 function pabmTarjeta(g, origen) {
-    var meta = g.nFilas + ' fila(s)';
+    var meta = g.nFilas + (g.nFilas === 1 ? PABM_ROT_FILA : PABM_ROT_FILAS);
     var verbo = PABM_VERBO_SELLO[origen];
     if (verbo && g.corridas === 1) {
         meta += ' · ' + verbo + ' ' + pabmFmtSello(g.ultimoSello);
-    } else if (verbo && g.corridas > 1) {
-        meta += ' · ' + g.corridas + ' corridas, ultima ' + pabmFmtSello(g.ultimoSello);
+    } else if (g.corridas > 1) {
+        meta += ' · ' + g.corridas + PABM_ROT_CORRIDAS +
+            ' · ' + pabmFmtSello(g.ultimoSello);
     }
     var t = g.totales || {};
-    var otras = g.otrasFilas > 0
-        ? '<div class="alert alert-warning"><span>' + g.otrasFilas +
-          ' fila(s) con categoria no reconocida no entran en estos totales.</span></div>'
-        : '';
+    var dom = pabmDominante(t.neto);
+    var comp = ['ingresos', 'fijos', 'variables'].map(function (k) {
+        return PABM_ROT_COMPONENTE[k] + ' ' + pabmFmtSinMoneda(pabmMontoDe(t[k], dom.moneda));
+    });
+    var compTxt = comp.join(' · ');
+    var neto = dom.moneda
+        ? '<span class="pabm-neto" data-signo="' + (dom.monto < 0 ? 'neg' : 'pos') + '">' +
+              escapar(pabmFmtSinMoneda(dom.monto)) + '<span class="u">' + escapar(dom.moneda) +
+              (dom.extra ? ' +' + dom.extra : '') + '</span></span>'
+        : '<span class="pabm-neto">—</span>';
     return '' +
         '<div class="pabm-card" data-clave="' + escapar(g.clave) + '" data-origen="' +
                 escapar(origen) + '" data-abierto="0">' +
@@ -4496,15 +4698,19 @@ function pabmTarjeta(g, origen) {
                 'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
                 'stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
             '</button>' +
-            '<div class="pabm-totales">' +
-                '<span>Ingresos: <b>' + escapar(pabmFmtLista(t.ingresos)) + '</b></span>' +
-                '<span>Fijos: <b>' + escapar(pabmFmtLista(t.fijos)) + '</b></span>' +
-                '<span>Variables: <b>' + escapar(pabmFmtLista(t.variables)) + '</b></span>' +
-                '<span>Neto: <b>' + escapar(pabmFmtLista(t.neto)) + '</b></span>' +
+            '<div class="pabm-linea">' +
+                '<span class="pabm-comp">' + escapar(compTxt) + '</span>' + neto +
             '</div>' +
-            otras +
+            pabmAvisoOtras(g) +
             '<div class="pabm-detalle hidden"></div>' +
         '</div>';
+}
+
+/** Solo aparece cuando hay filas con categoria no reconocida: tampoco es estado normal. */
+function pabmAvisoOtras(g) {
+    if (!(g.otrasFilas > 0)) return '';
+    return '<div class="alert alert-warning"><span>' + g.otrasFilas +
+        ' fila(s) con categoria no reconocida no entran en estos totales.</span></div>';
 }
 
 // ---- Detalle por periodo ----
@@ -4531,7 +4737,12 @@ function pabmCargarDetalle(card, clave, origen) {
     var body = card.querySelector('.pabm-detalle');
     body.innerHTML = '<p class="conc-hint conc-hint--tenue">Cargando...</p>';
     google.script.run
-        .withSuccessHandler(function (det) { body.innerHTML = pabmRenderDetalle(det, origen); })
+        .withSuccessHandler(function (det) {
+            // El motivo viaja UNA vez por grupo y lo guarda el cliente por origen: es el texto
+            // que se muestra recien cuando alguien intenta corregir una fila que no se edita.
+            pabmMotivos[origen] = det.motivoNoEditable || '';
+            body.innerHTML = pabmRenderDetalle(det, origen);
+        })
         .withFailureHandler(function (err) {
             body.innerHTML = '<div class="alert alert-error"><span>' +
                 escapar(err.message) + '</span></div>';
@@ -4539,17 +4750,35 @@ function pabmCargarDetalle(card, clave, origen) {
         .detalleFilasPeriodoProyeccion(clave, origen);
 }
 
-/** Nota al pie por origen: donde se corrige cada cosa, en vez de una tabla muda. */
-function pabmNotaPie(origen) {
-    if (origen === 'guardado' || origen === 'shell') return 'Toca un monto para corregirlo.';
-    if (origen === 'recurrentes') return 'Se corrigen desde la vista de Recurrentes y se vuelve a volcar el mes.';
-    if (origen === 'otros') return 'Origen no reconocido: solo se puede borrar el mes completo.';
-    return 'Presupuesto base: se recalcula corriendo de nuevo ese modulo, no se edita a mano.';
-}
-
+/**
+ * LA TABLA Y NADA MAS. La nota al pie por origen (cuatro variantes, permanentes) se retiro: en
+ * el origen editable el lapiz del monto ya es el affordance, y en los otros cuatro el motivo
+ * aparece al tocar el monto, con la ruta exacta, y se va solo.
+ * La baja bloqueada (un mes de recurrentes DENTRO de la ventana del horizonte) no muestra el
+ * boton: un borrado que la proxima sincronizacion deshace sola es una trampa, no una funcion.
+ * En su lugar se dice el motivo que manda el SERVIDOR -- que es tambien el que aplica el gate.
+ */
 function pabmRenderDetalle(det, origen) {
     var filas = det.filas || [];
     var totalTxt = pabmFmtLista(pabmTotalDeFilas(filas));
+    var baja = det.bajaBloqueada
+        ? '<p class="pabm-pie">' + escapar(det.bajaBloqueada) + '</p>'
+        : '<div class="pabm-borrar">' +
+            '<button type="button" class="btn btn-secondary btn--mini pabm-abrir-conf" ' +
+            'onclick="pabmPedirBorrado(this)">Borrar este periodo</button>' +
+            '<div class="pabm-conf hidden">' +
+                // UNA linea. La version anterior tenia 133 caracteres en tres, y el matiz
+                // "pero no una vez que hagas otro cambio" no cambiaba la decision en ese
+                // momento: el boton Deshacer que aparece despues es el que sostiene la promesa.
+                '<p>Borrar <b>' + filas.length + '</b> filas de <b>' + escapar(det.mesLabel) +
+                '</b> (' + escapar(PABM_ROTULO_ORIGEN[origen] || origen) + ') · <b>' +
+                escapar(totalTxt) + '</b>. Se puede deshacer.</p>' +
+                '<button type="button" class="btn btn-secondary btn--mini" ' +
+                'onclick="pabmCancelarBorrado(this)">Cancelar</button>' +
+                '<button type="button" class="btn btn--mini btn--peligro" ' +
+                'onclick="pabmConfirmarBorrado(this)">Confirmar borrado</button>' +
+            '</div>' +
+          '</div>';
     return '' +
         // La columna es f.tipoCuenta: la columna E de Registros (Ingreso / Gasto Fijo /
         // Gasto Variable), NO la categoria. El modal viejo la rotulaba "Categoria" y en la
@@ -4560,22 +4789,7 @@ function pabmRenderDetalle(det, origen) {
         '<table class="conc-tabla"><thead><tr><th>Cuenta</th><th>Tipo de cuenta</th>' +
         '<th class="num">Monto</th></tr></thead><tbody>' +
         filas.map(pabmFilaHtml).join('') +
-        '</tbody></table>' +
-        '<p class="pabm-pie">' + escapar(pabmNotaPie(origen)) + '</p>' +
-        '<div class="pabm-borrar">' +
-            '<button type="button" class="btn btn-secondary btn--mini pabm-abrir-conf" ' +
-            'onclick="pabmPedirBorrado(this)">Borrar este periodo</button>' +
-            '<div class="pabm-conf hidden">' +
-                '<p>Se van a borrar <b>' + filas.length + '</b> fila(s) de <b>' +
-                escapar(det.mesLabel) + '</b> (' + escapar(PABM_ROTULO_ORIGEN[origen] || origen) +
-                '), por un total de <b>' + escapar(totalTxt) + '</b>. Se puede deshacer justo ' +
-                'despues, pero no una vez que hagas otro cambio.</p>' +
-                '<button type="button" class="btn btn-secondary btn--mini" ' +
-                'onclick="pabmCancelarBorrado(this)">Cancelar</button>' +
-                '<button type="button" class="btn btn--mini btn--peligro" ' +
-                'onclick="pabmConfirmarBorrado(this)">Confirmar borrado</button>' +
-            '</div>' +
-        '</div>';
+        '</tbody></table>' + baja;
 }
 
 function pabmFilaHtml(f) {
@@ -4583,16 +4797,13 @@ function pabmFilaHtml(f) {
     // cuenta: es lo que identifica "Netflix" entre tres filas de la misma cuenta.
     var celdaCuenta = escapar(f.cuenta) +
         (f.notaLibre ? '<div class="pabm-nota">' + escapar(f.notaLibre) + '</div>' : '');
-    if (!f.editable) {
-        return '<tr data-fila="' + f.fila + '"><td>' + celdaCuenta + '</td><td>' +
-            escapar(f.tipoCuenta) + '</td><td class="num">' +
-            escapar(pabmFmtMonto(f)) + '</td></tr>';
-    }
+    var celdaMonto = f.editable
+        ? '<td class="num pabm-celda-monto" data-monto="' + escapar(f.monto) +
+              '" data-moneda="' + escapar(f.moneda) + '">' +
+              pabmCeldaVista(f.monto, f.moneda) + '</td>'
+        : '<td class="num">' + pabmCeldaFija(f) + '</td>';
     return '<tr data-fila="' + f.fila + '"><td>' + celdaCuenta + '</td><td>' +
-        escapar(f.tipoCuenta) + '</td>' +
-        '<td class="num pabm-celda-monto" data-monto="' + escapar(f.monto) +
-        '" data-moneda="' + escapar(f.moneda) + '">' +
-        pabmCeldaVista(f.monto, f.moneda) + '</td></tr>';
+        escapar(f.tipoCuenta) + '</td>' + celdaMonto + '</tr>';
 }
 
 function pabmCeldaVista(monto, moneda) {
@@ -4606,6 +4817,40 @@ function pabmCeldaVista(monto, moneda) {
         'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" ' +
         'stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L20 8l-4-4L4 16z"/>' +
         '</svg></button>';
+}
+
+/**
+ * El monto NO editable. Sigue siendo un <button>: antes la fila simplemente no respondia al
+ * click y el usuario no se enteraba de por que. Ahora el candado dice "esto se corrige en otro
+ * lado" y el click revela DONDE. Es mas informacion util con menos texto permanente.
+ */
+function pabmCeldaFija(f) {
+    return '<button type="button" class="pabm-monto pabm-monto--fijo" ' +
+        'onclick="pabmMostrarMotivo(this)">' +
+        escapar(pabmFmtMonto(f)) + pabmCandadoSvg('candado', '') + '</button>';
+}
+
+/**
+ * La linea REACTIVA de la Parte 2.7: aparece bajo la fila que se intento corregir, dice la ruta
+ * exacta que mando el servidor y se retira sola a los 6 segundos. Nunca es prosa permanente.
+ */
+function pabmMostrarMotivo(btn) {
+    var tr = btn.closest('tr');
+    var card = btn.closest('.pabm-card');
+    var motivo = pabmMotivos[card.dataset.origen];
+    if (!motivo) return;
+    var sig = tr.nextElementSibling;
+    if (sig && sig.classList.contains('pabm-motivo')) return;   // ya esta puesta
+    var fila = document.createElement('tr');
+    fila.className = 'pabm-motivo';
+    var td = document.createElement('td');
+    td.colSpan = 3;
+    td.textContent = motivo;
+    fila.appendChild(td);
+    tr.parentNode.insertBefore(fila, tr.nextSibling);
+    window.setTimeout(function () {
+        if (fila.parentNode) fila.parentNode.removeChild(fila);
+    }, 6000);
 }
 
 // ---- Correccion de monto inline (el gate real sigue del lado del servidor) ----
@@ -4766,7 +5011,15 @@ function enviar(fn, datos, botones, alSalirBien) {
             // alSalirBien PRIMERO: los callbacks navegan con irAVista, que limpia el aviso
             // en el mismo tick -- con el orden invertido, el mensaje de exito del backend
             // (con semantica real: totales, advertencias) se borraba sin un solo frame.
-            if (r && r.ok) { alSalirBien(); mostrarOk(r.mensaje || 'Listo.'); }
+            // FASE 2 (recurrentes): ok:true con `aviso` significa que la escritura principal
+            // entro y que la sincronizacion de la proyeccion no. NO es un fallo del guardado y
+            // no se trata como tal: se dicen las dos cosas y se ofrece el reintento.
+            if (r && r.ok && r.aviso) {
+                alSalirBien();
+                mostrarAvisoConAccion((r.mensaje || 'Listo.') + ' ' + r.aviso,
+                    'Reintentar sincronizacion', sincronizarRecurrentesUI);
+            }
+            else if (r && r.ok) { alSalirBien(); mostrarOk(r.mensaje || 'Listo.'); }
             else if (r && r.problemas) { mostrarError(r.problemas.join(' ')); }
             else { mostrarError((r && r.error) || 'No se pudo guardar.'); }
         })

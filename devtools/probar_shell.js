@@ -42,6 +42,14 @@ let tablasFalsas = {
     MEDIOS_PAGO: [['Galicia', 'ARS', 'Hogar'], ['Dolar Cash', 'USD', 'Ahorros'], ['', '', '']]
 };
 let getTableDataExplota = false;
+const _propsStore = {};
+const propsFalsas = {
+    setProperty: (k, v) => { _propsStore[k] = String(v); },
+    getProperty: (k) => (k in _propsStore ? _propsStore[k] : null),
+    deleteProperty: (k) => { delete _propsStore[k]; },
+    getKeys: () => Object.keys(_propsStore),
+    getProperties: () => Object.assign({}, _propsStore)
+};
 
 function plantillaFalsa() {
     const t = {};
@@ -67,7 +75,9 @@ const ctx = {
         }),
         getActiveSpreadsheet: () => ({ getName: () => 'PLANILLA FINANZAS_v4 .WIP | Personal' })
     },
-    PropertiesService: { getDocumentProperties: () => ({ getProperty: () => null, setProperty() {}, deleteProperty() {} }) },
+    // Almacen de propiedades DE VERDAD: 18_RespaldoService guarda ahi los respaldos y un
+    // stub que traga las escrituras haria pasar en verde un respaldo que no existe.
+    PropertiesService: { getDocumentProperties: () => propsFalsas },
     Utilities: { formatDate: () => '2026-08-24_1200' },
     Session: { getScriptTimeZone: () => 'America/Argentina/Buenos_Aires' },
     Logger: { log() {} },
@@ -102,13 +112,20 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/16_ShellService.js'), 'utf8') + '\n' +
     // 17_RecurrentesService: la BD de recurrentes y su volcado a Proyeccion. Carga DESPUES
     // del shell, igual que en Apps Script (16_ < 17_ en el orden alfabetico).
-    fs.readFileSync(path.join(RAIZ, 'src/17_RecurrentesService.js'), 'utf8') +
+    fs.readFileSync(path.join(RAIZ, 'src/17_RecurrentesService.js'), 'utf8') + '\n' +
+    // 18_RespaldoService: aporta _conHojaActivaPreservada, que 17_ usa en runtime para su
+    // unica creacion de hoja. Carga DESPUES de 17_, igual que en Apps Script.
+    fs.readFileSync(path.join(RAIZ, 'src/18_RespaldoService.js'), 'utf8') +
     '\n;Object.assign(globalThis,{SHELL_VISTAS,SHELL_GEOMETRIA,SHELL_VISTA_DEFECTO,_abrirShell,' +
     'abrirTidetrack,abrirMovimientoNuevo,abrirTraspasoNuevo,abrirProyeccionNueva,' +
     'abrirRecurrentes,abrirConciliacionNueva,abrirPlanCuentas,abrirProyeccionesElaboradas,'+
     'obtenerCatalogoShell,' +
     'procesarCargasDesdeShell,diagnosticarShell,_validarMovimiento,_estadoGrillaCargas,_filaDeCarga,_plata,TIPOS_RIQUEZA,columnLetterToIndex,RANGES,SHEETS,MENU_CONFIG,CUENTAS_NEUTRAS,MONEDAS_DISPONIBLES,' +
-    'SHELL_CONC_TOLERANCIA,CUENTA_AJUSTE,CUENTA_ARRASTRE,REC_MARCA,REC_ACTIVO_SI,REC_ACTIVO_NO,REC_MESES});',
+    'SHELL_CONC_TOLERANCIA,CUENTA_AJUSTE,CUENTA_ARRASTRE,REC_MARCA,REC_ACTIVO_SI,REC_ACTIVO_NO,REC_MESES,' +
+    'REC_HORIZONTE_MESES,REC_HEADERS,obtenerRecurrentes,guardarRecurrente,borrarRecurrente,' +
+    'sincronizarRecurrentes,estadoHorizonteRecurrentes,_recPosterioresRec,' +
+    '_clavesVentanaRec,_correEnMesRec,_claveVigenciaRec,_vigenciaValidaRec,_filasRecEnClaves,' +
+    '_conHojaActivaPreservada});',
     ctx
 );
 
@@ -589,6 +606,18 @@ function hojaFalsa(nombre) {
             return 0;
         },
         getRange: function (fila, col, nf, nc) {
+            // updateRow (03_SheetManager) llama getRange en notacion A1 ('B7:K7'). El mock no la
+            // soportaba y devolvia col=NaN: la EDICION de un recurrente reventaba en el banco por
+            // una limitacion del doble, no del producto. Se traduce a fila/col/nf/nc.
+            if (typeof fila === 'string') {
+                const m = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(fila);
+                if (!m) throw new Error('notacion A1 no soportada por el mock: ' + fila);
+                const aCol = (L) => L.split('').reduce((a, c) => a * 26 + (c.charCodeAt(0) - 64), 0);
+                col = aCol(m[1]);
+                nf = Number(m[4]) - Number(m[2]) + 1;
+                nc = aCol(m[3]) - col + 1;
+                fila = Number(m[2]);
+            }
             nf = nf || 1; nc = nc || 1;
             return {
                 getValues: function () {
@@ -604,7 +633,8 @@ function hojaFalsa(nombre) {
                 clearContent: function () {
                     for (let r = 0; r < nf; r++) for (let c = 0; c < nc; c++) grid[fila - 1 + r][col - 1 + c] = '';
                 },
-                copyTo: function () { /* formato: no aplica en el banco */ }
+                copyTo: function () { /* formato: no aplica en el banco */ },
+                setNumberFormat: function () { /* formato: no aplica en el banco */ }
             };
         },
         insertRowsAfter: function (pos, cant) { for (let i = 0; i < cant; i++) grid.push(new Array(20).fill('')); },
@@ -617,12 +647,34 @@ function hojaFalsa(nombre) {
     };
 }
 const hojasFalsas = {};
+// La traza registra el ORDEN de las operaciones de la unica creacion de hoja: es lo que hace
+// medible que el foco vuelva y la hoja se oculte ANTES de la primera escritura.
+const trazaHojas = [];
+let hojaActivaFalsa = null;
 const ssFalsa = {
     getName: () => 'PLANILLA FALSA',
     getSheets: () => Object.keys(hojasFalsas).map(n => hojasFalsas[n]),
     getSheetByName: (n) => hojasFalsas[n] || null,
-    insertSheet: (n) => { hojasFalsas[n] = hojaFalsa(n); return hojasFalsas[n]; },
-    deleteSheet: (h) => { delete hojasFalsas[h.getName()]; }
+    getActiveSheet: () => hojaActivaFalsa,
+    setActiveSheet: (h) => { trazaHojas.push('setActiveSheet'); hojaActivaFalsa = h; return h; },
+    insertSheet: (n) => {
+        trazaHojas.push('insertSheet');
+        const h = hojaFalsa(n);
+        const setValuesReal = h.getRange;
+        h.getRange = function (f, c, nf, nc) {
+            const r = setValuesReal.call(h, f, c, nf, nc);
+            const sv = r.setValues, sV = r.setValue;
+            if (sv) r.setValues = function (v) { trazaHojas.push('escribir'); return sv.call(r, v); };
+            if (sV) r.setValue = function (v) { trazaHojas.push('escribir'); return sV.call(r, v); };
+            return r;
+        };
+        const hideReal = h.hideSheet;
+        h.hideSheet = function () { trazaHojas.push('hideSheet'); return hideReal.call(h); };
+        hojasFalsas[n] = h;
+        hojaActivaFalsa = h;
+        return h;
+    },
+    deleteSheet: (h) => { trazaHojas.push('deleteSheet'); delete hojasFalsas[h.getName()]; }
 };
 // La geometria de las hojas falsas se DERIVA de RANGES, no se retipea.
 const cfgReg19 = ctx.RANGES.REGISTROS;
@@ -812,12 +864,12 @@ rc = ctx.registrarConciliacion([{ medio: 'Galicia', saldoVisto: 1000, saldoReal:
 ok(rc.ok === true && locksTomados === 1,
     'registrarConciliacion tambien: mide y escribe bajo UN solo lock, sin re-entrar');
 
-// --- Recurrentes ---
+// --- Recurrentes: HORIZONTE RODANTE CON VIGENCIA (v0.64.0) ---
 let lr = ctx.obtenerRecurrentes();
 ok(lr.ok === true && lr.recurrentes.length === 0,
     'obtenerRecurrentes con hoja ausente devuelve lista vacia SIN lanzar (leer no crea la hoja)');
 const recBase19 = { nombre: 'Netflix', cuenta: 'Comidas', monto: 5000, moneda: 'ARS',
-    medio: 'Galicia', dia: 5, nota: '', activo: 'Si' };
+    medio: 'Galicia', dia: 5, nota: '', activo: 'Si', desde: '', hasta: '' };
 let gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { cuenta: ctx.CUENTAS_NEUTRAS[0] }));
 ok(gr.ok === false && /comodin del sistema/.test((gr.problemas || []).join(' ')),
     'una cuenta comodin no puede ser recurrente');
@@ -825,38 +877,221 @@ gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { dia: 0 }));
 ok(gr.ok === false, 'dia 0 se rechaza');
 gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { dia: 32 }));
 ok(gr.ok === false, 'dia 32 se rechaza');
+// VIGENCIA: formato y orden.
+gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { desde: 'el mes que viene' }));
+ok(gr.ok === false && /"Desde"/.test((gr.problemas || []).join(' ')), 'un "Desde" que no es un mes se rechaza');
+gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { hasta: '2026-13' }));
+ok(gr.ok === false && /"Hasta"/.test((gr.problemas || []).join(' ')), 'un mes 13 en "Hasta" se rechaza');
+gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { desde: '2027-01', hasta: '2026-12' }));
+ok(gr.ok === false && /no puede ser anterior/.test((gr.problemas || []).join(' ')),
+    'un "Hasta" anterior al "Desde" se rechaza nombrando los dos meses');
+
+const trazaAntesRec = trazaHojas.length;
 gr = ctx.guardarRecurrente(recBase19);
 ok(gr.ok === true, 'un recurrente valido se guarda: ' + (gr.error || (gr.problemas || []).join('; ') || 'ok'));
 ok(!!hojasFalsas[ctx.SHEETS.RECURRENTES] && hojasFalsas[ctx.SHEETS.RECURRENTES]._oculta === true,
-    'la hoja se creo en el primer guardado y quedo OCULTA recien despues de verificar');
+    'la hoja se creo en el primer guardado y quedo OCULTA');
+// LA REGLA DE LA UNICA CREACION, medida por ORDEN y no por resultado: el foco vuelve y la hoja
+// se oculta ANTES de la primera escritura. Antes se ocultaba DESPUES de verificar, y el flush de
+// esa verificacion ya habia empujado al cliente la pestania visible y activa.
+{
+    const t = trazaHojas.slice(trazaAntesRec);
+    const iInsert = t.indexOf('insertSheet');
+    const iFoco = t.indexOf('setActiveSheet');
+    const iHide = t.indexOf('hideSheet');
+    const iEscribir = t.indexOf('escribir');
+    ok(iInsert === 0, 'la traza de la creacion arranca con insertSheet, dio ' + JSON.stringify(t.slice(0, 5)));
+    ok(iFoco > iInsert && iFoco < iHide, 'el foco se repone DESPUES de insertSheet y ANTES de hideSheet');
+    ok(iHide < iEscribir, 'hideSheet ocurre ANTES de la primera escritura de celdas');
+}
 lr = ctx.obtenerRecurrentes();
-ok(lr.ok === true && lr.recurrentes.length === 1 && lr.recurrentes[0].activo === true,
-    'la lectura devuelve el recurrente, con activo como booleano');
-const filasRec19 = () => notasProy19().filter(n => n.indexOf(ctx.REC_MARCA + ' ' + claveFut19 + ' ') === 0).length;
-const periodo19 = { mes: mesFut19.getMonth() + 1, anio: mesFut19.getFullYear() };
-let vr = ctx.volcarRecurrentesAlMes(periodo19);
-ok(vr.ok === true && filasRec19() === 1,
-    'el volcado escribe una fila por recurrente activo: ' + (vr.error || vr.mensaje));
-vr = ctx.volcarRecurrentesAlMes(periodo19);
-ok(vr.ok === true && filasRec19() === 1,
-    'volcar DOS veces el mismo mes deja N filas, no 2N (idempotente por periodo)');
-ok(/Se reemplazo el volcado anterior/.test(vr.mensaje), 'y el mensaje dice que reemplazo');
+ok(lr.ok === true && lr.recurrentes.length === 1 && lr.recurrentes[0].activo === true &&
+   lr.recurrentes[0].desde === '' && lr.recurrentes[0].hasta === '',
+    'la lectura devuelve el recurrente con activo booleano y la vigencia vacia (desde siempre / sin fin)');
+ok(ctx.REC_HEADERS.length === 10 && ctx.REC_HEADERS[8] === 'Desde' && ctx.REC_HEADERS[9] === 'Hasta',
+    'la hoja tiene las dos columnas de vigencia en el header');
+
+// FASE 2: guardar un recurrente YA sincroniza el horizonte. No hay boton de volcado ni mes.
+const ventana19 = ctx._clavesVentanaRec();
+const filasRecEnVentana = () => ctx._filasRecEnClaves(hojaProy19, ventana19).length;
+ok(gr.sincronizado === true, 'guardar dispara la SEGUNDA FASE y la declara (sincronizado:true)');
+ok(filasRecEnVentana() === ctx.REC_HORIZONTE_MESES,
+    'el horizonte quedo lleno: una fila por cada uno de los ' + ctx.REC_HORIZONTE_MESES +
+    ' meses, dio ' + filasRecEnVentana());
+ok(ventana19.length === ctx.REC_HORIZONTE_MESES, 'la ventana tiene REC_HORIZONTE_MESES claves');
+
+// IDEMPOTENCIA: dos corridas seguidas sin cambios dejan el MISMO estado, no el doble.
+let sr = ctx.sincronizarRecurrentes();
+ok(sr.ok === true && filasRecEnVentana() === ctx.REC_HORIZONTE_MESES,
+    'sincronizar dos veces deja N filas, no 2N (idempotente por ventana): ' + (sr.error || sr.mensaje));
+
+// EL INVARIANTE DURO: nunca se escribe ni se borra antes del mes en curso.
+const clavePasada19 = '2020-01';
+const notaPasada19 = ctx.REC_MARCA + ' ' + clavePasada19 + ' 2020-01-05_090000 - Netflix';
+{
+    const destino = hojaProy19.getLastRow() + 1;
+    const filaP = new Array(col19(cfgReg19.end) - col19(cfgReg19.start) + 1).fill('');
+    filaP[col19(cfgReg19.columns.monto) - col19(cfgReg19.start)] = 5000;
+    filaP[col19(cfgReg19.columns.moneda) - col19(cfgReg19.start)] = 'ARS';
+    filaP[col19(cfgReg19.columns.fecha) - col19(cfgReg19.start)] = new Date(2020, 0, 5);
+    filaP[col19(cfgReg19.columns.nota) - col19(cfgReg19.start)] = notaPasada19;
+    hojaProy19.getRange(destino, col19(cfgReg19.start), 1, HDR19.length).setValues([filaP]);
+}
+ctx.sincronizarRecurrentes();
+ok(notasProy19().indexOf(notaPasada19) !== -1,
+    'INVARIANTE: una fila REC de un mes ANTERIOR al mes en curso sobrevive intacta a la sincronizacion');
+
 ok(notasProy19().filter(n => n.indexOf(ctx.PG_MARCA) === 0).length === 1,
-    'las filas PG del mismo mes NO se tocaron: los recurrentes son aditivos');
+    'las filas PG NO se tocaron: los recurrentes son aditivos');
+
+// VIGENCIA: "Hasta" saca al recurrente de los meses posteriores, sin tocar los anteriores.
+gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { hasta: ventana19[2] }));
+ok(gr.ok === true && filasRecEnVentana() === 3,
+    'con Hasta = el tercer mes de la ventana, el horizonte queda con 3 filas, dio ' + filasRecEnVentana());
+// PAUSADO: sale de TODO el horizonte futuro, pero la regla no se pierde.
+gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { activo: 'No' }));
+ok(gr.ok === true && filasRecEnVentana() === 0, 'pausado sale del horizonte entero, dio ' + filasRecEnVentana());
+ok(ctx.obtenerRecurrentes().recurrentes.length === 1, 'y la regla sigue en la BD: pausar no borra');
+gr = ctx.guardarRecurrente(recBase19);
+ok(gr.ok === true && filasRecEnVentana() === ctx.REC_HORIZONTE_MESES,
+    'reactivarlo repone el horizonte completo (la pausa es reversible sin perder fechas)');
+
+// REGLA ESTRICTA 9: si la API de FX cae, no se escribe una sola celda.
 ctx._fxExplota = true;
-vr = ctx.volcarRecurrentesAlMes(periodo19);
+sr = ctx.sincronizarRecurrentes();
 ctx._fxExplota = false;
-ok(vr.ok === false && filasRec19() === 1,
-    'si la API de FX cae, el volcado corta SIN escribir y SIN tocar el volcado previo');
-const ev19 = ctx.estadoVolcadoRecurrentes(periodo19);
-ok(ev19.ok === true && ev19.activos === 1 && ev19.previasPropias === 1 && ev19.otrasDelMes.manual === 1,
-    'estadoVolcado informa activos, previas propias y las filas ajenas del mes ANTES de escribir');
+ok(sr.ok === false && /API caida/.test(sr.error || '') && filasRecEnVentana() === ctx.REC_HORIZONTE_MESES,
+    'si la API de FX cae, la sincronizacion corta SIN escribir y SIN tocar el horizonte previo');
+
+// FASE 2 FALLIDA: el recurrente NO se pierde, y se avisa con la razon exacta.
+ctx._fxExplota = true;
+gr = ctx.guardarRecurrente(Object.assign({}, recBase19, { monto: 7777 }));
+ctx._fxExplota = false;
+ok(gr.ok === true && gr.sincronizado === false && /API caida/.test(gr.aviso || ''),
+    'fase 2 caida: ok:true + sincronizado:false + aviso con la razon, dio ' + JSON.stringify({ ok: gr.ok, s: gr.sincronizado, a: gr.aviso }));
+ok(ctx.obtenerRecurrentes().recurrentes[0].monto === 7777,
+    'y el recurrente quedo guardado igual: la API caida no le hace perder el dato al usuario');
+ctx.sincronizarRecurrentes();
+
+// LA VERIFICACION DE VIGENCIA FALLA: el ok:false NO puede dejar la BD cambiada (2026-08-30).
+// Antes se devolvia el error con la fila YA ESCRITA y sin correr la fase 2: el usuario veia un
+// fallo, el recurrente quedaba en la hoja y la proyeccion no se sincronizaba -- un estado a
+// medias que el mensaje ni nombraba. Se fuerza el desvio haciendo mentir a la relectura, que es
+// exactamente lo que pasa en la planilla si la celda J o K quedo como Date en vez de texto.
+{
+    const realObtener = ctx.obtenerRecurrentes;
+    const mentir = function () {
+        const r = realObtener();
+        if (r.ok) r.recurrentes.forEach(function (x) { x.hasta = '1999-01'; });
+        return r;
+    };
+
+    // (a) EDICION: la fila anterior se repone tal cual.
+    const antesEdicion = JSON.parse(JSON.stringify(realObtener().recurrentes));
+    ctx.obtenerRecurrentes = mentir;
+    let gv = ctx.guardarRecurrente(Object.assign({}, recBase19, { monto: 31337 }));
+    ctx.obtenerRecurrentes = realObtener;
+    ok(gv.ok === false && /no quedo como se escribio/.test(gv.error || ''),
+        'una vigencia que no verifica devuelve ok:false, dio: ' + (gv.error || '').slice(0, 80));
+    ok(/se repuso como estaba antes/.test(gv.error || ''),
+        'y el mensaje DICE en que estado quedo la hoja, no lo deja implicito');
+    const despuesEdicion = realObtener().recurrentes;
+    ok(JSON.stringify(despuesEdicion) === JSON.stringify(antesEdicion),
+        'la BD quedo EXACTAMENTE como estaba (monto ' + despuesEdicion[0].monto + ', no 31337)');
+
+    // (b) ALTA: el alta se quita entera, no queda un recurrente fantasma.
+    const cuantosAntes = realObtener().recurrentes.length;
+    ctx.obtenerRecurrentes = mentir;
+    gv = ctx.guardarRecurrente(Object.assign({}, recBase19, { nombre: 'Fantasma', monto: 999 }));
+    ctx.obtenerRecurrentes = realObtener;
+    ok(gv.ok === false && /NO quedo guardado/.test(gv.error || ''),
+        'un ALTA que no verifica se retira y el mensaje lo dice, dio: ' + (gv.error || '').slice(-70));
+    const nombresDespues = realObtener().recurrentes.map(function (x) { return x.nombre; });
+    ok(realObtener().recurrentes.length === cuantosAntes && nombresDespues.indexOf('Fantasma') === -1,
+        'y "Fantasma" no quedo en la hoja: ' + JSON.stringify(nombresDespues));
+}
+
+// ESTADO DEL HORIZONTE: solo lectura, no escribe, y dice si quedo corto.
+let eh19 = ctx.estadoHorizonteRecurrentes();
+ok(eh19.ok === true && eh19.desincronizado === false && eh19.mesesFaltantes.length === 0,
+    'estadoHorizonteRecurrentes: al dia despues de sincronizar');
+ok(eh19.ventana.desde === ventana19[0] && eh19.ventana.hasta === ventana19[ventana19.length - 1],
+    'la ventana informada es la real');
+ok(eh19.activos === 1 && eh19.pausados === 0 && eh19.filasEnVentana === ctx.REC_HORIZONTE_MESES,
+    'informa activos, pausados y filas en ventana');
+{
+    // Se saca una fila a mano: el estado tiene que verlo y NO arreglarlo solo.
+    const filasV = ctx._filasRecEnClaves(hojaProy19, ventana19);
+    hojaProy19.deleteRows(filasV[0], 1);
+    const antesDeMedir = filasRecEnVentana();
+    eh19 = ctx.estadoHorizonteRecurrentes();
+    ok(eh19.desincronizado === true && eh19.mesesFaltantes.length === 1,
+        'si el horizonte quedo corto, el estado lo dice (mesesFaltantes)');
+    ok(filasRecEnVentana() === antesDeMedir, 'y NO escribe nada al medir: leer no vuelca');
+    ctx.sincronizarRecurrentes();
+}
+
+{
+    // LO QUE QUEDO FUERA DE LA VENTANA HACIA ADELANTE (2026-08-30). El modelo viejo dejaba
+    // volcar a cualquier mes entre 2024 y 2100, asi que una planilla real puede tener filas REC
+    // en meses lejanos. El horizonte rodante NO las toca -- _escribirClavesRec no toca una fila
+    // fuera de sus claves, jamas -- pero la proyeccion las sigue sumando aunque la vigencia diga
+    // otra cosa. Hasta esta version nada las denunciaba. Se siembra una en ventana+13.
+    const lejano = new Date();
+    const dLejano = new Date(lejano.getFullYear(), lejano.getMonth() + ctx.REC_HORIZONTE_MESES + 1, 1);
+    const claveLejana = dLejano.getFullYear() + '-' + String(dLejano.getMonth() + 1).padStart(2, '0');
+    const cfgP19 = ctx.RANGES.REGISTROS;
+    const anchoP19 = col19(cfgP19.end) - col19(cfgP19.start) + 1;
+    const filaLejana = new Array(anchoP19).fill('');
+    filaLejana[col19(cfgP19.columns.monto) - col19(cfgP19.start)] = 12345;
+    filaLejana[col19(cfgP19.columns.moneda) - col19(cfgP19.start)] = 'ARS';
+    filaLejana[col19(cfgP19.columns.fecha) - col19(cfgP19.start)] = new Date(dLejano.getFullYear(), dLejano.getMonth(), 5);
+    filaLejana[col19(cfgP19.columns.nota) - col19(cfgP19.start)] =
+        ctx.REC_MARCA + ' ' + claveLejana + ' 2026-01-01_000000 - Volcado viejo';
+    hojaProy19.getRange(hojaProy19.getLastRow() + 1, col19(cfgP19.start), 1, anchoP19).setValues([filaLejana]);
+
+    const antesSync = hojaProy19.getLastRow();
+    const srLejano = ctx.sincronizarRecurrentes();
+    ok(srLejano.ok === true, 'la sincronizacion corre con una fila REC fuera de la ventana: ' + (srLejano.error || 'ok'));
+    ok(ctx._recPosterioresRec(hojaProy19, ventana19[ventana19.length - 1]).filas === 1,
+        'y la fila lejana SOBREVIVE: el horizonte no toca nada fuera de sus claves');
+    ok(hojaProy19.getLastRow() >= antesSync - ctx.REC_HORIZONTE_MESES,
+        'la hoja no se vacio: la fila lejana sigue contada en el total');
+
+    const ehLejano = ctx.estadoHorizonteRecurrentes();
+    ok(ehLejano.sobrantes === 1 && (ehLejano.mesesSobrantes || [])[0] === claveLejana,
+        'el estado la REPORTA como sobrante y nombra su mes (' + claveLejana + '), dio ' +
+        JSON.stringify({ n: ehLejano.sobrantes, m: ehLejano.mesesSobrantes }));
+    ok(ehLejano.filasEnVentana === ctx.REC_HORIZONTE_MESES,
+        'sin contarla como si estuviera en la ventana: filasEnVentana sigue en ' + ehLejano.filasEnVentana);
+    ok(ehLejano.desincronizado === false,
+        'y NO se declara desincronizado por ella: "Poner al dia" no la puede arreglar, seria un boton que miente');
+
+    // Lo de ATRAS no es sobrante: es historia congelada por el invariante duro del modulo.
+    ok(ctx._recPosterioresRec(hojaProy19, ventana19[ventana19.length - 1]).claves.length === 1,
+        'la fila REC de un mes PASADO (sembrada al inicio de la seccion) no se cuenta como sobrante');
+
+    // Se retira para no contaminar los escenarios siguientes.
+    const filasLejanas = [];
+    const notasTodas = hojaProy19.getRange(cfgP19.dataRow, col19(cfgP19.columns.nota),
+        hojaProy19.getLastRow() - cfgP19.dataRow + 1, 1).getValues();
+    notasTodas.forEach(function (f, i) {
+        if (String(f[0] || '').indexOf(ctx.REC_MARCA + ' ' + claveLejana + ' ') === 0) filasLejanas.push(cfgP19.dataRow + i);
+    });
+    filasLejanas.reverse().forEach(function (f) { hojaProy19.deleteRows(f, 1); });
+    ok(ctx._recPosterioresRec(hojaProy19, ventana19[ventana19.length - 1]).filas === 0,
+        'y se limpia el escenario: cero sobrantes al salir');
+}
+
 let br = ctx.borrarRecurrente('No Existe');
 ok(br.ok === false && /No existe un recurrente/.test(br.error), 'borrar un recurrente inexistente avisa');
 br = ctx.borrarRecurrente('Netflix');
 ok(br.ok === true && ctx.obtenerRecurrentes().recurrentes.length === 0,
-    'borrar quita la fila de la BD (lo ya volcado no se toca)');
-ok(filasRec19() === 1, 'y efectivamente lo volcado sigue en Proyeccion');
+    'borrar quita la fila de la BD');
+ok(br.sincronizado === true && filasRecEnVentana() === 0,
+    'y la fase 2 lo saca del horizonte entero, dio ' + filasRecEnVentana() + ' fila(s)');
+ok(notasProy19().indexOf(notaPasada19) !== -1,
+    'pero lo proyectado en un mes ANTERIOR al mes en curso queda: la historia no se reescribe');
 
 seccion('20. El cliente de las tres vistas nuevas');
 // El backend ya se probo en la 19; aca se prueba que el HTML lo INVOQUE de verdad y que el
@@ -882,19 +1117,62 @@ ok(/PLANTILLA_PROYECCION/.test(HTML) && /abrirBloqueProyeccion/.test(HTML),
 ok(/no lleva cotizacion congelada/.test(HTML) === false,
     'el texto falso sobre cotizaciones no congeladas se retiro: PG congela J:M desde v0.50.0');
 
-// -- Recurrentes --
-ok(/id="recLista"/.test(HTML) && /id="recBtnVolcar"/.test(HTML) &&
-   /id="recMes"/.test(HTML) && /id="recAnio"/.test(HTML),
-    'la vista recurrentes tiene lista, periodo (mes y anio) y boton de volcado');
+// -- Recurrentes: HORIZONTE RODANTE CON VIGENCIA (v0.64.0) --
+// EL SELECTOR DE MES SE FUE. Las aserciones son INVERSAS a proposito: el modelo viejo hacia
+// elegir un mes y apretar "volcar", y la unica forma de que eso no vuelva de a poco es que su
+// vocabulario entero (los dos ids, la funcion de armado, la confirmacion y el boton) tenga un
+// test que se ponga rojo si reaparece.
+ok(/id="recLista"/.test(HTML) && /id="recBtnSync"/.test(HTML),
+    'la vista recurrentes tiene su lista y UN boton de conjunto: poner al dia la proyeccion');
+ok(!/id="recMes"/.test(HTML) && !/id="recAnio"/.test(HTML),
+    'y ya no tiene selector de mes ni de anio: el usuario no elige un mes');
+['llenarPeriodoVolcado', 'pedirVolcado', 'mostrarConfirmacionVolcado'].forEach(function (fn) {
+    ok(!new RegExp('function ' + fn + '\\(').test(jsShell),
+        fn + '() se retiro del cliente con el modelo viejo');
+});
 ok(/enviar\('guardarRecurrente'/.test(HTML) && /enviar\('borrarRecurrente'/.test(HTML) &&
-   /enviar\('volcarRecurrentesAlMes'/.test(HTML),
-    'recurrentes guarda, borra y vuelca por enviar()');
-ok(usadas.has('obtenerRecurrentes') && usadas.has('estadoVolcadoRecurrentes'),
-    'la lista se lee del backend y el volcado pide su estado ANTES de escribir');
+   /enviar\('sincronizarRecurrentes'/.test(HTML),
+    'recurrentes guarda, borra y sincroniza por enviar()');
+ok(usadas.has('obtenerRecurrentes') && usadas.has('estadoHorizonteRecurrentes'),
+    'la lista se lee del backend y el estado del horizonte se PIDE al entrar, sin escribir');
+ok(/function pedirEstadoHorizonte\([\s\S]*?estadoHorizonteRecurrentes\(\)/.test(jsShell) &&
+   !/function pedirEstadoHorizonte\([\s\S]*?\.sincronizarRecurrentes\(/.test(jsShell),
+    'entrar a la vista es SOLO LECTURA: el preparador mide, nunca sincroniza (volcar como ' +
+    'efecto de mirar es el efecto oculto que este modelo vino a sacar)');
+ok(/boton\.classList\.toggle\('hidden', !r\.desincronizado\)/.test(jsShell),
+    'el boton primario aparece SOLO si desincronizado === true: al dia no hay nada que hacer');
 ok(/Confirmar borrado/.test(HTML),
     'borrar pide un segundo click sobre el mismo boton: dos pasos, sin dialogo nativo');
-ok(/Confirmar volcado/.test(HTML) && /alert-warning/.test(HTML),
-    'el volcado se confirma INLINE con los numeros reales, nunca como efecto oculto');
+// FASE 2: el recurrente NUNCA se pierde por culpa de la API (Regla Estricta 9).
+{
+    const cuerpoEnviar = (jsShell.match(/function enviar\([\s\S]*?\n\}/) || [''])[0];
+    ok(/r\.ok && r\.aviso/.test(cuerpoEnviar) && /alSalirBien\(\)/.test(cuerpoEnviar),
+        'enviar() distingue ok:true con aviso: la escritura entro y la sincronizacion no, ' +
+        'y no lo trata como un fallo del guardado');
+    ok(/mostrarAvisoConAccion\([\s\S]*?'Reintentar sincronizacion', sincronizarRecurrentesUI\)/
+            .test(cuerpoEnviar),
+        'y ofrece el reintento al lado del motivo, en vez de silenciar el fallo');
+}
+ok(/function mostrarAvisoConAccion\(/.test(jsShell) &&
+   /alerta\.className = 'alert alert-warning'/.test(jsShell),
+    'ese aviso reusa el markup de la confirmacion que se borro: cero CSS y cero color nuevo');
+// VIGENCIA: dos campos nuevos que viajan en las dos direcciones.
+ok(/class="form-input r-desde" type="month"/.test(HTML) &&
+   /class="form-input r-hasta" type="month"/.test(HTML),
+    'el bloque tiene Desde y Hasta como type="month": la clave YYYY-MM sin parseo de texto libre');
+{
+    const cuerpoGuardarRec = (jsShell.match(/function guardarRecurrenteUI\([\s\S]*?\n\}/) || [''])[0];
+    ok(/desde: b\.querySelector\('\.r-desde'\)\.value/.test(cuerpoGuardarRec) &&
+       /hasta: b\.querySelector\('\.r-hasta'\)\.value/.test(cuerpoGuardarRec),
+        'la vigencia VIAJA al backend en el payload de guardarRecurrente');
+    ok(/r\.desde \|\| ''/.test(jsShell) && /r\.hasta \|\| ''/.test(jsShell),
+        'y vuelve a poblar el bloque desde la hoja: vacio sigue siendo vacio, sin default inventado');
+}
+ok(/Vacio = siempre/.test(HTML) && /Vacio = sin fin/.test(HTML) &&
+   /Sale de los meses futuros/.test(HTML),
+    'pausar y poner fecha de fin se distinguen en UNA linea cada uno, no en un parrafo');
+ok(/Los cambios entran desde el mes en curso/.test(HTML),
+    'y la consecuencia declarada del modelo (el mes en curso SI se reescribe) esta dicha');
 ok(/data-v="Si"/.test(HTML) && /data-v="No"/.test(HTML) &&
    /\[data-activo="Si"\]/.test(HTML) && /\[data-activo="No"\]/.test(HTML),
     'el estado Activo/Pausado usa el segmentado y el punto del resumen, verde/ambar del semaforo');
@@ -1049,8 +1327,11 @@ ok(/toLocaleString/.test(jsShell) === false,
     'el formato de plata es el de la casa (toFixed + coma), no el toLocaleString del modal');
 ok(/aNumero\(crudo\)/.test(jsShell),
     'el monto tipeado se parsea con aNumero(): acepta la coma decimal es-AR, que el modal rechazaba');
-ok(/Se puede deshacer justo /.test(HTML) && /por un total de/.test(HTML),
-    'la confirmacion de baja dice CUANTO se borra y que la reversion dura un solo cambio');
+ok(/Se puede deshacer\.<\/p>/.test(HTML) && !/Se puede deshacer justo /.test(HTML),
+    'la confirmacion de baja es UNA linea: se cayo el matiz "pero no una vez que hagas otro ' +
+    'cambio", que no cambiaba la decision en ese momento -- el boton Deshacer la sostiene');
+ok(/Borrar <b>' \+ filas\.length \+ '<\/b> filas de/.test(jsShell),
+    'y sigue diciendo CUANTAS filas y de que mes se borran');
 ok(/PABM_MONEDAS_ORDEN\.indexOf/.test(jsShell),
     'ese total se ordena por moneda y nunca suma monedas distintas entre si (ADR-003)');
 ok(/'guardado'/.test(jsShell) && /'shell'/.test(jsShell) && /'recurrentes'/.test(jsShell) &&
@@ -1058,8 +1339,9 @@ ok(/'guardado'/.test(jsShell) && /'shell'/.test(jsShell) && /'recurrentes'/.test
     'las cinco poblaciones del servidor tienen su seccion en la vista');
 ok(/siempre: true/.test(jsShell) && /siempre: false/.test(jsShell),
     "la asimetria deliberada se conserva: 'guardado' y 'base' se ven aun vacias, las otras no");
-ok(/msgVacio/.test(jsShell),
-    'y las dos que se ven vacias traen su propio mensaje ("todo base, cero guardado" es produccion)');
+ok(!/msgVacio/.test(jsShell) && /vacioRot/.test(jsShell) && /vacioRuta/.test(jsShell),
+    'y las dos que se ven vacias cambiaron su parrafo por una linea con boton ' +
+    '("todo base, cero guardado" sigue siendo el estado real de produccion y se sigue viendo)');
 ok(/pabm-nota/.test(HTML),
     'la nota libre del usuario se muestra APARTE del sello, bajo la cuenta');
 ok(/\.btn--mini, \.alert \.btn \{ height: 32px; padding: 0 12px; font-size: 12px; \}/.test(HTML),
@@ -1126,8 +1408,16 @@ ok(!/<th>Categoria<\/th>/.test(HTML),
         subGuardar.items.filter((i) => /Aplicar/.test(i.name || ''))[0].name;
     ok(HTML.indexOf(rutaViva) !== -1,
         'la vista deriva del menu la ruta literal "' + rutaViva + '"');
-    ok((HTML.match(new RegExp(rutaViva.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length >= 2,
-        'y la dicen las DOS menciones: el hint de cabecera y el vacio de "Guardado a mano"');
+    // DENSIDAD 2026-08-30: la ruta dejo de estar DOS veces como prosa permanente (el parrafo de
+    // cabecera y el estado vacio de 133 caracteres). Queda UNA sola vez, y como respuesta a un
+    // click: es el `vacioRuta` del estado vacio de "Guardado a mano", que el boton revela.
+    // La otra mencion, la del bloqueo de edicion, la manda ahora el SERVIDOR
+    // (PA_MSJ_NO_EDITABLE, cruzado contra MENU_CONFIG por probar_proyeccion_abm.js): el cliente
+    // no la retipea, la muestra.
+    ok(new RegExp("vacioRuta: '" + rutaViva.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'").test(jsShell),
+        'y vive en el vacioRuta de la seccion, que el boton del estado vacio revela al apretarlo');
+    ok(!/<p class="conc-hint">Aca vive lo ya guardado/.test(HTML),
+        'el parrafo de cabecera de 212 caracteres que la repetia se retiro entero');
 }
 ok(!/Guardar Proyeccion" desde la hoja Presupuesto/.test(HTML) &&
    !/\(Guardar Proyeccion, menu tidetrack Dev\)/.test(HTML),
@@ -1155,9 +1445,15 @@ ok(/<button type="button" class="pabm-monto" onclick="pabmEditarMonto\(this\)">/
     'y el monto editable tambien es un <button>, no un <span> con onclick');
 ok(!/<div class="pabm-head"/.test(HTML) && !/<span class="pabm-monto"/.test(HTML),
     'no queda ningun control de la vista fuera del orden de tabulacion');
-ok(/\.pabm-head:focus-visible \{ outline: 2px solid var\(--teal-tinta\)/.test(HTML) &&
-   /\.pabm-monto:focus-visible \{ outline: 2px solid var\(--teal-tinta\)/.test(HTML),
+ok(/\.pabm-head:focus-visible \{ outline: 2px solid var\(--tt-teal\)/.test(HTML) &&
+   /\.pabm-monto:focus-visible \{ outline: 2px solid var\(--tt-teal\)/.test(HTML),
     'los dos tienen el mismo anillo de foco que .bloque-resumen: cero color nuevo');
+// El token --teal-tinta era un teal OSCURECIDO A MANO para poder escribir con el, porque la
+// menta #2ECAB0 daba 1.86:1 sobre blanco. El teal del brandbook Ed.03 da 6.00:1 calculado, asi
+// que ese token dejo de tener razon de existir: dos nombres para un solo valor es la clase de
+// duplicacion que este repo persigue en el CSS.
+ok(!/teal-tinta:/.test(HTML) && !/var\(--teal-tinta\)/.test(HTML),
+    'y --teal-tinta se retiro: con #2E6B7A no hace falta un segundo teal para poder escribir');
 ok(/headEl\.setAttribute\('aria-expanded', 'true'\)/.test(jsShell) &&
    /headEl\.setAttribute\('aria-expanded', 'false'\)/.test(jsShell),
     'aria-expanded lo mantiene sincronizado el toggle, no se queda mintiendo al plegar');
@@ -1187,12 +1483,17 @@ ok(/titulo: 'Cargadas a mano en tidetrack'/.test(jsShell) &&
 // asi que el control quedaba SIN NINGUN indicador justo mientras se lo estaba usando. Es la
 // cicatriz v0.55.2 dada vuelta -- cero flechas en vez de dos -- y el guard de flechas de esta
 // misma seccion no la veia porque solo auditaba .combo.
+// ACTUALIZADO v0.64.0: la regla dejo de ser una lista de dos selectores. Los <select> de
+// mes/anio de recurrentes eran el UNICO consumidor de .shell-acciones .form-input y se fueron
+// con el modelo de horizonte rodante, asi que la regla se retiro entera -- una regla sin
+// consumidor es exactamente lo que persigue el guard 31, dos secciones mas abajo.
 {
     const reglaSelect = (HTML.match(
-        /\.f select\.form-input,\s*\n\.shell-acciones \.form-input \{([^}]*)\}/) || ['', ''])[1];
+        /\.f select\.form-input \{([^}]*)\}/) || ['', ''])[1];
     const focoSelect = (HTML.match(
-        /\.f select\.form-input:focus,\s*\n\.shell-acciones \.form-input:focus \{([^}]*)\}/) ||
-        ['', ''])[1];
+        /\.f select\.form-input:focus \{([^}]*)\}/) || ['', ''])[1];
+    ok(!/\.shell-acciones \.form-input/.test(HTML),
+        'la barra de acciones ya no declara .form-input: se quedo sin consumidor y se retiro');
     ok(/appearance:\s*none/.test(reglaSelect) && /var\(--chevron\)/.test(reglaSelect),
         'los <select> del shell apagan la flecha nativa y dibujan el chevron de la casa');
     ok(/var\(--chevron\)/.test(focoSelect),
@@ -1200,7 +1501,7 @@ ok(/titulo: 'Cargadas a mano en tidetrack'/.test(jsShell) &&
     const offsets = [...(reglaSelect + focoSelect).matchAll(/right (\d+)px center/g)]
         .map((m) => m[1]);
     ok(offsets.length === 2 && offsets[0] === offsets[1],
-        'las dos reglas usan el MISMO offset: la ley "una sola flecha" dejo de estar escrita ' +
+        'base y foco usan el MISMO offset: la ley "una sola flecha" dejo de estar escrita ' +
         'dos veces con dos valores (' + offsets.join(' / ') + ')');
     ok((HTML.match(/appearance: none; -webkit-appearance: none; -moz-appearance: none;/g) || [])
             .length === 1,
@@ -1226,8 +1527,8 @@ ok((HTML.match(/box-shadow: inset 0 0 0 1px rgba\(178,59,50,\.22\);/g) || []).le
 // (10) EL SEGMENTADO NEUTRO LLEGA A AA. rgba(46,202,176,.14) sobre --tt-gris componia un
 // #D8F1F0 efectivo: 4.38:1 contra --teal-tinta a 12.5px/600, el mas flojo de los cuatro
 // estados presionados del mismo componente. El guard de paleta mira procedencia, no contraste.
-ok(/\[data-v="Editar"\] \{\s*background: #FFFFFF; color: var\(--teal-tinta\);/.test(HTML),
-    'el presionado neutro Crear/Editar es una pastilla BLANCA con los anillos teal: 5.18:1');
+ok(/\[data-v="Editar"\] \{\s*background: #FFFFFF; color: var\(--tt-teal\);/.test(HTML),
+    'el presionado neutro Crear/Editar es una pastilla BLANCA con los anillos teal: 6.00:1');
 ok(!/\[data-v="Crear"\],\s*\n\.seg button\[aria-pressed="true"\]\[data-v="Editar"\] \{\s*background: rgba/
         .test(HTML),
     'y ningun estado presionado del segmentado se pinta con un relleno translucido: los cuatro ' +
@@ -1260,7 +1561,7 @@ ok(/El detalle NO se anima como \.bloque-cuerpo/.test(HTML),
 //    aca se fija que los OCHO endpoints nuevos esten de verdad implementados) --
 ['registrarProyecciones', 'obtenerSaldosConciliacion', 'registrarConciliacion',
  'obtenerRecurrentes', 'guardarRecurrente', 'borrarRecurrente',
- 'estadoVolcadoRecurrentes', 'volcarRecurrentesAlMes'].forEach(function (fn) {
+ 'estadoHorizonteRecurrentes', 'sincronizarRecurrentes'].forEach(function (fn) {
     ok(new RegExp(fn + ': function').test(DOBLE),
         'el doble implementa ' + fn + ' (metodo real, no solo whitelist)');
 });
@@ -1282,14 +1583,67 @@ camposCatalogo.forEach(function (campo) {
 });
 // Lo mismo para los endpoints de medicion (asi se cazo 'pausados'). Salvedad documentada:
 // el alias generico 'r' puede dar falso positivo si dos endpoints comparten nombre de campo.
+// estadoVolcadoRecurrentes SALIO de esta lista: desde v0.64.0 el cliente no lo llama (se fue
+// con el selector de mes). Su reemplazo, estadoHorizonteRecurrentes, entra en su lugar -- y con
+// el mismo rigor: los SIETE campos tienen que tener lector. Asi se cazo 'pausados' en su dia.
 [['obtenerSaldosConciliacion', ctx.obtenerSaldosConciliacion()],
- ['estadoVolcadoRecurrentes', ctx.estadoVolcadoRecurrentes(periodo19)]].forEach(function (par) {
+ ['estadoHorizonteRecurrentes', ctx.estadoHorizonteRecurrentes()]].forEach(function (par) {
     ok(par[1] && par[1].ok === true, par[0] + ' respondio ok para poder listar sus campos');
     Object.keys(par[1] || {}).filter(k => k !== 'ok' && k !== 'error').forEach(function (campo) {
         ok(new RegExp('\\b(?:r|saldosConc)\\s*\\.\\s*' + campo + '\\b').test(jsShell),
             par[0] + '.' + campo + ' tiene lector en el cliente');
     });
 });
+
+// GUARD DE TRANSICION (v0.64.0), en TRES estados y no en dos. La version anterior asumia que la
+// UI nueva y el retiro de los endpoints transitorios del backend caian en el mismo commit. No
+// cayeron: la etapa de UI (esta) borro el selector de mes, y el retiro de volcarRecurrentesAlMes
+// y estadoVolcadoRecurrentes de 17_RecurrentesService.js es un paso propio, con su propia
+// verificacion. Un guard que se pone rojo en un estado sano -- porque el repo esta en un punto
+// intermedio que el guard no contemplo -- es tan malo como uno que afirma de mas.
+//
+// El estado se DERIVA del repo, no se declara a mano, y cada uno exige lo suyo:
+//   A. UI vieja (existe #recMes): estadoHorizonteRecurrentes no tiene por que estar consumido.
+//   B. UI nueva, backend con los transitorios todavia vivos: el cliente NO puede llamarlos, y
+//      todos los campos del payload nuevo tienen que tener lector. Es donde esta el repo hoy.
+//   C. UI nueva y transitorios retirados: ademas, no queda rastro de ellos en el backend.
+// DEUDA CON NOMBRE Y CONDICION: el paso de B a C es retirar volcarRecurrentesAlMes(d) y
+// estadoVolcadoRecurrentes(d) de 17_RecurrentesService.js -- ya no tienen un solo llamador -- y
+// con ellos sus casos de la seccion 19 y del doble. Este guard lo detecta solo y cambia de rama.
+{
+    const uiVieja = /id="recMes"/.test(HTML);
+    const REC_SRC = leerSrc('src/17_RecurrentesService.js');
+    const transitoriosVivos = /function volcarRecurrentesAlMes/.test(REC_SRC);
+    const eh = ctx.estadoHorizonteRecurrentes();
+    ok(eh.ok === true, 'estadoHorizonteRecurrentes respondio ok para poder listar sus campos');
+    const campos = Object.keys(eh).filter(k => k !== 'ok' && k !== 'error');
+    if (uiVieja) {
+        ok(/enviar\('volcarRecurrentesAlMes'/.test(HTML),
+            'ESTADO A: la vista de recurrentes es todavia la del modelo viejo (selector de mes + ' +
+            'boton de volcado), por eso los dos endpoints transitorios siguen vivos');
+        ok(typeof ctx.sincronizarRecurrentes === 'function' && typeof ctx.estadoHorizonteRecurrentes === 'function',
+            'y el backend ya expone el modelo nuevo, listo para que la UI lo estrene: ' + campos.join(', '));
+    } else {
+        campos.forEach(function (campo) {
+            ok(new RegExp('\\br\\s*\\.\\s*' + campo + '\\b').test(jsShell),
+                'estadoHorizonteRecurrentes.' + campo + ' tiene lector en el cliente');
+        });
+        ok(!/volcarRecurrentesAlMes/.test(jsShell) && !/estadoVolcadoRecurrentes/.test(jsShell),
+            'con la vista nueva, los dos endpoints transitorios ya no se llaman desde el cliente');
+        ok(!usadas.has('volcarRecurrentesAlMes') && !usadas.has('estadoVolcadoRecurrentes'),
+            'y tampoco quedan en el cruce de endpoints que el shell invoca de verdad');
+        if (transitoriosVivos) {
+            ok(typeof ctx.volcarRecurrentesAlMes === 'function',
+                'ESTADO B (el de hoy): la UI ya es la nueva y los transitorios siguen en el ' +
+                'backend, sin ningun llamador. Retirarlos es el paso siguiente, y este guard ' +
+                'pasa solo a la rama C cuando eso ocurra');
+        } else {
+            ok(!/estadoVolcadoRecurrentes/.test(REC_SRC),
+                'ESTADO C: los dos transitorios se retiraron del backend, no queda un camino de ' +
+                'escritura sin UI que lo justifique');
+        }
+    }
+}
 
 seccion('22. Correcciones de la pasada adversarial post-v0.58.0');
 // -- (1) La escritura por tandas NO pisa una fila tipeada a mano en el medio de la grilla --
@@ -1343,28 +1697,39 @@ rc = ctx.registrarConciliacion([{ medio: 'Galicia', saldoReal: 100 }]);
 ok(rc.ok === false && /Volve a entrar a Conciliacion/.test((rc.problemas || []).join(' ')),
     'saldoVisto ausente o no numerico se rechaza explicito en vez de apagar el guard (NaN > x da false)');
 
-// -- (19) anio fuera de rango en el volcado --
-let vr22 = ctx.volcarRecurrentesAlMes({ mes: 8, anio: 26 });
-ok(vr22.ok === false && /cuatro cifras/.test(vr22.error || ''),
-    'anio de dos digitos se rechaza: Date lo mapearia a 1926 y el volcado seria invisible');
-ok(ctx.estadoVolcadoRecurrentes({ mes: 8, anio: 2026.5 }).ok === false,
-    'anio no entero tambien se rechaza, en el estado y en el volcado');
+// -- (19) El anio ya no puede venir del cliente: se retiro con volcarRecurrentesAlMes(d).
+// Aquel endpoint tomaba {mes, anio} y _periodoValidoRec atajaba el anio de dos digitos (Date
+// mapea 26 a 1926 y el volcado quedaba invisible). El modelo de horizonte rodante no acepta un
+// periodo: la ventana la calcula el backend con _clavesVentanaRec. Lo que se verifica ahora es
+// que la ventana sea siempre de cuatro cifras, sin que nadie pueda pasarle otra cosa.
+ok(ctx._clavesVentanaRec().every(c => /^\d{4}-\d{2}$/.test(c)),
+    'las claves de la ventana son siempre YYYY-MM: el anio ya no viaja desde el cliente');
 
-// -- (6) El volcado revalida lo leido de la hoja Recurrentes y corta ANTES de borrar --
+// -- (6) La sincronizacion revalida lo leido de la hoja Recurrentes y corta ANTES de borrar --
 gr = ctx.guardarRecurrente(recBase19);
 ok(gr.ok === true, 'se re-crea el recurrente para el escenario de hoja corrupta');
 const hojaRec22 = hojasFalsas[ctx.SHEETS.RECURRENTES];
 const cfgRec22 = ctx.RANGES.RECURRENTES;
+const filasHorizonte22 = () => ctx._filasRecEnClaves(hojaProy19, ctx._clavesVentanaRec()).length;
+const antesCorrupto22 = filasHorizonte22();
 const celdaMonto22 = hojaRec22.getRange(cfgRec22.dataRow, col19(cfgRec22.columns.monto), 1, 1);
 celdaMonto22.setValue('$4.500');   // pegado a mano en la hoja oculta: Number() da NaN
-vr22 = ctx.volcarRecurrentesAlMes(periodo19);
-ok(vr22.ok === false && /Netflix/.test(vr22.error || ''),
-    'un monto con texto corta el volcado NOMBRANDO la fila invalida (antes fallaba abierto: NaN > tolerancia da false)');
-ok(filasRec19() === 1, 'y el volcado previo del mes quedo intacto: se corto antes de borrar');
+let sr22 = ctx.sincronizarRecurrentes();
+ok(sr22.ok === false && /Netflix/.test(sr22.error || '') && /monto/.test(sr22.error || ''),
+    'un monto con texto corta la sincronizacion NOMBRANDO la fila y el campo invalidos (antes fallaba abierto: NaN > tolerancia da false)');
+ok(filasHorizonte22() === antesCorrupto22, 'y el horizonte previo quedo intacto: se corto antes de borrar');
+// La vigencia entra en la MISMA revalidacion: la hoja es oculta pero editable a mano.
 celdaMonto22.setValue(5000);
-vr22 = ctx.volcarRecurrentesAlMes(periodo19);
-ok(vr22.ok === true && filasRec19() === 1,
-    'con el monto reparado el volcado vuelve a operar (y sigue idempotente)');
+const celdaHasta22 = hojaRec22.getRange(cfgRec22.dataRow, col19(cfgRec22.columns.hasta), 1, 1);
+celdaHasta22.setValue('el ano que viene');
+sr22 = ctx.sincronizarRecurrentes();
+ok(sr22.ok === false && /Netflix/.test(sr22.error || '') && /Hasta/.test(sr22.error || ''),
+    'una vigencia ilegible pegada a mano tambien corta, nombrando el campo Hasta');
+ok(filasHorizonte22() === antesCorrupto22, 'y tampoco toco el horizonte');
+celdaHasta22.setValue('');
+sr22 = ctx.sincronizarRecurrentes();
+ok(sr22.ok === true && filasHorizonte22() === ctx.REC_HORIZONTE_MESES,
+    'con la hoja reparada la sincronizacion vuelve a operar y llena el horizonte, dio ' + filasHorizonte22());
 
 // -- (21) Dos lotes de proyecciones en el mismo segundo: el rollback no cruza corridas --
 const notasAntes22 = notasProy19().length;
@@ -1411,7 +1776,7 @@ ok(!/mostrarOk\(r\.mensaje[^\n]*;\s*alSalirBien\(\)/.test(jsShell),
 // -- (12) Los botones por bloque de recurrentes se deshabilitan mientras viaja --
 ok(/typeof bt === 'string' \? document\.getElementById\(bt\) : bt/.test(jsShell),
     'enviar() acepta elementos ademas de ids: los botones por bloque no tienen id');
-ok((jsShell.match(/\['recBtnVolcar', btn\]/g) || []).length === 2,
+ok((jsShell.match(/\['recBtnSync', btn\]/g) || []).length === 2,
     'guardar Y borrar de cada bloque recurrente pasan SU boton a enviar (doble Enter bloqueado)');
 
 // -- (13) Con el catalogo caido, los botones Agregar no tiran TypeError ni dejan DOM a medias --
@@ -1476,35 +1841,88 @@ ok(/Proyecciones Elaboradas, aca en tidetrack/.test(HTML),
     'el hint apunta a la VISTA con el rotulo exacto del item de MENU_CONFIG ("Proyecciones ' +
     'Elaboradas") y dice que vive aca adentro, no en otro modal del menu');
 
-seccion('23. GUARD DE PALETA: el shell viste el brandbook, cero hex fuera de lista');
-// decision Franco 2026-08-29: "esta quedando buenisimo de UX pero no son los colores de la
-// marca. Ajusta colores." Los colores base son CINCO; todo tono intermedio es un derivado
-// DECLARADO por la spec Corriente. Un hex que no este en esta lista es un color inventado
-// (los grises #e2e5e9/#dadfe4 y familia, el navy viejo) y pone el banco en ROJO. Esta lista
-// es la regla ejecutable: cada entrada dice de que deriva y para que sirve.
+seccion('23. GUARD DE PALETA: el shell viste el brandbook Ed.03, cero hex fuera de lista');
+// PEDIDO DE FRANCO 2026-08-30, textual: "Me gusta ese verde agua, pero la identidad de tidetrack
+// esta mas asociada a un color navy #1E2A55 y, de ultima, podrias utilizar tambien color teal
+// #2E6B7A". La lista blanca se REEMPLAZO entera: el teal menta #2ECAB0 y sus tres derivados,
+// el ink #1E2A33 con sus dos aclarados, el gris #F4F7FA y el durazno #FFB380 SALIERON del
+// proyecto. Los que entran son los tokens del brandbook Ed.03 mas los tres pares del semaforo.
+//
+// REGLA DE ORO del brandbook, que es la que ordena para que sirve cada uno: "El navy es la voz,
+// el cloud es el espacio. Todo lo demas se usa con cuidado."
+//
+// Los contrastes de los comentarios estan CALCULADOS (WCAG 2.x, luminancia relativa), no
+// declarados de memoria: el bloque de verificacion de contraste que sigue a la lista los vuelve
+// a calcular en cada corrida y falla si alguno se cae por debajo de AA.
 const PALETA = {
-    // -- base (brandbook Tidetrack) --
-    '#1E2A33': 'base: ink (texto primario, wordmark, icono del hero, texto del boton primario)',
-    '#2ECAB0': 'base: teal de accion (degrade primario, filo de foco, punto del pie)',
-    '#F4F7FA': 'base: gris de superficies secundarias (huecos, rieles, chips, tags)',
-    '#FFB380': 'base: durazno decorativo (monograma, hairlines, radial calido)',
-    '#FFFFFF': 'base: blanco (lienzo, fondo de foco, vidrio)',
-    // -- derivados declarados (spec Corriente 2026-08-29) --
-    '#44576A': 'ink-2: ink aclarado AA para secundaria y labels; deriva de #1E2A33',
-    '#5A6B7C': 'ink-3: ink aclarado para placeholders y auxiliares; deriva de #1E2A33',
-    '#0B7B69': 'teal-tinta: el UNICO teal que puede ser texto sobre blanco; deriva de #2ECAB0',
-    '#29B89F': 'teal oscurecido: tramo bajo del degrade del boton primario y el chip hero; deriva de #2ECAB0',
-    '#35D6BB': 'teal aclarado: hover del degrade primario; deriva de #2ECAB0',
-    // -- semaforo: colores DE FUNCION, no de marca (pares ink/bg AA de la spec) --
-    '#0E6B4F': 'verde de funcion, texto: Ingreso activo, pill +, aviso ok',
-    '#DDF5EC': 'verde de funcion, riel del par anterior',
-    '#B23B32': 'rojo de funcion, texto: Egreso activo, pill -, aviso error',
-    '#FCEAE7': 'rojo de funcion, riel del par anterior',
-    '#7A4A10': 'ambar de funcion, texto: advertencia, combo fuera de catalogo',
-    '#FFF1E2': 'ambar de funcion, riel del par anterior'
+    // -- primarios (brandbook Ed.03) --
+    '#182040': 'Navy: la VOZ. Logo, wordmark, texto, boton primario. 15.92:1 sobre blanco',
+    '#F4F5F8': 'Cloud: el ESPACIO. Superficie de chips, tags y rieles del segmentado',
+    // -- neutros y secundarios, de uso moderado (brandbook Ed.03) --
+    '#1E2A55': 'Navy 700: texto cuerpo, labels y tramo alto del degrade primario. 13.84:1',
+    '#6B7290': 'Navy 400: auxiliar y muted. 4.74:1 sobre blanco, 4.54:1 sobre Paper',
+    '#2E6B7A': 'Teal: acento EDITORIAL. Foco, hover, hairlines, chip del hero. 6.00:1 sobre blanco',
+    '#E8E3D5': 'Sand: calido/papel. Riel de atencion del ambar y radial ambiente',
+    '#FAFAFC': 'Paper: el hueco de los inputs. Es donde vive el texto auxiliar, que sobre Cloud no llegaba a AA',
+    '#FFFFFF': 'Blanco: lienzo, fondo de foco, vidrio y texto del boton primario',
+    // -- semaforo: colores DE FUNCION, no de marca. El brandbook legisla marca, no estado.
+    //    El rojo NO es inventado: es Warn del brandbook. El brandbook lo reserva para "no
+    //    hacer" y en esta planilla el egreso y la accion destructiva comparten ese registro de
+    //    alarma; inventar un segundo rojo para no reusarlo habria agregado un color al sistema
+    //    para decir exactamente lo mismo. Verde y ambar si son de funcion pura: el brandbook no
+    //    trae ninguno, y se recalibraron para convivir con el navy en vez de con la menta.
+    '#B84A3E': 'Warn del brandbook, usado como rojo de funcion: Egreso, neto negativo, borrar',
+    '#F9F1F0': 'riel del rojo (8% de su ink sobre blanco). 4.62:1 contra su ink',
+    '#1D6A4F': 'verde de funcion, texto: Ingreso, neto positivo, aviso ok. 6.51:1 sobre blanco',
+    '#E8F0ED': 'riel del verde (10% de su ink sobre blanco). 5.61:1 contra su ink',
+    '#6B4A18': 'ambar de funcion, texto: advertencia, combo fuera de catalogo. 8.02:1 sobre blanco'
+    // El riel del ambar NO tiene entrada propia: es Sand (#E8E3D5), que ya esta arriba.
 };
-// Se audita el <style> PROPIO del shell (el design system incluido tiene su propio pase),
-// sin comentarios: se miran los hex que RENDERIZAN, no los que se documentan. Los data-URI
+// LOS CONTRASTES SE CALCULAN, NO SE DECLARAN. Un comentario que dice "5.18:1" envejece solo; el
+// guard de paleta mira PROCEDENCIA y por eso dejaba pasar un par ilegible con colores legales
+// (fue exactamente lo que paso con el segmentado Crear/Editar). Estos son los pares que de
+// verdad se pintan uno sobre el otro en el shell.
+{
+    const lum = (h) => {
+        const c = [1, 3, 5].map((i) => parseInt(h.substr(i, 2), 16) / 255)
+            .map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    const contraste = (a, b) => {
+        const x = lum(a), y = lum(b);
+        return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+    };
+    const PARES = [
+        ['#182040', '#FFFFFF', 4.5, 'ink-1 sobre el lienzo'],
+        ['#1E2A55', '#FFFFFF', 4.5, 'ink-2 (texto cuerpo) sobre el lienzo'],
+        ['#6B7290', '#FFFFFF', 4.5, 'ink-3 sobre el lienzo'],
+        ['#6B7290', '#FAFAFC', 4.5, 'ink-3 sobre Paper: placeholders y la pastilla "sin datos aun"'],
+        ['#1E2A55', '#F4F5F8', 4.5, 'ink-2 sobre Cloud: los botones del segmentado'],
+        ['#2E6B7A', '#FFFFFF', 4.5, 'el teal como texto (lapiz, hover, Crear/Editar presionado)'],
+        ['#FFFFFF', '#182040', 4.5, 'texto del boton primario sobre su tramo mas oscuro'],
+        ['#FFFFFF', '#2E6B7A', 4.5, 'texto del boton primario sobre su tramo de hover, y el icono del hero'],
+        ['#FFFFFF', '#B84A3E', 4.5, 'texto del boton destructivo solido'],
+        ['#1D6A4F', '#E8F0ED', 4.5, 'par verde de funcion'],
+        ['#B84A3E', '#F9F1F0', 4.5, 'par rojo de funcion'],
+        ['#6B4A18', '#E8E3D5', 4.5, 'par ambar de funcion (su riel es Sand)']
+    ];
+    PARES.forEach(function (par) {
+        const r = contraste(par[0], par[1]);
+        ok(r >= par[2],
+            par[3] + ': ' + par[0] + ' sobre ' + par[1] + ' da ' + r.toFixed(2) +
+            ':1 (minimo ' + par[2] + ')');
+    });
+    // Y la regla que separa las dos superficies neutras, que es la razon de que Paper exista.
+    ok(contraste('#6B7290', '#F4F5F8') < 4.5,
+        'queda anotado por que ink-3 NO puede apoyar en Cloud: da ' +
+        contraste('#6B7290', '#F4F5F8').toFixed(2) + ':1, por debajo de AA. Por eso el hueco de ' +
+        'los inputs es Paper y Cloud queda para los chips, cuyo contenido es ink-2');
+}
+// Se audita el <style> PROPIO del shell, sin comentarios: se miran los hex que RENDERIZAN, no
+// los que se documentan. El design system incluido (src/UI_SharedStyles.html) pasa por el MISMO
+// metodo mas abajo, en el barrido de todos los .html de src/ -- hasta el 2026-08-30 su "pase
+// propio" se limitaba a comprobar que no existiera --font-mono, y por ese hueco vivia una paleta
+// entera de otra generacion que ademas renderizaba. Los data-URI
 // llevan el hex como %23: se decodifica antes de extraer para que no se escape ninguno.
 const estiloShell = (HTML.match(/<style>([\s\S]*?)<\/style>/) || ['', ''])[1];
 ok(estiloShell.length > 0, 'el <style> del shell se pudo aislar para auditarlo');
@@ -1550,15 +1968,97 @@ ok(kwIntrusos.length === 0,
     (kwIntrusos.length ? ' -- INTRUSOS: ' + kwIntrusos.join(', ') : ''));
 // Sanidad inversa: la marca de verdad se USA (un shell gris que pasara la lista por no
 // tener ningun hex tambien seria un shell sin marca).
-['#1E2A33', '#2ECAB0', '#F4F7FA', '#FFB380', '#FFFFFF'].forEach(function (base) {
+['#182040', '#F4F5F8', '#2E6B7A', '#E8E3D5', '#FFFFFF'].forEach(function (base) {
     ok(hexUsados.indexOf(base) !== -1, 'el color base ' + base + ' se usa de verdad en el estilo');
 });
-// La tipografia del brandbook: Poppins por <link> (la spec fija familia y pesos) y el
-// token --font-family del shell la declara primera, con fallback que no cae a serif.
-ok(/fonts\.googleapis\.com\/css2\?family=Poppins/.test(HTML),
-    'la webfont que se carga es Poppins, la del brandbook');
-ok(/--font-family:\s*'Poppins'/.test(cssPaleta),
-    "--font-family arranca en 'Poppins': el * del design system la propaga a todo");
+// Y el reves del reves: los colores de la paleta ANTERIOR no pueden haber quedado en ningun
+// rincon. Un recolor a medias (el teal menta sobreviviendo en un hover o en un data-URI) es la
+// forma tipica en que una identidad vieja vuelve de a poco.
+['#2ECAB0', '#1E2A33', '#F4F7FA', '#FFB380', '#0B7B69', '#29B89F', '#35D6BB',
+ '#44576A', '#5A6B7C', '#0E6B4F', '#DDF5EC', '#B23B32', '#FCEAE7', '#7A4A10',
+ '#FFF1E2'].forEach(function (viejo) {
+    ok(hexUsados.indexOf(viejo) === -1,
+        'el color ' + viejo + ' de la paleta anterior no sobrevive en ningun rincon del estilo');
+});
+// La tipografia del brandbook Ed.03: DM Sans por <link>, con los CUATRO pesos que declara.
+ok(/fonts\.googleapis\.com\/css2\?family=DM\+Sans:wght@300;400;500;700/.test(HTML),
+    'la webfont que se carga es DM Sans con los pesos 300/400/500/700 del brandbook');
+ok(!/family=Poppins/.test(HTML),
+    'y Poppins ya no se descarga: la familia anterior salio del proyecto');
+ok(/--font-family:\s*'DM Sans'/.test(cssPaleta),
+    "--font-family arranca en 'DM Sans': el * del design system la propaga a todo");
+// EL PESO 600 NO EXISTE EN DM SANS. Dejarlo habria hecho que cada navegador lo resolviera a su
+// manera (sintesis o salto a 700), que es una diferencia visible entre la maquina de Franco y
+// la de cualquier otro. Los 27 pesos 600 del rediseno anterior pasaron a 500.
+ok(!/font-weight:\s*600/.test(cssPaleta),
+    'ningun font-weight: 600 en el estilo: DM Sans no lo trae y el navegador lo inventaria');
+{
+    const pesos = [...new Set((cssPaleta.match(/font-weight:\s*(\d{3})/g) || [])
+        .map((m) => m.replace(/\D/g, '')))].sort();
+    ok(pesos.every((w) => ['300', '400', '500', '700'].indexOf(w) !== -1),
+        'y los pesos que si se usan son los declarados por el brandbook: ' + pesos.join(', '));
+}
+
+// LOS OTROS .html DE src/. El <style> de arriba es el del shell, pero el shell INCLUYE
+// literalmente src/UI_SharedStyles.html (<?!= include('UI_SharedStyles'); ?>, linea 16) y ese
+// archivo no lo auditaba NADIE: el comentario de este guard decia "el design system incluido
+// tiene su propio pase", pero ese pase se limitaba a comprobar que no existiera --font-mono.
+// Probado en rojo el 2026-08-30: metiendo '--intruso-menta: #2ECAB0;' en UI_SharedStyles.html los
+// tres verificadores seguian en VERDE. No era hipotetico -- el archivo traia una paleta entera de
+// otra generacion (#34475d, #eff2f9, #CBD5E1, #94A3B8, #DC2626...) y parte RENDERIZABA: sus
+// scrollbars globales pintaban en todo contenedor con overflow salvo .shell-scroll, que era el
+// unico que el shell redefine, y por eso la tabla de Conciliacion mostraba la barra de la
+// generacion anterior. Ahora TODO .html de src/ pasa por la misma lista blanca y el mismo metodo.
+fs.readdirSync(path.join(RAIZ, 'src'))
+    .filter(f => f.endsWith('.html') && f !== 'UI_Shell.html')
+    .forEach(function (archivo) {
+        const ruta = 'src/' + archivo;
+        const bloques = (leerSrc(ruta).match(/<style>([\s\S]*?)<\/style>/g) || [])
+            .join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/%23/gi, '#');
+        ok(bloques.length > 0, ruta + ' aporta un <style> auditable');
+        const hexH = [...new Set((bloques.match(/#[0-9a-fA-F]{3,8}\b/g) || []).map(normalizarHex))];
+        const intrusosH = hexH.filter(h => !(h in PALETA));
+        ok(intrusosH.length === 0,
+            'cada hex de ' + ruta + ' esta en la lista blanca del brandbook' +
+            (intrusosH.length ? ' -- INTRUSOS: ' + intrusosH.join(', ') : ''));
+        const ternasH = [...new Set(
+            (bloques.match(/rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}/g) || []).map(function (t) {
+                return '#' + t.match(/\d{1,3}/g)
+                    .map(n => Number(n).toString(16).padStart(2, '0')).join('').toUpperCase();
+            })
+        )].filter(h => !(h in PALETA));
+        ok(ternasH.length === 0,
+            'cada rgba()/rgb() de ' + ruta + ' deriva de la lista blanca' +
+            (ternasH.length ? ' -- INTRUSAS: ' + ternasH.join(', ') : ''));
+        const kwH = [...new Set(
+            (bloques.replace(/url\([^)]*\)/g, 'url(_)')
+                .match(/[:\s,(](white|black|navy|gray|grey|silver|red|blue|green|yellow|orange|purple|pink|brown|cyan|magenta|teal|aqua|lime|maroon|olive|coral|salmon|ivory|beige|khaki|gold|azure|snow|linen)(?![\w-])/gi) || [])
+                .map(k => k.slice(1).toLowerCase())
+        )];
+        ok(kwH.length === 0,
+            'ningun keyword CSS de color renderiza en ' + ruta +
+            (kwH.length ? ' -- INTRUSOS: ' + kwH.join(', ') : ''));
+        ok(!/League Spartan/.test(bloques) && !/Poppins/.test(bloques) && !/Google Sans/.test(bloques),
+            ruta + ' no arrastra ninguna familia de las generaciones anteriores');
+    });
+// Y el reves: el teal menta y Poppins no pueden sobrevivir en NINGUN .html de src/, ni siquiera
+// fuera de un <style>. El changelog de esta release afirma que "el teal menta #2ECAB0 SALE del
+// proyecto entero"; hasta hoy esa frase no la sostenia ningun banco, y era falsa -- quedaban 5
+// apariciones de #2ECAB0 y 4 de Poppins en UI_AbmPlanCuentas.html y 4 y 4 en
+// UI_AbmProyeccionElaborada.html, mas el <link> a fonts.googleapis.com/css2?family=Poppins en los
+// dos. Los dos archivos se borraron (eran huerfanos desde v0.62/v0.63); este assert es lo que
+// impide que la afirmacion vuelva a ser una promesa.
+{
+    const sucios = [];
+    fs.readdirSync(path.join(RAIZ, 'src')).filter(f => f.endsWith('.html')).forEach(function (f) {
+        const crudo = leerSrc('src/' + f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
+        if (/#2ECAB0/i.test(crudo)) sucios.push('src/' + f + ' (#2ECAB0)');
+        if (/Poppins/.test(crudo)) sucios.push('src/' + f + ' (Poppins)');
+    });
+    ok(sucios.length === 0,
+        'ni el teal menta ni Poppins sobreviven en ningun .html de src/' +
+        (sucios.length ? ' -- QUEDAN: ' + sucios.join(', ') : ''));
+}
 
 // LA SEGUNDA SUPERFICIE HTML DEL PRODUCTO. El shell no es la unica pantalla: hay HTML inline
 // con su propio <style> adentro de src/*.js (hoy solo la alerta de edicion multiple de
@@ -1601,9 +2101,198 @@ jsConEstilo.forEach(function (x) {
     ok(kwJs.length === 0,
         'ningun keyword CSS de color renderiza en el <style> de ' + x.archivo +
         (kwJs.length ? ' -- INTRUSOS: ' + kwJs.join(', ') : ''));
-    ok(!/League Spartan/.test(bloques) && /Poppins/.test(bloques),
-        x.archivo + ' viste Poppins, no la League Spartan de dos redisenos atras');
+    ok(!/League Spartan/.test(bloques) && !/Poppins/.test(bloques) && /DM Sans/.test(bloques),
+        x.archivo + ' viste DM Sans: ni la League Spartan de dos redisenos atras ni la ' +
+        'Poppins del anterior');
 });
+
+seccion('25. DENSIDAD DE LA VISTA proyecciones: los cuatro objetivos, medidos');
+// El muro que se saco, medido antes de sacarlo: 212 caracteres de encabezado con dos rutas de
+// menu, cinco parrafos `sub` (60+65+82+50+90) y dos estados vacios (133+103) = 795 caracteres
+// de prosa PERMANENTE antes del primer numero. Toda esa prosa era PREVENTIVA: le explicaba
+// reglas a quien todavia no habia chocado con ninguna.
+// Los cuatro objetivos son verificables, no opinables, y aca se verifican de verdad: el
+// encabezado se EJECUTA con datos sinteticos en vez de leerse, que es la diferencia entre medir
+// y creerle a un comentario.
+{
+    // El <script> crudo, con comentarios: los dos marcadores de la zona de prosa son
+    // comentarios y jsShell los borra.
+    const jsCrudo = (HTML.match(/<script[^>]*>([\s\S]*?)<\/script>/) || ['', ''])[1];
+    const sinComent = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '')
+        .split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
+
+    const iniZona = jsCrudo.indexOf('// ---- PROSA PERMANENTE DE LA VISTA');
+    const finZona = jsCrudo.indexOf('// ---- fin prosa permanente');
+    ok(iniZona !== -1 && finZona > iniZona,
+        'la vista declara su zona de prosa permanente entre dos marcadores: es lo que hace ' +
+        'medible el objetivo O-4 sin tener que adivinar que se lee en pantalla');
+    const zona = sinComent(jsCrudo.slice(iniZona, finZona));
+
+    // La region ENTERA de la vista, para el objetivo O-2.
+    const iniVista = jsCrudo.indexOf('// PROYECCIONES ELABORADAS -- vista');
+    const finVista = jsCrudo.indexOf('// ACCIONES DEL HOME');
+    ok(iniVista !== -1 && finVista > iniVista, 'la region de la vista se pudo aislar');
+    const regionVista = sinComent(jsCrudo.slice(iniVista, finVista));
+
+    // PROSA = una FRASE: dos palabras de tres o mas letras separadas por un espacio. Un literal
+    // suelto como 'ingresos' o 'neg' es un identificador, no prosa, y contarlo haria ruido; un
+    // fragmento de markup (lleva '<' o un atributo '="') tampoco es prosa.
+    const literales = (txt) => {
+        const salida = []; let m;
+        const re = /'((?:[^'\\\n]|\\.)*)'/g;
+        while ((m = re.exec(txt)) !== null) salida.push(m[1]);
+        return salida;
+    };
+    const esProsa = (t) => t.indexOf('<') === -1 && t.indexOf('="') === -1 &&
+        /[A-Za-z]{3,}\s+[A-Za-z]{3,}/.test(t);
+
+    // ---- O-3: PABM_SECCIONES pierde el campo `sub` en las cinco entradas ----
+    const bloqueSecciones = (zona.match(/var PABM_SECCIONES = \[[\s\S]*?\n\];/) || [''])[0];
+    ok(bloqueSecciones.length > 0, 'O-3: PABM_SECCIONES se pudo aislar para auditarla');
+    ok(!/\bsub\s*:/.test(bloqueSecciones),
+        'O-3: ninguna de las cinco secciones declara ya el campo `sub` (eran 347 caracteres ' +
+        'de parrafo permanente, uno por seccion)');
+    ok((bloqueSecciones.match(/origen:/g) || []).length === 5,
+        'y las cinco secciones siguen ahi: se saco la prosa, no las poblaciones');
+    ok((bloqueSecciones.match(/editable:/g) || []).length === 5,
+        'lo unico que sobrevive del `sub` es la condicion de edicion, ahora como dato');
+
+    // ---- O-1: el encabezado es UNA cadena y no supera 80 caracteres ----
+    // Se EJECUTA la funcion real extraida del HTML, con un dataset a proposito grande (cuatro
+    // digitos de filas, doce meses distintos repartidos entre origenes, sello del shell con
+    // milisegundos): si el encabezado se pasa de 80 con datos plausibles, tiene que doler aca.
+    const zonaEjec = new Function(
+        zona + '\n' + (jsShell.match(/function pabmFmtSello[\s\S]*?\n\}/) || [''])[0] +
+        '\nreturn { enc: pabmEncabezado, sec: PABM_SECCIONES, vacio: PABM_ROT_VACIO, ' +
+        'nueva: PABM_ROT_NUEVA, candado: PABM_CANDADO_TITULO };')();
+    const grupoFalso = (clave, n, sello) => ({ clave: clave, mesLabel: clave, nFilas: n,
+        corridas: 1, ultimoSello: sello, totales: {} });
+    const mesesFalsos = ['2026-09', '2026-10', '2026-11', '2026-12', '2027-01', '2027-02',
+        '2027-03', '2027-04', '2027-05', '2027-06', '2027-07', '2027-08'];
+    const datosFalsos = { grupos: {
+        base: mesesFalsos.map((c) => grupoFalso(c, 120, '2026-08-01_090000')),
+        guardado: [grupoFalso('2026-09', 40, '2026-08-20_143012')],
+        shell: [grupoFalso('2026-10', 8, 'shell_2026-08-29_181203445')]
+    } };
+    const encab = zonaEjec.enc(datosFalsos.grupos);
+    ok(typeof encab === 'string' && encab.indexOf('\n') === -1,
+        'O-1: el encabezado es UNA sola cadena');
+    ok(encab.length <= 80,
+        'O-1: y mide ' + encab.length + ' caracteres con datos grandes (tope 80): "' + encab + '"');
+    ok(/1488 filas/.test(encab) && /12 meses/.test(encab),
+        'los numeros salen de lo que listarPeriodosProyeccion YA devuelve, y los meses se ' +
+        'cuentan por clave distinta: el mismo mes en dos origenes es un mes, no dos');
+    ok(/<span class="pabm-resumen">' \+ escapar\(pabmEncabezado\(grupos\)\)/.test(jsShell),
+        'y es lo unico que el encabezado imprime como texto: el resto de esa linea es un boton');
+
+    // ---- O-2: ninguna cadena de prosa de la vista supera 120 caracteres ----
+    // LISTA BLANCA VACIA, y esa es la noticia. Las cuatro cadenas que hoy superarian el tope
+    // son los mensajes de bloqueo por origen, y ya no viven aca: las manda el servidor en
+    // `motivoNoEditable` (PA_MSJ_NO_EDITABLE, con las rutas de MENU_CONFIG que
+    // probar_proyeccion_abm.js cruza contra el config vivo). El cliente las muestra, no las
+    // retipea -- que es tambien lo que impide que las dos copias se separen con el tiempo.
+    const PROSA_PERMITIDA = [];
+    const largas = literales(regionVista).filter(esProsa)
+        .filter((t) => t.length > 120 && PROSA_PERMITIDA.indexOf(t) === -1);
+    ok(largas.length === 0,
+        'O-2: ninguna cadena de prosa de la vista supera 120 caracteres' +
+        (largas.length ? ' -- LARGAS: ' + largas.map((t) => t.length + ' "' + t.slice(0, 60) + '..."').join(' | ') : ''));
+    ['Se corrige en la hoja Presupuesto', 'se vuelve a volcar el mes',
+     'El presupuesto base se recalcula', 'No se reconoce el origen de esta fila'].forEach(function (frag) {
+        ok(jsShell.indexOf(frag) === -1,
+            'el cliente no retipea el mensaje de bloqueo del servidor ("' + frag + '")');
+    });
+
+    // ---- O-4: prosa permanente en el estado normal, de 795 a <= 200 ----
+    // Se mide EXACTAMENTE el mismo conjunto que daba 795: el encabezado, los cinco `sub` (que
+    // ya no existen) y los dos estados vacios. Los titulos de seccion no entran, igual que
+    // antes: son rotulos, no prosa.
+    let o4 = encab.length;
+    const detalle = ['encabezado ' + encab.length];
+    zonaEjec.sec.filter((x) => x.siempre).forEach(function (x) {
+        const n = zonaEjec.vacio.length + (x.vacioRot || '').length;
+        o4 += n;
+        detalle.push('vacio de "' + x.titulo + '" ' + n);
+    });
+    o4 += zonaEjec.nueva.length;
+    detalle.push('boton del encabezado ' + zonaEjec.nueva.length);
+    ok(o4 <= 200,
+        'O-4: la prosa permanente del estado normal quedo en ' + o4 + ' caracteres, de 795 ' +
+        '(tope 200) -- ' + detalle.join(', '));
+
+    // LOS DIENTES DE O-4. Sumar constantes chicas no sirve de nada si manana alguien escribe un
+    // parrafo adentro de una funcion de render: la suma de arriba seguiria dando 113 y la
+    // pantalla volveria a tener un muro. Las tres funciones del estado normal no pueden tener
+    // una sola frase propia; los dos bloques condicionales (el banner de deshacer y el aviso de
+    // filas no reconocidas) viven en funciones aparte JUSTAMENTE porque no son estado normal.
+    ['pabmRender', 'pabmTarjeta', 'pabmSeccionHtml'].forEach(function (fn) {
+        const cuerpo = (regionVista.match(new RegExp('function ' + fn + '\\([\\s\\S]*?\\n\\}')) || [''])[0];
+        ok(cuerpo.length > 0, fn + '() se pudo aislar');
+        const prosa = literales(cuerpo).filter(esProsa);
+        ok(prosa.length === 0,
+            fn + '() no escribe una sola frase propia: todo rotulo sale de la zona de prosa' +
+            (prosa.length ? ' -- HALLADAS: ' + prosa.map((t) => '"' + t + '"').join(', ') : ''));
+    });
+    ['pabmBannerRevert', 'pabmAvisoOtras'].forEach(function (fn) {
+        ok(new RegExp('function ' + fn + '\\(').test(jsShell),
+            fn + '() existe: lo condicional se aparta del estado normal en vez de contarse como si siempre estuviera');
+    });
+
+    // ---- La densidad, del lado del DOM ----
+    ok(/class="pabm-neto"/.test(HTML) && /font-size: 18px; font-weight: 700/.test(HTML),
+        'el neto es el UNICO numero grande de la tarjeta (18px/700): la jerarquia la dan el ' +
+        'tamano, el color y el espacio, no una caja nueva');
+    ok(/\.pabm-comp \{[^}]*font-size: 11px/.test(HTML),
+        'y los tres componentes van en 11px tenue, con la moneda escrita UNA sola vez junto al neto');
+    ok(!/pabm-totales/.test(HTML),
+        'el bloque de cuatro pares "Rotulo: valor" del mismo tamano y peso se retiro entero');
+    ok(/\.shell-sec \.pabm-sec-total \{\s*order: 1;/.test(HTML),
+        'cada seccion lleva su total del otro lado de la estela (order:1 sobre el ::after)');
+    ok(/pabmFmtListaTope\(pabmNetoDeSeccion\(lista\), 2\)/.test(jsShell),
+        'ese total es la suma POR MONEDA de los netos de sus meses, acotada a dos con un "+N"');
+    ok(/function pabmCandadoSvg\(/.test(jsShell) && /class="pabm-candado"/.test(HTML) === false,
+        'el candado se dibuja por funcion (SVG stroke como todos los iconos), no como markup suelto');
+    ok(zonaEjec.candado.length <= 120 && /toca un monto/.test(zonaEjec.candado),
+        'y su title dice, en una frase, que el monto revela donde se corrige');
+}
+
+seccion('26. EDICION RESTRINGIDA POR ORIGEN: el cliente respeta el gate del servidor');
+// El pedido de Franco fue textual: "me preocupa que se puedan editar los montos de TODO".
+// Despues del cambio se edita UNA sola poblacion, 'shell', que es la unica que no tiene un
+// documento aguas arriba con el que pueda discrepar. El gate REAL sigue siendo del servidor
+// (probar_proyeccion_abm.js lo prueba ahi); lo que se verifica aca es que el cliente no
+// invente su propia version del gate ni de los mensajes.
+ok(/function pabmCeldaFija\(/.test(jsShell),
+    'la fila no editable tiene su propia celda, con candado en vez de lapiz');
+ok(/pabm-monto pabm-monto--fijo/.test(HTML) && /onclick="pabmMostrarMotivo\(this\)"/.test(HTML),
+    'y sigue siendo un <button>: antes no respondia al click y el usuario no sabia por que');
+ok(/pabmMotivos\[origen\] = det\.motivoNoEditable \|\| ''/.test(jsShell),
+    'el motivo lo guarda el cliente TAL COMO lo manda el servidor, una vez por grupo');
+ok(/var motivo = pabmMotivos\[card\.dataset\.origen\]/.test(jsShell),
+    'y lo lee por el origen de la tarjeta cuando alguien toca un monto que no se edita');
+ok(/fila\.className = 'pabm-motivo'/.test(jsShell) && /\}, 6000\);/.test(jsShell),
+    'la linea aparece bajo esa fila y se retira sola a los 6 s: reactiva, nunca permanente');
+ok(/f\.editable\s*\n?\s*\?/.test(jsShell) || /var celdaMonto = f\.editable/.test(jsShell),
+    'la celda editable la decide el campo `editable` del servidor, no una lista propia del cliente');
+ok(!/origen === 'guardado' \|\| origen === 'shell'/.test(jsShell),
+    "y no queda ninguna copia cliente del gate viejo ('guardado' tambien editable)");
+// BAJA BLOQUEADA. Un borrado que la proxima sincronizacion deshace sola es una trampa, no una
+// funcion: el boton no se muestra, y el motivo que se muestra en su lugar es el del servidor.
+ok(/var baja = det\.bajaBloqueada/.test(jsShell),
+    'el boton "Borrar este periodo" no se dibuja cuando el servidor manda bajaBloqueada');
+ok(/'<p class="pabm-pie">' \+ escapar\(det\.bajaBloqueada\)/.test(jsShell),
+    'y en su lugar se dice el motivo del servidor, que es el mismo que aplica el gate');
+ok(!/pabmNotaPie/.test(jsShell),
+    'la nota al pie por origen (cuatro variantes permanentes) se retiro: el motivo es reactivo');
+// El doble tiene que hablar el MISMO contrato, o la vista se valida en local contra otra cosa.
+['motivoNoEditable', 'bajaBloqueada'].forEach(function (campo) {
+    ok(new RegExp(campo).test(DOBLE), 'el doble devuelve ' + campo + ' en el detalle');
+});
+ok(/var editable = \(origen === 'shell'\);/.test(DOBLE),
+    "y aplica el mismo gate: solo 'shell' se edita");
+ok(/PA_MSJ_NO_EDITABLE_DOBLE/.test(DOBLE) && /proyBajaBloqueadaDoble/.test(DOBLE),
+    'con los cuatro mensajes y el bloqueo de baja por ventana, para que mirar la vista en ' +
+    'local no sea mirar una pantalla distinta a la de produccion');
 
 seccion('24. El pipeline dejo de tragarse los errores: nucleo que lanza, menu que alerta');
 // EL DEFECTO QUE CIERRA ESTA SECCION. procesarCargas tenia el alert adentro y no relanzaba:
@@ -1727,5 +2416,5 @@ ok((fuenteShell24.match(/_procesarCargasNucleo\(/g) || []).length >= 3,
         'y alerta textual "' + ctxMenu.__MSJ + '", sin el prefijo "Fallo en el procesamiento"');
 }
 
-console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (24 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (26 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
 process.exit(fallas === 0 ? 0 : 1);

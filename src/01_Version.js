@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 63,
- patch: 2,
+ minor: 65,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-08-29',
- releaseName: 'v0.63.2 - El repo deja de llamarse igual que lo desplegado',
+ releaseDate: '2026-08-30',
+ releaseName: 'v0.65.0 - El shell viste el brandbook Ed.03 y la vista de proyecciones deja de ser un muro',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,39 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.65.0 (2026-08-30) - El shell viste el brandbook Ed.03 y la vista de proyecciones deja de ser un muro
+! RECOLOR DE MARCA, no rediseno: la estructura, el liquid glass y los componentes se conservan; cambian los tokens. Regla de oro del brandbook, textual: "El navy es la voz, el cloud es el espacio. Todo lo demas se usa con cuidado." El navy #182040 pasa a ser la voz (texto, wordmark, boton primario) y el teal menta #2ECAB0 SALE del proyecto entero, junto con sus tres derivados, el ink #1E2A33, el gris #F4F7FA y el durazno #FFB380. Entra #2E6B7A como acento editorial moderado: foco, hover, hairlines, el punto del pie y el chip del hero.
+- El token --teal-tinta se retira: existia porque la menta daba 1.86:1 sobre blanco y hacia falta un teal oscurecido a mano para poder escribir con el. #2E6B7A da 6.00:1 calculado, asi que dos nombres para un solo valor dejaban de tener razon.
+* Tipografia: Poppins SALE, entra DM Sans con los cuatro pesos que declara el brandbook (300/400/500/700). Los 27 pesos 600 del rediseno anterior pasaron a 500: DM Sans no trae el 600 y cada navegador lo habria resuelto a su manera. JetBrains Mono NO se toma, con razon escrita y condicion de retiro (cicatriz v0.49.0 y ancho de columnas).
++ El semaforo se recalibro para convivir con el navy, con los contrastes CALCULADOS en el banco y no declarados de memoria. El rojo deja de ser inventado: es Warn #B84A3E del brandbook. Y aparece Paper #FAFAFC como hueco de los inputs, porque el auxiliar Navy 400 sobre Cloud da 4.34:1 -- por debajo de AA -- y sobre Paper 4.54:1.
+* src/14_EventHandlers.js: la alerta de edicion multiple, que es la SEGUNDA superficie HTML del producto, se recolorea en el mismo commit. Dejarla con la menta y con Poppins habria hecho que el recolor pasara en verde estando a medias.
+! LA VISTA 'proyecciones' EN VERSION DENSA: la prosa permanente del estado normal baja de 795 a 123 caracteres, medidos por el banco. La regla que ordeno el recorte: el texto que explica DONDE se corrige algo no se muestra hasta que alguien intenta corregirlo. El encabezado pasa de un parrafo de 212 caracteres a una linea de datos ("Proyeccion . 23 filas . 4 meses . ultimo cambio 29/08 18:15"), el campo "sub" de las cinco secciones desaparece, cada seccion gana su total por moneda y un candado si su origen no se edita, y la tarjeta de un mes pasa a dos filas con el NETO como unico numero grande.
++ El click en un monto no editable muestra, bajo esa fila, el mensaje que manda el servidor con la ruta exacta, y se va solo a los 6 segundos: mas informacion util con menos texto permanente. Antes la fila simplemente no respondia y el usuario no sabia por que.
+! La vista 'recurrentes' pierde el selector de mes/anio y el boton "Volcar a la proyeccion": el usuario ya no elige un mes. Entran los campos de vigencia Desde/Hasta por bloque y una linea de estado del horizonte, con un boton primario que aparece SOLO si quedo corto.
++ devtools/probar_shell.js: dos secciones nuevas (25 y 26) que miden los cuatro objetivos de densidad y el gate de edicion por origen, la lista blanca de paleta reemplazada entera con verificacion de contraste calculado, y el guard de transicion de recurrentes reescrito a tres estados.
+
+CORRECCIONES DEL CONTROL ADVERSARIAL, ANTES DE DEPLOYAR (misma version arreglada, no consume numero propio):
+! BLOQUEANTE: el deshacer de una edicion de monto escribia por NUMERO DE FILA ABSOLUTO sin comprobar que esa fila siguiera siendo la misma. Reproducido: se edita la fila shell, se corre un deleteRows sobre Proyeccion -- lo que hace _borrarFilasRec en cada sincronizacion -- y el deshacer PISABA el monto de una fila del presupuesto base, dejaba la editada sin revertir, informaba exito y borraba el respaldo. Esta etapa lo volvia rutinario porque guardar o borrar un recurrente dispara la fase 2. Ahora se comparan Nota, Cuenta y Fecha contra el respaldo antes de escribir; si no coinciden LANZA, no escribe, y conserva respaldo y propiedad para reintentar.
+- El guard de paleta no miraba src/UI_SharedStyles.html, que el shell incluye literalmente: probado en rojo, un #2ECAB0 ahi adentro pasaba los tres verificadores en verde. Y parte de esa paleta vieja RENDERIZABA (las scrollbars globales, visibles en la tabla de Conciliacion). El guard barre ahora todos los .html de src/, y UI_SharedStyles se reescribio sin un solo color: queda el reset, la familia y las scrollbars con el tratamiento navy del shell.
+! Se BORRAN src/UI_AbmPlanCuentas.html y src/UI_AbmProyeccionElaborada.html: eran huerfanos desde v0.62.0 y v0.63.0, la verificacion en vivo que condicionaba su retiro ya ocurrio, y conservaban 9 apariciones de #2ECAB0 y 8 de Poppins que clasp seguia empujando a produccion. Los alias showAbmPlanCuentas y showAbmProyeccionElaborada SE CONSERVAN (la botonera de dibujos los referencia por nombre).
+- Los dos campos de vigencia quedaban en 146px (c3) y Chrome recortaba el ano: en es-AR el control nativo renderiza "mmmm de aaaa" y se leia "septiembre de 2(". La fila pasa a tercios (c4/c4/c4): 196px medidos en el navegador, con los dos valores enteros. Los placeholder de los month se sacan: Chrome los ignora en type=month.
++ estadoHorizonteRecurrentes informa "sobrantes" y "mesesSobrantes": las filas REC en meses POSTERIORES a la ventana que el horizonte no toca pero la proyeccion si suma. Se reportan con su camino de baja, no se borran solas, y no cuentan como desincronizado.
+- guardarRecurrente ya no deja la BD cambiada en un ok:false: si la verificacion de vigencia falla, se deshace la escritura (repone la fila anterior o quita el alta) y el mensaje dice en que estado quedo todo.
+- Se retiran estadoVolcadoRecurrentes y volcarRecurrentesAlMes con sus helpers, stubs y casos de banco: el comentario que los conservaba decia "mientras ese HTML siga llamandolos" y el shell ya no los llamaba. El guard de transicion pasa del estado B al C.
+* verificar_sintaxis.py suma el cruce de cabeceras: todo src/*.js modificado respecto de HEAD tiene que llevar @lastModified con el releaseDate, con mensaje propio. 14_EventHandlers.js y 00_Config.js estaban desactualizados.
+! Honestidad sobre insertSheet: NO queda ninguna, quedan DOS caminos (_asegurarHojaRecurrentes en el primer guardado de un cliente nuevo, y _asegurarBoveda por encima de 300 filas de respaldo), los dos via _conHojaActivaPreservada, que es una mitigacion del parpadeo y no una garantia. El defecto que Franco llamo pesimo -- una hoja por CADA monto editado -- si esta cerrado y medido.
+
+v0.64.0 (2026-08-30) - El respaldo deja de crear una hoja, y los recurrentes dejan de tener mes
+- QUEJA 1 DE FRANCO, MEDIDA: al editar un monto desde Proyecciones Elaboradas aparecia detras del modal una pestania "Respaldo proyeccion abm <sello>", el grid de fondo saltaba a esa hoja, la pestania desaparecia sola y el foco NO volvia. Causa: insertSheet deja la hoja VISIBLE y ACTIVA por contrato de Apps Script, y el SpreadsheetApp.flush() de la verificacion empujaba ese estado al cliente; el hideSheet llegaba 15 lineas despues y ademas no reponia el foco. No se arregla moviendo el hideSheet: hay que no crear la hoja.
++ 18_RespaldoService.js (nuevo): guardarRespaldoFilas / leerRespaldoFilas / borrarRespaldoFilas y el helper _conHojaActivaPreservada. Dos niveles: PropertiesService troceado en propiedades de 40 filas hasta 300 filas, y una boveda (SHEETS.RESPALDOS, una unica hoja oculta REUSADA) por encima. Medido: 271 bytes por respaldo de una fila contra 9 KB de limite por propiedad; 190 bytes por fila en volumen; los grupos reales de la Proyeccion van de 45 a 64 filas, por eso el troceado.
+* DEVTOOL_ProyeccionAbm.js y DEVTOOL_PresupuestoGuardar.js: _respaldarFilasPa y _respaldarFilasPg dejan de hacer insertSheet y delegan. Los dos en el MISMO commit: eran codigo copiado literal y curar uno solo es como se produce el drift entre gemelos.
++ Camino legado: leerRespaldoFilas entiende las propiedades viejas con campo respaldo (nombre de hoja), para no romper un deshacer pendiente al momento del deploy.
+* 17_RecurrentesService.js: _asegurarHojaRecurrentes reordena su unica creacion (foco repuesto y hideSheet ANTES de escribir) y gana un camino de REPARACION DE HEADER: antes, si la hoja ya existia, jamas escribia los rotulos nuevos.
+* DEVTOOL_PurgaRespaldos.js: el regex de sello acepta HHmmss (antes solo HHmm, asi que NUNCA hubiera matcheado un respaldo de PA/PG); la guarda de proteccion por Document Properties ahora tambien mira ADENTRO de los valores JSON (PA y PG guardan el nombre de hoja en el campo respaldo, no como valor pelado: la purga podia borrar la hoja del ultimo revertir); y se suman tres patrones vivos. Van seis.
+! Los recurrentes dejan de tener mes: HORIZONTE RODANTE CON VIGENCIA. El recurrente se declara UNA vez con Desde/Hasta y el sistema mantiene lleno un horizonte de 12 meses. sincronizarRecurrentes() y estadoHorizonteRecurrentes() reemplazan al modelo del mes como parametro; la sincronizacion es la SEGUNDA FASE de guardar/pausar/borrar, y si falla el recurrente queda guardado igual con un aviso (Regla Estricta 9).
+! Solo se edita el monto de las filas cargadas a mano en tidetrack. Las guardadas desde la hoja Presupuesto dejan de editarse, por el mismo motivo por el que ya no se editan las del presupuesto base: la marca de la nota es una AFIRMACION y no puede quedar en pie con un valor que ya no la cumple. Y la baja de un mes de recurrentes DENTRO de la ventana queda bloqueada: la proxima sincronizacion la deshace sola.
++ 00_Config.js: SHEETS.RESPALDOS, RANGES.RESPALDOS y las columnas J/K (Desde/Hasta) de RANGES.RECURRENTES.
+
 v0.63.2 (2026-08-30) - El repo deja de llamarse igual que lo desplegado
 - Despues de desplegar v0.63.1 entraron al repo el merge de la rama paralela (los dos ABM restilados, huerfanos) y el fix del filo de la alerta de proteccion. O sea que el repo dejo de ser el 0.63.1 que corre en la planilla, pero AMBOS seguian declarando "0.63.1": dos codigos distintos con el mismo rotulo, y ningun guard podia delatarlo porque el guard de coherencia compara las cuatro fuentes ENTRE SI, no contra produccion.
 - El drift-check si lo vio -- compara hashes de blob y dio "local adelante" -- pero quien mirara solo los numeros habria leido "sin drift" y se habria equivocado. Lo encontro la sesion paralela auditando el merge.

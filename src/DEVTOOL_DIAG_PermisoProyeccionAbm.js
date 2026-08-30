@@ -68,12 +68,13 @@
  *
  * @see src/DEVTOOL_ProyeccionAbm.js (listarPeriodosProyeccion, _leerTodasFilasPa, pingProyeccionAbm)
  * @see src/DEVTOOL_PresupuestoBase.js (_preflightPb)
- * @see src/UI_AbmProyeccionElaborada.html (la unica llamada real que falla, disparada desde el navegador)
+ * @see src/UI_Shell.html, vista 'proyecciones' (absorbio aquel modal en v0.63.0; el archivo
+ *      src/UI_AbmProyeccionElaborada.html se borro el 2026-08-30, ver ZZ_Changelog)
  * @see docs/permanente/ARNES_TIDETRACK.md
  *
- * @version 0.1.1 (temporal, no se versiona el sistema por esto -- ver commits chore(diag) previos)
+ * @version 0.1.2 (temporal, no se versiona el sistema por esto -- ver commits chore(diag) previos)
  * @since 2026-08-25
- * @lastModified 2026-08-25
+ * @lastModified 2026-08-30
  */
 
 /**

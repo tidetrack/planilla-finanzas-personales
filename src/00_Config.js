@@ -3,9 +3,9 @@
  * Configuración global del sistema Tidetrack
  * Define constantes, rangos de columnas, y enums
  *
- * @version 0.11.2
+ * @version 0.11.3
  * @since 0.1.0
- * @lastModified 2026-08-24
+ * @lastModified 2026-08-30
  */
 
 // [CONCEPTO DE NEGOCIO] Single Source of Truth de nombres de hoja y rangos; ningun modulo hardcodea posiciones.
@@ -124,7 +124,16 @@ const SHEETS = {
     // CREA, no hay historico con datos con el que pueda haber ambiguedad (mismo argumento
     // que SHEETS.PRESUPUESTO). Hoja y no PropertiesService: la filosofia del producto es
     // legibilidad directa en la hoja (CLAUDE.md seccion 1).
-    RECURRENTES: 'Recurrentes'
+    RECURRENTES: 'Recurrentes',
+    // decision Franco 2026-08-30: la boveda de respaldos internos. Una sola hoja oculta, creada
+    // una unica vez en la vida de la planilla y REUSADA: cada respaldo posterior es un append de
+    // filas, nunca una hoja nueva. Existe solo para los respaldos que no entran en
+    // PropertiesService (mas de RESP_TOPE_PROPS filas); el camino normal no la toca. String
+    // estatico y no getter de alias, mismo argumento que SHEETS.PRESUPUESTO y SHEETS.RECURRENTES:
+    // es una hoja que el sistema CREA, no hay historico con datos con el que pueda haber
+    // ambiguedad. NO la purga DEVTOOL_PurgaRespaldos.js: no lleva sello en el nombre, no matchea
+    // ningun patron, y ademas es infraestructura viva -- se controla borrando FILAS por token.
+    RESPALDOS: 'Respaldos tidetrack'
 };
 
 // DEFAULT GLOBAL, no verdad universal: corresponden al layout del Plan de Cuentas, la unica
@@ -320,13 +329,35 @@ const RANGES = {
     // datos fila 7, arranque en B) para que sea una BD mas y no un caso especial.
     // 'dia' es el dia del mes en que el gasto se repite (1-31; al volcar se recorta al
     // largo real del mes). 'activo' es 'Si'/'No': pausar no borra la historia de la regla.
+    // decision Franco 2026-08-30: se suman 'desde' y 'hasta' (texto 'YYYY-MM', vacio = "desde
+    // siempre" / "sin fin"). Son la VIGENCIA de la regla, y es lo que hace que dar de baja un
+    // recurrente en julio no le saque ese gasto a la proyeccion de enero a junio: una proyeccion
+    // es el REGISTRO de lo que se decidio entonces, no una consulta al estado de hoy. Las dos
+    // columnas van con formato de TEXTO PLANO: Sheets interpreta "2026-08" como fecha (ago-2026)
+    // y la releeria como Date -- la trampa del patron de numero que este repo ya pago.
+    // Compatibilidad sin migracion: vacio en ambas = la fila vieja sigue corriendo igual.
     RECURRENTES: {
         sheet: SHEETS.RECURRENTES,
         start: 'B',
-        end: 'I',
+        end: 'K',
         headerRow: 6,
         dataRow: 7,
-        columns: { nombre: 'B', cuenta: 'C', monto: 'D', moneda: 'E', medio: 'F', dia: 'G', nota: 'H', activo: 'I' }
+        columns: { nombre: 'B', cuenta: 'C', monto: 'D', moneda: 'E', medio: 'F', dia: 'G', nota: 'H',
+                    activo: 'I', desde: 'J', hasta: 'K' }
+    },
+
+    // --- Respaldos tidetrack: la boveda de respaldos internos (18_RespaldoService.js) ---
+    // decision Franco 2026-08-30: misma convencion de BD que Recurrentes (titulo B2, header
+    // fila 6, datos fila 7, arranque en B). Una fila por fila respaldada; el token agrupa las
+    // de una misma operacion. Ninguna letra de columna de la boveda se escribe fuera de aca
+    // (Regla Estricta 1).
+    RESPALDOS: {
+        sheet: SHEETS.RESPALDOS,
+        start: 'B',
+        end: 'G',
+        headerRow: 6,
+        dataRow: 7,
+        columns: { token: 'B', creado: 'C', contexto: 'D', hoja: 'E', fila_original: 'F', valores_json: 'G' }
     }
 };
 

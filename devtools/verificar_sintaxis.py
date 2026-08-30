@@ -209,6 +209,68 @@ def verificar_despliegue():
     return fallas, True
 
 
+def verificar_cabeceras():
+    """@lastModified de todo src/*.js MODIFICADO respecto de HEAD tiene que ser la fecha del release.
+
+    [FUNDAMENTO] La convencion de CLAUDE.md pide @version y @lastModified en cada archivo, y hasta
+    hoy nada lo verificaba: esta funcion cruza las cuatro fuentes de la VERSION, pero la cabecera
+    de cada modulo se actualizaba de memoria. El 2026-08-30 se encontro que 14_EventHandlers.js
+    (recoloreado entero) seguia diciendo 2026-08-29 y 00_Config.js (que sumo SHEETS.RESPALDOS,
+    RANGES.RESPALDOS y las dos columnas de vigencia) seguia diciendo 2026-08-24. Una cabecera que
+    miente es la misma familia de defecto que el drift de version: el archivo afirma algo sobre si
+    mismo que no es cierto, y el proximo que lo lea le va a creer.
+
+    Es un chequeo BARATO: `git status --porcelain` mas una regex. Alcance declarado:
+      - solo src/*.js (los .html del shell no llevan cabecera JSDoc con @lastModified, y
+        ZZ_Changelog.js es un unico comentario de bloque sin cabecera de modulo);
+      - solo archivos que YA tienen un @lastModified: no obliga a ponerlo donde nunca estuvo, eso
+        seria una migracion, no un guard;
+      - la fecha esperada es releaseDate de 01_Version.js, no "hoy": lo que importa es que la
+        cabecera coincida con el release que se esta armando.
+    Sin git disponible NO falla: devuelve un aviso y sigue (mismo criterio que verificar_despliegue).
+    """
+    ruta_v = os.path.join(SRC, '01_Version.js')
+    if not os.path.exists(ruta_v):
+        return []
+    m = re.search(r"releaseDate:\s*'(\d{4}-\d{2}-\d{2})'", open(ruta_v, encoding='utf-8').read())
+    if not m:
+        return ['no se pudo leer releaseDate de src/01_Version.js para cruzar las cabeceras']
+    esperada = m.group(1)
+
+    try:
+        r = subprocess.run(['git', 'status', '--porcelain', '--', 'src/'],
+                           cwd=RAIZ, capture_output=True, text=True, timeout=20)
+    except Exception:
+        return []
+    if r.returncode != 0:
+        return []
+
+    fallas = []
+    for linea in r.stdout.splitlines():
+        estado, _, camino = linea[:2], linea[2], linea[3:].strip()
+        if estado.strip() in ('D', 'R'):
+            continue
+        # Un rename llega como "viejo -> nuevo": vale el destino.
+        camino = camino.split(' -> ')[-1].strip('"')
+        if not camino.startswith('src/') or not camino.endswith('.js'):
+            continue
+        full = os.path.join(RAIZ, camino)
+        if not os.path.exists(full):
+            continue
+        # LINEA DE TAG JSDOC, no cualquier aparicion del texto: anclada a principio y fin de
+        # linea. ZZ_Changelog.js es un unico comentario de bloque que HABLA de @lastModified en
+        # su prosa, y una regex suelta lo tomaba por cabecera de modulo -- un rojo en estado sano,
+        # que es tan malo como el verde que afirma de mas.
+        cab = re.search(r'^\s*\*\s*@lastModified\s+(\d{4}-\d{2}-\d{2})\s*$',
+                        open(full, encoding='utf-8').read(), re.M)
+        if not cab:
+            continue
+        if cab.group(1) != esperada:
+            fallas.append('%s se modifico en este release pero su @lastModified dice %s '
+                          '(el release es %s)' % (camino, cab.group(1), esperada))
+    return fallas
+
+
 def _version_del_repo():
     """major.minor.patch de src/01_Version.js, o None si no se puede leer."""
     ruta = os.path.join(SRC, '01_Version.js')
@@ -291,10 +353,29 @@ def main(argv):
         print('que evita que dos sesiones se pisen queda mintiendo.')
         return 1
 
+    # Las cabeceras van APARTE y con su propio mensaje: es otra causa. Un rojo que dice "la
+    # version es incoherente" cuando lo que falta es un @lastModified manda a mirar targets.yaml,
+    # que no tiene nada que ver -- la cicatriz de v0.63.2 fue exactamente esa, un mensaje de
+    # cancelacion que nombraba la causa equivocada.
+    cabeceras = verificar_cabeceras()
+    if cabeceras:
+        print('Los %d archivos de src/ parsean y la version es coherente, PERO hay cabeceras de '
+              'modulo desactualizadas.' % len(objetivos))
+        print('')
+        for f in cabeceras:
+            print('  %s' % f)
+        print('')
+        print('La convencion de CLAUDE.md pide @version y @lastModified en cada archivo. Un')
+        print('archivo que se toco y sigue fechado en el release anterior afirma algo falso')
+        print('sobre si mismo, y el proximo que lo lea le va a creer. Actualizar la cabecera')
+        print('(y el @version, si el cambio lo amerita) antes de cerrar la tarea.')
+        return 1
+
     cierre = (', y el repo no se llama igual que lo desplegado.' if despliegue_verificado
               else '. El invariante de despliegue NO se pudo verificar (ver aviso).')
     print('Los %d archivos de src/ parsean, sin emojis, la version es coherente en las cuatro '
-          'fuentes%s' % (len(objetivos), cierre))
+          'fuentes, las cabeceras de los modulos tocados llevan la fecha del release%s'
+          % (len(objetivos), cierre))
     return 0
 
 

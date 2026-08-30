@@ -54,7 +54,10 @@
  * sobre una BD de produccion, con dos caminos que podrian divergir con el tiempo. Este ABM asume
  * que las filas YA estan escritas por ese camino y trabaja sobre eso: ver, corregir, borrar.
  *
- * DECISION 2 -- MODIFICACION: SOLO MONTO, SOLO EN FILAS "GUARDADO A MANO" (marca PG_MARCA).
+ * DECISION 2 -- MODIFICACION: SOLO MONTO, SOLO EN FILAS CARGADAS A MANO EN TIDETRACK ('shell').
+ * ENMENDADA EL 2026-08-30: el gate se cerro un paso mas y 'guardado' salio de las editables. El
+ * fundamento completo esta en PA_MSJ_NO_EDITABLE, mas abajo. Lo que sigue es el argumento
+ * original, que se conserva porque es el MISMO y ahora se aplica parejo a las dos poblaciones.
  * Nunca en filas PB_MARCA (presupuesto base historico, promedio automatico): editarlas a mano las
  * dejaria con la marca "presupuesto base historico" en la Nota pero un valor que ya no es ese
  * promedio -- una mentira en la hoja, indistinguible de un dato genuino hasta que alguien audite
@@ -129,21 +132,20 @@
  *    `saveAbmRecord`/`updateAbmRecord`/`deleteAbmRecord` en 11_UIService.js, NO el patron
  *    `{ok:false,error}` de los modulos DEVTOOL_Presupuesto*, que es para `ui.alert()` de menu).
  *
- * Reusa de DEVTOOL_PresupuestoGuardar.js: PG_MARCA, _claveMesPg,
- * _leerRespaldoFilasPg, _escribirAlPieProyeccionPg.
- * Reusa de 17_RecurrentesService.js: REC_MARCA (leida dentro de cuerpos de funcion).
+ * Reusa de DEVTOOL_PresupuestoGuardar.js: PG_MARCA, _claveMesPg, _escribirAlPieProyeccionPg.
+ * Reusa de 17_RecurrentesService.js: REC_MARCA y _enVentanaRec (leidas dentro de cuerpos de funcion).
  * Reusa de DEVTOOL_PresupuestoBase.js: PB_MARCA, _preflightPb, _borrarGeneradasPb.
  * Reusa de DEVTOOL_InicioPresupuesto.js: IP_MESES.
- * Reusa de DEVTOOL_FormulerioV0111.js: _nombreHojaLibreFormulerio.
+ * Reusa de 18_RespaldoService.js: guardarRespaldoFilas, leerRespaldoFilas, borrarRespaldoFilas.
  * Reusa de 00_Config.js/03_SheetManager.js: SHEETS, RANGES, MONEDAS_DISPONIBLES,
- * columnLetterToIndex, invalidarCacheNombresHojas.
+ * columnLetterToIndex.
  *
- * NO reusa `_respaldarFilasPg` (DEVTOOL_PresupuestoGuardar.js) tal cual: esa funcion hardcodea
- * `PG_PREFIJO_RESPALDO` en el nombre de la hoja de respaldo, y este modulo necesita el suyo
- * propio (`PA_PREFIJO_RESPALDO`) para no confundir, en la lista de hojas ocultas, un respaldo de
- * "Guardar Proyeccion" con uno de este ABM. `_respaldarFilasPa` es una copia deliberada del MISMO
- * algoritmo (escribir, `flush`, releer, verificar fila por fila, ocultar) con esa unica variable
- * cambiada -- no una reinvencion.
+ * EL RESPALDO YA NO ES UNA HOJA (2026-08-30). `_respaldarFilasPa` y `_respaldarFilasPg` eran el
+ * MISMO algoritmo copiado (escribir en una hoja nueva, flush, releer, verificar, ocultar) con el
+ * prefijo cambiado. Los dos delegan ahora en `guardarRespaldoFilas` (18_RespaldoService.js) y no
+ * crean ninguna hoja: la copia dejo de existir en vez de duplicarse mejor.
+ * `PA_PREFIJO_RESPALDO` se conserva porque DEVTOOL_PurgaRespaldos.js lo lee para poder borrar las
+ * hojas que este modulo dejo acumuladas antes de v0.64.0.
  *
  * ============================================================================
  * [INCIDENTE 2026-08-25 -- EXPERIMENTO DECISIVO: CANAL ENTERO VS. ESTA FUNCION/RESPUESTA]
@@ -188,9 +190,9 @@
  * @see DEVTOOL_PresupuestoBase.js
  * @see DEVTOOL_DIAG_PermisoProyeccionAbm.js (paso 5b: tamanio real del payload en produccion)
  * @see UI_Shell.html (vista 'proyecciones': el consumidor vivo de los cinco endpoints)
- * @version 0.63.0
+ * @version 0.64.0
  * @since 2026-08-25
- * @lastModified 2026-08-29
+ * @lastModified 2026-08-30
  */
 
 // ============================================
@@ -199,6 +201,9 @@
 
 const PA_PROP_PREVIOS_BAJA = 'proyeccion_abm_baja_previos';
 const PA_PROP_PREVIOS_EDICION = 'proyeccion_abm_edicion_previos';
+// Desde v0.64.0 este prefijo YA NO se usa para crear nada. Se conserva porque
+// DEVTOOL_PurgaRespaldos.js lo lee en runtime para borrar las hojas que este modulo dejo
+// acumuladas antes del cambio -- una por cada monto editado.
 const PA_PREFIJO_RESPALDO = 'Respaldo proyeccion abm ';
 
 // Literal propio: no lee ningun simbolo de otro archivo, es seguro como const de nivel superior.
@@ -207,6 +212,34 @@ const PA_CATEGORIA_A_CLAVE = { 'Ingreso': 'ingresos', 'Gasto Fijo': 'fijos', 'Ga
 // Los cinco origenes que este ABM reconoce (literal puro, mismo criterio que arriba). El orden
 // es el de presentacion en el modal: guardado a mano, manual del shell, recurrentes, base, otros.
 const PA_ORIGENES = ['guardado', 'shell', 'recurrentes', 'base', 'otros'];
+
+// decision Franco 2026-08-30: SOLO 'shell' edita el monto. La marca de la Nota es una
+// AFIRMACION, no una etiqueta: "Presupuesto guardado <clave> <sello>" afirma que esa fila es lo
+// que la hoja Presupuesto decia en ese momento y que su total cerro contra el invariante por
+// bloque que aplicarGuardarProyeccion verifica al escribir. Editarla a mano deja la afirmacion
+// en pie con un valor que ya no la cumple: la hoja Presupuesto y la BD Proyeccion divergen en
+// silencio y nada en la fila lo delata -- exactamente el argumento con el que la decision 2 ya
+// bloqueaba 'base'. No se sostiene aplicarlo a una poblacion y no a la otra. La fila 'shell' no
+// tiene ese problema: ELLA MISMA es el origen, no hay documento aguas arriba con el que pueda
+// discrepar. Corregir un 'guardado' no queda sin camino: volver a guardar ese mes desde la hoja
+// Presupuesto es idempotente por periodo, retira sus propias filas y las reescribe.
+//
+// Cada mensaje nombra el LUGAR, no solo la prohibicion. Las rutas son literales de MENU_CONFIG
+// (00_Config.js) y devtools/probar_proyeccion_abm.js las cruza contra el config real: un banco
+// con su propia copia de una ruta miente. DEUDA ANOTADA CON NOMBRE: "Guardar proyeccion"
+// necesita su boton fuera del menu Dev (el comentario de MENU_CONFIG ya lo dice: "por ahora en
+// tidetrack dev, luego va a tener su boton").
+const PA_MSJ_NO_EDITABLE = {
+    guardado: 'Esta fila viene de la hoja Presupuesto y su nota afirma que cerro contra ese total. ' +
+        'Se corrige en la hoja Presupuesto y se vuelve a guardar el mes: ' +
+        'tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar.',
+    recurrentes: 'Esta fila la mantiene la vista de Gastos recurrentes. ' +
+        'Se corrige en Gastos recurrentes: cambia el monto y la proyeccion se actualiza sola.',
+    base: 'Esta fila es del presupuesto base historico (un promedio automatico). ' +
+        'El presupuesto base se recalcula corriendo de nuevo ese modulo: ' +
+        'tidetrack Dev > Presupuesto base (desde el historial).',
+    otros: 'No se reconoce el origen de esta fila. Solo se puede borrar el mes completo.'
+};
 
 // decision Franco 2026-08-25: PG_MARCA, PB_MARCA, IP_MESES, RANGES, SHEETS, MONEDAS_DISPONIBLES y
 // cualquier funcion de otro archivo (DEVTOOL_PresupuestoGuardar.js, DEVTOOL_PresupuestoBase.js,
@@ -424,7 +457,7 @@ function _totalesPorBloquePa(filasCrudas) {
 }
 
 // ============================================
-// SELLO Y RESPALDO (copia deliberada de _respaldarFilasPg con PA_PREFIJO_RESPALDO, ver cabecera)
+// SELLO Y RESPALDO (el respaldo vive en 18_RespaldoService.js: ya no crea una hoja)
 // ============================================
 
 // Resolucion de segundos, mismo criterio y misma razon que _selloPg (DEVTOOL_PresupuestoGuardar.js):
@@ -433,49 +466,25 @@ function _selloPa() {
     return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd_HHmmss');
 }
 
+// decision Franco 2026-08-30: el respaldo para deshacer una edicion puntual no crea una hoja.
+// insertSheet deja la hoja visible y activa, y el flush de la verificacion la empuja al cliente:
+// Franco veia aparecer la pestania y quedaba parado en otra hoja. 271 bytes medidos por fila de
+// respaldo contra 9 KB de limite por propiedad -- entra 34 veces.
 /**
- * Congela el contenido (B:M, valores crudos) de `filas` de "Proyeccion" en una hoja nueva,
- * oculta, y la RELEE para verificar. Copia deliberada de `_respaldarFilasPg`
- * (DEVTOOL_PresupuestoGuardar.js) con `PA_PREFIJO_RESPALDO` en vez de `PG_PREFIJO_RESPALDO`: esa
- * funcion hardcodea su propio prefijo, asi que no se puede parametrizar sin tocar ese archivo.
+ * Congela el contenido (B:M, valores crudos) de `filas` de "Proyeccion" bajo el sello de la
+ * operacion, delegando en la boveda de respaldos (18_RespaldoService.js). Ya no crea, oculta ni
+ * nombra ninguna hoja: devuelve un TOKEN. La disciplina no cambio -- se escribe, se relee por su
+ * clave y se compara fila por fila; si no verifica, LANZA y "Proyeccion" queda intacta.
+ *
+ * `guardarRespaldoFilas` se lee DENTRO del cuerpo (cicatriz v0.50.1): 18_RespaldoService.js
+ * carga antes que este archivo por orden alfabetico, pero la regla se respeta igual.
+ * @see 18_RespaldoService.js
  */
 function _respaldarFilasPa(ss, hojaProy, filas, sello) {
-    const cfg = RANGES.REGISTROS;
-    const colIni = columnLetterToIndex(cfg.start);
-    const ancho = columnLetterToIndex(cfg.end) - colIni + 1;
-    const nombre = _nombreHojaLibreFormulerio(ss, PA_PREFIJO_RESPALDO + sello);
-
-    const destino = ss.insertSheet(nombre);
-    invalidarCacheNombresHojas();
-    destino.getRange(1, 1, 1, 2).setValues([['fila_original', 'valores_json']]);
-
-    if (filas.length) {
-        const filasVivas = hojaProy.getRange(1, colIni, hojaProy.getLastRow(), ancho).getValues();
-        const matrizRespaldo = filas.map(function (fila) {
-            const vals = filasVivas[fila - 1];
-            const serial = vals.map(function (v) { return v instanceof Date ? { __fecha__: v.toISOString() } : v; });
-            return [fila, JSON.stringify(serial)];
-        });
-        destino.getRange(2, 1, matrizRespaldo.length, 2).setValues(matrizRespaldo);
-    }
-    SpreadsheetApp.flush();
-
-    const leidas = filas.length ? destino.getRange(2, 1, filas.length, 2).getValues() : [];
-    if (leidas.length !== filas.length) {
-        throw new Error('El respaldo de filas quedo en "' + nombre + '" pero NO VERIFICA: ' +
-            'se esperaban ' + filas.length + ' fila(s) y se releyeron ' + leidas.length +
-            '. No se toco "' + hojaProy.getName() + '".');
-    }
-    for (let i = 0; i < leidas.length; i++) {
-        if (Number(leidas[i][0]) !== filas[i]) {
-            throw new Error('El respaldo en "' + nombre + '" no coincide fila por fila con lo esperado. ' +
-                'No se toco "' + hojaProy.getName() + '".');
-        }
-    }
-
-    destino.hideSheet();
-    logInfo('_respaldarFilasPa: ' + filas.length + ' fila(s) de "' + hojaProy.getName() + '" respaldadas en "' + nombre + '".');
-    return { nombre: nombre, filas: filas.length };
+    const r = guardarRespaldoFilas(ss, hojaProy, filas, sello, 'proyeccion-abm');
+    logInfo('_respaldarFilasPa: ' + r.filas + ' fila(s) de "' + hojaProy.getName() +
+        '" respaldadas bajo el token "' + r.token + '" (' + r.medio + ').');
+    return r;
 }
 
 // ============================================
@@ -610,8 +619,10 @@ function _validarClaveOrigenPa(clave, origen) {
  * El detalle fila por fila de un periodo+origen puntual. Solo lectura. `clave`+`origen` invalidos
  * tiran; una clave+origen SIN ninguna fila (carrera con otra pestana, doble click) NO es un
  * error: devuelve `filas: []`. Cada fila suma `notaLibre` (la nota del shell o el nombre del
- * recurrente) y `editable`: solo 'guardado' y 'shell' se editan -- las del shell son decisiones
- * deliberadas del usuario; base sigue igual; recurrentes y otros NO son editables.
+ * recurrente) y `editable`: desde 2026-08-30 SOLO 'shell' se edita (ver PA_MSJ_NO_EDITABLE), y
+ * `motivoNoEditable` trae, para los otros cuatro origenes, el lugar exacto donde SI se corrige.
+ * El cliente nunca es el gate: `actualizarMontoFilaProyeccion` vuelve a verificar del lado del
+ * servidor.
  */
 function detalleFilasPeriodoProyeccion(clave, origen) {
     _validarClaveOrigenPa(clave, origen);
@@ -629,7 +640,8 @@ function detalleFilasPeriodoProyeccion(clave, origen) {
     });
     delGrupo.sort(function (a, b) { return a.f.fila - b.f.fila; });
 
-    const editable = (origen === 'guardado' || origen === 'shell');
+    const editable = (origen === 'shell');
+    const motivoNoEditable = editable ? '' : (PA_MSJ_NO_EDITABLE[origen] || PA_MSJ_NO_EDITABLE.otros);
     const filas = delGrupo.map(function (par) {
         const f = par.f;
         return {
@@ -646,8 +658,29 @@ function detalleFilasPeriodoProyeccion(clave, origen) {
     return {
         clave: clave, origen: origen,
         mesLabel: periodo ? _mesLabelPa(periodo.getFullYear(), periodo.getMonth()) : 'Sin mes reconocible',
+        editable: editable,
+        // El texto REACTIVO: el cliente lo muestra recien cuando alguien intenta corregir una
+        // fila que no se corrige aca. Viaja una vez por grupo, no por fila.
+        motivoNoEditable: motivoNoEditable,
+        bajaBloqueada: _motivoBajaBloqueadaPa(clave, origen),
         filas: filas, totales: _totalesPorBloquePa(delGrupo.map(function (par) { return par.f; }))
     };
+}
+
+/**
+ * '' si la baja de `clave`+`origen` esta permitida; el motivo si esta bloqueada.
+ *
+ * decision Franco 2026-08-30: un mes de 'recurrentes' DENTRO de la ventana del horizonte no se
+ * borra desde aca. La proxima sincronizacion lo repone sola -- un borrado que se deshace solo es
+ * una trampa, no una funcion. Fuera de la ventana SI se borra: son historia congelada y este ABM
+ * es la unica via de limpiarlos. El gate se aplica del lado del SERVIDOR; el cliente nunca es el
+ * gate. `_enVentanaRec` se lee en runtime (17_RecurrentesService.js).
+ */
+function _motivoBajaBloqueadaPa(clave, origen) {
+    if (origen !== 'recurrentes') return '';
+    if (!_enVentanaRec(clave)) return '';
+    return 'Este mes lo mantiene la vista de Gastos recurrentes. Para que deje de proyectarse, ' +
+        'pausalo o ponele fecha de fin alli.';
 }
 
 /**
@@ -658,6 +691,9 @@ function detalleFilasPeriodoProyeccion(clave, origen) {
  */
 function eliminarPeriodoProyeccion(clave, origen) {
     _validarClaveOrigenPa(clave, origen);
+
+    const bloqueada = _motivoBajaBloqueadaPa(clave, origen);
+    if (bloqueada) throw new Error(bloqueada);
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const pre = _preflightPb(ss);
@@ -685,32 +721,41 @@ function eliminarPeriodoProyeccion(clave, origen) {
         let restaurado = '';
         if (respaldo) {
             try {
-                const backup = ss.getSheetByName(respaldo.nombre);
-                const matrizBackup = backup ? _leerRespaldoFilasPg(backup) : [];
+                const matrizBackup = leerRespaldoFilas(ss, respaldo.token);
                 if (matrizBackup.length) {
                     const yaQuedan = _filasDelPeriodoPa(hoja, clave, origen);
                     if (yaQuedan.length) _borrarGeneradasPb(hoja, yaQuedan);
                     _escribirAlPieProyeccionPg(hoja, matrizBackup);
                     SpreadsheetApp.flush();
                 }
-                restaurado = ' Se revirtio: se repusieron las filas desde el respaldo "' + respaldo.nombre + '".';
+                restaurado = ' Se revirtio: se repusieron las filas desde el respaldo "' + respaldo.token + '".';
             } catch (e2) {
-                restaurado = ' ADEMAS fallo la reversion automatica (' + e2.message + '). El respaldo sigue en "' +
-                    respaldo.nombre + '": revision manual.';
+                restaurado = ' ADEMAS fallo la reversion automatica (' + e2.message + '). El respaldo "' +
+                    respaldo.token + '" sigue guardado: revision manual.';
             }
         }
         throw new Error('NO SE BORRO "' + clave + '" (' + origen + '): ' + e.message + restaurado);
     }
 
     PropertiesService.getDocumentProperties().setProperty(PA_PROP_PREVIOS_BAJA, JSON.stringify({
-        respaldo: respaldo.nombre, clave: clave, origen: origen, filas: filas.length
+        token: respaldo.token, clave: clave, origen: origen, filas: filas.length
     }));
 
     logSuccess('eliminarPeriodoProyeccion: ' + filas.length + ' fila(s) de ' + clave + ' (' + origen + ') borradas.');
-    return { clave: clave, origen: origen, filasBorradas: filas.length, respaldo: respaldo.nombre };
+    return { clave: clave, origen: origen, filasBorradas: filas.length, respaldo: respaldo.token };
 }
 
-/** Repone la ULTIMA baja aplicada por este ABM (solo una, ver `eliminarPeriodoProyeccion`). */
+/**
+ * Repone la ULTIMA baja aplicada por este ABM (solo una, ver `eliminarPeriodoProyeccion`).
+ *
+ * decision Franco 2026-08-30: revisado con el mismo criterio que el guard de identidad de
+ * `revertirEdicionMontoProyeccion` y NO necesita uno. Este camino no escribe en un numero de
+ * fila guardado: repone AL PIE (`_escribirAlPieProyeccionPg`) las filas enteras del respaldo, asi
+ * que un corrimiento de indices por el medio no puede hacerle pisar una fila ajena. Su modo de
+ * falla es otro y esta acotado: reponer al pie algo que ya volvio por otro camino deja filas
+ * duplicadas, VISIBLES y borrables desde este mismo ABM -- no una fila ajena sobrescrita en
+ * silencio, que es lo que el guard de identidad del deshacer de monto viene a impedir.
+ */
 function revertirBajaProyeccionAbm() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const props = PropertiesService.getDocumentProperties();
@@ -721,14 +766,18 @@ function revertirBajaProyeccionAbm() {
     const pre = _preflightPb(ss);
     const hoja = pre.hoja;
 
-    const backup = ss.getSheetByName(previos.respaldo);
-    if (!backup) {
-        throw new Error('La hoja de respaldo "' + previos.respaldo + '" ya no existe: no se puede revertir la ' +
-            'baja de "' + previos.clave + '" (' + previos.origen + ').');
+    // `previos.token` es el formato nuevo; `previos.respaldo` (nombre de hoja) es el LEGADO que
+    // puede estar vivo en la planilla al momento del deploy. leerRespaldoFilas resuelve los dos.
+    const refRespaldo = previos.token || previos.respaldo;
+    let matrizBackup;
+    try {
+        matrizBackup = leerRespaldoFilas(ss, refRespaldo);
+    } catch (e) {
+        throw new Error('El respaldo de la baja de "' + previos.clave + '" (' + previos.origen +
+            ') ya no esta disponible: no se puede revertir. ' + e.message);
     }
-    const matrizBackup = _leerRespaldoFilasPg(backup);
     if (!matrizBackup.length) {
-        throw new Error('El respaldo "' + previos.respaldo + '" esta vacio: no hay nada que reponer.');
+        throw new Error('El respaldo "' + refRespaldo + '" esta vacio: no hay nada que reponer.');
     }
 
     _escribirAlPieProyeccionPg(hoja, matrizBackup);
@@ -753,11 +802,14 @@ function revertirBajaProyeccionAbm() {
     if (repuestas.length < esperadas) {
         throw new Error('Se intento reponer ' + matrizBackup.length + ' fila(s) pero solo se verifican ' +
             repuestas.length + ' de "' + previos.clave + '" (' + previos.origen + ') contra ' + esperadas +
-            ' esperadas del respaldo. Revisar "' + SHEETS.PROYECCION + '" a mano; el respaldo sigue en "' +
-            previos.respaldo + '".');
+            ' esperadas del respaldo. Revisar "' + SHEETS.PROYECCION + '" a mano; el respaldo "' +
+            refRespaldo + '" sigue guardado.');
     }
 
     props.deleteProperty(PA_PROP_PREVIOS_BAJA);
+    // El respaldo ya cumplio: se retira para que la boveda no crezca sola. Solo el formato nuevo
+    // -- una hoja legada la borra el operador con DEVTOOL_PurgaRespaldos.js, que es su duenio.
+    if (previos.token) borrarRespaldoFilas(ss, previos.token);
 
     logSuccess('revertirBajaProyeccionAbm: ' + matrizBackup.length + ' fila(s) repuestas de ' + previos.clave + ' (' + previos.origen + ').');
     return { clave: previos.clave, origen: previos.origen, filasRepuestas: matrizBackup.length };
@@ -773,6 +825,30 @@ function _montoValidoPa(v) {
     if (String(v).trim() === '') return null;
     const n = Number(v);
     return isFinite(n) ? n : null;
+}
+
+/**
+ * Normaliza un valor de celda para COMPARAR IDENTIDAD entre la hoja viva y un respaldo.
+ *
+ * decision Franco 2026-08-30: las Date se comparan por getTime() y todo lo demas por texto. Dos
+ * Date del mismo instante son objetos distintos y `===` las declara diferentes: comparar Fecha
+ * con `===` habria hecho que el guard de identidad del deshacer disparara SIEMPRE, o sea un rojo
+ * en estado sano. Y una Date invalida se colapsa a un valor propio para que dos NaN no se lean
+ * como "igual" por casualidad.
+ */
+function _valorComparablePa(v) {
+    if (v instanceof Date) return isNaN(v.getTime()) ? 'fecha-invalida' : 'fecha:' + v.getTime();
+    return String(v === null || v === undefined ? '' : v);
+}
+
+/** El mismo valor, pero para MOSTRARLE a una persona: la fecha como dd/mm/aaaa, no como epoch. */
+function _textoCeldaPa(v) {
+    if (v instanceof Date) {
+        if (isNaN(v.getTime())) return 'fecha invalida';
+        return String(v.getDate()).padStart(2, '0') + '/' + String(v.getMonth() + 1).padStart(2, '0') +
+            '/' + v.getFullYear();
+    }
+    return String(v === null || v === undefined ? '' : v);
 }
 
 /**
@@ -808,16 +884,9 @@ function actualizarMontoFilaProyeccion(fila, nuevoMonto) {
     const nota = String(hoja.getRange(filaNum, colNota).getValue() || '');
     const partes = _origenNotaPa(nota, hoja.getRange(filaNum, colFecha).getValue());
     const origen = partes ? partes.origen : null;
-    if (origen === 'base') {
-        throw new Error('Esta fila no es un guardado manual: las filas de presupuesto base se recalculan ' +
-            'corriendo de nuevo ese modulo, no se editan a mano.');
-    }
-    if (origen === 'recurrentes') {
-        throw new Error('Esta fila es un volcado de recurrentes: el monto se corrige en la vista de ' +
-            'Recurrentes y se vuelve a volcar el mes.');
-    }
-    if (origen !== 'guardado' && origen !== 'shell') {
-        throw new Error('No se reconoce el origen de esta fila: no se edita desde este ABM.');
+    if (origen !== 'shell') {
+        // El gate es del SERVIDOR: no confia en que el cliente ya haya filtrado por `editable`.
+        throw new Error(PA_MSJ_NO_EDITABLE[origen] || PA_MSJ_NO_EDITABLE.otros);
     }
 
     const colMonto = columnLetterToIndex(cfg.columns.monto);
@@ -845,14 +914,14 @@ function actualizarMontoFilaProyeccion(fila, nuevoMonto) {
             SpreadsheetApp.flush();
             restaurado = ' Se revirtio al valor anterior (' + montoAnterior + ').';
         } catch (e2) {
-            restaurado = ' ADEMAS fallo la reversion automatica (' + e2.message + '). El respaldo sigue en "' +
-                respaldo.nombre + '": revision manual.';
+            restaurado = ' ADEMAS fallo la reversion automatica (' + e2.message + '). El respaldo "' +
+                respaldo.token + '" sigue guardado: revision manual.';
         }
         throw new Error('NO SE ACTUALIZO la fila ' + filaNum + ': ' + e.message + restaurado);
     }
 
     PropertiesService.getDocumentProperties().setProperty(PA_PROP_PREVIOS_EDICION, JSON.stringify({
-        respaldo: respaldo.nombre, fila: filaNum, montoAnterior: montoAnterior, montoNuevo: montoNuevoNum
+        token: respaldo.token, fila: filaNum, montoAnterior: montoAnterior, montoNuevo: montoNuevoNum
     }));
 
     logSuccess('actualizarMontoFilaProyeccion: fila ' + filaNum + ' de ' + montoAnterior + ' a ' + montoNuevoNum + '.');
@@ -878,20 +947,58 @@ function revertirEdicionMontoProyeccion() {
             SHEETS.PROYECCION + '". No se pudo revertir.');
     }
 
-    const backup = ss.getSheetByName(previos.respaldo);
-    if (!backup) {
-        throw new Error('La hoja de respaldo "' + previos.respaldo + '" ya no existe: no se puede revertir la ' +
-            'edicion de la fila ' + previos.fila + '.');
+    // Formato nuevo (token) y LEGADO (nombre de hoja) resueltos por el mismo lector.
+    const refRespaldo = previos.token || previos.respaldo;
+    let matrizBackup;
+    try {
+        matrizBackup = leerRespaldoFilas(ss, refRespaldo);
+    } catch (e) {
+        throw new Error('El respaldo de la edicion ya no esta disponible: no se puede revertir la fila ' +
+            previos.fila + '. ' + e.message);
     }
-    const matrizBackup = _leerRespaldoFilasPg(backup);
     if (!matrizBackup.length) {
-        throw new Error('El respaldo "' + previos.respaldo + '" esta vacio: no hay nada que reponer.');
+        throw new Error('El respaldo "' + refRespaldo + '" esta vacio: no hay nada que reponer.');
     }
 
     const colIni = columnLetterToIndex(cfg.start);
     const idxMonto = columnLetterToIndex(cfg.columns.monto) - colIni;
     const montoOriginal = Number(matrizBackup[0][idxMonto]);
     const colMonto = columnLetterToIndex(cfg.columns.monto);
+
+    // decision Franco 2026-08-30: ANTES de escribir se comprueba que la fila SIGA SIENDO LA
+    // MISMA. El deshacer guarda un NUMERO DE FILA, y entre la edicion y el deshacer la planilla
+    // se mueve sola: la fase 2 de Gastos recurrentes (_conFase2Rec ->
+    // _sincronizarRecurrentesSinLock -> _escribirClavesRec -> _borrarFilasRec) borra y reescribe
+    // hasta REC_HORIZONTE_MESES meses de filas REC en CADA guardado o borrado de un recurrente.
+    // Al correrse los indices, la fila N pasa a ser otra. Medido contra el mock del banco: el
+    // deshacer pisaba el monto de una fila del presupuesto base -- justo una de las poblaciones
+    // que este ABM se niega a dejar editar --, dejaba la fila editada sin revertir, informaba
+    // exito y borraba el respaldo, o sea que no quedaba con que reponer. El chequeo posterior no
+    // lo agarraba porque relee la misma celda que acaba de escribir.
+    // La identidad se compara contra el respaldo, que ya trae la fila B:M entera: Nota (que lleva
+    // la marca de origen), Cuenta y Fecha. Si no coincide se LANZA nombrando el desvio, no se
+    // escribe una celda, y NO se borra ni el respaldo ni la propiedad: el usuario reintenta o
+    // mira a mano. Fallar ruidoso y reversible antes que escribir en la fila equivocada.
+    const desvios = [];
+    ['nota', 'cuenta', 'fecha'].forEach(function (campo) {
+        const col = columnLetterToIndex(cfg.columns[campo]);
+        const vivo = hoja.getRange(previos.fila, col).getValue();
+        const guardado = matrizBackup[0][col - colIni];
+        // Se COMPARA normalizado y se MUESTRA el valor tal cual: la forma normalizada es
+        // mecanica interna y en un mensaje al usuario solo agrega ruido.
+        if (_valorComparablePa(vivo) !== _valorComparablePa(guardado)) {
+            desvios.push('la ' + campo + ' dice "' + _textoCeldaPa(vivo) + '" y el respaldo guarda "' +
+                _textoCeldaPa(guardado) + '"');
+        }
+    });
+    if (desvios.length) {
+        throw new Error('La fila ' + previos.fila + ' ya no es la que se edito: la planilla se movio ' +
+            'entre la edicion y el deshacer (' + desvios.join('; ') + '). NO se escribio nada. ' +
+            'Pasa cuando se guarda o se borra un gasto recurrente en el medio, porque eso reescribe ' +
+            'las filas de recurrentes de la proyeccion. El respaldo "' + refRespaldo + '" sigue ' +
+            'guardado y el deshacer sigue disponible: volve a entrar a Proyecciones Elaboradas y ' +
+            'corregi el monto a mano (el valor original es ' + montoOriginal + ').');
+    }
 
     hoja.getRange(previos.fila, colMonto).setValue(montoOriginal);
     SpreadsheetApp.flush();
@@ -900,10 +1007,11 @@ function revertirEdicionMontoProyeccion() {
     if (releido !== montoOriginal) {
         throw new Error('Se intento revertir la fila ' + previos.fila + ' pero el monto releido (' + releido +
             ') no coincide con el original del respaldo (' + montoOriginal + '). Revisar "' + SHEETS.PROYECCION +
-            '" a mano; el respaldo sigue en "' + previos.respaldo + '".');
+            '" a mano; el respaldo "' + refRespaldo + '" sigue guardado.');
     }
 
     props.deleteProperty(PA_PROP_PREVIOS_EDICION);
+    if (previos.token) borrarRespaldoFilas(ss, previos.token);
 
     logSuccess('revertirEdicionMontoProyeccion: fila ' + previos.fila + ' restaurada a ' + montoOriginal + '.');
     return { fila: previos.fila, montoRestaurado: montoOriginal };

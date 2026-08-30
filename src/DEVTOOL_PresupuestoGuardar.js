@@ -264,9 +264,9 @@
  * @see DEVTOOL_PresupuestoModo.js
  * @see DEVTOOL_PresupuestoResumen.js
  * @see DEVTOOL_PresupuestoBase.js
- * @version 0.50.0
+ * @version 0.64.0
  * @since 2026-08-25
- * @lastModified 2026-08-29
+ * @lastModified 2026-08-30
  */
 
 // ============================================
@@ -691,7 +691,7 @@ function _planGuardarPg(ss, prePresupuesto) {
     // que el operador que aprueba el guardado vea la convivencia completa del mes. REC_MARCA
     // se lee ACA ADENTRO, nunca en un const de nivel superior (cicatriz v0.50.1); el prefijo
     // es el mismo que arma _filasRecPorPrefijo del otro lado, con @see cruzado.
-    // @see 17_RecurrentesService.js (_filasRecPorPrefijo, volcarRecurrentesAlMes)
+    // @see 17_RecurrentesService.js (_filasRecPorPrefijo, _escribirClavesRec)
     const filasRecDelPeriodo = _filasPorNotaPrefijoPg(hojaProy, REC_MARCA + ' ' + clave + ' ');
 
     return {
@@ -709,49 +709,23 @@ function _planGuardarPg(ss, prePresupuesto) {
 // RESPALDO DE FILAS RETIRADAS (para poder revertir)
 // ============================================
 
+// decision Franco 2026-08-30: mismo tratamiento que _respaldarFilasPa, y en el MISMO commit. Es
+// codigo copiado literal del de PA (el comentario de PA lo declaraba: "copia deliberada"), y
+// dejar la copia con el defecto mientras el original se cura es exactamente como se produce el
+// drift entre gemelos. insertSheet deja la hoja visible y activa por contrato de Apps Script y el
+// flush de la verificacion la empujaba al cliente.
 /**
- * Congela el CONTENIDO (B:M, valores crudos) de `filas` de "Proyeccion" en una hoja nueva,
- * oculta, y la RELEE para verificar -- mismo patron de `_respaldarPm`/`_respaldarPb`, adaptado a
- * VALORES (nunca formulas: Proyeccion no lleva formulas en B:M) en vez de texto de formula. Las
- * fechas se serializan a ISO porque JSON no representa objetos Date.
+ * Congela el CONTENIDO (B:M, valores crudos) de `filas` de "Proyeccion" bajo el sello de la
+ * corrida, delegando en la boveda de respaldos (18_RespaldoService.js). Ya no crea ni oculta
+ * ninguna hoja: devuelve un TOKEN. La disciplina no cambio -- se escribe, se relee por su clave
+ * y se compara fila por fila; si no verifica, LANZA y "Proyeccion" queda intacta.
+ * @see 18_RespaldoService.js
  */
 function _respaldarFilasPg(ss, hojaProy, filas, sello) {
-    const cfg = RANGES.REGISTROS;
-    const colIni = columnLetterToIndex(cfg.start);
-    const ancho = columnLetterToIndex(cfg.end) - colIni + 1;
-    const nombre = _nombreHojaLibreFormulerio(ss, PG_PREFIJO_RESPALDO + sello);
-
-    const destino = ss.insertSheet(nombre);
-    invalidarCacheNombresHojas();
-    destino.getRange(1, 1, 1, 2).setValues([['fila_original', 'valores_json']]);
-
-    if (filas.length) {
-        const filasVivas = hojaProy.getRange(1, colIni, hojaProy.getLastRow(), ancho).getValues();
-        const matrizRespaldo = filas.map(function (fila) {
-            const vals = filasVivas[fila - 1];
-            const serial = vals.map(function (v) { return v instanceof Date ? { __fecha__: v.toISOString() } : v; });
-            return [fila, JSON.stringify(serial)];
-        });
-        destino.getRange(2, 1, matrizRespaldo.length, 2).setValues(matrizRespaldo);
-    }
-    SpreadsheetApp.flush();
-
-    const leidas = filas.length ? destino.getRange(2, 1, filas.length, 2).getValues() : [];
-    if (leidas.length !== filas.length) {
-        throw new Error('El respaldo de filas retiradas quedo en "' + nombre + '" pero NO VERIFICA: ' +
-            'se esperaban ' + filas.length + ' fila(s) y se releyeron ' + leidas.length +
-            '. No se toco "' + hojaProy.getName() + '".');
-    }
-    for (let i = 0; i < leidas.length; i++) {
-        if (Number(leidas[i][0]) !== filas[i]) {
-            throw new Error('El respaldo en "' + nombre + '" no coincide fila por fila con lo esperado. ' +
-                'No se toco "' + hojaProy.getName() + '".');
-        }
-    }
-
-    destino.hideSheet();
-    logInfo('_respaldarFilasPg: ' + filas.length + ' fila(s) de "' + hojaProy.getName() + '" respaldadas en "' + nombre + '".');
-    return { nombre: nombre, filas: filas.length };
+    const r = guardarRespaldoFilas(ss, hojaProy, filas, sello, 'presupuesto-guardar');
+    logInfo('_respaldarFilasPg: ' + r.filas + ' fila(s) de "' + hojaProy.getName() +
+        '" respaldadas bajo el token "' + r.token + '" (' + r.medio + ').');
+    return r;
 }
 
 /** Reconstruye la matriz de filas (valores crudos, con Date reconstruida) desde una hoja de respaldo. */
@@ -954,7 +928,7 @@ function aplicarGuardarProyeccion() {
             if (quedanBase.length || quedanPropias.length) {
                 throw new Error('Quedaron filas sin retirar (' + quedanBase.length + ' base + ' +
                     quedanPropias.length + ' propias): se corta antes de escribir para no duplicar. ' +
-                    'El respaldo quedo en "' + respaldo.nombre + '".');
+                    'El respaldo quedo bajo el token "' + respaldo.token + '".');
             }
         }
 
@@ -1011,7 +985,7 @@ function aplicarGuardarProyeccion() {
 
         const props = PropertiesService.getDocumentProperties();
         props.setProperty(PG_PROP_PREVIOS, JSON.stringify({
-            respaldo: respaldo.nombre, clave: plan.clave, prefijoPropio: plan.prefijoPropio, sello: sello
+            token: respaldo.token, clave: plan.clave, prefijoPropio: plan.prefijoPropio, sello: sello
         }));
 
         const detalle = 'GUARDAR PROYECCION APLICADO\n\n' +
@@ -1023,7 +997,7 @@ function aplicarGuardarProyeccion() {
             (plan.filasShellDelPeriodo.length ? '- Proyecciones del shell intactas: ' + plan.filasShellDelPeriodo.length + ' fila(s)\n' : '') +
             (plan.filasRecDelPeriodo.length ? '- Volcado de recurrentes intacto: ' + plan.filasRecDelPeriodo.length + ' fila(s)\n' : '') +
             (plan.filasPgIrreconocibles.length ? '- Filas PG de forma irreconocible intactas (ver ABM, grupo "Otros"): ' + plan.filasPgIrreconocibles.length + ' fila(s)\n' : '') +
-            '- Respaldo de lo retirado en la hoja oculta "' + respaldo.nombre + '"\n' +
+            '- Respaldo de lo retirado bajo el token "' + respaldo.token + '" (sin hoja nueva)\n' +
             '- Invariante verificado: Ingresos/Fijos/Variables y el neto cierran contra K8/O8/S8\n\n' +
             'Si algo quedo peor: revertirGuardarProyeccion (menu tidetrack Dev).';
 
@@ -1040,15 +1014,14 @@ function aplicarGuardarProyeccion() {
                 // por el camino del error.
                 const nuevasVivas = _filasGuardadoPropioPg(plan.hojaProy, plan.prefijoPropio);
                 if (nuevasVivas.length) _borrarGeneradasPb(plan.hojaProy, nuevasVivas);
-                const backup = ss.getSheetByName(respaldo.nombre);
-                const matrizBackup = backup ? _leerRespaldoFilasPg(backup) : [];
+                const matrizBackup = leerRespaldoFilas(ss, respaldo.token);
                 if (matrizBackup.length) _escribirAlPieProyeccionPg(plan.hojaProy, matrizBackup);
                 SpreadsheetApp.flush();
                 restaurado = ' Se revirtio: se quitaron las filas nuevas y se repusieron las ' +
-                    matrizBackup.length + ' fila(s) retiradas, desde "' + respaldo.nombre + '".';
+                    matrizBackup.length + ' fila(s) retiradas, desde el respaldo "' + respaldo.token + '".';
             } catch (e2) {
                 restaurado = ' ADEMAS fallo la reversion automatica (' + e2.message + '). El respaldo sigue en "' +
-                    (respaldo ? respaldo.nombre : '?') + '": revertirGuardarProyeccion o revision manual.';
+                    (respaldo ? respaldo.token : '?') + '": revertirGuardarProyeccion o revision manual.';
             }
         }
         const msg = 'NO APLICADO. ' + e.message + restaurado;
@@ -1084,8 +1057,16 @@ function revertirGuardarProyeccion() {
             quitadas = nuevas.length;
         }
 
-        const backup = ss.getSheetByName(previos.respaldo);
-        const matrizBackup = backup ? _leerRespaldoFilasPg(backup) : [];
+        // Formato nuevo (token) y LEGADO (nombre de hoja) resueltos por el mismo lector: al
+        // desplegar puede haber una propiedad vieja con el campo `respaldo` apuntando a una hoja.
+        const refRespaldo = previos.token || previos.respaldo;
+        let matrizBackup = [];
+        let faltaRespaldo = '';
+        try {
+            matrizBackup = leerRespaldoFilas(ss, refRespaldo);
+        } catch (e) {
+            faltaRespaldo = String(e && e.message ? e.message : e);
+        }
         let repuestas = 0;
         if (matrizBackup.length) {
             _escribirAlPieProyeccionPg(hojaProy, matrizBackup);
@@ -1096,16 +1077,20 @@ function revertirGuardarProyeccion() {
         const quedanNuevas = _filasPorNotaPrefijoPg(hojaProy, notaExacta);
         if (quedanNuevas.length) {
             throw new Error('Quedaron ' + quedanNuevas.length + ' fila(s) del guardado sin quitar. Revisar "' +
-                SHEETS.PROYECCION + '" a mano; el respaldo sigue en "' + previos.respaldo + '".');
+                SHEETS.PROYECCION + '" a mano; el respaldo "' + refRespaldo + '" sigue guardado.');
         }
 
         props.deleteProperty(PG_PROP_PREVIOS);
+        // El respaldo ya cumplio: se retira para que la boveda no crezca sola. Solo el formato
+        // nuevo -- una hoja legada la borra el operador con "Purgar respaldos acumulados".
+        if (previos.token) borrarRespaldoFilas(ss, previos.token);
 
         const t = 'GUARDAR PROYECCION REVERTIDO\n\n- Periodo: ' + previos.clave +
             '\n- Filas del guardado quitadas: ' + quitadas +
             '\n- Filas repuestas (base + guardado anterior del mismo periodo): ' + repuestas +
-            (backup ? '' : '\n- ATENCION: la hoja de respaldo "' + previos.respaldo + '" ya no existe, no se pudo reponer nada') +
-            '\n- Respaldo usado: "' + previos.respaldo + '"';
+            (faltaRespaldo ? '\n- ATENCION: el respaldo ya no esta disponible (' + faltaRespaldo +
+                '), no se pudo reponer nada' : '') +
+            '\n- Respaldo usado: "' + refRespaldo + '"';
         logSuccess('revertirGuardarProyeccion: ' + quitadas + ' quitadas, ' + repuestas + ' repuestas.');
         _mostrarPg('Guardar Proyeccion - revertido', t);
         return { ok: true, detalle: t };

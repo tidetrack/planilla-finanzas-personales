@@ -37,9 +37,9 @@
  * QUE PATRONES SE BORRAN, Y COMO SE LLEGO A ELLOS (derivados, no inventados)
  * ============================================================================
  * Se barrio TODO src/ buscando cada `insertSheet(` que crea una hoja de respaldo. Aparecieron
- * OCHO prefijos distintos, no tres. Los TRES que Franco nombro son los unicos que hoy siguen
- * VIVOS -- sus modulos estan en el menu y pueden crear una hoja nueva en cualquier corrida futura
- * (ver 00_Config.js, MENU_CONFIG):
+ * OCHO prefijos distintos, no tres. Los TRES que Franco nombro fueron los primeros -- sus modulos
+ * estan en el menu y pueden crear una hoja nueva en cualquier corrida futura (ver 00_Config.js,
+ * MENU_CONFIG):
  *
  *   1. FORM_PREFIJO_RESPALDO ('Respaldo formulerio ', DEVTOOL_FormulerioV0111.js) -- compartido
  *      via _respaldarFormulerio() por OCHO modulos mas: DEVTOOL_BloqueCategorias.js,
@@ -48,6 +48,22 @@
  *      DEVTOOL_StockYFlujo.js. Es, por lejos, el prefijo con mas hojas acumuladas.
  *   2. ALTA_PREFIJO_RESPALDO ('Respaldo Plan de Cuentas ', DEVTOOL_AltaCuentas.js).
  *   3. V031_PREFIJO_RESPALDO ('RESP_REGISTROS_v031_', MIGRACION_v031_Historico.js).
+ *
+ * El 2026-08-30 se suman TRES mas, y van SEIS. Se suman porque sus modulos estan VIVOS -- dos en
+ * el menu Dev y uno en el shell de uso diario -- y porque el prefijo de PA crece mas rapido que
+ * ningun otro: hasta ese dia creaba una hoja por CADA monto editado desde la vista Proyecciones
+ * Elaboradas. Desde v0.64.0 ya no crean hojas nuevas (el respaldo vive en PropertiesService, ver
+ * 18_RespaldoService.js), pero las que quedaron acumuladas hay que poder borrarlas:
+ *
+ *   4. PA_PREFIJO_RESPALDO ('Respaldo proyeccion abm ', DEVTOOL_ProyeccionAbm.js).
+ *   5. PG_PREFIJO_RESPALDO ('Respaldo presupuesto guardar ', DEVTOOL_PresupuestoGuardar.js).
+ *   6. PM_PREFIJO_RESPALDO ('Respaldo presupuesto modo ', DEVTOOL_PresupuestoModo.js).
+ *
+ * LA BOVEDA NO ENTRA EN LA PURGA. SHEETS.RESPALDOS ('Respaldos tidetrack', 18_RespaldoService.js)
+ * no lleva sello en el nombre, asi que no matchea ningun patron -- y ademas es infraestructura
+ * VIVA, no un respaldo fechado: se crea una sola vez y se reusa. Su crecimiento se controla
+ * borrando FILAS por token (borrarRespaldoFilas), nunca borrando la hoja. Queda dicho explicito
+ * aca para que nadie la sume por analogia.
  *
  * Los otros CINCO prefijos encontrados pertenecen a modulos que MENU_CONFIG saco del menu por
  * decision de Franco (DEVTOOL_Presupuesto.js y DEVTOOL_CableadoPresupuesto.js: "SALE DEL MENU
@@ -110,7 +126,7 @@
  *    con el motivo, para que quede a la vista sin que haga falta ir hoja por hoja a mano.
  *
  * QUE NO HACE
- * 1. NO toca ninguna hoja que no matchee EXACTO uno de los tres patrones de arriba. Nada de
+ * 1. NO toca ninguna hoja que no matchee EXACTO uno de los patrones de arriba. Nada de
  *    heuristicas ("empieza con Respaldo", "tiene una fecha en el nombre"): el regex de cada
  *    patron sale del prefijo real mas el formato de sello real, character por character.
  * 2. NO decide "cuanto es demasiado viejo": no hay ventana de dias. La unica regla de antiguedad
@@ -118,7 +134,8 @@
  * 3. NO opina sobre RESP_CABLEADO_/RESP_PRESUPUESTO_/RESP_ROBUSTEZ_/RESP_TC_v095_/
  *    RESP_FORMULAS_v095_: quedan fuera de PURGA_RESPALDOS_PATRONES() a proposito (ver arriba).
  *
- * @version 0.1.0
+ * @version 0.2.0
+ * @lastModified 2026-08-30
  * @since 2026-08-24
  * @see docs/permanente/FUNCIONALIDADES.md
  * @see docs/permanente/HISTORIAL_DESARROLLO.md (entrada 2026-08-24)
@@ -128,15 +145,21 @@
 // "TRES GUARDAS", punto 2. Constante visible a proposito: nunca un "3" suelto en medio del codigo.
 const PURGA_RESPALDOS_N_CONSERVAR = 3;
 
-/** Formato del sello que usan los tres modulos: Utilities.formatDate(..., 'yyyy-MM-dd_HHmm'). */
-const PURGA_RESPALDOS_SELLO_REGEX = '\\d{4}-\\d{2}-\\d{2}_\\d{4}';
+// decision Franco 2026-08-30: el sello acepta HHmm (4 digitos) Y HHmmss (6). El regex viejo era
+// solo '\\d{4}-\\d{2}-\\d{2}_\\d{4}' y esta anclado con $: los prefijos de Formulerio, AltaCuentas y
+// v031 sellan HHmm y matchean, pero PA (DEVTOOL_ProyeccionAbm.js) y PG
+// (DEVTOOL_PresupuestoGuardar.js) sellan HHmmss, asi que quedaban 2 digitos sobrantes antes del $
+// y NO matcheaban NUNCA. Sumar sus prefijos sin ampliar el regex habria dado un devtool diciendo
+// "0 a borrar" sobre una planilla llena de basura: verde que afirma de mas.
+/** Formato del sello: 'yyyy-MM-dd_HHmm' con los segundos OPCIONALES ('yyyy-MM-dd_HHmmss'). */
+const PURGA_RESPALDOS_SELLO_REGEX = '\\d{4}-\\d{2}-\\d{2}_\\d{4}(?:\\d{2})?';
 
 function _purgaRespaldosEscapar(s) {
     return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
- * Los tres patrones conocidos, derivados de las constantes REALES de los modulos que crean cada
+ * Los patrones conocidos (SEIS desde 2026-08-30), derivados de las constantes REALES de los modulos que crean cada
  * respaldo (nunca retipeadas a mano). Cada uno declara su propio sufijo de colision porque cada
  * modulo usa su propio "nombre libre": _nombreHojaLibreFormulerio agrega ' (2)', ' (3)'...
  * (Formulerio y AltaCuentas comparten esa funcion); _nombreHojaLibreV031 agrega '_2', '_3'...
@@ -160,6 +183,27 @@ function _purgaRespaldosPatrones() {
             duenio: 'MIGRACION_v031_Historico.js (V031_PREFIJO_RESPALDO)',
             regex: new RegExp('^' + _purgaRespaldosEscapar(V031_PREFIJO_RESPALDO) +
                 '(' + PURGA_RESPALDOS_SELLO_REGEX + ')(?:_\\d+)?$')
+        },
+        // Los TRES que se suman el 2026-08-30, con el mismo sufijo de colision ' (N)' que los de
+        // Formulerio porque los tres usan _nombreHojaLibreFormulerio. Los prefijos se leen de las
+        // constantes REALES en runtime, nunca retipeados (regla del propio modulo).
+        {
+            etiqueta: 'Respaldo proyeccion abm',
+            duenio: 'DEVTOOL_ProyeccionAbm.js (PA_PREFIJO_RESPALDO)',
+            regex: new RegExp('^' + _purgaRespaldosEscapar(PA_PREFIJO_RESPALDO) +
+                '(' + PURGA_RESPALDOS_SELLO_REGEX + ')(?: \\(\\d+\\))?$')
+        },
+        {
+            etiqueta: 'Respaldo presupuesto guardar',
+            duenio: 'DEVTOOL_PresupuestoGuardar.js (PG_PREFIJO_RESPALDO)',
+            regex: new RegExp('^' + _purgaRespaldosEscapar(PG_PREFIJO_RESPALDO) +
+                '(' + PURGA_RESPALDOS_SELLO_REGEX + ')(?: \\(\\d+\\))?$')
+        },
+        {
+            etiqueta: 'Respaldo presupuesto modo',
+            duenio: 'DEVTOOL_PresupuestoModo.js (PM_PREFIJO_RESPALDO)',
+            regex: new RegExp('^' + _purgaRespaldosEscapar(PM_PREFIJO_RESPALDO) +
+                '(' + PURGA_RESPALDOS_SELLO_REGEX + ')(?: \\(\\d+\\))?$')
         }
     ];
 }
@@ -172,11 +216,31 @@ function _purgaRespaldosPatrones() {
 function _purgaRespaldosValoresProtegidos() {
     const props = PropertiesService.getDocumentProperties().getProperties();
     const mapa = {};
-    Object.keys(props).forEach(function (clave) {
-        const valor = String(props[clave] || '').trim();
+    const registrar = function (nombre, clave) {
+        const valor = String(nombre || '').trim();
         if (!valor) return;
         if (!mapa[valor]) mapa[valor] = [];
-        mapa[valor].push(clave);
+        if (mapa[valor].indexOf(clave) === -1) mapa[valor].push(clave);
+    };
+    Object.keys(props).forEach(function (clave) {
+        const crudo = String(props[clave] || '').trim();
+        if (!crudo) return;
+        registrar(crudo, clave);
+        // decision Franco 2026-08-30: ademas del valor CRUDO se mira ADENTRO de los valores JSON.
+        // Trece modulos guardan el nombre de hoja pelado, pero PA y PG lo guardan en el campo
+        // `respaldo` de un objeto (PA_PROP_PREVIOS_EDICION, PA_PROP_PREVIOS_BAJA,
+        // PG_PROP_PREVIOS): el mapa nunca lo veia, asi que la purga podia borrar justo la hoja a
+        // la que apunta el ultimo "revertir" -- el escenario exacto que la guarda 1 dice evitar.
+        // El try/catch es OBLIGATORIO: la mayoria de los valores no son JSON y JSON.parse lanza.
+        // Sirve tambien de indicador para retirar el camino legado de leerRespaldoFilas: cuando
+        // no quede ninguna propiedad con campo `respaldo`, ese paso ya no tiene nada que resolver.
+        if (crudo.charAt(0) !== '{') return;
+        try {
+            const obj = JSON.parse(crudo);
+            if (obj && typeof obj === 'object' && typeof obj.respaldo === 'string') {
+                registrar(obj.respaldo, clave);
+            }
+        } catch (e) { /* no era JSON: el valor crudo ya quedo registrado */ }
     });
     return mapa;
 }
@@ -265,7 +329,8 @@ function estadoPurgaRespaldos() {
 
         const l = ['PURGAR RESPALDOS - ESTADO (no se borro nada)', ''];
         l.push('Hojas totales en la planilla HOY: ' + ev.totalHojas);
-        l.push('Hojas de respaldo (matchean alguno de los 3 patrones conocidos): ' + ev.matcheadas.length);
+        l.push('Hojas de respaldo (matchean alguno de los ' + _purgaRespaldosPatrones().length +
+            ' patrones conocidos): ' + ev.matcheadas.length);
         l.push('Hojas totales DESPUES de aplicar: ' + (ev.totalHojas - ev.aBorrar.length));
         l.push('');
         l.push('A BORRAR: ' + ev.aBorrar.length);

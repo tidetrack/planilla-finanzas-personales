@@ -11,16 +11,67 @@ var CATALOGO_REAL = {"ingresos": ["Tidetrack", "Umoh", "Ingresos Extra", "Intere
    Los recurrentes viven MUTABLES en memoria para que guardar/borrar/volcar se sientan de
    verdad dentro de una misma sesion de pruebas; los saldos son un snapshot verosimil con
    la moneda de cada medio del catalogo. La tolerancia es la del backend (SHELL_CONC_TOLERANCIA). */
+/* MODELO NUEVO (v0.64.0): cada recurrente lleva su vigencia 'YYYY-MM' ('' = desde siempre /
+   sin fin). El doble trae los tres casos que importan mirar en local: uno sin vigencia, uno
+   que arranca en un mes futuro y uno pausado con fecha de fin. */
 var RECURRENTES_DOBLE = [
   { nombre: 'Netflix', cuenta: 'Subscripciones', monto: 13999, moneda: 'ARS',
-    medio: 'NaranjaX', dia: 5, nota: '', activo: true },
+    medio: 'NaranjaX', dia: 5, nota: '', activo: true, desde: '', hasta: '' },
   { nombre: 'SportClub', cuenta: 'SportClub', monto: 42000, moneda: 'ARS',
-    medio: 'Galicia', dia: 1, nota: 'debito automatico', activo: true },
+    medio: 'Galicia', dia: 1, nota: 'debito automatico', activo: true,
+    desde: '2026-09', hasta: '' },
   { nombre: 'iCloud', cuenta: 'Subscripciones', monto: 2.99, moneda: 'USD',
-    medio: 'Dolar Galicia', dia: 28, nota: '', activo: false }
+    medio: 'Dolar Galicia', dia: 28, nota: '', activo: false, desde: '', hasta: '2027-03' }
 ];
-var MESES_DOBLE = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
-  'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+/* La ventana del horizonte del doble: 12 meses desde el mes en curso, igual que
+   REC_HORIZONTE_MESES del backend. `RECURRENTES_SYNC_DOBLE` es cuantos meses estan escritos:
+   arranca CORTO a proposito (10 de 12) para poder ver en local el estado "desincronizado" y su
+   boton, que es justo el que no se puede fabricar a mano en la planilla. */
+var REC_HORIZONTE_DOBLE = 12;
+var REC_MESES_ESCRITOS_DOBLE = 10;
+function recClavesVentanaDoble() {
+  var hoy = new Date(), claves = [];
+  for (var i = 0; i < REC_HORIZONTE_DOBLE; i++) {
+    var d = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
+    claves.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+  }
+  return claves;
+}
+function recCorreEnDoble(r, clave) {
+  if (!r.activo) return false;
+  if (r.desde && r.desde > clave) return false;
+  if (r.hasta && clave > r.hasta) return false;
+  return true;
+}
+function estadoHorizonteDoble() {
+  var claves = recClavesVentanaDoble();
+  var activos = RECURRENTES_DOBLE.filter(function (r) { return r.activo; });
+  var total = {};
+  activos.forEach(function (r) { total[r.moneda] = (total[r.moneda] || 0) + r.monto; });
+  var filas = 0, faltantes = [];
+  claves.forEach(function (c, i) {
+    var corren = RECURRENTES_DOBLE.filter(function (r) { return recCorreEnDoble(r, c); }).length;
+    if (i < REC_MESES_ESCRITOS_DOBLE) filas += corren;
+    else faltantes.push(c);
+  });
+  // Sobrantes: filas de recurrentes en meses POSTERIORES a la ventana, que el horizonte no
+  // toca. En el doble son fijas y a proposito distintas de cero: es un estado que en la planilla
+  // solo aparece si alguien volco a un mes lejano con el modelo viejo, y sin esto no se puede
+  // mirar el aviso en local.
+  var lejano = new Date();
+  lejano = new Date(lejano.getFullYear(), lejano.getMonth() + REC_HORIZONTE_DOBLE + 1, 1);
+  var claveLejana = lejano.getFullYear() + '-' + String(lejano.getMonth() + 1).padStart(2, '0');
+  return { ok: true,
+           ventana: { desde: claves[0], hasta: claves[claves.length - 1] },
+           activos: activos.length,
+           pausados: RECURRENTES_DOBLE.length - activos.length,
+           totalPorMoneda: total,
+           filasEnVentana: filas,
+           mesesFaltantes: faltantes,
+           sobrantes: 2,
+           mesesSobrantes: [claveLejana],
+           desincronizado: faltantes.length > 0 };
+}
 var SALDOS_CONC_DOBLE = {
   ok: true,
   tolerancia: 0.005,
@@ -123,6 +174,30 @@ var PROY_FILAS_DOBLE = (function () {
   return filas;
 })();
 var PROY_ORIGENES_DOBLE = ['guardado', 'shell', 'recurrentes', 'base', 'otros'];
+/* EDICION RESTRINGIDA POR ORIGEN (2026-08-30). Solo 'shell' se edita: es la unica poblacion
+   que no tiene un documento aguas arriba con el que pueda discrepar. Los cuatro mensajes son
+   copia LITERAL de PA_MSJ_NO_EDITABLE (DEVTOOL_ProyeccionAbm.js), porque el doble tiene que
+   mentir lo menos posible: probar_shell.js no los cruza, pero mirar la vista en local con un
+   texto distinto al de produccion es exactamente como se valida la pantalla equivocada. */
+var PA_MSJ_NO_EDITABLE_DOBLE = {
+  guardado: 'Esta fila viene de la hoja Presupuesto y su nota afirma que cerro contra ese total. ' +
+    'Se corrige en la hoja Presupuesto y se vuelve a guardar el mes: ' +
+    'tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar.',
+  recurrentes: 'Esta fila la mantiene la vista de Gastos recurrentes. ' +
+    'Se corrige en Gastos recurrentes: cambia el monto y la proyeccion se actualiza sola.',
+  base: 'Esta fila es del presupuesto base historico (un promedio automatico). ' +
+    'El presupuesto base se recalcula corriendo de nuevo ese modulo: ' +
+    'tidetrack Dev > Presupuesto base (desde el historial).',
+  otros: 'No se reconoce el origen de esta fila. Solo se puede borrar el mes completo.'
+};
+var PA_MSJ_BAJA_REC_DOBLE = 'Este mes lo mantiene la vista de Gastos recurrentes. Para que ' +
+  'deje de proyectarse, pausalo o ponele fecha de fin alli.';
+/* La baja de un mes de 'recurrentes' se bloquea DENTRO de la ventana del horizonte y se
+   permite fuera (historia congelada). Es el mismo criterio de _motivoBajaBloqueadaPa. */
+function proyBajaBloqueadaDoble(clave, origen) {
+  if (origen !== 'recurrentes') return '';
+  return recClavesVentanaDoble().indexOf(clave) === -1 ? '' : PA_MSJ_BAJA_REC_DOBLE;
+}
 var PROY_PAPELERA_DOBLE = null;   // la ULTIMA baja, unica reversible (como el servidor)
 var PROY_EDICION_DOBLE = null;    // la ULTIMA edicion de monto
 function proyTotalesDoble(filas) {
@@ -210,7 +285,8 @@ window.google = { script: {
             });
             var reg = { nombre: String(d.nombre || '').trim(), cuenta: d.cuenta, monto: d.monto,
                         moneda: d.moneda, medio: d.medio, dia: d.dia, nota: d.nota || '',
-                        activo: d.activo === 'Si' };
+                        activo: d.activo === 'Si',
+                        desde: String(d.desde || ''), hasta: String(d.hasta || '') };
             var mensaje;
             if (indice === -1) {
               RECURRENTES_DOBLE.push(reg);
@@ -219,8 +295,19 @@ window.google = { script: {
               RECURRENTES_DOBLE[indice] = reg;
               mensaje = 'Listo. Actualizaste "' + reg.nombre + '".';
             }
-            if (d.activo === 'No') mensaje += ' Quedo pausado: no entra en los proximos volcados.';
-            exito({ ok: true, mensaje: mensaje + ' (Entorno de pruebas.)' });
+            if (d.activo === 'No') mensaje += ' Quedo pausado: sale de los meses futuros.';
+            // FASE 2. El nombre "Fase2" en el recurrente dispara el camino que NO se puede
+            // provocar a mano: la escritura entro, la sincronizacion no. Sirve para mirar en
+            // local que el aviso con reintento aparece y que el recurrente NO se pierde.
+            if (/fase2/i.test(reg.nombre)) {
+              exito({ ok: true, mensaje: mensaje + ' (Entorno de pruebas.)',
+                      sincronizado: false,
+                      aviso: 'La proyeccion no se actualizo: la cotizacion del dia no se pudo ' +
+                             'resolver. El recurrente quedo guardado igual.' });
+              return;
+            }
+            REC_MESES_ESCRITOS_DOBLE = REC_HORIZONTE_DOBLE;
+            exito({ ok: true, mensaje: mensaje + ' (Entorno de pruebas.)', sincronizado: true });
           }, 700);
         },
         borrarRecurrente: function (nombre) {
@@ -232,30 +319,24 @@ window.google = { script: {
             if (RECURRENTES_DOBLE.length === antes) {
               exito({ ok: false, error: 'No existe un recurrente llamado "' + nombre + '".' });
             } else {
-              exito({ ok: true, mensaje: 'Listo. Se borro "' + nombre + '". Lo ya volcado a la ' +
-                      'proyeccion no se toca. (Entorno de pruebas.)' });
+              REC_MESES_ESCRITOS_DOBLE = REC_HORIZONTE_DOBLE;
+              exito({ ok: true, sincronizado: true,
+                      mensaje: 'Listo. Se borro "' + nombre + '". Lo proyectado en meses ' +
+                      'pasados no se toca. (Entorno de pruebas.)' });
             }
           }, 700);
         },
-        estadoVolcadoRecurrentes: function (d) {
-          setTimeout(function () {
-            var activos = RECURRENTES_DOBLE.filter(function (r) { return r.activo; });
-            var total = {};
-            activos.forEach(function (r) { total[r.moneda] = (total[r.moneda] || 0) + r.monto; });
-            exito({ ok: true,
-                    periodo: MESES_DOBLE[d.mes - 1] + ' ' + d.anio,
-                    activos: activos.length,
-                    totalPorMoneda: total,
-                    previasPropias: 0,
-                    otrasDelMes: { base: 12, manual: 1 } });
-          }, 600);
+        estadoHorizonteRecurrentes: function () {
+          // SOLO LECTURA: al entrar a la vista no se escribe nada, ni en el doble.
+          setTimeout(function () { exito(estadoHorizonteDoble()); }, 500);
         },
-        volcarRecurrentesAlMes: function (d) {
+        sincronizarRecurrentes: function () {
           setTimeout(function () {
-            var activos = RECURRENTES_DOBLE.filter(function (r) { return r.activo; });
-            exito({ ok: true, mensaje: 'Listo. Se volcaron ' + activos.length + ' recurrente(s) a ' +
-                    MESES_DOBLE[d.mes - 1] + ' ' + d.anio + '. (Entorno de pruebas: no se ' +
-                    'escribio en la planilla.)' });
+            REC_MESES_ESCRITOS_DOBLE = REC_HORIZONTE_DOBLE;
+            var e = estadoHorizonteDoble();
+            exito({ ok: true, mensaje: 'Listo. La proyeccion queda al dia hasta ' +
+                    e.ventana.hasta + ': ' + e.filasEnVentana + ' fila(s). (Entorno de pruebas: ' +
+                    'no se escribio en la planilla.)' });
           }, 1200);
         },
         procesarCargasDesdeShell: function () {
@@ -373,9 +454,12 @@ window.google = { script: {
               return;
             }
             var filas = proyDelGrupoDoble(clave, origen);
-            // Solo 'guardado' y 'shell' se editan: el mismo gate que aplica el servidor.
-            var editable = (origen === 'guardado' || origen === 'shell');
+            // Solo 'shell' se edita: el mismo gate que aplica el servidor.
+            var editable = (origen === 'shell');
             exito({ clave: clave, origen: origen, mesLabel: pabmMesLabelDoble(clave),
+                    editable: editable,
+                    motivoNoEditable: editable ? '' : PA_MSJ_NO_EDITABLE_DOBLE[origen],
+                    bajaBloqueada: proyBajaBloqueadaDoble(clave, origen),
                     filas: filas.map(function (f) {
                       return { fila: f.fila, cuenta: f.cuenta, tipoCuenta: f.tipoCuenta,
                                tipo: f.tipo, monto: f.monto, moneda: f.moneda, fecha: null,
@@ -386,6 +470,8 @@ window.google = { script: {
         },
         eliminarPeriodoProyeccion: function (clave, origen) {
           setTimeout(function () {
+            var bloqueada = proyBajaBloqueadaDoble(clave, origen);
+            if (bloqueada) { falla(new Error(bloqueada)); return; }
             var filas = proyDelGrupoDoble(clave, origen);
             if (!filas.length) {
               falla(new Error('No hay ninguna fila de "' + clave + '" (' + origen +
@@ -396,8 +482,10 @@ window.google = { script: {
             PROY_FILAS_DOBLE = PROY_FILAS_DOBLE.filter(function (f) {
               return !(f.clave === clave && f.origen === origen);
             });
+            // `respaldo` es un TOKEN (el sello), ya no un nombre de hoja: la boveda de
+            // respaldos (18_RespaldoService.js) puede resolverlo en propiedades o en la hoja.
             exito({ clave: clave, origen: origen, filasBorradas: filas.length,
-                    respaldo: 'Respaldo proyeccion abm 2026-08-29_120000' });
+                    respaldo: '2026-08-29_120000' });
           }, 1100);
         },
         revertirBajaProyeccionAbm: function () {
@@ -418,18 +506,11 @@ window.google = { script: {
             var f = null;
             PROY_FILAS_DOBLE.forEach(function (x) { if (String(x.fila) === String(fila)) f = x; });
             if (!f) { falla(new Error('La fila ' + fila + ' esta fuera del rango de datos vivo.')); return; }
-            if (f.origen === 'base') {
-              falla(new Error('Esta fila no es un guardado manual: las filas de presupuesto ' +
-                              'base se recalculan corriendo de nuevo ese modulo, no se editan a mano.'));
-              return;
-            }
-            if (f.origen === 'recurrentes') {
-              falla(new Error('Esta fila es un volcado de recurrentes: el monto se corrige en ' +
-                              'la vista de Recurrentes y se vuelve a volcar el mes.'));
-              return;
-            }
-            if (f.origen !== 'guardado' && f.origen !== 'shell') {
-              falla(new Error('No se reconoce el origen de esta fila: no se edita desde este ABM.'));
+            // El gate del SERVIDOR, no el del cliente: aunque la vista mande la edicion de una
+            // fila que pinto como no editable, aca se rechaza con el motivo de ese origen.
+            if (f.origen !== 'shell') {
+              falla(new Error(PA_MSJ_NO_EDITABLE_DOBLE[f.origen] ||
+                              PA_MSJ_NO_EDITABLE_DOBLE.otros));
               return;
             }
             var n = Number(nuevoMonto);
@@ -465,7 +546,7 @@ window.google = { script: {
     ['withSuccessHandler','withFailureHandler','obtenerCatalogoShell','registrarMovimientos',
      'registrarTraspasos','registrarProyecciones','obtenerSaldosConciliacion',
      'registrarConciliacion','obtenerRecurrentes','guardarRecurrente','borrarRecurrente',
-     'estadoVolcadoRecurrentes','volcarRecurrentesAlMes',
+     'estadoHorizonteRecurrentes','sincronizarRecurrentes',
      'procesarCargasDesdeShell',
      'getAbmFormData','getCategoryAccounts','saveAbmRecord','updateAbmRecord',
      'deleteAbmRecord',

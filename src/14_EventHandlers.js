@@ -15,9 +15,9 @@
  *
  * @see 00_Config.js (SHEETS, NAV_CONFIG, HEADER_ROW, RANGES.CARGAS)
  *
- * @version 0.63.1
+ * @version 0.65.0
  * @since 0.1.0
- * @lastModified 2026-08-29
+ * @lastModified 2026-08-30
  */
 
 /**
@@ -74,9 +74,9 @@ function handlePlanCuentasEdit(e) {
             // Intentar mostrar diálogo HTML personalizado con el lenguaje Corriente.
             // NOTA: Requiere que onEdit sea un disparador instalable. En trigger simple fallará e irá al catch.
             //
-            // decision Franco 2026-08-29: esta pantalla se restilea a Corriente (Poppins, par
-            // rojo de FUNCION #B23B32/#FCEAE7 de la lista blanca del brandbook, titulo del
-            // dialogo en blanco como el shell) pero CONSERVA su geometria propia 450x340: es
+            // decision Franco 2026-08-30: esta pantalla viste el brandbook Ed.03 igual que el
+            // shell (DM Sans, par rojo de FUNCION #B84A3E/#F9F1F0 de la lista blanca, titulo
+            // del dialogo en blanco) pero CONSERVA su geometria propia 450x340: es
             // la UNICA excepcion a SHELL_GEOMETRIA (900x700) en todo el sistema. Motivo: no es
             // una pantalla de flujo sino una interrupcion de emergencia disparada por un
             // trigger sobre una edicion accidental. Abrirla del tamano del Centro de
@@ -88,19 +88,25 @@ function handlePlanCuentasEdit(e) {
                     <!DOCTYPE html>
                     <html>
                     <head>
-                        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+                        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
                         <style>
-                            body { font-family: 'Poppins', 'DM Sans', 'Segoe UI', sans-serif; background: #FFFFFF; padding: 22px; color: #1E2A33; margin: 0; }
+                            /* decision Franco 2026-08-30: esta es la SEGUNDA superficie HTML del
+                               producto y se recolorea en el mismo commit que el shell. La
+                               paleta es la del brandbook Ed.03 y la familia es DM Sans (sin el
+                               peso 600, que DM Sans no trae). El guard de paleta de
+                               devtools/probar_shell.js audita este <style> con la MISMA lista
+                               blanca que el shell: si esto se quedaba con la menta y con
+                               Poppins, el recolor pasaba en verde estando a medias. */
+                            body { font-family: 'DM Sans', 'Segoe UI', sans-serif; background: #FFFFFF; padding: 22px; color: #182040; margin: 0; }
                             /* Filo COMPLETO de 1px al 15%, no una barra lateral gruesa: es
-                               el tratamiento que .alert-error usa en el shell
-                               (UI_Shell.html:854-857) y este dialogo tiene que leerse como
-                               parte del mismo sistema. El border-left de acento era ademas
-                               el unico del proyecto. */
-                            .aviso { background: #FCEAE7; box-shadow: inset 0 0 0 1px rgba(178,59,50,.15); border-radius: 14px; padding: 16px 18px; }
-                            h2 { color: #B23B32; margin: 0 0 10px; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
-                            p { font-size: 13px; line-height: 1.55; color: #44576A; margin: 0 0 10px; }
-                            .tecla { background: #FFFFFF; border: 1px solid #B23B32; padding: 1px 7px; border-radius: 6px; font-weight: 600; color: #B23B32; }
-                            .btn-close { display: block; margin-top: 16px; padding: 11px 16px; background: #B23B32; color: #FFFFFF; border: none; border-radius: 10px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; text-align: center; width: 100%; box-sizing: border-box; }
+                               el tratamiento que .alert-error usa en el shell y este dialogo
+                               tiene que leerse como parte del mismo sistema. El border-left de
+                               acento era ademas el unico del proyecto. */
+                            .aviso { background: #F9F1F0; box-shadow: inset 0 0 0 1px rgba(184,74,62,.15); border-radius: 14px; padding: 16px 18px; }
+                            h2 { color: #B84A3E; margin: 0 0 10px; font-size: 16px; font-weight: 500; letter-spacing: -0.01em; }
+                            p { font-size: 13px; line-height: 1.55; color: #1E2A55; margin: 0 0 10px; }
+                            .tecla { background: #FFFFFF; border: 1px solid #B84A3E; padding: 1px 7px; border-radius: 6px; font-weight: 500; color: #B84A3E; }
+                            .btn-close { display: block; margin-top: 16px; padding: 11px 16px; background: #B84A3E; color: #FFFFFF; border: none; border-radius: 10px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; text-align: center; width: 100%; box-sizing: border-box; }
                         </style>
                     </head>
                     <body>

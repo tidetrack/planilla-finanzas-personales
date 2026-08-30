@@ -56,6 +56,9 @@ vm.runInContext(
     // Script (los digitos ordenan antes que las letras); sus const de nivel superior son
     // literales puros -- mismo criterio que probar_proyeccion_abm.js.
     fs.readFileSync(path.join(RAIZ, 'src/17_RecurrentesService.js'), 'utf8') + '\n' +
+    // 18_RespaldoService: desde v0.64.0 _respaldarFilasPg delega ahi (el respaldo ya no es
+    // una hoja). Carga DESPUES de 17_ y ANTES de los DEVTOOL_*, igual que en Apps Script.
+    fs.readFileSync(path.join(RAIZ, 'src/18_RespaldoService.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_FormulerioV0111.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_StockYFlujo.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Proyeccion.js'), 'utf8') + '\n' +
@@ -73,7 +76,8 @@ vm.runInContext(
     '_preflightPresupuestoPg,_preflightProyeccionPg,_leerFilasPresupuestoPg,_sumarPorBloquePg,' +
     '_filasPorNotaPrefijoPg,_filasBasePorMesPg,_planGuardarPg,_matrizNuevaPg,' +
     '_esNotaShellPg,_filasGuardadoPropioPg,_filasShellPeriodoPg,_leerRespaldoFilasPg,PG_PREFIJO_RESPALDO,' +
-    'estadoGuardarProyeccion,aplicarGuardarProyeccion,revertirGuardarProyeccion});',
+    'estadoGuardarProyeccion,aplicarGuardarProyeccion,revertirGuardarProyeccion,' +
+    'PG_PROP_PREVIOS,guardarRespaldoFilas,leerRespaldoFilas,borrarRespaldoFilas,_claveIndiceResp});',
     ctx);
 
 // El sello de cada corrida (_selloPg) sale de `new Date()`: se fija el reloj para que la seccion
@@ -437,12 +441,23 @@ function hojaGenericaMock() {
     let grid = [];
     return {
         getLastRow: () => grid.length,
-        hideSheet() {},
+        hideSheet() { this._oculta = true; },
+        getMaxRows: () => Math.max(grid.length, 1000),
+        deleteRows(startRow, numRows) { grid.splice(startRow - 1, numRows); },
+        insertRowsAfter() {},
         getRange(row, col, nRows, nCols) {
-            if (nRows === undefined) { const f = grid[row - 1] || []; return { getValue: () => (f[col - 1] === undefined ? '' : f[col - 1]) }; }
+            if (nRows === undefined) {
+                return {
+                    getValue: () => { const f = grid[row - 1] || []; return f[col - 1] === undefined ? '' : f[col - 1]; },
+                    setValue: (v) => { while (grid.length <= row - 1) grid.push([]); grid[row - 1][col - 1] = v; },
+                    setNumberFormat: () => {}
+                };
+            }
             return {
                 getValues: () => { const out = []; for (let i = 0; i < nRows; i++) { const f = grid[row - 1 + i] || []; out.push(f.slice(col - 1, col - 1 + nCols)); } return out; },
-                setValues: (vals) => { for (let i = 0; i < nRows; i++) { while (grid.length <= row - 1 + i) grid.push([]); const f = grid[row - 1 + i]; for (let j = 0; j < nCols; j++) f[col - 1 + j] = vals[i][j]; } }
+                setValues: (vals) => { for (let i = 0; i < nRows; i++) { while (grid.length <= row - 1 + i) grid.push([]); const f = grid[row - 1 + i]; for (let j = 0; j < nCols; j++) f[col - 1 + j] = vals[i][j]; } },
+                setNumberFormat: () => {},
+                copyTo: () => {}
             };
         }
     };
@@ -450,13 +465,19 @@ function hojaGenericaMock() {
 
 function crearSsMock(registrosFilas, proyeccionFilas) {
     const hojas = { 'Registros': hojaGridMock('Registros', registrosFilas), 'Proyeccion': hojaGridMock('Proyeccion', proyeccionFilas) };
-    return {
+    let activa = hojas['Proyeccion'];
+    const m = {
         getSheetByName: (n) => hojas[n] || null,
         getSheets: () => Object.keys(hojas).map(n => ({ getName: () => n })),
-        insertSheet: (n) => { hojas[n] = hojaGenericaMock(); return hojas[n]; },
+        getActiveSheet: () => activa,
+        setActiveSheet: (h) => { activa = h; return h; },
+        insertSheet: (n) => { hojas[n] = hojaGenericaMock(); hojas[n].getName = () => n; activa = hojas[n]; m.insertSheetLlamadas++; return hojas[n]; },
+        deleteSheet: (h) => { Object.keys(hojas).forEach(n => { if (hojas[n] === h) delete hojas[n]; }); },
         toast() {},
+        insertSheetLlamadas: 0,
         _hojas: hojas,
     };
+    return m;
 }
 
 function uiMockSiempreSi() {
@@ -465,7 +486,9 @@ function uiMockSiempreSi() {
 
 function propsMock() {
     const store = {};
-    return { setProperty: (k, v) => { store[k] = v; }, getProperty: (k) => (k in store ? store[k] : null), deleteProperty: (k) => { delete store[k]; }, _store: store };
+    return { setProperty: (k, v) => { store[k] = String(v); }, getProperty: (k) => (k in store ? store[k] : null),
+             deleteProperty: (k) => { delete store[k]; }, getKeys: () => Object.keys(store),
+             getProperties: () => Object.assign({}, store), _store: store };
 }
 
 function contarFilasConMarca(ssMock, marca) {
@@ -726,11 +749,16 @@ console.log('\n=== 9. Retiro selectivo: aplicar con filas shell y REC presentes 
        'quedaron exactamente las 3 filas propias nuevas (una por bloque)');
 
     // El respaldo de lo retirado NO contiene ninguna fila shell (nunca se retiraron).
-    const nombresRespaldo = Object.keys(ssMock._hojas).filter(n => n.indexOf(ctx.PG_PREFIJO_RESPALDO) === 0);
-    ok(nombresRespaldo.length === 1, 'hay exactamente una hoja de respaldo de esta corrida');
+    // v0.64.0: el respaldo ya NO es una hoja. Se lee por TOKEN desde PropertiesService.
+    ok(Object.keys(ssMock._hojas).filter(n => n.indexOf(ctx.PG_PREFIJO_RESPALDO) === 0).length === 0,
+       'HOJA AUXILIAR: aplicar NO deja ninguna hoja "' + ctx.PG_PREFIJO_RESPALDO + '..." en la planilla');
+    ok(ssMock.insertSheetLlamadas === 0, 'y no llamo a insertSheet ni una vez, dio ' + ssMock.insertSheetLlamadas);
+    const previosPg = JSON.parse(propsActual.getProperty(ctx.PG_PROP_PREVIOS));
+    ok(typeof previosPg.token === 'string' && previosPg.respaldo === undefined,
+       'la propiedad de la corrida guarda un TOKEN, ya no un nombre de hoja: ' + JSON.stringify(previosPg));
     const colIni = ctx.columnLetterToIndex(cfg.start);
     const idxNota = ctx.columnLetterToIndex(cfg.columns.nota) - colIni;
-    const filasRespaldo = ctx._leerRespaldoFilasPg(ssMock._hojas[nombresRespaldo[0]]);
+    const filasRespaldo = ctx.leerRespaldoFilas(ssActual, previosPg.token);
     const respaldoConShell = filasRespaldo.filter(vals => ctx._esNotaShellPg(vals[idxNota]));
     ok(respaldoConShell.length === 0, 'el respaldo NO contiene filas shell: nunca entraron a filasARetirar');
     ok(filasRespaldo.filter(vals => vals[idxNota] === notaPgConCola || vals[idxNota] === notaPgSelloRaro).length === 0,
@@ -774,12 +802,13 @@ console.log('\n=== 10. Fallo post-escritura: el catch revierte sin borrar las sh
     propsActual = propsMock();
     horaMock = new DateReal(2026, 7, 29, 11, 0, 0);
 
-    // Se inyecta el fallo DESPUES de escribir: el flush 1 es del respaldo, el 2 del retiro,
-    // el 3 el de la escritura de las filas nuevas -- ahi corta, y el catch tiene que revertir
-    // (quitar lo nuevo, reponer el respaldo) SIN llevarse las shell, que no estan respaldadas.
+    // Se inyecta el fallo DESPUES de escribir. v0.64.0: el respaldo ya NO flushea (vive en
+    // PropertiesService, no en una hoja), asi que el flush 1 es el del retiro y el 2 el de la
+    // escritura de las filas nuevas -- ahi corta, y el catch tiene que revertir (quitar lo nuevo,
+    // reponer el respaldo) SIN llevarse las shell, que no estan respaldadas.
     const flushOriginal = ctx.SpreadsheetApp.flush;
     let flushes = 0;
-    ctx.SpreadsheetApp.flush = function () { flushes++; if (flushes === 3) throw new Error('corte simulado post-escritura'); };
+    ctx.SpreadsheetApp.flush = function () { flushes++; if (flushes === 2) throw new Error('corte simulado post-escritura'); };
 
     const r = ctx.aplicarGuardarProyeccion();
     ctx.SpreadsheetApp.flush = flushOriginal;

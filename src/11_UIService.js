@@ -2,9 +2,9 @@
  * 11_UIService.js
  * Servicio para gestión de interfaces de usuario (HTML Service)
  * 
- * @version 0.63.0
+ * @version 0.65.0
  * @since 0.4.0
- * @lastModified 2026-08-29
+ * @lastModified 2026-08-30
  */
 
 // [AGILE-VALOR] Punto de entrada para la UI de los módulos validados.
@@ -28,8 +28,10 @@ function include(filename) {
  * funcion POR NOMBRE y no es editable ni auditable desde el repo (los drawings con script
  * asignado no son accesibles ni por Sheets API ni por Apps Script). Un dibujo apuntando a una
  * funcion inexistente falla en silencio o con un error criptico, asi que el nombre se conserva
- * aunque el modal que abria (UI_AbmPlanCuentas, 520x750) ya no se use. Borrar recien despues
- * de reasignar los dibujos en la planilla viva a abrirPlanCuentas.
+ * aunque el modal que abria (UI_AbmPlanCuentas, 520x750) ya no exista: src/UI_AbmPlanCuentas.html
+ * SE BORRO el 2026-08-30, una vez verificada en vivo la vista 'cuentas' con v0.63.2 desplegada.
+ * Este alias es lo unico que queda de aquel camino. Borrarlo recien despues de reasignar los
+ * dibujos en la planilla viva a abrirPlanCuentas.
  *
  * @see 16_ShellService.js (abrirPlanCuentas -> vista 'cuentas')
  */
@@ -285,8 +287,9 @@ function deleteAbmRecord(payload) {
  * desde el repo (los drawings con script asignado no son accesibles ni por Sheets API ni por
  * Apps Script), y un dibujo apuntando a una funcion inexistente falla en silencio o con un
  * error criptico. El modal que abria (UI_AbmProyeccionElaborada, 720x680) fue absorbido por
- * la vista 'proyecciones' del shell (v0.63.0). Borrar recien despues de reasignar los dibujos
- * en la planilla viva a abrirProyeccionesElaboradas.
+ * la vista 'proyecciones' del shell (v0.63.0) y su HTML SE BORRO el 2026-08-30, una vez
+ * verificado en vivo con v0.63.2 desplegada. Borrar el alias recien despues de reasignar los
+ * dibujos en la planilla viva a abrirProyeccionesElaboradas.
  *
  * @see 16_ShellService.js (abrirProyeccionesElaboradas -> vista 'proyecciones')
  */

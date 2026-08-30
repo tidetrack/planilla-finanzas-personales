@@ -65,6 +65,9 @@ vm.runInContext(
     // de nivel superior son literales puros, no leen otros archivos (probar_carga_apps_script
     // es la red si eso cambiara).
     fs.readFileSync(path.join(RAIZ, 'src/17_RecurrentesService.js'), 'utf8') + '\n' +
+    // 18_RespaldoService: la boveda de respaldos. Carga DESPUES de 17_ y ANTES de los
+    // DEVTOOL_*, igual que en Apps Script (los digitos ordenan antes que las letras).
+    fs.readFileSync(path.join(RAIZ, 'src/18_RespaldoService.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_FormulerioV0111.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_StockYFlujo.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Proyeccion.js'), 'utf8') + '\n' +
@@ -83,7 +86,11 @@ vm.runInContext(
     '_fechaDesdeClavePa,_mesLabelPa,_origenNotaPa,_leerTodasFilasPa,_filasDelPeriodoPa,' +
     '_totalesPorBloquePa,_ordenMonedasPa,_monedasEnFilasPa,_montoValidoPa,_respaldarFilasPa,' +
     'pingProyeccionAbm,listarPeriodosProyeccion,detalleFilasPeriodoProyeccion,eliminarPeriodoProyeccion,' +
-    'revertirBajaProyeccionAbm,actualizarMontoFilaProyeccion,revertirEdicionMontoProyeccion});',
+    'revertirBajaProyeccionAbm,actualizarMontoFilaProyeccion,revertirEdicionMontoProyeccion,' +
+    'PA_MSJ_NO_EDITABLE,_motivoBajaBloqueadaPa,MENU_CONFIG,' +
+    'RESP_PROP_PREFIJO,RESP_FILAS_POR_TROZO,RESP_TOPE_PROPS,RESP_TOPE_CARACTERES_TROZO,' +
+    'guardarRespaldoFilas,leerRespaldoFilas,borrarRespaldoFilas,_conHojaActivaPreservada,' +
+    '_claveIndiceResp,_claveTrozoResp,REC_HORIZONTE_MESES,_clavesVentanaRec});',
     ctx);
 
 // ============================================================================
@@ -280,40 +287,76 @@ function hojaGridMock(nombre, filasDatos) {
     };
 }
 
-function hojaGenericaMock() {
+// La hoja generica que devuelve insertSheet: cubre la boveda (18_RespaldoService.js) y el
+// formato legado. `_traza` registra el ORDEN de las operaciones -- es lo que hace medible la
+// regla de la unica creacion (foco repuesto y hideSheet ANTES de la primera escritura).
+function hojaGenericaMock(nombre, traza) {
     let grid = [];
-    return {
+    const anotar = (que) => { if (traza) traza.push(que); };
+    const hoja = {
+        getName: () => nombre || 'generica',
         getLastRow: () => grid.length,
-        hideSheet() {},
+        getMaxRows: () => Math.max(grid.length, 1000),
+        hideSheet() { anotar('hideSheet'); hoja._oculta = true; },
+        deleteRows(startRow, numRows) { grid.splice(startRow - 1, numRows); },
+        insertRowsAfter() {},
         getRange(row, col, nRows, nCols) {
-            if (nRows === undefined) { const f = grid[row - 1] || []; return { getValue: () => (f[col - 1] === undefined ? '' : f[col - 1]) }; }
+            if (nRows === undefined) {
+                return {
+                    getValue: () => { const f = grid[row - 1] || []; return f[col - 1] === undefined ? '' : f[col - 1]; },
+                    setValue: (v) => { anotar('escribir'); while (grid.length <= row - 1) grid.push([]); grid[row - 1][col - 1] = v; },
+                    setNumberFormat: () => {}
+                };
+            }
             return {
                 getValues: () => { const out = []; for (let i = 0; i < nRows; i++) { const f = grid[row - 1 + i] || []; out.push(f.slice(col - 1, col - 1 + nCols)); } return out; },
-                setValues: (vals) => { for (let i = 0; i < nRows; i++) { while (grid.length <= row - 1 + i) grid.push([]); const f = grid[row - 1 + i]; for (let j = 0; j < nCols; j++) f[col - 1 + j] = vals[i][j]; } }
+                setValues: (vals) => { anotar('escribir'); for (let i = 0; i < nRows; i++) { while (grid.length <= row - 1 + i) grid.push([]); const f = grid[row - 1 + i]; for (let j = 0; j < nCols; j++) f[col - 1 + j] = vals[i][j]; } },
+                setNumberFormat: () => {},
+                copyTo: () => {}
             };
-        }
+        },
+        _grid: () => grid
     };
+    return hoja;
 }
 
 function crearSsMock(registrosFilas, proyeccionFilas) {
     const hojas = { 'Registros': hojaGridMock('Registros', registrosFilas), 'Proyeccion': hojaGridMock('Proyeccion', proyeccionFilas) };
-    return {
+    const traza = [];
+    let activa = hojas['Proyeccion'];
+    const m = {
         getSheetByName: (n) => hojas[n] || null,
         getSheets: () => Object.keys(hojas).map(n => ({ getName: () => n })),
-        insertSheet: (n) => { hojas[n] = hojaGenericaMock(); return hojas[n]; },
+        getActiveSheet: () => activa,
+        setActiveSheet: (h) => { traza.push('setActiveSheet'); activa = h; return h; },
+        insertSheet: (n) => { traza.push('insertSheet'); hojas[n] = hojaGenericaMock(n, traza); activa = hojas[n]; m.insertSheetLlamadas++; return hojas[n]; },
+        deleteSheet: (h) => { traza.push('deleteSheet'); Object.keys(hojas).forEach(n => { if (hojas[n] === h) delete hojas[n]; }); },
         toast() {},
+        insertSheetLlamadas: 0,
+        _traza: traza,
+        _activa: () => activa,
         _hojas: hojas,
     };
+    return m;
 }
 
 function propsMock() {
     const store = {};
-    return { setProperty: (k, v) => { store[k] = v; }, getProperty: (k) => (k in store ? store[k] : null), deleteProperty: (k) => { delete store[k]; }, _store: store };
+    return {
+        setProperty: (k, v) => { store[k] = String(v); },
+        getProperty: (k) => (k in store ? store[k] : null),
+        deleteProperty: (k) => { delete store[k]; },
+        getKeys: () => Object.keys(store),
+        getProperties: () => Object.assign({}, store),
+        _store: store
+    };
 }
 
+let ssMockActivo = null;
 function activarSs(registrosFilas, proyeccionFilas) {
     const m = crearSsMock(registrosFilas, proyeccionFilas);
-    ssActual = { getSheetByName: (n) => m.getSheetByName(n), getSheets: () => m.getSheets(), insertSheet: (n) => m.insertSheet(n), toast() {} };
+    ssActual = m;
+    ssMockActivo = m;
     propsActual = propsMock();
     return m;
 }
@@ -435,7 +478,10 @@ console.log('\n=== 4. detalleFilasPeriodoProyeccion: detalle y editabilidad POR 
 
     const d = ctx.detalleFilasPeriodoProyeccion('2026-09', 'guardado');
     ok(d.filas.length === 1 && d.filas[0].cuenta === 'Sueldo', 'detalle de 2026-09/guardado: SOLO su fila (ni shell ni rec)');
-    ok(d.filas[0].editable === true && d.filas[0].notaLibre === '', 'una fila guardado es editable, notaLibre vacia');
+    ok(d.filas[0].editable === false && d.filas[0].notaLibre === '',
+       'una fila guardado YA NO es editable (2026-08-30): la marca de la nota es una afirmacion');
+    ok(d.editable === false && /Presupuesto: guardar proyeccion/.test(d.motivoNoEditable),
+       'y el grupo trae el motivo REACTIVO con la ruta de menu, dio: ' + d.motivoNoEditable);
     ok(d.filas[0].tcUsd === 1000, 'el detalle expone las cotizaciones congeladas (tcUsd=1000), dio ' + d.filas[0].tcUsd);
     ok(typeof d.filas[0].fecha === 'string', 'la fecha se serializa como string ISO, dio ' + typeof d.filas[0].fecha);
 
@@ -444,8 +490,8 @@ console.log('\n=== 4. detalleFilasPeriodoProyeccion: detalle y editabilidad POR 
 
     // Shell: editable, con la nota libre separada (lo que identifica la fila para el usuario).
     const d3 = ctx.detalleFilasPeriodoProyeccion('2026-09', 'shell');
-    ok(d3.filas.length === 1 && d3.filas[0].editable === true && d3.filas[0].notaLibre === 'vacaciones',
-       'detalle de 2026-09/shell: editable===true y notaLibre separada, dio ' + JSON.stringify({ e: d3.filas[0].editable, n: d3.filas[0].notaLibre }));
+    ok(d3.filas.length === 1 && d3.filas[0].editable === true && d3.motivoNoEditable === '' && d3.filas[0].notaLibre === 'vacaciones',
+       'detalle de 2026-09/shell: UNICO editable, sin motivo de bloqueo, notaLibre separada, dio ' + JSON.stringify({ e: d3.filas[0].editable, n: d3.filas[0].notaLibre }));
 
     // Recurrentes: visible pero NO editable; la notaLibre trae el nombre.
     const d4 = ctx.detalleFilasPeriodoProyeccion('2026-09', 'recurrentes');
@@ -538,13 +584,7 @@ console.log('\n=== 5. eliminarPeriodoProyeccion y revertirBajaProyeccionAbm ==='
     ok(notasShellVivas.indexOf(notaShell1) !== -1 && notasShellVivas.indexOf(notaShell2) !== -1,
        'las notas shell repuestas son IDENTICAS (nota libre incluida)');
 
-    // -------- baja de 'recurrentes' y de 'otros' (hallazgo 4): funcionan y el revert repone --------
-    const rBajaRec = ctx.eliminarPeriodoProyeccion('2026-09', 'recurrentes');
-    ok(rBajaRec.filasBorradas === 1 && ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'recurrentes').length === 0,
-       'baja de recurrentes-2026-09: por fin hay un camino de UI para quitar el volcado de un mes');
-    const rRevRec = ctx.revertirBajaProyeccionAbm();
-    ok(rRevRec.origen === 'recurrentes' && ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'recurrentes').length === 1,
-       'el revert repone el volcado exacto');
+    // -------- baja de 'otros' (hallazgo 4): funciona y el revert repone --------
     const rBajaOtros = ctx.eliminarPeriodoProyeccion('2026-09', 'otros');
     ok(rBajaOtros.filasBorradas === 1 && ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'otros').length === 0,
        'baja de otros-2026-09: la nota irreconocible se puede borrar por mes');
@@ -570,6 +610,56 @@ console.log('\n=== 5. eliminarPeriodoProyeccion y revertirBajaProyeccionAbm ==='
        'base-2026-09 volvio (era la segunda baja)');
     ok(ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'guardado').length === 0,
        'guardado-2026-09 SIGUE ausente (la primera baja no es revertible: su registro fue pisado por la segunda -- limitacion esperada, no un bug)');
+
+    // -------- (x) LA BAJA DE 'recurrentes' DEPENDE DE LA VENTANA (2026-08-30) --------
+    // Dentro del horizonte NO se borra: la proxima sincronizacion lo repone sola y un borrado
+    // que se deshace solo es una trampa. Fuera del horizonte SI: es historia congelada y este
+    // ABM es la unica via de limpiarla. Las dos claves se DERIVAN de _clavesVentanaRec (nunca
+    // se tipean: un banco con su propia copia de la ventana miente cuando pasa el tiempo).
+    {
+        const ventana = ctx._clavesVentanaRec();
+        const claveDentro = ventana[0];
+        const claveFuera = '2020-01';   // siempre pasada: jamas puede caer en la ventana
+        ok(ventana.length === ctx.REC_HORIZONTE_MESES,
+           'la ventana tiene REC_HORIZONTE_MESES claves, dio ' + ventana.length);
+        ok(ventana.indexOf(claveFuera) === -1, '"' + claveFuera + '" esta FUERA de la ventana, como se necesita');
+
+        const notaRecDentro = ctx.REC_MARCA + ' ' + claveDentro + ' 2026-08-21_090000 - Netflix';
+        const notaRecFuera = ctx.REC_MARCA + ' ' + claveFuera + ' 2026-08-21_090000 - Netflix';
+        const fDentro = ctx._fechaDesdeClavePa(claveDentro);
+        const ssV = activarSs([], [
+            filaProy({ monto: 5000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: fDentro, nota: notaRecDentro }),
+            filaProy({ monto: 4000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2020, 0, 1), nota: notaRecFuera })
+        ]);
+        const hojaV = ssV._hojas['Proyeccion'];
+
+        let lanzoV = false, msgV = '';
+        try { ctx.eliminarPeriodoProyeccion(claveDentro, 'recurrentes'); } catch (e) { lanzoV = true; msgV = e.message; }
+        ok(lanzoV && /Gastos recurrentes/.test(msgV) && /pausalo o ponele fecha de fin/.test(msgV),
+           'un mes de recurrentes DENTRO de la ventana se rechaza nombrando donde se corrige, dio: ' + msgV);
+        ok(ctx._filasDelPeriodoPa(hojaV, claveDentro, 'recurrentes').length === 1,
+           'y la fila sigue ahi: el gate corta ANTES de respaldar y borrar');
+        ok(ssV.insertSheetLlamadas === 0, 'el rechazo no crea ninguna hoja');
+
+        const rFuera = ctx.eliminarPeriodoProyeccion(claveFuera, 'recurrentes');
+        ok(rFuera.filasBorradas === 1 && ctx._filasDelPeriodoPa(hojaV, claveFuera, 'recurrentes').length === 0,
+           'un mes de recurrentes FUERA de la ventana SI se borra (historia congelada)');
+        const rRevFuera = ctx.revertirBajaProyeccionAbm();
+        ok(rRevFuera.origen === 'recurrentes' && ctx._filasDelPeriodoPa(hojaV, claveFuera, 'recurrentes').length === 1,
+           'y su revert repone la fila exacta');
+
+        // El gate tambien vale en el detalle, para que el cliente pueda esconder el boton.
+        const detDentro = ctx.detalleFilasPeriodoProyeccion(claveDentro, 'recurrentes');
+        ok(/Gastos recurrentes/.test(detDentro.bajaBloqueada), 'el detalle del mes dentro de la ventana trae bajaBloqueada');
+        const detFuera = ctx.detalleFilasPeriodoProyeccion(claveFuera, 'recurrentes');
+        ok(detFuera.bajaBloqueada === '', 'el detalle del mes fuera de la ventana NO trae bajaBloqueada');
+        // Los otros cuatro origenes nunca se bloquean por ventana.
+        ok(ctx._motivoBajaBloqueadaPa(claveDentro, 'shell') === '' &&
+           ctx._motivoBajaBloqueadaPa(claveDentro, 'guardado') === '' &&
+           ctx._motivoBajaBloqueadaPa(claveDentro, 'base') === '' &&
+           ctx._motivoBajaBloqueadaPa(claveDentro, 'otros') === '',
+           'la ventana solo bloquea la baja de recurrentes, no la de los otros cuatro origenes');
+    }
 
     // -------- MUTACION 7: lo restaurado es IDENTICO fila por fila, no solo en cantidad --------
     const filasBaseSepDespues = ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'base');
@@ -608,13 +698,25 @@ console.log('\n=== 5. eliminarPeriodoProyeccion y revertirBajaProyeccionAbm ==='
         // Se simula la baja legada: respaldo de AMBAS filas (guardado + shell juntas, como
         // hacia la version anterior) y borrado de ambas, con el registro origen='guardado'.
         const filasAmbas = [cfg2.dataRow, cfg2.dataRow + 1];
-        const resp = ctx._respaldarFilasPa(ssActual, hojaProy2, filasAmbas, '2026-08-29_090000');
+        // Respaldo del formato LEGADO, armado a mano: una HOJA con 'fila_original'/'valores_json'
+        // y la propiedad apuntando por el campo `respaldo`. Es el estado que la planilla puede
+        // tener al momento del deploy; si el lector nuevo no lo entiende, el unico deshacer que
+        // existe se rompe EN SILENCIO.
+        const nombreLegado = ctx.PA_PREFIJO_RESPALDO + '2026-08-29_090000';
+        const hojaLegado = ssActual.insertSheet(nombreLegado);
+        const colIniL = ctx.columnLetterToIndex(cfg2.start);
+        const anchoL = ctx.columnLetterToIndex(cfg2.end) - colIniL + 1;
+        hojaLegado.getRange(1, 1, 1, 2).setValues([['fila_original', 'valores_json']]);
+        hojaLegado.getRange(2, 1, filasAmbas.length, 2).setValues(filasAmbas.map(function (f) {
+            const vals = hojaProy2.getRange(f, colIniL, 1, anchoL).getValues()[0];
+            return [f, JSON.stringify(vals.map(v => v instanceof Date ? { __fecha__: v.toISOString() } : v))];
+        }));
         ctx._borrarGeneradasPb(hojaProy2, filasAmbas);
         propsActual.setProperty(ctx.PA_PROP_PREVIOS_BAJA, JSON.stringify({
-            respaldo: resp.nombre, clave: '2026-11', origen: 'guardado', filas: 2
+            respaldo: nombreLegado, clave: '2026-11', origen: 'guardado', filas: 2
         }));
         const rLegado = ctx.revertirBajaProyeccionAbm();
-        ok(rLegado.filasRepuestas === 2, 'el respaldo legado mixto se repone ENTERO (2 filas), dio ' + rLegado.filasRepuestas);
+        ok(rLegado.filasRepuestas === 2, 'CAMINO LEGADO: un respaldo del formato viejo (HOJA + campo `respaldo`) se lee y se repone ENTERO (2 filas), dio ' + rLegado.filasRepuestas);
         ok(ctx._filasDelPeriodoPa(hojaProy2, '2026-11', 'guardado').length === 1 &&
            ctx._filasDelPeriodoPa(hojaProy2, '2026-11', 'shell').length === 1,
            'las dos filas volvieron, cada una clasificando a su origen -- sin falso error de verificacion');
@@ -645,61 +747,86 @@ console.log('\n=== 6. actualizarMontoFilaProyeccion y revertirEdicionMontoProyec
     let lanzo = false, msg = '';
     try { ctx.actualizarMontoFilaProyeccion(filaBase, 999); } catch (e) { lanzo = true; msg = e.message; }
     ok(lanzo && msg.indexOf('presupuesto base') !== -1, 'editar una fila base tira con mensaje explicito, dio: ' + msg);
-    const colMonto = ctx.columnLetterToIndex(cfg.columns.monto);
-    const montoBaseTrasIntento = ssMock._hojas['Proyeccion'].getRange(filaBase, colMonto).getValue();
+    const montoBaseTrasIntento = ssMock._hojas['Proyeccion'].getRange(ctx.RANGES.REGISTROS.dataRow,
+        ctx.columnLetterToIndex(cfg.columns.monto)).getValue();
     ok(montoBaseTrasIntento === 100000, 'el monto de la fila base SIGUE en 100000 (no se escribio nada), dio ' + montoBaseTrasIntento);
+
+    // -------- MUTACION 9-bis (2026-08-30): 'guardado' DEJA de editarse --------
+    // Mismo argumento con el que ya se bloqueaba 'base': la marca de la Nota es una AFIRMACION
+    // y no puede quedar en pie con un valor que ya no la cumple.
+    lanzo = false; msg = '';
+    try { ctx.actualizarMontoFilaProyeccion(filaGuardado, 250000); } catch (e) { lanzo = true; msg = e.message; }
+    ok(lanzo && msg.indexOf('hoja Presupuesto') !== -1,
+       'editar una fila guardado tira nombrando la hoja Presupuesto, dio: ' + msg);
+    const colMonto = ctx.columnLetterToIndex(cfg.columns.monto);
+    ok(ssMock._hojas['Proyeccion'].getRange(filaGuardado, colMonto).getValue() === 200000,
+       'y el monto guardado SIGUE en 200000: el gate corta del lado del SERVIDOR, aunque el cliente mande la edicion');
 
     // -------- MUTACION 11: nuevoMonto no numerico -- tira, no escribe, para CADA variante --------
     [NaN, '', 'abc', null, undefined, '   '].forEach(valorMalo => {
         let lanzoMal = false;
-        try { ctx.actualizarMontoFilaProyeccion(filaGuardado, valorMalo); } catch (e) { lanzoMal = true; }
+        try { ctx.actualizarMontoFilaProyeccion(filaShell, valorMalo); } catch (e) { lanzoMal = true; }
         ok(lanzoMal, 'nuevoMonto=' + JSON.stringify(valorMalo) + ' tira (incluida la trampa Number("")===0)');
     });
-    const montoGuardadoTrasIntentosMalos = ssMock._hojas['Proyeccion'].getRange(filaGuardado, colMonto).getValue();
-    ok(montoGuardadoTrasIntentosMalos === 200000, 'tras los 6 intentos invalidos, el monto SIGUE en 200000 (ninguno escribio), dio ' + montoGuardadoTrasIntentosMalos);
+    const montoShellTrasIntentosMalos = ssMock._hojas['Proyeccion'].getRange(filaShell, colMonto).getValue();
+    ok(montoShellTrasIntentosMalos === 45000, 'tras los 6 intentos invalidos, el monto SIGUE en 45000 (ninguno escribio), dio ' + montoShellTrasIntentosMalos);
 
-    // -------- MUTACION 10: editar una fila PG_MARCA -- escribe, verifica, y revierte exacto --------
-    const rEdit = ctx.actualizarMontoFilaProyeccion(filaGuardado, 250000);
-    ok(rEdit.montoAnterior === 200000 && rEdit.montoNuevo === 250000 && rEdit.clave === '2026-09',
-       'actualizarMontoFilaProyeccion devuelve montoAnterior/montoNuevo/clave correctos, dio ' + JSON.stringify(rEdit));
-    const montoTrasEditar = ssMock._hojas['Proyeccion'].getRange(filaGuardado, colMonto).getValue();
-    ok(montoTrasEditar === 250000, 'el monto releido de la hoja es 250000, dio ' + montoTrasEditar);
+    // -------- MUTACION 10: editar la fila shell -- escribe, verifica, y revierte exacto --------
+    const rEdit = ctx.actualizarMontoFilaProyeccion(filaShell, 50000);
+    ok(rEdit.origen === 'shell' && rEdit.montoAnterior === 45000 && rEdit.montoNuevo === 50000 &&
+       rEdit.clave === '2026-09',
+       'la UNICA poblacion editable (shell) se edita y devuelve origen/montoAnterior/montoNuevo/clave, dio ' + JSON.stringify(rEdit));
+    const montoTrasEditar = ssMock._hojas['Proyeccion'].getRange(filaShell, colMonto).getValue();
+    ok(montoTrasEditar === 50000, 'el monto releido de la hoja es 50000, dio ' + montoTrasEditar);
+    ok(ssMock.insertSheetLlamadas === 0,
+       'HOJA AUXILIAR: editar un monto NO crea ni una hoja (antes creaba una por edicion), dio ' + ssMock.insertSheetLlamadas);
 
     const rRevertEdit = ctx.revertirEdicionMontoProyeccion();
-    ok(rRevertEdit.fila === filaGuardado && rRevertEdit.montoRestaurado === 200000,
-       'revertirEdicionMontoProyeccion devuelve la fila y el monto restaurado (200000), dio ' + JSON.stringify(rRevertEdit));
-    const montoTrasRevertir = ssMock._hojas['Proyeccion'].getRange(filaGuardado, colMonto).getValue();
-    ok(montoTrasRevertir === 200000, 'el monto releido tras revertir es EXACTO al original (200000), dio ' + montoTrasRevertir);
+    ok(rRevertEdit.fila === filaShell && rRevertEdit.montoRestaurado === 45000,
+       'revertirEdicionMontoProyeccion devuelve la fila y el monto restaurado (45000), dio ' + JSON.stringify(rRevertEdit));
+    const montoTrasRevertir = ssMock._hojas['Proyeccion'].getRange(filaShell, colMonto).getValue();
+    ok(montoTrasRevertir === 45000, 'el monto releido tras revertir es EXACTO al original (45000), dio ' + montoTrasRevertir);
 
     // revertir de nuevo (sin edicion pendiente) tira.
     lanzo = false;
     try { ctx.revertirEdicionMontoProyeccion(); } catch (e) { lanzo = true; }
     ok(lanzo, 'revertirEdicionMontoProyeccion sin edicion previa tira');
 
-    // -------- (viii) editabilidad por origen --------
-    // Shell: EDITABLE (decision deliberada del usuario), con origen en el retorno.
-    const rEditShell = ctx.actualizarMontoFilaProyeccion(filaShell, 50000);
-    ok(rEditShell.origen === 'shell' && rEditShell.montoAnterior === 45000 && rEditShell.montoNuevo === 50000 &&
-       rEditShell.clave === '2026-09',
-       'una fila shell SE EDITA y el retorno trae origen="shell", dio ' + JSON.stringify(rEditShell));
-    ok(ssMock._hojas['Proyeccion'].getRange(filaShell, colMonto).getValue() === 50000,
-       'el monto shell quedo escrito (50000)');
-    const rRevShellEd = ctx.revertirEdicionMontoProyeccion();
-    ok(rRevShellEd.montoRestaurado === 45000, 'y su edicion tambien se revierte exacta (45000)');
-
-    // Recurrentes: rechazada con su mensaje propio.
+    // -------- (viii) los otros tres origenes, cada uno con SU lugar de correccion --------
     lanzo = false; msg = '';
     try { ctx.actualizarMontoFilaProyeccion(filaRec, 9999); } catch (e) { lanzo = true; msg = e.message; }
-    ok(lanzo && msg.indexOf('volcado de recurrentes') !== -1 && msg.indexOf('vista de') !== -1,
-       'una fila de recurrentes se rechaza apuntando a la vista de Recurrentes, dio: ' + msg);
+    ok(lanzo && msg.indexOf('Gastos recurrentes') !== -1 && msg.indexOf('se actualiza sola') !== -1,
+       'una fila de recurrentes se rechaza apuntando a Gastos recurrentes, dio: ' + msg);
     ok(ssMock._hojas['Proyeccion'].getRange(filaRec, colMonto).getValue() === 5000,
        'el monto del recurrente sigue en 5000 (no se escribio nada)');
 
-    // Otros: rechazada con su mensaje propio.
     lanzo = false; msg = '';
     try { ctx.actualizarMontoFilaProyeccion(filaOtros, 9999); } catch (e) { lanzo = true; msg = e.message; }
     ok(lanzo && msg.indexOf('No se reconoce el origen') !== -1,
        'una fila "otros" (nota editada a mano) se rechaza con su mensaje propio, dio: ' + msg);
+
+    // -------- LAS RUTAS DE MENU DE LOS MENSAJES SALEN DE MENU_CONFIG, no de una copia --------
+    {
+        const rutas = [];
+        const recorrer = function (items, camino) {
+            (items || []).forEach(function (it) {
+                if (it.submenu) { recorrer(it.items, camino.concat([it.submenu])); return; }
+                if (it.name) rutas.push(camino.concat([it.name]).join(' > '));
+            });
+        };
+        recorrer(ctx.MENU_CONFIG.DEV_ITEMS, [ctx.MENU_CONFIG.DEV_MENU]);
+        ok(rutas.indexOf('tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar') !== -1,
+           'la ruta del mensaje de "guardado" existe TAL CUAL en MENU_CONFIG');
+        ok(ctx.PA_MSJ_NO_EDITABLE.guardado.indexOf('tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar') !== -1,
+           'y el mensaje la nombra literal, sin parafrasear');
+        ok(rutas.some(r => r.indexOf('tidetrack Dev > Presupuesto base (desde el historial)') === 0),
+           'el submenu del presupuesto base existe TAL CUAL en MENU_CONFIG');
+        ok(ctx.PA_MSJ_NO_EDITABLE.base.indexOf('tidetrack Dev > Presupuesto base (desde el historial)') !== -1,
+           'y el mensaje de "base" lo nombra literal');
+        ok(ctx.PA_MSJ_NO_EDITABLE.recurrentes.indexOf('Gastos recurrentes') !== -1 &&
+           ctx.MENU_CONFIG.ITEMS.some(it => it.name === 'Gastos recurrentes'),
+           'el mensaje de "recurrentes" nombra el item de menu "Gastos recurrentes", que existe');
+    }
 
     // Una fila sin ninguna marca tampoco es editable (mismo gate que PB_MARCA).
     const filasSinMarca = [filaProy({ monto: 1, tipo: 'Ingreso', cuenta: 'X', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: 'cargado a mano' })];
@@ -712,6 +839,77 @@ console.log('\n=== 6. actualizarMontoFilaProyeccion y revertirEdicionMontoProyec
     lanzo = false;
     try { ctx.actualizarMontoFilaProyeccion(99999, 5); } catch (e) { lanzo = true; }
     ok(lanzo, 'un numero de fila fuera del rango vivo tira');
+}
+
+// -------- MUTACION 12 (2026-08-30): LA PLANILLA SE MOVIO ENTRE LA EDICION Y EL DESHACER -------
+// Escenario propio (activarSs nuevo) porque BORRA una fila y correria los indices del resto.
+// El camino de uso que lo provoca es normal: corrijo un monto en Proyecciones Elaboradas, paso a
+// Gastos recurrentes, guardo uno -- eso dispara la fase 2, que borra y reescribe hasta
+// REC_HORIZONTE_MESES meses de filas REC via _borrarFilasRec -- vuelvo y toco Deshacer.
+// Antes del guard, el deshacer escribia en el NUMERO DE FILA guardado sin comprobar nada: pisaba
+// el monto de la fila del presupuesto base, dejaba la editada sin revertir, devolvia exito y
+// ademas borraba el respaldo, o sea que no quedaba con que reponer.
+{
+    const cfg = ctx.RANGES.REGISTROS;
+    const colMonto = ctx.columnLetterToIndex(cfg.columns.monto);
+    // El orden importa: una fila ARRIBA de la editada (la que se borra) y otra ABAJO (la que
+    // termina ocupando el numero de fila guardado). Sin la de abajo, el deshacer caeria en una
+    // fila vacia y el escenario no demostraria lo grave: que pisaba una fila del presupuesto
+    // base, justo una de las poblaciones que este ABM se niega a dejar editar.
+    const filas = [
+        filaProy({ monto: 100000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 7, 1), nota: ctx.PB_MARCA + ' selloA' }),
+        filaProy({ monto: 45000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 shell_2026-08-28_110000222 vacaciones' }),
+        filaProy({ monto: 70000, tipo: 'Egreso', cuenta: 'Alquiler', tipo_cuenta: 'Gasto Fijo', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PB_MARCA + ' selloB' })
+    ];
+    const ssMock = activarSs([], filas);
+    const filaBase = cfg.dataRow;
+    const filaShell = cfg.dataRow + 1;
+
+    const rEdit = ctx.actualizarMontoFilaProyeccion(filaShell, 50000);
+    ok(rEdit.montoAnterior === 45000 && rEdit.montoNuevo === 50000,
+       'MUTACION 12: se edita la fila shell (45000 -> 50000) para montar el escenario');
+
+    // El deleteRows exacto que hace _borrarFilasRec en cada sincronizacion: todo lo de abajo sube
+    // un renglon y la fila guardada en la propiedad pasa a apuntar a OTRA fila.
+    ssMock._hojas['Proyeccion'].deleteRows(filaBase, 1);
+    const notaEnLaFilaVieja = String(ssMock._hojas['Proyeccion']
+        .getRange(filaShell, ctx.columnLetterToIndex(cfg.columns.nota)).getValue());
+    ok(notaEnLaFilaVieja.indexOf(ctx.PB_MARCA) === 0,
+       'tras el deleteRows la fila ' + filaShell + ' es una fila del PRESUPUESTO BASE, no la editada: "' + notaEnLaFilaVieja + '"');
+
+    const montosAntes = [filaBase, filaShell].map(f => ssMock._hojas['Proyeccion'].getRange(f, colMonto).getValue());
+    let lanzoIdent = false, msgIdent = '';
+    try { ctx.revertirEdicionMontoProyeccion(); } catch (e) { lanzoIdent = true; msgIdent = e.message; }
+    ok(lanzoIdent && /ya no es la que se edito/.test(msgIdent),
+       'el deshacer LANZA nombrando el desvio en vez de escribir a ciegas, dio: ' + msgIdent);
+
+    const montosDespues = [filaBase, filaShell].map(f => ssMock._hojas['Proyeccion'].getRange(f, colMonto).getValue());
+    ok(JSON.stringify(montosAntes) === JSON.stringify(montosDespues),
+       'y NO escribio una sola celda: los montos siguen ' + JSON.stringify(montosDespues) +
+       ' (eran ' + JSON.stringify(montosAntes) + ')');
+    ok(montosDespues[1] === 70000,
+       'en particular la fila base que quedo en el numero guardado conserva sus 70000: el deshacer no la piso');
+    ok(montosDespues[0] === 50000,
+       'y la fila editada de verdad sigue en 50000: quedo sin revertir, pero VISIBLE y con su respaldo');
+
+    // Y no se llevo puestas las herramientas para reintentar: un deshacer que falla y ademas
+    // borra el respaldo deja al usuario sin salida.
+    const previosVivos = propsActual.getProperty(ctx.PA_PROP_PREVIOS_EDICION);
+    ok(!!previosVivos, 'la propiedad de la edicion pendiente NO se borro: se puede reintentar');
+    let respaldoVivo = [];
+    try { respaldoVivo = ctx.leerRespaldoFilas(ssMock, JSON.parse(previosVivos).token); } catch (e) { respaldoVivo = []; }
+    ok(respaldoVivo.length === 1,
+       'y el respaldo sigue guardado (' + respaldoVivo.length + ' fila): el usuario conserva con que reponer a mano');
+
+    // CONTROL EN LA OTRA DIRECCION: sin corrimiento, el deshacer sigue funcionando. Un guard que
+    // se pone rojo en estado sano seria tan malo como el defecto que cierra.
+    const filasOk = [filaProy({ monto: 45000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 shell_2026-08-28_110000222 vacaciones' })];
+    const ssSano = activarSs([], filasOk);
+    ctx.actualizarMontoFilaProyeccion(cfg.dataRow, 50000);
+    const rSano = ctx.revertirEdicionMontoProyeccion();
+    ok(rSano.montoRestaurado === 45000 &&
+       ssSano._hojas['Proyeccion'].getRange(cfg.dataRow, colMonto).getValue() === 45000,
+       'sin corrimiento el deshacer sigue reponiendo exacto (45000): el guard no dispara en estado sano');
 }
 
 // ============================================================================
@@ -767,6 +965,249 @@ console.log('\n=== 7. pingProyeccionAbm ===');
     // falla por el canal, no puede ser "la respuesta es demasiado grande".
     const bytes = JSON.stringify(r1).length;
     ok(bytes < 100, 'el payload del ping es trivial (<100 caracteres), dio ' + bytes);
+}
+
+
+// ============================================================================
+// 8. LA BOVEDA DE RESPALDOS (18_RespaldoService.js): CERO HOJAS EN EL CAMINO DIARIO
+// ============================================================================
+// La queja de Franco, medida: al editar un monto aparecia una pestania "Respaldo proyeccion abm
+// <sello>", el grid de fondo saltaba a esa hoja y el foco no volvia. El mock cuenta las llamadas
+// a insertSheet y registra el ORDEN de setActiveSheet / hideSheet / escrituras, asi que estas
+// pruebas miden el HECHO (cuantas hojas se crearon, en que orden), no un mensaje.
+console.log('\n=== 8. Boveda de respaldos: el respaldo deja de crear una hoja ===');
+{
+    const cfg = ctx.RANGES.REGISTROS;
+    const colMonto = ctx.columnLetterToIndex(cfg.columns.monto);
+    const notaShell = ctx.PG_MARCA + ' 2026-09 shell_2026-08-28_110000222 vacaciones';
+
+    // -------- 8.1 editar un monto: CERO insertSheet --------
+    // PROBADO EN ROJO contra el codigo anterior: con _respaldarFilasPa creando la hoja, esto
+    // daba 1 y la prueba fallaba. Si pasara en verde contra el codigo viejo, no mediria nada.
+    {
+        const ssM = activarSs([], [filaProy({ monto: 45000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaShell })]);
+        ctx.actualizarMontoFilaProyeccion(cfg.dataRow, 50000);
+        ok(ssM.insertSheetLlamadas === 0, '8.1 editar un monto crea CERO hojas, dio ' + ssM.insertSheetLlamadas);
+        ok(ssM._traza.length === 0, '8.1 y no hay una sola operacion de hoja nueva en la traza');
+        ok(ssM._activa() === ssM._hojas['Proyeccion'], '8.1 la hoja activa no cambio');
+
+        // 8.2 roundtrip exacto con el respaldo en PROPIEDADES (no en una hoja).
+        const previos = JSON.parse(propsActual.getProperty(ctx.PA_PROP_PREVIOS_EDICION));
+        ok(typeof previos.token === 'string' && previos.token.length > 0 && previos.respaldo === undefined,
+           '8.2 la propiedad de la edicion guarda un TOKEN, ya no un nombre de hoja: ' + JSON.stringify(previos));
+        ok(propsActual.getProperty(ctx._claveIndiceResp(previos.token)) !== null,
+           '8.2 y existe el indice "' + ctx._claveIndiceResp(previos.token) + '" en propiedades');
+        const rRev = ctx.revertirEdicionMontoProyeccion();
+        ok(rRev.montoRestaurado === 45000 &&
+           ssM._hojas['Proyeccion'].getRange(cfg.dataRow, colMonto).getValue() === 45000,
+           '8.2 revertir repone el VALOR exacto (45000) leyendo el respaldo de propiedades');
+        ok(propsActual.getProperty(ctx._claveIndiceResp(previos.token)) === null,
+           '8.2 y el respaldo se retira despues del revert: la boveda no crece sola');
+    }
+
+    // -------- 8.3 baja de un periodo de 64 filas (el grupo mas grande medido en la Proyeccion
+    // real de Franco): cero hojas, respaldo troceado, revert exacto --------
+    {
+        const filas64 = [];
+        for (let i = 0; i < 64; i++) {
+            filas64.push(filaProy({ monto: 1000 + i, tipo: 'Egreso', cuenta: 'Alquiler departamento',
+                tipo_cuenta: 'Gasto Fijo', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1),
+                nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }));
+        }
+        const ssM = activarSs([], filas64);
+        const hojaP = ssM._hojas['Proyeccion'];
+        const antes = ctx._filasDelPeriodoPa(hojaP, '2026-09', 'guardado').map(f => filaCompletaPorNumero(ssM, f));
+
+        const rBaja = ctx.eliminarPeriodoProyeccion('2026-09', 'guardado');
+        ok(rBaja.filasBorradas === 64 && ssM.insertSheetLlamadas === 0,
+           '8.3 borrar 64 filas crea CERO hojas, dio ' + ssM.insertSheetLlamadas);
+        const token = JSON.parse(propsActual.getProperty(ctx.PA_PROP_PREVIOS_BAJA)).token;
+        const ix = JSON.parse(propsActual.getProperty(ctx._claveIndiceResp(token)));
+        ok(ix.nFilas === 64 && ix.nTrozos === 2 && ix.medio === 'props' && ix.contexto === 'proyeccion-abm',
+           '8.3 el respaldo quedo troceado en 2 propiedades de hasta ' + ctx.RESP_FILAS_POR_TROZO +
+           ' filas, dio ' + JSON.stringify({ n: ix.nFilas, t: ix.nTrozos, m: ix.medio }));
+
+        ctx.revertirBajaProyeccionAbm();
+        const despues = ctx._filasDelPeriodoPa(hojaP, '2026-09', 'guardado').map(f => filaCompletaPorNumero(ssM, f));
+        ok(despues.length === 64, '8.3 el revert repone las 64 filas, dio ' + despues.length);
+        let idenNo = 0;
+        const idxFecha = ctx.columnLetterToIndex(cfg.columns.fecha) - ctx.columnLetterToIndex(cfg.start);
+        for (let i = 0; i < 64; i++) {
+            for (let j = 0; j < antes[i].length; j++) {
+                const a = antes[i][j], b = despues[i][j];
+                const igual = (j === idxFecha)
+                    ? (a instanceof Date && b instanceof Date && a.getTime() === b.getTime())
+                    : (a === b);
+                if (!igual) idenNo++;
+            }
+        }
+        ok(idenNo === 0, '8.3 las 64 filas repuestas son IDENTICAS celda por celda (fechas incluidas), desvios: ' + idenNo);
+    }
+
+    // -------- 8.4 el borde del troceado: 40 filas = 1 trozo, 41 = 2 --------
+    {
+        const armar = (n) => {
+            const fs2 = [];
+            for (let i = 0; i < n; i++) {
+                fs2.push(filaProy({ monto: 100 + i, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable',
+                    medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }));
+            }
+            const ssM = activarSs([], fs2);
+            const filas = ctx._filasDelPeriodoPa(ssM._hojas['Proyeccion'], '2026-09', 'guardado');
+            const r = ctx.guardarRespaldoFilas(ssM, ssM._hojas['Proyeccion'], filas, 'sello_' + n, 'proyeccion-abm');
+            return { ssM: ssM, ix: JSON.parse(propsActual.getProperty(ctx._claveIndiceResp(r.token))), token: r.token, medio: r.medio };
+        };
+        const r40 = armar(ctx.RESP_FILAS_POR_TROZO);
+        ok(r40.ix.nTrozos === 1, '8.4 ' + ctx.RESP_FILAS_POR_TROZO + ' filas = 1 trozo, dio ' + r40.ix.nTrozos);
+        const r41 = armar(ctx.RESP_FILAS_POR_TROZO + 1);
+        ok(r41.ix.nTrozos === 2, '8.4 ' + (ctx.RESP_FILAS_POR_TROZO + 1) + ' filas = 2 trozos, dio ' + r41.ix.nTrozos);
+
+        // 8.5 NINGUN trozo supera el tope por propiedad. Se mide el largo del string REALMENTE
+        // guardado en el almacen, no un estimado.
+        let mayor = 0;
+        for (let i = 0; i < r41.ix.nTrozos; i++) {
+            mayor = Math.max(mayor, propsActual.getProperty(ctx._claveTrozoResp(r41.token, i)).length);
+        }
+        ok(mayor <= ctx.RESP_TOPE_CARACTERES_TROZO,
+           '8.5 el trozo mas grande realmente guardado mide ' + mayor + ' caracteres (tope ' +
+           ctx.RESP_TOPE_CARACTERES_TROZO + ')');
+    }
+
+    // -------- 8.6 escritura atomica: si muere a mitad, NO queda indice ni trozos sueltos --------
+    // Matiz declarado: cuando las propiedades fallan, el modulo NO se rinde -- pasa el respaldo
+    // entero a la boveda y lo LOGUEA (mismo criterio que la Regla Estricta 9 con el fallback de
+    // cotizaciones). Lo que se prueba aca es el invariante de atomicidad: en propiedades no queda
+    // NADA a medias. La parte "y entonces no se toca la Proyeccion" se prueba abajo, cortando
+    // tambien la boveda.
+    {
+        const fs3 = [];
+        for (let i = 0; i < 45; i++) {
+            fs3.push(filaProy({ monto: 100 + i, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable',
+                medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }));
+        }
+        const ssM = activarSs([], fs3);
+        const hojaP = ssM._hojas['Proyeccion'];
+        const filas = ctx._filasDelPeriodoPa(hojaP, '2026-09', 'guardado');
+
+        const setReal = propsActual.setProperty;
+        propsActual.setProperty = function (k, v) {
+            if (k === ctx._claveTrozoResp('sello_atomico', 1)) throw new Error('almacen lleno');
+            return setReal(k, v);
+        };
+        const r = ctx.guardarRespaldoFilas(ssM, hojaP, filas, 'sello_atomico', 'proyeccion-abm');
+        propsActual.setProperty = setReal;
+
+        ok(propsActual.getProperty(ctx._claveIndiceResp('sello_atomico')) === null,
+           '8.6 si un trozo no se pudo escribir, NO queda indice: sin indice, el respaldo se considera inexistente');
+        const sueltas = propsActual.getKeys().filter(k => k.indexOf(ctx.RESP_PROP_PREFIJO + 'sello_atomico_') === 0);
+        ok(sueltas.length === 0, '8.6 y no queda ningun trozo suelto en propiedades, dio ' + sueltas.length);
+        ok(r.medio === 'boveda', '8.6 el respaldo cayo entero a la boveda (fallback declarado y logueado), dio ' + r.medio);
+        ok(ctx.leerRespaldoFilas(ssM, 'sello_atomico').length === 45,
+           '8.6 y desde la boveda se relee completo: 45 filas');
+
+        // Ahora SI el caso terminal: propiedades rotas Y la boveda imposible de crear. El
+        // respaldo lanza, y eliminarPeriodoProyeccion no toca una sola fila de la Proyeccion.
+        const ssM2 = activarSs([], fs3);
+        const hojaP2 = ssM2._hojas['Proyeccion'];
+        const antes2 = ctx._filasDelPeriodoPa(hojaP2, '2026-09', 'guardado').length;
+        const setReal2 = propsActual.setProperty;
+        propsActual.setProperty = function () { throw new Error('almacen lleno'); };
+        ssM2.insertSheet = function () { throw new Error('no se puede crear la boveda'); };
+        let lanzo8 = false;
+        try { ctx.eliminarPeriodoProyeccion('2026-09', 'guardado'); } catch (e) { lanzo8 = true; }
+        propsActual.setProperty = setReal2;
+        ok(lanzo8, '8.6 sin ningun soporte para el respaldo, la baja LANZA');
+        ok(ctx._filasDelPeriodoPa(hojaP2, '2026-09', 'guardado').length === antes2,
+           '8.6 y la Proyeccion quedo intacta: ' + antes2 + ' filas, las mismas que antes');
+    }
+
+    // -------- 8.7 CAMINO LEGADO en la edicion de monto (el de la baja ya se probo en la 5) ----
+    {
+        const ssM = activarSs([], [filaProy({ monto: 45000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaShell })]);
+        const hojaP = ssM._hojas['Proyeccion'];
+        const colIni = ctx.columnLetterToIndex(cfg.start);
+        const ancho = ctx.columnLetterToIndex(cfg.end) - colIni + 1;
+        const nombreLegado = ctx.PA_PREFIJO_RESPALDO + '2026-08-29_101010';
+        const hojaLegado = ssM.insertSheet(nombreLegado);
+        hojaLegado.getRange(1, 1, 1, 2).setValues([['fila_original', 'valores_json']]);
+        hojaLegado.getRange(2, 1, 1, 2).setValues([[cfg.dataRow,
+            JSON.stringify(hojaP.getRange(cfg.dataRow, colIni, 1, ancho).getValues()[0]
+                .map(v => v instanceof Date ? { __fecha__: v.toISOString() } : v))]]);
+        // La planilla ya tenia el monto cambiado y la propiedad VIEJA apuntando a esa hoja.
+        hojaP.getRange(cfg.dataRow, colMonto).setValue(99999);
+        propsActual.setProperty(ctx.PA_PROP_PREVIOS_EDICION, JSON.stringify({
+            respaldo: nombreLegado, fila: cfg.dataRow, montoAnterior: 45000, montoNuevo: 99999
+        }));
+        const rLeg = ctx.revertirEdicionMontoProyeccion();
+        ok(rLeg.montoRestaurado === 45000 && hojaP.getRange(cfg.dataRow, colMonto).getValue() === 45000,
+           '8.7 una edicion pendiente del formato VIEJO (campo `respaldo` = hoja) se revierte igual: el deploy no rompe el deshacer');
+    }
+
+    // -------- 8.8 mas de RESP_TOPE_PROPS filas -> boveda, creada UNA sola vez --------
+    {
+        const n = ctx.RESP_TOPE_PROPS + 1;
+        const fs4 = [];
+        for (let i = 0; i < n; i++) {
+            fs4.push(filaProy({ monto: 10 + i, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable',
+                medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }));
+        }
+        const ssM = activarSs([], fs4);
+        const hojaP = ssM._hojas['Proyeccion'];
+        const filas = ctx._filasDelPeriodoPa(hojaP, '2026-09', 'guardado');
+
+        const r1 = ctx.guardarRespaldoFilas(ssM, hojaP, filas, 'sello_grande_1', 'proyeccion-abm');
+        ok(r1.medio === 'boveda' && r1.filas === n,
+           '8.8 ' + n + ' filas (mas de RESP_TOPE_PROPS=' + ctx.RESP_TOPE_PROPS + ') van a la boveda, dio ' + r1.medio);
+        ok(ssM.insertSheetLlamadas === 1, '8.8 la boveda se crea UNA vez, dio ' + ssM.insertSheetLlamadas);
+        ok(!!ssM._hojas[ctx.SHEETS.RESPALDOS] && ssM._hojas[ctx.SHEETS.RESPALDOS]._oculta === true,
+           '8.8 y queda oculta');
+        ok(propsActual.getProperty(ctx._claveIndiceResp('sello_grande_1')) === null,
+           '8.8 un respaldo de boveda no deja indice en propiedades');
+
+        const r2 = ctx.guardarRespaldoFilas(ssM, hojaP, filas, 'sello_grande_2', 'proyeccion-abm');
+        ok(r2.medio === 'boveda' && ssM.insertSheetLlamadas === 1,
+           '8.8 una SEGUNDA operacion de mas de ' + ctx.RESP_TOPE_PROPS + ' filas NO vuelve a crear la hoja: se reusa, dio ' +
+           ssM.insertSheetLlamadas + ' llamada(s) en total');
+
+        ok(ctx.leerRespaldoFilas(ssM, 'sello_grande_1').length === n,
+           '8.8 leer por token devuelve SOLO las filas de ese token (' + n + ')');
+        ctx.borrarRespaldoFilas(ssM, 'sello_grande_1');
+        ok(ctx.leerRespaldoFilas(ssM, 'sello_grande_2').length === n,
+           '8.8 borrar un token no se lleva puesto el otro');
+        ok(!!ssM._hojas[ctx.SHEETS.RESPALDOS],
+           '8.8 y borrar por token NUNCA borra la boveda: se borran FILAS, no la hoja');
+    }
+
+    // -------- 8.9 EL ORDEN de la unica creacion: foco repuesto y hideSheet ANTES de escribir --
+    // Es un test de ORDEN, no de resultado: lo que hacia visible la hoja era escribir (y por lo
+    // tanto vaciar al cliente) con la hoja todavia activa y visible.
+    {
+        const ssM = activarSs([], []);
+        const antesActiva = ssM._activa();
+        ctx._conHojaActivaPreservada(ssM, 'Hoja de prueba', function (h) {
+            h.getRange(2, 2).setValue('titulo');
+        });
+        const t = ssM._traza;
+        const iInsert = t.indexOf('insertSheet');
+        const iFoco = t.indexOf('setActiveSheet');
+        const iHide = t.indexOf('hideSheet');
+        const iEscribir = t.indexOf('escribir');
+        ok(iInsert === 0, '8.9 la traza arranca con insertSheet, dio ' + JSON.stringify(t));
+        ok(iFoco > iInsert && iFoco < iHide, '8.9 el foco se repone DESPUES de insertSheet y ANTES de hideSheet');
+        ok(iHide < iEscribir, '8.9 hideSheet ocurre ANTES de la primera escritura de celdas');
+        ok(ssM._activa() === antesActiva, '8.9 y la hoja activa al terminar es la misma que antes de crear');
+
+        // Si fn falla, la hoja se borra y el foco vuelve igual.
+        const ssM2 = activarSs([], []);
+        const antesActiva2 = ssM2._activa();
+        let lanzo9 = false;
+        try {
+            ctx._conHojaActivaPreservada(ssM2, 'Hoja rota', function () { throw new Error('no verifica'); });
+        } catch (e) { lanzo9 = true; }
+        ok(lanzo9, '8.9 si la verificacion falla, relanza');
+        ok(!ssM2._hojas['Hoja rota'], '8.9 y borra la hoja a medio crear');
+        ok(ssM2._activa() === antesActiva2, '8.9 y repone el foco igual');
+    }
 }
 
 // ============================================================================
