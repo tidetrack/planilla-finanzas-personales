@@ -258,6 +258,64 @@ hay filas nuevas desde el 2026-08-13** — revisar el trigger instalable del FX.
 
 ---
 
+## 08 | Tarjetas de Credito (modelo aprobado 2026-08-30, sin cambios de codigo)
+
+Decision de negocio de Franco, registrada como ADR-007 en `GUIA_ARQUITECTURA.md`. El
+analisis determino que el sistema YA la soporta con piezas existentes -- no requirio una sola
+linea de codigo. Aplica hacia adelante; no hay migracion del historico.
+
+> Nota de relacion con el item 1 de "Pendientes del formulerio" (abajo): ese pendiente es
+> sobre las formulas LEGACY de Inicio/Tablero, que todavia no aplican la lista blanca de
+> `TIPOS_RIQUEZA` y siguen contando Financiacion como capital. Es un frente tecnico distinto,
+> anterior a esta decision y no resuelto por ella.
+
+**El modelo**: una tarjeta de credito es un MEDIO DE PAGO de tipo `Financiacion`
+(`TIPOS_MEDIO`, `00_Config.js:368`). Su saldo es NEGATIVO: representa la deuda, no un activo.
+`TIPOS_RIQUEZA` (`00_Config.js:356`) excluye Financiacion a proposito desde la decision Franco
+2026-08-19 ("RIQUEZA se define por LISTA BLANCA") -- la constante ya prevenia que una tarjeta
+contara como capital; la funcionalidad de dar de alta tarjetas como medio simplemente nunca se
+uso.
+
+**Partida doble**: la misma maquinaria que ya usan los traspasos (dos filas por movimiento
+cuando corresponde).
+
+| Movimiento | Fila(s) en Registros | Debe | Haber |
+|---|---|---|---|
+| Consumo con tarjeta | 1 fila Egreso. Cuenta = el gasto real, Medio = la tarjeta | El gasto (Cuenta) | La tarjeta (Medio) -- la deuda sube |
+| Recurrente en tarjeta | 1 regla en Recurrentes (`RANGES.RECURRENTES`, columna `medio`) con medio = la tarjeta; se declara una vez, no se marca cada mes | El gasto (Cuenta) | La tarjeta (Medio) |
+| Pago del resumen | 2 filas (Traspaso): la que sale de la caja real, la que entra a la tarjeta | La tarjeta (Medio) -- la deuda baja | La caja real (Medio origen) |
+| Diferencia de cambio del pago (impuesto PAIS, percepciones, IVA, IIBB) | 1 fila Egreso adicional. Cuenta = GastosBancarios | GastosBancarios (Cuenta) | La caja real (Medio) |
+
+**Por que no hay doble conteo**: el consumo y el pago viven en LADOS DISTINTOS del libro. El
+gasto se cuenta cuando se consume (Egreso), no cuando se paga el resumen (Traspaso: neutro,
+no suma ni a ingresos ni a gastos -- `CUENTAS_NEUTRAS`).
+
+**Multimoneda**: una tarjeta que opera en pesos y en dolares se da de alta como DOS medios
+separados ("Tarjeta X ARS", "Tarjeta X USD"), uno por moneda -- `RANGES.MEDIOS_PAGO` (Plan!L:N)
+asume un medio = una moneda (ADR-002), y el emisor mismo entrega dos saldos separados. El
+traspaso ya sabe cruzar monedas: `_prepararTraspaso` (`16_ShellService.js`, ~linea 727) pide
+el monto de ambos lados cuando origen y destino difieren de moneda, y congela las cuatro
+cotizaciones del dia (`_cotizacionesCongeladasShell`).
+
+**La diferencia de cambio no es parte del traspaso**: el traspaso mueve la plata al tipo de
+cambio del dia; si el banco cobra un tipo peor (impuesto PAIS, percepciones, IVA, IIBB), ese
+sobrecosto es un GASTO propio y se carga aparte, como Egreso a la cuenta GastosBancarios. El
+traspaso mueve lo que se movio; el impuesto es lo que costo moverlo.
+
+**Alta manual pendiente** (no hay codigo que la haga, Franco la hace a mano en el Plan de
+Cuentas): MEDIOS_PAGO (L:N) -- "Tarjeta \<nombre\> ARS" / ARS / Financiacion, y
+"Tarjeta \<nombre\> USD" / USD / Financiacion; GASTOS_VARIABLES (I:J) -- "GastosBancarios" /
+categoria "Deuda y financiacion" (va en Variables, no en Fijos, porque el monto escala con el
+consumo en dolares del mes, no es un compromiso fijo conocido de antemano).
+
+**Sin migracion**: el historico de la cuenta "Pago tarjeta" (ver "Suciedad del catalogo" en
+05 | Plan de Cuentas: "Pago Tarjeta MP" listada entre las cuentas eliminadas que siguen en el
+historico de Registros) se deja como esta. Reescribirlo descuadraria conciliaciones ya
+verificadas al centavo. El modelo aplica desde la primera tarjeta que se de de alta en
+adelante.
+
+---
+
 ## Pendientes del formulerio (fase siguiente, hoja por hoja)
 
 Lo que el swap v0.11 NO resolvio a proposito (repuntear a ciegas habria corrompido en

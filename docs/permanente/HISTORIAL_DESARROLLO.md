@@ -6,6 +6,50 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-08-30 - Modelo de tarjetas de credito aprobado: documentacion pura, cero codigo (v0.63.2, sin bump)
+
+### Que se pidio
+
+Franco aprobo el modelo de negocio para tarjetas de credito. El encargo fue documentarlo, no
+implementarlo: el analisis previo (verificado contra el codigo antes de escribir una sola
+linea de doc) determino que el sistema ya lo soporta con piezas existentes -- no hace falta
+tocar `src/`.
+
+### El modelo
+
+Una tarjeta de credito se modela como un MEDIO DE PAGO de tipo `Financiacion` (`TIPOS_MEDIO`,
+`00_Config.js:368`), con saldo NEGATIVO. `TIPOS_RIQUEZA` (`00_Config.js:356`) ya excluye
+Financiacion de patrimonio por lista blanca desde la decision Franco 2026-08-19 -- la
+constante ya estaba lista, la funcionalidad de dar de alta tarjetas nunca se ejercito.
+
+Se resuelve con la misma partida doble que ya usan los traspasos: el consumo es una fila
+Egreso (Debe el gasto, Haber la tarjeta -- la deuda sube) y el pago del resumen es un Traspaso
+de dos filas (Debe la tarjeta -- la deuda baja --, Haber la caja real). Consumo y pago quedan
+en lados distintos del libro, por lo que no hay doble conteo. La diferencia de cambio del
+pago (impuesto PAIS, percepciones, IVA, IIBB) no es parte del traspaso: se carga aparte como
+Egreso a una cuenta nueva, `GastosBancarios`. Una tarjeta que opera en dos monedas se da de
+alta como dos medios separados ("Tarjeta X ARS" / "Tarjeta X USD"), porque el traspaso
+(`_prepararTraspaso`, `16_ShellService.js` ~727) ya sabe cruzar monedas y congelar
+cotizaciones. Los recurrentes en tarjeta usan el campo `medio` que `RANGES.RECURRENTES` ya
+tiene. No hay migracion: el historico de "Pago tarjeta" queda como esta.
+
+### Que se escribio
+
+- `ADR-007` nuevo en `docs/permanente/GUIA_ARQUITECTURA.md` (contexto, decision, dos
+  alternativas descartadas con su razon, consecuencias).
+- Seccion `08 | Tarjetas de Credito` nueva en `docs/permanente/FUNCIONALIDADES.md`, con la
+  tabla Debe/Haber de los cuatro movimientos (consumo, recurrente, pago del resumen,
+  diferencia de cambio) y una nota de relacion con el pendiente ya documentado sobre las
+  formulas legacy de Inicio/Tablero (frente tecnico distinto, no resuelto por este modelo).
+- Linea de ADR-007 agregada a la seccion de ADRs vigentes de `CLAUDE.md`.
+- Doble escritura en el vault: fila nueva en la tabla "Decisiones Tomadas" de
+  `04 RECURSOS/productos/Planilla Finanzas.md`.
+- Changelog dual sin bump de version: entrada nueva en `ZZ_Changelog.js` y `CHANGELOG.md`,
+  ambas bajo el rotulo `v0.63.2` repetido (patron ya usado por el repo para releases que no
+  se numeran de nuevo), marcada explicitamente como documentacion sin cambio de codigo.
+
+---
+
 ## 2026-08-25 - Presupuesto: ABM de Proyecciones Elaboradas, ver/corregir/borrar lo guardado (v0.54.0)
 
 ### Que se pidio

@@ -364,6 +364,34 @@
  *   apretando un boton contra un endpoint inexistente. El guard de transicion de
  *   devtools/probar_shell.js declara en cual de los dos estados esta el repo y exige lo que
  *   corresponde a cada uno.
+ * [2026-08-30] v0.63.2 - Modelo de tarjetas de credito: documentacion, cero codigo.
+ * >>> SIN BUMP: no hay cambio de codigo, asi que no hay release nuevo -- el numero se repite
+ *     a proposito, mismo patron que el repo ya uso para dos entradas de v0.62.0 y dos de
+ *     v0.53.0 en corridas distintas del mismo tramo. Franco aprobo hoy el modelo de tarjetas
+ *     de credito; el analisis determino que el sistema YA lo soporta con piezas existentes.
+ * - Una tarjeta de credito es un MEDIO DE PAGO tipo `Financiacion` (TIPOS_MEDIO,
+ *   00_Config.js:368), con saldo NEGATIVO. TIPOS_RIQUEZA (00_Config.js:356) ya la excluye de
+ *   patrimonio por lista blanca (decision Franco 2026-08-19) -- la funcionalidad nunca se
+ *   uso, no que faltara construirla.
+ * - Se resuelve con la MISMA partida doble de los traspasos: consumo = 1 fila Egreso (Debe el
+ *   gasto, Haber la tarjeta); pago del resumen = Traspaso de 2 filas (Debe la tarjeta, Haber
+ *   la caja real). Consumo y pago viven en lados distintos del libro -- por eso no hay doble
+ *   conteo.
+ * - Diferencia de cambio del pago (impuesto PAIS, percepciones, IVA, IIBB) NO es parte del
+ *   traspaso: se carga aparte como Egreso a una cuenta GastosBancarios nueva (Variables, no
+ *   Fijos, porque escala con el consumo en dolares del mes).
+ * - Multimoneda: una tarjeta con saldo en ARS y en USD se da de alta como DOS medios
+ *   ("Tarjeta X ARS" / "Tarjeta X USD") -- RANGES.MEDIOS_PAGO asume un medio = una moneda
+ *   (ADR-002). El traspaso ya sabe cruzar monedas (16_ShellService.js, _prepararTraspaso,
+ *   ~linea 727: pide el monto de ambos lados y congela las cuatro cotizaciones del dia).
+ * - Recurrentes en tarjeta: se declaran una vez con medio = la tarjeta (RANGES.RECURRENTES ya
+ *   tiene ese campo); el pago del resumen sigue siendo un traspaso aparte, sin duplicar.
+ * - Alta de catalogo (medios "Tarjeta ... Financiacion" y cuenta GastosBancarios): manual, en
+ *   el Plan de Cuentas -- no hay ABM que la automatice. Sin migracion del historico de "Pago
+ *   tarjeta": el modelo aplica hacia adelante.
+ * + ADR-007 nuevo en docs/permanente/GUIA_ARQUITECTURA.md; seccion 08 nueva en
+ *   FUNCIONALIDADES.md con la tabla Debe/Haber de los cuatro movimientos; ADR listado en
+ *   CLAUDE.md; doble escritura en el vault (Planilla Finanzas.md, tabla Decisiones Tomadas).
  *
  * [2026-08-30] v0.63.2 - El repo deja de llamarse igual que lo desplegado.
  * - AMPLIACION del mismo dia: el arreglo original agregaba el DATO (commit_desplegado) pero
