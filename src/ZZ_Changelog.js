@@ -3,6 +3,40 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-29] v0.60.0 - Rediseno Corriente: el shell se funde con el dialogo y habla la
+ * paleta de la marca.
+ * - Pedido de Franco, textual: fondo blanco "porque sino no hace juego con el borde en si
+ *   del popup de google", y despues "esta quedando buenisimo de UX pero no son los colores
+ *   de la marca. Ajusta colores". El shell dejaba de imitar la paleta medida de la hoja y
+ *   pasa al brandbook (BRAND_TIDETRACK.md, sesion con Hexa Estudio): #1E2A33 / #2ECAB0 /
+ *   #F4F7FA / #FFB380, tipografia Poppins, y para el segmento personal "liquid glass y
+ *   elementos organicos, mas calido, mas fluido".
+ * - Metodo: dos direcciones de arte compitieron con mockups renderizados y un director de
+ *   arte fallo mirando lo RENDERIZADO, no las specs. Gano "Corriente" (liquid glass); ocho
+ *   enmiendas de la perdedora "Papel continuo" (chevron persistente, disabled, loader,
+ *   fuera-de-catalogo, boton quitar, iconos de aviso, anillo del semaforo, disciplina de
+ *   perimetro).
+ * - Lo visible: lienzo blanco puro con tres radiales de agua; la banda navy DESAPARECE --
+ *   el marco de Google ya encuadra, la cabecera es transparente con monograma en degrade
+ *   teal-durazno y hairline liquida; tarjetas y bloques de vidrio (blur 10, filo de luz,
+ *   sombras color agua, nunca negras); semaforo recalibrado con pares ink/bg verificados
+ *   AA; boton primario teal con TEXTO #1E2A33 -- blanco sobre teal daba 1.9:1 y quedo
+ *   prohibido por regla dura.
+ * - La regla de paleta es un GUARD EJECUTABLE (seccion 23 del banco): bases permitidas, los
+ *   derivados con su comentario de derivacion, el semaforo agrupado como colores DE FUNCION.
+ *   El guard extrae hex, ternas rgb()/rgba() y keywords de color, y se probo en rojo con
+ *   tres intrusos distintos (un hex gris, un rgba gris y un navy por keyword).
+ * - Perimetro: los radiales literales de la spec tenian al borde un tinte de 8.1% contra el
+ *   marco blanco -- una contradiccion interna con su propia enmienda de <=6%. Se corrieron
+ *   los centros (calculado: maximo 5.57% en la banda de 20px) porque la regla del perimetro
+ *   ES el pedido central de Franco; los valores literales eran el medio, no el fin.
+ * - La barra de acciones pasa a full-bleed real (calc(50% - 50vw)): era una placa de 716px
+ *   centrada con lienzo a los costados y la hairline desalineada de la del pie.
+ * - Desviacion documentada: el th de conciliacion queda en 11px y no en los 10.5px de la
+ *   spec -- el guard del banco prohibe 10.5px con cicatriz documentada (Chrome redondea
+ *   fraccionarios distinto segun la caja). Relajar un guard con cicatriz para cumplir medio
+ *   pixel de spec era peor.
+ *
  * [2026-08-29] v0.59.1 - Las cuatro puertas de navegacion que faltaban para la botonera.
  * - El mapeo de botones por hoja encontro que no existian navigateToPlanDeCuentas,
  *   navigateToRegistros, navigateToTiposDeCambio ni navigateToMiradaInteranual: sin ellas,

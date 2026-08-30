@@ -8,169 +8,87 @@
      Prestamo con tilde) salen rotos en la simulacion. Medido el 2026-08-27. -->
 <meta charset="utf-8">
 <!-- LA FUENTE SE CARGA DE VERDAD. UI_SharedStyles declara la familia pero sin este link no se
-     descarga nunca. Verificado contra la API de Google Fonts: responde 200 y sirve los cuatro
-     pesos en subset latin. -->
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+     descarga nunca. Poppins es la familia del brandbook que fija la spec Corriente (2026-08-29);
+     los cuatro pesos 400/500/600/700 en subset latin. -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <?!= include('UI_SharedStyles'); ?>
 <style>
 /* ============================================================
    SHELL -- Centro de Operaciones. 900x700 (16_ShellService.js:61).
-   La base viene de UI_SharedStyles (include en :11); esto redefine lo que el
-   shell necesita y NADA mas. Un solo design system, no dos (regla del arnes).
+   Direccion "Corriente": liquid glass organico sobre lienzo blanco puro
+   (spec_final 2026-08-29, correccion de paleta de Franco). El marco del
+   dialogo de Google es blanco; el shell tambien: marco y shell se leen como
+   UNA superficie. La profundidad no la da un fondo gris: la dan tarjetas de
+   vidrio flotando sobre un agua apenas tenida (radiales teal/durazno 3-10%).
 
-   Dos capas de tokens: primitivos de marca (--tt-*) y alias semanticos. Los
-   componentes SOLO tocan la capa semantica. Metodo portado de la webapp PyME.
+   REGLA DE PALETA (ley de Franco 2026-08-29): colores base #1E2A33, #2ECAB0,
+   #F4F7FA, #FFB380 y #FFFFFF. Todo tono intermedio es DERIVADO DECLARADO:
+   rgba() de un base, o un hex de la spec con su comentario de derivacion.
+   El guard de devtools/probar_shell.js (seccion 23) lo verifica en cada corrida.
+   La base viene de UI_SharedStyles (include de arriba); esto redefine lo que
+   el shell necesita y NADA mas.
    ============================================================ */
 
 :root {
-    /* ---- PRIMITIVOS ------------------------------------------------
-       El navy es el MEDIDO de la planilla (#34475d, UI_SharedStyles.html:9),
-       el de la banda de cada pestania. NO se importa el #182040 del brandbook
-       v3: ese es el navy de la webapp PyME, y usarlo aca rompe la unica
-       continuidad visual que el modal tiene con la hoja. De la webapp se
-       importa el METODO y el acento, no su navy. */
-    --tt-navy:       #34475d;   /* = --primary-color */
-    --tt-navy-dark:  #2b3a4d;   /* = --primary-dark (UI_SharedStyles.html:10) */
+    /* ---- MARCA (brandbook Tidetrack, los 4 + blanco) -------------------- */
+    --tt-ink:   #1E2A33;   /* texto primario, iconos hero, wordmark */
+    --tt-teal:  #2ECAB0;   /* SOLO accion y foco decorativo; NUNCA texto sobre blanco */
+    --tt-gris:  #F4F7FA;   /* superficies secundarias: huecos, rieles, chips, tags; NUNCA el lienzo */
+    --tt-peach: #FFB380;   /* decorativo: monograma, hairlines, radial calido; nunca texto */
 
-    /* Teal editorial, brandbook v3. El unico croma del producto.
-       6.00:1 sobre blanco, 5.35:1 sobre el lienzo: sirve como TINTA, no solo
-       como adorno. Hue 192 contra el hue 212 del navy: 20 grados, misma
-       temperatura -- da vida sin pelear con la marca. */
-    --tt-teal:       #2E6B7A;
-    --tt-teal-mid:   #25596b;   /* 7.72:1 sobre blanco. Hover de superficie teal */
-    --tt-teal-soft:  #cfe2e7;   /* borde decorativo de hover */
-    --tt-teal-rgb:   46, 107, 122;   /* var() no entra adentro de un hex */
-    --tt-sand-rgb:   232, 227, 213;  /* la mitad "mas calido" del contrato de segmento */
+    /* ---- TINTAS (AA verificadas, spec seccion 15) ----------------------- */
+    --ink-1: #1E2A33;      /* titulos, valores, montos. 14.64:1 sobre blanco */
+    --ink-2: #44576A;      /* ink aclarado para secundaria AA (7.45:1); deriva de --tt-ink */
+    --ink-3: #5A6B7C;      /* ink aclarado para placeholders y auxiliares (5.48:1); deriva de --tt-ink */
+    --teal-tinta: #0B7B69; /* teal oscurecido: el UNICO teal que puede ser texto (5.18:1); deriva de --tt-teal */
 
-    /* ---- SUPERFICIES: tres planos, y se INVIERTE la relacion de hoy -------
-       Hoy la pagina es blanca (UI_Shell.html:43, --bg-secondary) y las cards
-       son #eff2f9 (:87, --bg-main): una card GRIS con sombra se lee como un
-       pozo. Card blanca sobre lienzo templado con sombra se lee como objeto
-       que levanta. El lienzo es el gris de bloque MEDIDO de la hoja: cero
-       colores inventados en esta capa. */
-    --sup-page:  #eff2f9;   /* lienzo. El gris de bloque de la planilla */
-    --sup-card:  #FFFFFF;   /* papel: card, bloque, panel, barra */
-    --sup-hueco: #eff2f9;   /* campo hundido DENTRO del papel. 1.12:1 vs card */
-    --sup-hover: #e2e8f0;   /* el mismo campo bajo el cursor (= --bg-tertiary) */
+    /* ---- SEMAFORO: colores DE FUNCION, no de marca (spec, pares ink/bg AA) --
+       Verde/rojo/ambar comunican estado (Ingreso/Egreso, ok/error/advertencia).
+       Cada par ink/bg es el verificado de la spec; los filos salen del mismo
+       ink en rgba .14-.25, nunca de un tono nuevo. */
+    --verde-ink: #0E6B4F;  /* verde de funcion, texto. 5.67:1 sobre su bg */
+    --verde-bg:  #DDF5EC;  /* riel del verde de funcion */
+    --rojo-ink:  #B23B32;  /* rojo de funcion, texto. 5.07:1 sobre su bg */
+    --rojo-bg:   #FCEAE7;  /* riel del rojo de funcion */
+    --ambar-ink: #7A4A10;  /* ambar de funcion, texto. 6.73:1 sobre su bg */
+    --ambar-bg:  #FFF1E2;  /* riel del ambar de funcion */
 
-    /* ---- FILO -------------------------------------------------------
-       Vuelve el hairline, y es la ruptura deliberada con la doctrina escrita
-       en UI_Shell.html:132-134 ("la superficie se define por fondo, porque la
-       hoja no tiene un solo setBorder"). Es un mal transplante: una celda de
-       Sheets no necesita borde porque LA GRILLA YA ES EL BORDE. Un input
-       flotando en un modal no tiene grilla. Va como inset box-shadow y no como
-       border: no ocupa layout, asi que no puede desalinear una fila del grid
-       de 12. #d4dbe8 ya existe en el repo (UI_AbmPlanCuentas.html:42). */
-    --linea:        #d4dbe8;   /* 1.39:1 sobre papel: hairline, no cerco */
-    --linea-fuerte: #c3cddf;
-    --filo:  inset 0 0 0 1px var(--linea);
+    /* ---- VIDRIO --------------------------------------------------------- */
+    --vidrio: linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.52));
+    --vidrio-borde: rgba(30,42,51,.07);
+    --vidrio-borde-hover: rgba(46,202,176,.38);
+    --vidrio-luz: inset 0 1px 0 rgba(255,255,255,.95);
+    --elev-agua: 0 14px 30px -16px rgba(46,202,176,.30), 0 3px 10px -4px rgba(30,42,51,.08);
+    --elev-agua-hover: 0 20px 40px -16px rgba(46,202,176,.38), 0 6px 16px -6px rgba(30,42,51,.10);
 
-    /* ---- ELEVACION: tres niveles, dos capas, TINTE NAVY --------------
-       Nunca negro puro. Una sombra negra sobre superficie fria se ve sucia;
-       con rgb(52,71,93) -- el propio navy -- el papel parece levantar del
-       mismo material. --shadow-md/lg de UI_SharedStyles.html:62-63 son negras
-       y el shell nunca las uso: quedan para el ABM hasta su segundo pase. */
-    --elev-1: 0 1px 2px rgba(52,71,93,0.06), 0 1px 3px rgba(52,71,93,0.05);
-    --elev-2: 0 4px 10px rgba(52,71,93,0.10), 0 2px 4px rgba(52,71,93,0.06);
-    --elev-3: 0 12px 28px rgba(52,71,93,0.15), 0 4px 8px rgba(52,71,93,0.07);
+    /* ---- TIPOGRAFIA ------------------------------------------------------
+       Poppins, familia unica (brandbook via spec Corriente). Se redefine
+       --font-family, que es el token que consume el `*` de UI_SharedStyles:
+       un solo punto de cambio propaga a todo. Los digitos se alinean con
+       font-variant-numeric, NUNCA con una segunda familia (cicatriz v0.49.0). */
+    --font-family: 'Poppins', 'DM Sans', 'Segoe UI', sans-serif;
 
-    /* ---- TINTA: tres roles, con su piso de contraste medido ---------- */
-    --ink-1:  #34475d;   /* titulos y chrome.  9.52:1 papel / 8.50:1 lienzo */
-    --ink-2:  #39444d;   /* CUERPO Y NUMEROS.  9.96:1 papel / 8.89:1 hueco.
-                            El color del cuerpo de datos de la hoja: 4.136
-                            celdas y NO es negro puro (UI_SharedStyles.html:27) */
-    --ink-3:  #5f6368;   /* rotulos. NO texto de lectura. 6.05:1 papel */
-    --ink-inv:   #FFFFFF;
-    --ink-band:  #c9d5e2;   /* sobre banda. 6.39:1 sobre navy pleno, 4.75:1 en
-                               el punto MAS claro de la aurora: AA en todo el
-                               recorrido, medido */
-    --ink-ph:    #6f7a88;   /* placeholder. 3.89:1 sobre el hueco. Sube del
-                               #94A3B8 de UI_SharedStyles.html:168, que da 2.56 */
-
-    /* ---- SEMAFORO: los MEDIDOS de la hoja. Fondos y puntos NO se tocan --
-       Viven literales en las formulas SPARKLINE de Inicio!F19:F22.
-       @see DEVTOOL_InicioPresupuesto.js (IP_COLOR_VERDE / NARANJA / ROJO)
-       Lo unico que se separa es la TINTA del error: #c93232 sobre #fce8e6 da
-       4.47:1, un pelo abajo del AA -- y es el texto que MAS importa leer. En
-       la hoja ese par es barra-sobre-riel, no texto-sobre-riel, asi que
-       oscurecer la tinta no contradice nada medido. */
-    --est-verde:      #356854;   /* punto y barra. Medido. 6.44:1 sobre papel */
-    --est-verde-bg:   #e6f4ea;   /* riel. Medido */
-    --est-verde-ink:  #2a5544;   /* 7.45:1 sobre su riel */
-    --est-rojo:       #c93232;   /* punto y barra. Medido */
-    --est-rojo-bg:    #fce8e6;   /* riel. Medido */
-    --est-rojo-ink:   #ad2727;   /* 5.76:1 sobre su riel (contra 4.47 del medido) */
-    --est-ambar:      #ffb300;   /* punto y barra. Medido */
-    --est-ambar-bg:   #fef7e0;   /* riel. Medido */
-    --est-ambar-ink:  #6d4d00;   /* 7.23:1. Ya existia en UI_SharedStyles.html:282 */
-
-    /* ---- TIPOGRAFIA -------------------------------------------------
-       DM Sans, familia unica, tambien para los numeros: contrato de marca
-       vigente (brandbook v3). Verificado contra la API: variable 400..700,
-       subset latin, un solo woff2. Google Sans queda de fallback y TAMBIEN
-       resuelve (v70, verificado): si la red se cae, no cae a Arial.
-       Los digitos se alinean con font-variant-numeric, NUNCA con una segunda
-       familia -- esa es la causa raiz de la v0.49.0 (01_Version.js:39-41).
-       Se redefine --font-family, que es el token que consume el `*` de
-       UI_SharedStyles.html:89: un solo punto de cambio propaga a todo. */
-    --font-family: 'DM Sans', 'Google Sans', -apple-system, BlinkMacSystemFont,
-                   'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-
-    /* SEIS pasos, TODOS ENTEROS. Se van los fraccionarios por la misma razon
-       que se fueron los 10.5px: Chrome los redondea a subpixel distinto segun
-       donde caiga la caja (UI_Shell.html:30-32). */
-    --fs-monto:  19px;   /* NUEVO. El dato que la herramienta existe para capturar */
-    --fs-band:   18px;   /* titulo de la banda */
-    --fs-hero:   16px;   /* titulo de la card hero */
-    --fs-vista:  14px;   /* titulo de card compacta y de bloque */
-    --fs-body:   14px;   /* inputs, selects, parrafos, botones */
-    --fs-aux:    12px;   /* descripcion, hint, alerta, pie */
-    --fs-rotulo: 11px;   /* versalitas: seccion, label */
-
-    /* ---- GEOMETRIA. Base 4 estricta -------------------------------
-       Hoy conviven 6, 7, 10, 11, 12, 14, 16, 18, 22, 24 y 26 px. Nada cae en
-       grilla, y el desalineado inconsciente es la mitad de "se ve feo". */
-    --e1: 4px;  --e2: 8px;  --e3: 12px; --e4: 16px;
-    --e5: 20px; --e6: 24px; --e8: 32px;
-
-    --r-xs:   6px;    /* pastilla, badge */
-    --r-sm:  10px;    /* input, select, boton, segmentado */
-    --r-md:  14px;    /* card, bloque, panel, barra */
-    --r-lg:  18px;    /* card hero */
+    /* ---- GEOMETRIA Y MOVIMIENTO (spec: radios 12/18/22/999, una curva) -- */
+    --r-input: 12px;
+    --r-card:  18px;
+    --r-hero:  22px;
     --r-full: 999px;
+    --alto-control: 40px;
+    --mov: cubic-bezier(.22,.9,.36,1);
 
-    --alto-control: 40px;   /* baja de 42 (UI_Shell.html:40): seis campos por
-                               bloque, cada px cuenta */
-    --alto-cta:     42px;
-    --h-banda:      60px;
-    --h-pie:        32px;
-
-    /* ---- MOVIMIENTO. Tres curvas, tres duraciones, nunca transition: all -- */
-    --mov-out:    cubic-bezier(.33, 1, .68, 1);      /* easeOutCubic: hover-lift */
-    --mov-std:    cubic-bezier(.4, 0, .2, 1);        /* color, fondo, colapso */
-    /* El bloque que entra. Era un rebote (.34, 1.56, .64, 1): el 1.56 pasa de largo el
-       valor final y vuelve, o sea que el bloque se pasa de posicion y de escala. En una
-       pantalla donde se agregan hasta QUINCE bloques, ese rebote se ve quince veces
-       seguidas -- y esto es una herramienta de cargar plata, no una app de juego. Un objeto
-       real desacelera, no rebota. easeOutQuint: entra rapido y se frena, sin pasarse. */
-    --mov-entra:  cubic-bezier(.22, 1, .36, 1);
-    --t1: 120ms;  --t2: 200ms;  --t3: 280ms;
-
-    /* Chevron propio para los select. Data-URI porque el CSP del iframe de
-       HtmlService no deja traer un asset externo, y porque hoy no hay un solo
-       appearance:none en los dos archivos: cada bloque muestra cuatro
-       flechitas nativas de Chrome, los unicos "iconos" del formulario y
-       ninguno es nuestro. */
-    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%232E6B7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5'/%3E%3C/svg%3E");
+    /* Chevron propio para selects y combos. Data-URI porque el CSP del iframe
+       de HtmlService no deja traer un asset externo. El stroke %2344576A es
+       --ink-2 URL-encodeado (caret SVG ink-2, spec seccion 7). */
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%2344576A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5'/%3E%3C/svg%3E");
 }
 
 
 /* ============================================================
-   1. ESQUELETO -- columna de altura fija: banda, scroll, pie.
-   Reemplaza el `position: fixed` del pie (UI_Shell.html:196-197) y el
-   `padding: 0 0 44px` del body (:43). Con esto el pie NO PUEDE solaparse con
-   la ultima tarjeta -- que hoy pasa, porque el pie y la card son literalmente
-   el mismo color (--bg-main en :87 y en :200).
+   1. ESQUELETO -- columna de altura fija: cabecera, scroll, acciones, pie.
+   El lienzo es BLANCO PURO con el agua ambiente encima: tres radiales fijos
+   al 3-10% de alpha. Regla de perimetro (spec): los centros viven fuera del
+   encuadre y el tinte se disuelve antes de tocar el marco del dialogo de
+   Google, que queda practicamente blanco y se funde con el shell.
    ============================================================ */
 html { height: 100%; }
 body {
@@ -179,10 +97,19 @@ body {
     padding: 0;
     display: flex;
     flex-direction: column;
-    background: var(--sup-page);
-    color: var(--ink-2);
-    font-size: var(--fs-body);
-    line-height: 1.5;
+    /* Los centros van MAS AFUERA que en la spec original (-14%/112% en vez de -6%/108%):
+       con los literales de la spec el tinte llegaba a 8.1% en la banda de 20px que toca el
+       marco blanco del dialogo de Google, y la regla de perimetro (<=6%) es el pedido
+       central de Franco -- fundirse con el marco -- asi que gana sobre los valores textuales.
+       Calculado, no a ojo: con estos centros los cuatro bordes quedan bajo 6%. */
+    background:
+        radial-gradient(560px 340px at 88% -14%,  rgba(46,202,176,.10), transparent 65%),
+        radial-gradient(640px 420px at -12% 112%, rgba(255,179,128,.09), transparent 65%),
+        radial-gradient(420px 300px at 8% 30%,    rgba(46,202,176,.045), transparent 70%),
+        #FFFFFF;
+    color: var(--ink-1);
+    font-size: 13px;
+    line-height: 1.45;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }
@@ -193,961 +120,892 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: contain;   /* que el scroll no se escape a la planilla */
-    padding: var(--e5) var(--e6) 22px;
+    padding: 20px 28px 22px;
     scrollbar-width: thin;
-    scrollbar-color: var(--linea-fuerte) transparent;
+    scrollbar-color: rgba(30,42,51,.18) transparent;
+    /* Columna flex: con poco contenido la barra de acciones de cada vista se
+       apoya ABAJO (spec: "pegada abajo, sobre el pie") en vez de flotar a
+       mitad del panel; con mucho contenido el sticky de la barra toma el
+       relevo y el pliegue no se rompe. */
+    display: flex;
+    flex-direction: column;
 }
-/* La de 8px de UI_SharedStyles.html:290-293 se lee como cromo de navegador viejo. */
+.shell-scroll > * { width: 100%; }
+.vista-form {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+.vista-form > .shell-acciones { margin-top: auto; }
 .shell-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
 .shell-scroll::-webkit-scrollbar-track { background: transparent; }
 .shell-scroll::-webkit-scrollbar-thumb {
-    background: var(--linea-fuerte); border-radius: var(--r-full);
+    background: rgba(30,42,51,.18); border-radius: var(--r-full);
 }
-.shell-scroll::-webkit-scrollbar-thumb:hover { background: #a9b6cb; }
+.shell-scroll::-webkit-scrollbar-thumb:hover { background: rgba(30,42,51,.30); }
 
-/* Ancho POR NATURALEZA DE CONTENIDO. Se conserva la decision de
-   UI_Shell.html:65-71, que es correcta; solo se baja 852 -> 840 para dejar
-   lugar a la barra de scroll de 6px sin que el Home se corra. */
+/* Ancho POR NATURALEZA DE CONTENIDO: el Home respira ancho, el formulario
+   se lee angosto. */
 .vista-ancha { max-width: 840px; margin: 0 auto; }
 .vista-form  { max-width: 660px; margin: 0 auto; }
 .hidden { display: none !important; }
 
 
 /* ============================================================
-   2. LA BANDA -- sigue siendo la continuacion de la hoja, pero deja de ser
-   un rectangulo plano. Dos auroras radiales sobre un degrade navy: cero DOM,
-   cero animacion, y es donde el contrato del segmento pide lo organico. El
-   lado derecho, que hoy son ~700px de navy vacio (UI_Shell.html:224-229), es
-   justo donde florece la aurora.
-   Medido: en el punto MAS claro del recorrido, blanco da 7.08:1 y --ink-band
-   4.75:1. AA en toda la banda, no solo en el navy pleno.
+   2. CABECERA -- la banda navy DESAPARECE (spec seccion 4). 58px transparentes
+   sobre el mismo lienzo, cerrados por una hairline liquida teal-durazno que
+   se disuelve hacia la derecha. La marca es el monograma degrade + wordmark.
    ============================================================ */
 .shell-band {
     flex: 0 0 auto;
     position: relative;
-    height: var(--h-banda);
-    padding: 0 var(--e6) 0 var(--e5);
+    height: 58px;
+    padding: 0 28px;
     display: flex;
     align-items: center;
-    gap: var(--e3);
-    color: var(--ink-inv);
-    background:
-        radial-gradient(115% 190% at 92% 6%,
-            rgba(var(--tt-teal-rgb), 0.30) 0%, rgba(var(--tt-teal-rgb), 0) 60%),
-        radial-gradient(80% 150% at 62% 118%,
-            rgba(var(--tt-sand-rgb), 0.07) 0%, rgba(var(--tt-sand-rgb), 0) 64%),
-        linear-gradient(102deg, var(--tt-navy-dark) 0%, var(--tt-navy) 58%);
-    box-shadow: 0 1px 0 rgba(52,71,93,0.18), 0 4px 14px rgba(52,71,93,0.10);
+    gap: 12px;
+    background: transparent;
     z-index: 20;
 }
-/* Filo inferior: 1px de luz. Separa la banda del lienzo sin dibujar un borde. */
+/* Hairline liquida: 2px insertados 28px de cada lado. */
 .shell-band::after {
-    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+    content: ""; position: absolute; left: 28px; right: 28px; bottom: 0; height: 2px;
+    border-radius: 2px;
     background: linear-gradient(90deg,
-        rgba(255,255,255,0.05), rgba(var(--tt-teal-rgb),0.55) 66%, rgba(255,255,255,0.07));
+        rgba(46,202,176,.55), rgba(255,179,128,.35) 34%, rgba(30,42,51,.05) 62%, transparent 92%);
 }
 
-/* Monograma: la marca que NO desaparece al navegar. Hoy el h1 se reemplaza
-   por el titulo de la vista (UI_Shell.html:396) y "Tidetrack" se va del
-   producto entero apenas entras a un formulario. */
+/* Monograma "tt.": vidrio tenido con el degrade teal-durazno de la marca. */
 .shell-mono {
     flex: 0 0 auto;
     width: 32px; height: 32px;
     display: grid; place-items: center;
     border-radius: 10px;
-    background: rgba(255,255,255,0.12);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16);
-    font-size: 13px; font-weight: 700; letter-spacing: -0.02em;
-    color: var(--ink-inv);
+    background: linear-gradient(135deg, rgba(46,202,176,.22), rgba(255,179,128,.20));
+    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08), var(--vidrio-luz);
+    font-size: 12.5px; font-weight: 700; letter-spacing: -0.02em;
+    color: var(--ink-1);
 }
+/* Wordmark en el Home; titulo de vista adentro. Mismo registro 15/600. */
 .shell-band h1 {
     margin: 0;
-    font-size: var(--fs-band); font-weight: 700; letter-spacing: -0.3px;
+    font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
     line-height: 1.15; white-space: nowrap;
+    color: var(--ink-1);
 }
 .shell-band .spacer { flex: 1 1 auto; }
 
-/* Volver a la IZQUIERDA. A la derecha (UI_Shell.html:228) choca con la "x"
-   propia del dialogo de Google, que esta a ~16px, y ademas es
-   contra-convencion en toda interfaz de navegacion. */
+/* Volver: pill de vidrio de 32px, a la izquierda (la "x" de Google vive a la
+   derecha y es contra-convencion pisarla). */
 .shell-volver {
     flex: 0 0 auto;
     display: inline-flex; align-items: center; gap: 6px;
-    height: 30px; padding: 0 12px 0 9px;
+    height: 32px; padding: 0 14px 0 10px;
     border: 0; border-radius: var(--r-full);
-    background: rgba(255,255,255,0.13);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
-    color: var(--ink-inv);
+    background: var(--vidrio);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    box-shadow: inset 0 0 0 1px var(--vidrio-borde), var(--vidrio-luz),
+                0 4px 12px -6px rgba(30,42,51,.12);
+    color: var(--ink-2);
     font: inherit;
-    font-size: var(--fs-rotulo); font-weight: 600;
-    letter-spacing: 0.05em; text-transform: uppercase;
+    font-size: 12px; font-weight: 600;
     cursor: pointer;
-    transition: background-color var(--t1) var(--mov-std),
-                transform var(--t1) var(--mov-std);
+    transition: color .18s var(--mov), box-shadow .18s var(--mov),
+                transform .18s var(--mov);
 }
-.shell-volver:hover  { background: rgba(255,255,255,0.24); transform: translateX(-1px); }
+.shell-volver:hover {
+    color: var(--teal-tinta);
+    box-shadow: inset 0 0 0 1px rgba(46,202,176,.40), var(--vidrio-luz),
+                0 4px 12px -6px rgba(30,42,51,.12);
+    transform: translateX(-1px);
+}
 .shell-volver:active { transform: translateX(0); }
-.shell-volver:focus-visible { outline: 2px solid var(--ink-inv); outline-offset: 2px; }
-.shell-volver svg { width: 13px; height: 13px; flex: 0 0 auto; }
+.shell-volver:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 2px; }
+.shell-volver svg { width: 14px; height: 14px; flex: 0 0 auto; }
 
 
 /* ============================================================
-   3. ROTULO DE SECCION -- registro tipografico 1 de 3, y el hilo teal.
-   Hoy .shell-sec (:74-77), .bloque-num (:157-159) y .f label (:121-124) son
-   EL MISMO estilo exacto: 11px / 700 / uppercase / --text-secondary. Tres
-   jerarquias semanticas renderizadas identicas es cero jerarquia.
-   Teal sobre lienzo: 5.35:1, AA.
+   3. ROTULO DE SECCION -- versalita ink-2 con estela teal que se apaga.
    ============================================================ */
 .shell-sec {
     display: flex; align-items: center; gap: 10px;
     min-height: 14px;
-    margin: 22px 0 10px;
-    font-size: var(--fs-rotulo); font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.09em;
-    color: var(--tt-teal);
+    margin: 20px 0 10px;
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.13em;
+    color: var(--ink-2);
 }
-.shell-sec:first-of-type { margin-top: 0; }
-/* La regla se estira y se apaga. La actual usa --border-color #E2E8F0, que
-   sobre papel da 1.23:1 y directamente no se ve: se pierde el recurso entero. */
+.shell-sec:first-of-type { margin-top: 2px; }
 .shell-sec::after {
     content: ""; flex: 1; height: 1px;
-    background: linear-gradient(90deg, var(--linea), rgba(212,219,232,0));
+    background: linear-gradient(90deg,
+        rgba(46,202,176,.35), rgba(30,42,51,.05) 45%, transparent 85%);
 }
 
 
 /* ============================================================
-   4. TARJETAS DEL HOME -- una anatomia, tres escalas.
-   Horizontal y no vertical: una card ancha HORIZONTAL se lee deliberada, una
-   card ancha VERTICAL se lee vacia -- que es el bug de "Estructura" en
-   UI_Shell.html:268-274, una tarjeta con 564px de blanco al lado.
-   auto-fit + minmax hace el huerfano estructuralmente imposible: con un item
-   ocupa el ancho entero y sigue leyendose bien. La grilla fija de :84 fue el
-   "fix" del problema que su propio comentario declara arreglar (:82-83) y no
-   lo arreglo: con dos columnas el hueco era 430px, con tres es 564.
+   4. TARJETAS DEL HOME -- vidrio con sombra color agua. auto-fit + minmax
+   hace el huerfano estructuralmente imposible.
    ============================================================ */
 .shell-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: var(--e3);
+    grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+    gap: 12px;
 }
 .shell-card {
     position: relative; overflow: hidden;
-    display: flex; align-items: flex-start; gap: var(--e3);
-    width: 100%; min-height: 78px;
-    padding: 14px var(--e4);
+    display: flex; align-items: center; gap: 14px;
+    width: 100%;
+    padding: 15px 16px;
     text-align: left; font: inherit; color: inherit; cursor: pointer;
-    background: var(--sup-card);
-    border: 0; border-radius: var(--r-md);
-    box-shadow: var(--elev-1), var(--filo);
-    transition: box-shadow var(--t2) var(--mov-out),
-                transform var(--t2) var(--mov-out);
-}
-/* Shimmer de 2px arriba. En reposo es casi invisible y le da a la card un
-   TOPE en vez de un borde plano; en hover se tinie de teal. Acento sin gritar. */
-.shell-card::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg,
-        rgba(212,219,232,0), var(--linea) 50%, rgba(212,219,232,0));
-    transition: background var(--t2) var(--mov-std);
+    background: var(--vidrio);
+    -webkit-backdrop-filter: blur(10px) saturate(1.2);
+    backdrop-filter: blur(10px) saturate(1.2);
+    border: 0; border-radius: var(--r-card);
+    box-shadow: inset 0 0 0 1px var(--vidrio-borde), var(--vidrio-luz), var(--elev-agua);
+    transition: transform .2s var(--mov), box-shadow .2s var(--mov);
 }
 .shell-card:hover {
     transform: translateY(-2px);
-    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
+    box-shadow: inset 0 0 0 1px var(--vidrio-borde-hover), var(--vidrio-luz), var(--elev-agua-hover);
 }
-.shell-card:hover::before {
-    background: linear-gradient(90deg,
-        rgba(var(--tt-teal-rgb),0), rgba(var(--tt-teal-rgb),0.55) 50%, rgba(var(--tt-teal-rgb),0));
-}
-/* :active vuelve a una sombra MENOR, no al reposo. Es "se apoyo", no "se apago". */
-.shell-card:active { transform: translateY(0); box-shadow: var(--elev-1), var(--filo); }
-.shell-card:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
+.shell-card:active { transform: translateY(0); }
+.shell-card:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 2px; }
 
+/* Chip de icono: hueco gris que en hover se tine de agua. */
 .shell-card .ico {
     flex: 0 0 auto;
-    width: 36px; height: 36px; margin-top: 1px;   /* alineacion optica con la
-                                mediana de la mayuscula del titulo, no con el
-                                tope de su caja */
+    width: 38px; height: 38px;
     display: grid; place-items: center;
-    border-radius: 11px;
-    background: var(--sup-page);
-    box-shadow: inset 0 0 0 1px var(--linea);
-    color: var(--tt-navy);
-    transition: background-color var(--t2) var(--mov-std),
-                color var(--t2) var(--mov-std),
-                box-shadow var(--t2) var(--mov-std);
+    border-radius: 12px;
+    background: var(--tt-gris);
+    box-shadow: inset 0 0 0 1px rgba(30,42,51,.05);
+    color: var(--ink-2);
+    transition: background-color .2s var(--mov), color .2s var(--mov),
+                box-shadow .2s var(--mov);
 }
-/* El unico cambio de color de toda la interaccion, y es lo que hace que la
-   card se sienta un objeto y no un rectangulo con hover. */
 .shell-card:hover .ico {
-    background: var(--tt-teal); color: var(--ink-inv);
-    box-shadow: inset 0 0 0 1px rgba(var(--tt-teal-rgb), 0.9);
+    background: rgba(46,202,176,.14);
+    color: var(--teal-tinta);
+    box-shadow: inset 0 0 0 1px rgba(46,202,176,.25);
 }
-.shell-card .txt { display: block; min-width: 0; }
-/* Registro tipografico 2 de 3: caja alta y baja, peso 600, tinta fuerte. */
+.shell-card .txt { display: block; min-width: 0; flex: 1 1 auto; }
 .shell-card .t {
     display: block;
-    font-size: var(--fs-vista); font-weight: 600; letter-spacing: -0.15px;
-    line-height: 1.25; color: var(--ink-1);
+    font-size: 14px; font-weight: 600; letter-spacing: -0.1px;
+    line-height: 1.3; color: var(--ink-1);
 }
 .shell-card .d {
-    display: block; margin-top: 3px;
-    font-size: var(--fs-aux); line-height: 1.45; color: var(--ink-3);
+    display: block; margin-top: 1px;
+    font-size: 12.5px; line-height: 1.45; color: var(--ink-2);
 }
-/* Chevron que aparece en hover: el hint de "esto se clickea". */
+/* CHEVRON PERSISTENTE (enmienda Clara): visible en reposo en ink-3, en hover
+   pasa a teal-tinta y avanza 3px. El hint de "esto se clickea" no desaparece. */
 .shell-card .chev {
     flex: 0 0 auto; margin-left: auto; align-self: center;
-    color: var(--tt-teal);
-    opacity: 0; transform: translateX(-4px);
-    transition: opacity var(--t2) var(--mov-std), transform var(--t2) var(--mov-out);
+    color: var(--ink-3);
+    transition: color .2s var(--mov), transform .2s var(--mov);
 }
-.shell-card:hover .chev { opacity: 1; transform: translateX(0); }
+.shell-card:hover .chev { color: var(--teal-tinta); transform: translateX(3px); }
 
-/* Punto de estado. SHELL_VISTAS ya trae `listo` (16_ShellService.js:65-71) y
-   el HTML nunca lo uso: una tarjeta que promete lo que no hace es peor que
-   una que dice a que atenerse -- lo dice el propio comentario del backend.
-   Sin el atributo no se muestra nada: si el loop no corre, degrada limpio. */
+/* Tarjeta pendiente: pill gris "sin datos aun", chevron oculto. El texto lo
+   pone el CSS porque el span viaja vacio; si el loop de listo no corre, no
+   se muestra nada y la card degrada limpia. */
 .shell-card .pend { display: none; }
 .shell-card[data-listo="0"] .pend {
-    display: block;
+    display: inline-block;
     position: absolute; top: 13px; right: 13px;
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--est-ambar);
-    box-shadow: 0 0 0 3px var(--est-ambar-bg);
+    padding: 2px 9px; border-radius: var(--r-full);
+    background: var(--tt-gris);
+    font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+    color: var(--ink-3);
 }
+.shell-card[data-listo="0"] .pend::before { content: "sin datos aun"; }
 .shell-card[data-listo="0"] .chev { display: none; }
 
-/* --- Card HERO: la accion del dia. La unica grande y la unica con acento. --- */
+/* --- Card HERO: la accion del dia. Radio 22, chip degrade teal con ICONO
+   EN INK (7.11:1; blanco sobre teal prohibido) y blob organico de agua. --- */
 .shell-card--hero {
-    align-items: center;
-    gap: var(--e4);
-    min-height: 80px;
-    padding: 18px var(--e5);
-    border-radius: var(--r-lg);
-    background:
-        radial-gradient(140% 220% at 96% 0%,
-            rgba(var(--tt-teal-rgb),0.07) 0%, rgba(var(--tt-teal-rgb),0) 58%),
-        var(--sup-card);
-    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
+    gap: 16px;
+    padding: 19px 20px;
+    border-radius: var(--r-hero);
 }
-.shell-card--hero::before {
-    height: 3px;
-    background: linear-gradient(90deg,
-        var(--tt-teal), rgba(var(--tt-teal-rgb),0.45) 62%, rgba(var(--tt-teal-rgb),0));
+.shell-card--hero::after {
+    content: ""; position: absolute; right: -30px; top: -70px;
+    width: 200px; height: 170px;
+    border-radius: 50%; pointer-events: none;
+    background: radial-gradient(closest-side, rgba(46,202,176,.14), transparent 72%);
+    filter: blur(18px);
+    transition: transform .35s var(--mov);
 }
-.shell-card--hero:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--elev-3), inset 0 0 0 1px var(--tt-teal);
-}
+.shell-card--hero:hover::after { transform: translateX(-16px) scale(1.08); }
 .shell-card--hero .ico {
-    width: 44px; height: 44px; margin-top: 0; border-radius: 14px;
-    background: linear-gradient(140deg, var(--tt-teal), var(--tt-teal-mid));
-    color: var(--ink-inv);
-    box-shadow: 0 3px 8px rgba(var(--tt-teal-rgb), 0.30),
-                inset 0 0 0 1px rgba(255,255,255,0.18);
+    width: 44px; height: 44px; border-radius: 14px;
+    /* #29B89F: teal oscurecido para el tramo bajo del degrade del chip y el
+       boton primario; deriva de --tt-teal (spec seccion 6). */
+    background: linear-gradient(135deg, #2ECAB0, #29B89F);
+    color: var(--ink-1);
+    box-shadow: 0 8px 18px -8px rgba(46,202,176,.6);
 }
 .shell-card--hero:hover .ico {
-    box-shadow: 0 5px 14px rgba(var(--tt-teal-rgb), 0.38),
-                inset 0 0 0 1px rgba(255,255,255,0.26);
+    /* #35D6BB: teal aclarado para el hover del degrade; deriva de --tt-teal. */
+    background: linear-gradient(135deg, #35D6BB, #2ECAB0);
+    color: var(--ink-1);
 }
-.shell-card--hero .t { font-size: var(--fs-hero); }
-
-/* --- Chips: lo que no merece una tarjeta. Es la tercera escala. --- */
-/* decision Franco 2026-08-25: "el boton de gestionar cuentas debe tener el mismo peso que el
-   resto de acciones". Era un chip -- pastilla de 36px, sin descripcion -- al lado de tarjetas
-   de 116. Un chip comunica "accion secundaria", y administrar el Plan de Cuentas no lo es: es
-   la estructura sobre la que se apoya todo lo demas. Pasa a ser una tarjeta mas, con la misma
-   grilla y el mismo peso, y el CSS de .shell-chip se retira entero por quedar sin uso. */
+.shell-card--hero .t { font-size: 16px; }
 
 
 /* ============================================================
-   5. FORMULARIO -- se conserva la grilla de 12 con cortes COMPARTIDOS entre
-   filas (UI_Shell.html:112-120): es la mejor decision del archivo y no se toca.
+   5. FORMULARIO -- grilla de 12 con cortes COMPARTIDOS entre filas.
    ============================================================ */
-.shell-form { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--e3); }
+.shell-form { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px 14px; }
 .f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-/* Solo los spans que el markup usa de verdad: c7/c8 nunca tuvieron un elemento. */
 .f.c3 { grid-column: span 3; }  .f.c4 { grid-column: span 4; }
 .f.c5 { grid-column: span 5; }  .f.c6 { grid-column: span 6; }
 .f.c12 { grid-column: span 12; }
 
-/* Registro tipografico 3 de 3: caja normal, peso 500, gris.
-   Catorce rotulos uppercase en pantalla es la firma de un panel de admin de
-   2015, y ademas hoy son IDENTICOS al rotulo de seccion y al numero de bloque.
-   Aca el label es lo mas callado de la pantalla, que es lo que corresponde:
-   el protagonista es el valor. */
+/* Label de campo: versalita chica ink-2 (spec seccion 3). */
 .f > .rot {
-    font-size: var(--fs-aux); font-weight: 500; letter-spacing: 0;
-    text-transform: none; color: var(--ink-3); line-height: 1.2;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--ink-2); line-height: 1.2;
 }
-/* min-height RESERVADO SIEMPRE. Sin esto la fila con hint es 16px mas alta
-   que sus vecinas y el borde inferior del bloque queda dentado: hoy solo
-   Moneda lleva hint (UI_Shell.html:561) y por eso la esquina del bloque queda
-   con un hueco asimetrico. */
+/* min-height RESERVADO SIEMPRE: la fila con hint no puede ser mas alta que
+   sus vecinas o el borde del bloque queda dentado. */
 .f .hint {
     min-height: 16px;
-    font-size: var(--fs-aux); line-height: 1.35; color: var(--ink-3);
+    font-size: 11px; line-height: 1.35; color: var(--ink-3);
 }
-.f .hint.alerta { color: var(--est-ambar-ink); }
+.f .hint.alerta { color: var(--ambar-ink); }
 
-/* ALTURA FIJA en todos los controles. Se conserva el fix de UI_Shell.html:127-140:
-   un select ignora line-height y calcula su alto con su metrica interna, y un
-   input[type=date] trae su propio shadow DOM. Nunca se iguala un input con un
-   select por padding -- se fija height.
-   Lo que SI cambia: el control ahora EXISTE. Hoy es #eff2f9 dentro de un
-   bloque #eff2f9 (:161), o blanco dentro de #eff2f9: 1.12:1 en los dos casos
-   y sin sombra. Hay texto flotando, no cajas. */
-/* Los <select> reales del shell llevan class .moneda (en el campo de monto) o viven en la
-   barra (.shell-acciones .form-input): la familia .form-select nunca tuvo un elemento y se
-   retiro entera. */
+/* INPUTS: hueco gris de 40px, radio 12, filo casi invisible. FOCO: fondo
+   blanco, filo teal, halo de agua. La altura la manda --alto-control: un
+   select ignora line-height y un date trae su propio shadow DOM. */
 .f .form-input {
     width: 100%;
     height: var(--alto-control);
     padding: 0 12px;
     margin: 0;
     line-height: normal;
-    font-size: var(--fs-body);
-    color: var(--ink-2);
-    background: var(--sup-hueco);
+    font-size: 13.5px;
+    color: var(--ink-1);
+    background: var(--tt-gris);
     border: 0;
-    border-radius: var(--r-sm);
-    box-shadow: var(--filo);
-    transition: background-color var(--t1) var(--mov-std),
-                box-shadow var(--t1) var(--mov-std);
+    border-radius: var(--r-input);
+    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08), inset 0 1px 2px rgba(30,42,51,.05);
+    transition: background-color .15s var(--mov), box-shadow .15s var(--mov);
 }
-.f .form-input:hover {
-    background: var(--sup-hover);
-    box-shadow: inset 0 0 0 1px var(--linea-fuerte);
-}
-.f .form-input::placeholder { color: var(--ink-ph); }
-/* Foco: anillo teal de 3px + filo teal, sin outline. Un outline de 2px con
-   offset sobre un control de 40px en una grilla de 12 se pisa con el vecino. */
+.f .form-input::placeholder { color: var(--ink-3); }
 .f .form-input:focus {
     outline: none;
-    background: var(--sup-card);
-    box-shadow: inset 0 0 0 1.5px var(--tt-teal),
-                0 0 0 3px rgba(var(--tt-teal-rgb), 0.18);
+    background: #FFFFFF;
+    box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,202,176,.22);
 }
 
-.f .form-input[type="date"] { padding-right: var(--e2); }
+.f .form-input[type="date"] { padding-right: 8px; }
 .f .form-input[type="date"]::-webkit-calendar-picker-indicator {
-    opacity: 0.5; cursor: pointer;
-    filter: invert(35%) sepia(24%) saturate(760%) hue-rotate(150deg);
-    transition: opacity var(--t1) var(--mov-std);
+    opacity: .55; cursor: pointer;
+    transition: opacity .15s var(--mov);
 }
-.f .form-input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 0.9; }
+.f .form-input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: .9; }
 .f .form-input[type="date"]::-webkit-inner-spin-button { display: none; }
 
 
 /* ------------------------------------------------------------
-   EL MONTO. Unico campo con tamanio propio y el unico con adorno de moneda.
-   Hoy .campo-monto (UI_Shell.html:146) tiene el mismo 14px que la Nota: el
-   dato mas importante del producto pesa lo mismo que un campo opcional.
-   La altura la sigue mandando --alto-control: el font-size NUNCA maneja la
-   altura de un control.
-
-   El <select> de moneda vive ENCIMA del prefijo, transparente. Asi Moneda
-   deja de ocupar cuatro doceavos de la grilla (UI_Shell.html:559-561) sin
-   dejar de ser editable, y es lo que baja el bloque de tres filas a dos.
-   El <input> va PRIMERO en el DOM y se reordena por CSS: asi el <label> que
-   envuelve el campo asocia al monto y no al select.
+   EL MONTO. Un hueco compuesto: prefijo de divisa + importe a la derecha.
+   El <select> de moneda vive ENCIMA del prefijo, transparente; el <input>
+   va PRIMERO en el DOM y se reordena por CSS para que el <label> asocie
+   al monto y no al select.
    ------------------------------------------------------------ */
 .f .campo-monto {
     position: relative;
     display: flex; align-items: stretch;
     height: var(--alto-control);
-    background: var(--sup-hueco);
-    border-radius: var(--r-sm);
-    box-shadow: var(--filo);
-    transition: background-color var(--t1) var(--mov-std),
-                box-shadow var(--t1) var(--mov-std);
+    background: var(--tt-gris);
+    border-radius: var(--r-input);
+    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08), inset 0 1px 2px rgba(30,42,51,.05);
+    transition: background-color .15s var(--mov), box-shadow .15s var(--mov);
 }
-.f .campo-monto:hover { background: var(--sup-hover); }
 .f .campo-monto:focus-within {
-    background: var(--sup-card);
-    box-shadow: inset 0 0 0 1.5px var(--tt-teal),
-                0 0 0 3px rgba(var(--tt-teal-rgb), 0.18);
+    background: #FFFFFF;
+    box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,202,176,.22);
 }
 .f .campo-monto .pref {
     order: 1; flex: 0 0 auto;
     display: inline-flex; align-items: center; gap: 5px;
     padding: 0 10px 0 12px;
-    font-size: var(--fs-aux); font-weight: 700; letter-spacing: 0.06em;
-    color: var(--ink-3); pointer-events: none;
-    box-shadow: inset -1px 0 0 rgba(52,71,93,0.12);   /* riel, no borde */
-    transition: color var(--t1) var(--mov-std);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--ink-2); pointer-events: none;
+    box-shadow: inset -1px 0 0 rgba(30,42,51,.08);   /* separador, no borde */
+    transition: color .15s var(--mov);
 }
-.f .campo-monto:focus-within .pref { color: var(--tt-teal); }
+.f .campo-monto:focus-within .pref { color: var(--teal-tinta); }
 .f .campo-monto .pref::after {
     content: ""; display: inline-block;
     border-left: 3px solid transparent; border-right: 3px solid transparent;
-    border-top: 3.5px solid currentColor; opacity: 0.65;
+    border-top: 3.5px solid currentColor; opacity: .65;
 }
 .f .campo-monto .moneda {
     position: absolute; left: 0; top: 0; height: 100%; width: 74px;
     opacity: 0; cursor: pointer;
-    border: 0; background: transparent; font: inherit; font-size: var(--fs-body);
-    border-radius: var(--r-sm) 0 0 var(--r-sm);
+    border: 0; background: transparent; font: inherit; font-size: 13px;
+    border-radius: var(--r-input) 0 0 var(--r-input);
 }
-/* Un control invisible tiene que poder recibir foco de teclado Y verse. Al
-   enfocarlo con teclado se materializa: cero dependencias, cero :has(). */
+/* Un control invisible tiene que poder recibir foco de teclado Y verse. */
 .f .campo-monto .moneda:focus-visible {
     opacity: 1;
-    background: var(--sup-card); color: var(--ink-1);
-    font-size: var(--fs-aux); font-weight: 700;
-    outline: 2px solid var(--tt-teal); outline-offset: -2px;
+    background: #FFFFFF; color: var(--ink-1);
+    font-size: 11px; font-weight: 600;
+    outline: 2px solid var(--teal-tinta); outline-offset: -2px;
 }
 .f .campo-monto .monto {
     order: 2; flex: 1 1 auto; min-width: 0; height: 100%;
     padding: 0 12px 0 10px; margin: 0;
     border: 0; background: transparent; box-shadow: none; outline: none;
-    font-size: var(--fs-monto); font-weight: 600; letter-spacing: -0.35px;
+    font-size: 14px; font-weight: 600; letter-spacing: -0.2px;
     text-align: right; color: var(--ink-1);
     font-variant-numeric: tabular-nums;
 }
 .f .campo-monto .monto::placeholder {
-    font-weight: 500; font-size: var(--fs-body); color: var(--ink-ph);
+    font-weight: 400; font-size: 13px; color: var(--ink-3);
 }
-/* La tinta del monto la decide el TIPO, con el semaforo MEDIDO de la hoja.
-   Es color funcional, no decoracion: el mismo criterio con el que la hoja
-   pinta una celda. El Egreso queda navy y NO rojo: en una herramienta cuya
-   promesa es "paz financiera, todos los dias", pintar de rojo cada gasto
-   normal castiga el habito que se quiere construir. El rojo se reserva para
-   el error de validacion. */
-.bloque[data-tipo="Ingreso"] .campo-monto .monto { color: var(--est-verde); }
+/* La tinta del monto en edicion la decide el TIPO, con el semaforo de funcion. */
+.bloque[data-tipo="Ingreso"] .campo-monto .monto { color: var(--verde-ink); }
 
 
 /* ------------------------------------------------------------
-   SEGMENTADO Egreso / Ingreso. Un <select> de dos opciones
-   (UI_Shell.html:549-550) son dos clicks y una lista contra un click.
+   SEGMENTADO Egreso / Ingreso -- el semaforo (spec seccion 7). Riel gris,
+   opciones tenidas con su par ink/bg + inset ring del ink (enmienda Clara).
    ------------------------------------------------------------ */
 .seg {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 3px;
-    height: var(--alto-control); padding: 3px;
-    background: var(--sup-hueco);
-    border-radius: var(--r-sm);
-    box-shadow: var(--filo);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+    height: var(--alto-control); padding: 4px;
+    background: var(--tt-gris);
+    border-radius: var(--r-input);
+    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08), inset 0 1px 2px rgba(30,42,51,.05);
 }
 .seg button {
-    border: 0; border-radius: 7px; cursor: pointer;
-    font: inherit; font-size: var(--fs-aux); font-weight: 600; letter-spacing: 0.02em;
-    background: transparent; color: var(--ink-3);
-    transition: background-color var(--t1) var(--mov-std),
-                color var(--t1) var(--mov-std),
-                box-shadow var(--t1) var(--mov-std);
+    border: 0; border-radius: 9px; cursor: pointer;
+    font: inherit; font-size: 12.5px; font-weight: 600;
+    background: transparent; color: var(--ink-2);
+    transition: background-color .15s var(--mov), color .15s var(--mov),
+                box-shadow .15s var(--mov);
 }
-.seg button:hover { color: var(--ink-1); background: rgba(52,71,93,0.05); }
-/* decision Franco 2026-08-25: "en el Tipo seria genial que se ponga rojo/verde segun el
-   tipo". El estado elegido se tine con el semaforo MEDIDO de la hoja, y el riel tambien:
-   sin el fondo, el color solo en la letra a 13px no alcanza para leerse de un vistazo.
-   Los tonos -ink son los verificados contra AA sobre su propio riel -- el #c93232 medido
-   daba 4.47:1 sobre #fce8e6, por debajo del minimo. */
-.seg button[aria-pressed="true"] {
-    background: var(--sup-card); color: var(--ink-1);
-    box-shadow: 0 1px 2px rgba(52,71,93,0.12), inset 0 0 0 1px var(--linea);
-}
+.seg button:hover { color: var(--ink-1); }
 .seg button[aria-pressed="true"][data-v="Egreso"] {
-    background: var(--est-rojo-bg); color: var(--est-rojo-ink);
-    box-shadow: inset 0 0 0 1px rgba(173,39,39,0.22);
+    background: var(--rojo-bg); color: var(--rojo-ink);
+    box-shadow: 0 0 0 1px rgba(178,59,50,.22), inset 0 0 0 1px rgba(178,59,50,.25);
 }
 .seg button[aria-pressed="true"][data-v="Ingreso"] {
-    background: var(--est-verde-bg); color: var(--est-verde-ink);
-    box-shadow: inset 0 0 0 1px rgba(53,104,84,0.22);
+    background: var(--verde-bg); color: var(--verde-ink);
+    box-shadow: 0 0 0 1px rgba(14,107,79,.22), inset 0 0 0 1px rgba(14,107,79,.25);
 }
-.seg button:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 1px; }
+.seg button:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 1px; }
 
 
 /* ============================================================
-   6. BLOQUES REPETIBLES -- dos estados: EDICION (formulario) y RESUMEN (una
-   fila de 48px). Es lo que hace que quince movimientos entren en 700px.
-   El default es EDICION: si el JS del acordeon no corre, todos los bloques
-   quedan abiertos y el formulario sigue siendo usable. Falla en seguro.
+   6. BLOQUES REPETIBLES -- vidrio como la tarjeta; dos estados: EDICION
+   (formulario) y RESUMEN (una fila). El default es EDICION: si el JS del
+   acordeon no corre, el formulario sigue siendo usable. Falla en seguro.
    ============================================================ */
 .bloque {
-    background: var(--sup-card);
-    border-radius: var(--r-md);
-    box-shadow: var(--elev-2), inset 0 0 0 1px var(--tt-teal-soft);
-    margin-bottom: 10px;
-    transition: box-shadow var(--t2) var(--mov-std);
+    background: var(--vidrio);
+    -webkit-backdrop-filter: blur(10px) saturate(1.2);
+    backdrop-filter: blur(10px) saturate(1.2);
+    border-radius: var(--r-card);
+    box-shadow: inset 0 0 0 1px var(--vidrio-borde), var(--vidrio-luz), var(--elev-agua);
+    margin-bottom: 12px;
+    transition: box-shadow .2s var(--mov);
 }
-.bloque[data-estado="resumen"] { box-shadow: var(--elev-1), var(--filo); }
-/* Entrada del bloque nuevo: 8px y un rebote chico. Unico rebote del sistema. */
-.bloque--nuevo { animation: bloqueEntra var(--t3) var(--mov-entra) both; }
+.bloque--nuevo { animation: bloqueEntra .28s var(--mov) both; }
 @keyframes bloqueEntra {
     from { opacity: 0; transform: translateY(8px) scale(0.985); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ============================================================
-   DESPLEGABLES FILTRABLES.
-   decision Franco 2026-08-25: "en TODOS los desplegables deberias tener la opcion de acortar
-   las opciones tipeando caracteres". Un <select> nativo solo salta por PREFIJO y solo con la
-   lista abierta: con 60 cuentas hay que scrollear. Un <input list> con <datalist> filtra por
-   SUBCADENA mientras se tipea -- escribir "naran" trae "Frascos Naranja X" y "Dolar NaranjaX",
-   que un select por prefijo no encuentra nunca.
-   Es ademas lo que hace pymes: los datalist son COMPARTIDOS por todos los bloques y se
-   pueblan una sola vez; cada bloque los referencia por su id. Eso es lo que hace barato
-   clonar un bloque -- no arrastra el catalogo adentro.
-   El valor libre no se bloquea: la hoja misma acepta valores fuera de lista
-   (setAllowInvalid(true)), y el backend valida el medio contra el catalogo. Lo que si se hace
-   es AVISAR cuando lo tipeado no esta en la lista, en vez de dejarlo pasar mudo.
+   DESPLEGABLES FILTRABLES (input + datalist compartido).
+   decision Franco 2026-08-25: "en TODOS los desplegables deberias tener la
+   opcion de acortar las opciones tipeando caracteres". El valor libre no se
+   bloquea (la hoja acepta fuera de lista); se AVISA con el ambar de funcion.
    ============================================================ */
 .f .combo { position: relative; display: block; }
 .f .combo input { padding-right: 30px; }
 .f .combo::after {
     content: ""; position: absolute; right: 11px; top: 50%; width: 10px; height: 10px;
     margin-top: -5px; pointer-events: none;
-    background: var(--chevron) center/10px 10px no-repeat; opacity: .55;
+    background: var(--chevron) center/10px 10px no-repeat; opacity: .7;
 }
-/* Dos flechas, no una: el chevron de arriba lo dibuja el shell, y Chrome dibuja ADEMAS la
-   suya para todo <input list> con ::-webkit-calendar-picker-indicator -- un triangulo lleno
-   que la UA tiene en opacity 0 y revela en hover o foco. Por eso el campo se ve bien quieto
-   y muestra dos flechas apenas el mouse se acerca.
-   NO se apaga con display:none: ese pseudo-elemento ES el boton que abre la lista. Medido el
-   2026-08-25 sobre devtools/servidor_shell: con display:none, un click sobre la zona derecha
-   deja de abrir el desplegable y pasa a mover el cursor dentro del texto.
-   decision Franco 2026-08-25: la flecha nativa se vuelve INVISIBLE pero se estira sobre los
-   mismos 30px que ya reserva el padding-right de arriba, asi el area que abre la lista queda
-   exactamente debajo del chevron dibujado. El chevron sigue siendo el unico dibujo, y Firefox
-   -- que no dibuja flecha nativa ninguna -- lo conserva como unica senal visual.
-   El width y el margin negativo son el MISMO numero que ese padding-right (30px): si uno
-   cambia, cambian los tres, o el click cae al lado del dibujo.
-   El :not([type="date"]) protege el tratamiento propio que los campos de fecha ya le dan a
-   este mismo pseudo-elemento (UI_Shell.html:537-543), donde la flecha SI tiene que verse. */
+/* La flecha nativa del datalist queda INVISIBLE pero clickeable sobre los
+   mismos 30px del padding-right: NUNCA display:none (ese pseudo-elemento ES
+   el boton que abre la lista; medido 2026-08-25). El width y el margin
+   negativo son el MISMO numero que el padding-right de arriba. */
 .f .combo input:not([type="date"])::-webkit-calendar-picker-indicator {
     opacity: 0;
     width: 30px; height: 100%;
     margin: 0 -30px 0 0; padding: 0;
     cursor: pointer;
 }
+/* COMBO FUERA DE CATALOGO (enmienda Clara): filo ambar + hint ambar. */
 .f input[data-fuera="1"] {
-    box-shadow: inset 0 0 0 1px var(--est-ambar);
+    box-shadow: inset 0 0 0 1px rgba(122,74,16,.45), inset 0 1px 2px rgba(30,42,51,.05);
 }
 .f .aviso-fuera {
-    font-size: var(--fs-rotulo); color: var(--est-ambar-ink); margin-top: 2px;
+    font-size: 11px; color: var(--ambar-ink); margin-top: 2px;
 }
 
-/* --- Fila de resumen --- */
+/* --- Cabecera del bloque: numero en chip teal + nombre + quitar --- */
+.bloque-head {
+    display: flex; align-items: center; gap: 9px;
+    min-height: 26px; padding: 13px 12px 0 18px;
+}
+.bloque-num {
+    flex: 1 1 auto;
+    font-size: 14px; font-weight: 600; letter-spacing: -0.1px;
+    text-transform: none; color: var(--ink-1);
+}
+.bloque-num .n {
+    display: inline-grid; place-items: center;
+    width: 22px; height: 22px; margin-right: 9px; vertical-align: -5px;
+    border-radius: 8px;
+    background: rgba(46,202,176,.14);
+    box-shadow: inset 0 0 0 1px rgba(46,202,176,.22);
+    color: var(--teal-tinta);
+    font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+/* BOTON QUITAR (enmienda Clara): 26px transparente, icono ink-3; hover rojo. */
+.btn-quitar {
+    flex: 0 0 auto;
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    border: 0; border-radius: 8px;
+    background: transparent; color: var(--ink-3);
+    font: inherit; font-size: 16px; line-height: 1; cursor: pointer;
+    transition: background-color .15s var(--mov), color .15s var(--mov);
+}
+.btn-quitar:hover { background: var(--rojo-bg); color: var(--rojo-ink); }
+.btn-quitar:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 1px; }
+
+/* --- Fila de resumen (acordeon plegado): una linea con el semaforo --- */
 .bloque-resumen {
     display: none;
     align-items: center; gap: 10px;
-    width: 100%; height: 48px; padding: 0 10px 0 14px;
-    border: 0; background: transparent; border-radius: var(--r-md);
+    width: 100%; min-height: 48px; padding: 0 12px 0 16px;
+    border: 0; background: transparent; border-radius: var(--r-card);
     text-align: left; font: inherit; cursor: pointer;
-    transition: background-color var(--t1) var(--mov-std);
+    transition: background-color .15s var(--mov);
 }
 .bloque[data-estado="resumen"] .bloque-resumen { display: flex; }
 .bloque[data-estado="resumen"] .bloque-head { display: none; }
-.bloque-resumen:hover { background: var(--sup-hueco); }
-.bloque-resumen:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: -2px; }
+.bloque-resumen:hover { background: rgba(46,202,176,.05); }
+.bloque-resumen:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: -2px; }
 
 .bloque-punto {
     flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%;
-    background: var(--tt-navy);
-    box-shadow: 0 0 0 3px rgba(52,71,93,0.13);
+    background: var(--ink-2);
+    box-shadow: 0 0 0 3px rgba(30,42,51,.10);
 }
 .bloque-punto[data-tipo="Ingreso"] {
-    background: var(--est-verde);
-    box-shadow: 0 0 0 3px rgba(53,104,84,0.16);
+    background: var(--verde-ink);
+    box-shadow: 0 0 0 3px var(--verde-bg);
 }
 .bloque-cuenta {
     flex: 0 1 auto; min-width: 0;
     font-size: 13px; font-weight: 600; color: var(--ink-1);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* El eco de lo HEREDADO (medio + fecha). Con seis bloques cargados es lo que
-   deja verificar de un scroll que el medio y el dia son los que corresponden,
-   sin abrir seis selects. Es justo el dato que la herencia hace invisible
-   (UI_Shell.html:526-536). */
+/* El eco de lo HEREDADO (medio + fecha): 12 ink-3. */
 .bloque-meta {
     flex: 1 1 auto; min-width: 0;
-    font-size: var(--fs-aux); color: var(--ink-3);
+    font-size: 12px; color: var(--ink-3);
     font-variant-numeric: tabular-nums;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Monto del resumen: 13/600 tenido por el semaforo segun el tipo del bloque. */
 .bloque-monto {
     flex: 0 0 auto; margin-left: auto;
-    font-size: 15px; font-weight: 600; letter-spacing: -0.2px;
+    font-size: 13px; font-weight: 600;
     color: var(--ink-1); font-variant-numeric: tabular-nums;
 }
+.bloque[data-tipo="Egreso"] .bloque-monto { color: var(--rojo-ink); }
+.bloque[data-tipo="Ingreso"] .bloque-monto { color: var(--verde-ink); }
 .bloque-monto .u {
-    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
     color: var(--ink-3); margin-left: 5px;
 }
-/* Sin dato es un guion largo, NUNCA un cero: no se inventa un parcial. */
-.bloque-monto[data-vacio="1"] { color: var(--ink-ph); font-weight: 500; }
+/* Sin dato es un guion largo, NUNCA un cero: no se inventa un parcial. El
+   selector repite .bloque para ganarle en especificidad al tinte por tipo:
+   un bloque vacio se muestra gris aunque su tipo diga Egreso. */
+.bloque .bloque-monto[data-vacio="1"] { color: var(--ink-3); font-weight: 500; }
 .bloque-resumen .chev-abrir { flex: 0 0 auto; color: var(--ink-3); }
-.bloque-resumen:hover .chev-abrir { color: var(--tt-teal); }
+.bloque-resumen:hover .chev-abrir { color: var(--teal-tinta); }
 
-/* --- Cuerpo de edicion. Colapso con grid-template-rows 0fr -> 1fr: altura
-       real animable sin medir con JS y sin max-height inventado. --- */
+/* --- Cuerpo de edicion. Colapso con grid-template-rows 0fr -> 1fr. --- */
 .bloque-cuerpo {
     display: grid; grid-template-rows: 1fr;
-    transition: grid-template-rows var(--t3) var(--mov-std);
+    transition: grid-template-rows .28s var(--mov);
 }
 .bloque[data-estado="resumen"] .bloque-cuerpo { grid-template-rows: 0fr; }
-/* visibility saca los campos del bloque colapsado del ORDEN DE TAB (con quince recurrentes
-   colapsados eran mas de cien paradas de foco invisibles, y un Enter sobre el Guardar oculto
-   de un bloque cerrado disparaba su upsert). Es animable con transition y no toca el layout
-   del colapso 0fr: al ocultar, la visibilidad cae al final de la transicion. */
+/* visibility saca los campos del bloque colapsado del ORDEN DE TAB. */
 .bloque-cuerpo > .inner {
     overflow: hidden; min-height: 0;
-    transition: visibility var(--t3) var(--mov-std);
+    transition: visibility .28s var(--mov);
 }
 .bloque[data-estado="resumen"] .bloque-cuerpo > .inner { visibility: hidden; }
-.bloque-cuerpo .pad { padding: 10px var(--e4) var(--e4); }
+.bloque-cuerpo .pad { padding: 12px 18px 16px; }
 
-.bloque-head {
-    display: flex; align-items: center; gap: 10px;
-    min-height: 26px; padding: 12px 10px 0 var(--e4);
-}
-/* El titulo de bloque NO es una versalita: es un titulo, mismo registro que
-   el titulo de card. Antes era 11/700/uppercase/gris, o sea identico al label
-   de campo que tiene tres pixeles mas abajo. */
-.bloque-num {
-    flex: 1 1 auto;
-    font-size: 13px; font-weight: 600; letter-spacing: -0.1px;
-    text-transform: none; color: var(--ink-1);
-}
-/* El indice como pastilla: un ancla circular repetida en la columna izquierda
-   que el ojo cuenta sin leer. Es la pregunta real del que carga en lote. */
-.bloque-num .n {
-    display: inline-grid; place-items: center;
-    width: 19px; height: 19px; margin-right: 8px; vertical-align: -3px;
-    border-radius: var(--r-xs);
-    background: var(--tt-teal); color: var(--ink-inv);
-    font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
-}
-.btn-quitar {
-    flex: 0 0 auto;
-    width: 28px; height: 28px;
-    display: grid; place-items: center;
-    border: 0; border-radius: 9px;
-    background: transparent; color: var(--ink-3);
-    font: inherit; font-size: 16px; line-height: 1; cursor: pointer;
-    transition: background-color var(--t1) var(--mov-std), color var(--t1) var(--mov-std);
-}
-.btn-quitar:hover { background: var(--est-rojo-bg); color: var(--est-rojo-ink); }
-.btn-quitar:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 1px; }
-
-/* Agregar: FILL, no borde punteado. El `1px dashed --border-color` de
-   UI_Shell.html:170 da 1.23:1 sobre papel: se ve el texto, no se ve la caja. */
+/* Agregar: vidrio con borde punteado teal (spec seccion 7). */
 .btn-agregar {
     display: flex; align-items: center; justify-content: center; gap: 8px;
     width: 100%; height: 44px; margin-top: 2px;
-    border: 0; border-radius: var(--r-md);
-    background: var(--sup-card);
-    box-shadow: inset 0 0 0 1px var(--linea);
-    color: var(--tt-teal);
+    /* borde de verdad y no box-shadow: el dashed no se dibuja con sombra, y
+       box-sizing border-box (design system) evita que mueva el layout */
+    border: 1.5px dashed rgba(46,202,176,.45);
+    border-radius: var(--r-card);
+    background: rgba(255,255,255,.5);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    color: var(--teal-tinta);
     font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
-    transition: box-shadow var(--t1) var(--mov-std);
+    transition: background-color .18s var(--mov), border-color .18s var(--mov);
 }
-.btn-agregar:hover { box-shadow: inset 0 0 0 1.5px var(--tt-teal-soft), var(--elev-1); }
+.btn-agregar:hover { background: rgba(46,202,176,.08); border-color: var(--tt-teal); }
 .btn-agregar:disabled {
-    opacity: 0.45; cursor: not-allowed; box-shadow: inset 0 0 0 1px var(--linea);
+    opacity: .5; cursor: default; background: rgba(255,255,255,.5);
+    border-color: rgba(30,42,51,.15);
 }
-.btn-agregar:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
+.btn-agregar:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 2px; }
 
 
 /* ============================================================
-   7. BOTONES
+   7. BOTONES (spec seccion 8). PRIMARIO: degrade teal con TEXTO INK
+   (7.11:1; blanco sobre teal prohibido). SECUNDARIO: vidrio.
    ============================================================ */
 .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    height: var(--alto-cta); padding: 0 var(--e5);
-    border: 0; border-radius: var(--r-sm);
-    font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0.01em;
+    height: 38px; padding: 0 20px;
+    border: 0; border-radius: 12px;
+    font: inherit; font-size: 13px; font-weight: 600;
     cursor: pointer;
-    transition: background-color var(--t1) var(--mov-std),
-                box-shadow var(--t1) var(--mov-std),
-                transform var(--t1) var(--mov-out);
+    transition: background-color .18s var(--mov), box-shadow .18s var(--mov),
+                transform .18s var(--mov);
 }
-.btn:focus-visible { outline: 2px solid var(--tt-teal); outline-offset: 2px; }
-.btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn:focus-visible { outline: 2px solid var(--teal-tinta); outline-offset: 2px; }
+/* DISABLED (enmienda Clara): opacity .5, sin sombra, cursor default, sin hover. */
+.btn:disabled { opacity: .5; cursor: default; transform: none; box-shadow: none; }
 
 .btn-primary {
-    background: linear-gradient(140deg, var(--tt-navy) 0%, var(--tt-navy-dark) 100%);
-    color: var(--ink-inv);
-    box-shadow: 0 1px 2px rgba(52,71,93,0.24), inset 0 1px 0 rgba(255,255,255,0.10);
+    /* #29B89F: teal oscurecido, tramo bajo del degrade; deriva de --tt-teal. */
+    background: linear-gradient(135deg, #2ECAB0, #29B89F);
+    color: var(--ink-1);
+    box-shadow: 0 8px 18px -8px rgba(46,202,176,.6), inset 0 1px 0 rgba(255,255,255,.35);
 }
 .btn-primary:hover:not(:disabled) {
-    background: var(--tt-navy-dark);
-    box-shadow: 0 4px 12px rgba(52,71,93,0.28), inset 0 1px 0 rgba(255,255,255,0.14);
+    /* #35D6BB: teal aclarado para el hover; deriva de --tt-teal. */
+    background: linear-gradient(135deg, #35D6BB, #2ECAB0);
+    box-shadow: 0 11px 22px -8px rgba(46,202,176,.7), inset 0 1px 0 rgba(255,255,255,.4);
     transform: translateY(-1px);
 }
 .btn-primary:active:not(:disabled) {
-    transform: translateY(0); box-shadow: 0 1px 2px rgba(52,71,93,0.24);
+    transform: translateY(0);
+    box-shadow: 0 8px 18px -8px rgba(46,202,176,.6), inset 0 1px 0 rgba(255,255,255,.35);
 }
 
-/* Fill, no borde. El `1px solid --border-color` de UI_SharedStyles.html:208
-   sobre papel blanco da 1.23:1: "Cancelar" era texto navy suelto al lado de
-   un boton lleno, no un boton. */
 .btn-secondary {
-    background: var(--sup-page); color: var(--ink-1); box-shadow: var(--filo);
+    background: rgba(255,255,255,.7);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    color: var(--ink-1);
+    box-shadow: inset 0 0 0 1px rgba(30,42,51,.12), var(--vidrio-luz),
+                0 3px 10px -5px rgba(30,42,51,.12);
 }
 .btn-secondary:hover:not(:disabled) {
-    background: var(--sup-hover); box-shadow: inset 0 0 0 1px var(--linea-fuerte);
+    background: #FFFFFF;
+    box-shadow: inset 0 0 0 1px rgba(30,42,51,.24), var(--vidrio-luz),
+                0 3px 10px -5px rgba(30,42,51,.12);
 }
 .btn-secondary:active:not(:disabled) { transform: translateY(1px); }
 
 
 /* ============================================================
-   8. BARRA DE ACCIONES -- sticky al piso, de vidrio.
-   Hoy .shell-acciones (UI_Shell.html:178-180) es ESTATICA: con dos bloques
-   cargados el boton "Cargar" queda ~230px por debajo de la vista. El pliegue
-   se rompe exactamente al usar la funcion que la vista existe para ofrecer.
-   Los margenes negativos sangran a los bordes del scroll (padding 24 / 22).
+   8. BARRA DE ACCIONES -- vidrio pegado abajo, hairline superior de agua.
+   Sticky full-bleed respecto del IFRAME, no del contenedor: calc(50% - 50vw)
+   sangra desde el .vista-form centrado (max-width 660) hasta los bordes del
+   modal a cualquier ancho (en HtmlService 100vw = ancho del modal y la
+   scrollbar es overlay de 6px), asi la barra y su hairline quedan alineadas
+   con las del pie. El pliegue sticky no se rompe al crecer el lote.
    ============================================================ */
 .shell-acciones {
     position: sticky; bottom: -22px; z-index: 10;
-    display: flex; align-items: center; gap: 10px;
-    height: 60px;
-    margin: 14px calc(-1 * var(--e6)) -22px;
-    padding: 0 var(--e6);
-    background: rgba(239, 242, 249, 0.84);
-    -webkit-backdrop-filter: blur(16px) saturate(150%);
-    backdrop-filter: blur(16px) saturate(150%);
-    box-shadow: 0 -1px 0 var(--linea), 0 -8px 20px rgba(52,71,93,0.06);
+    display: flex; align-items: center; gap: 12px;
+    min-height: 62px;
+    margin: 14px calc(50% - 50vw) -22px;
+    padding: 12px 28px;
+    background: rgba(255,255,255,.82);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+}
+.shell-acciones::before {
+    content: ""; position: absolute; left: 28px; right: 28px; top: 0; height: 1px;
+    background: linear-gradient(90deg,
+        transparent, rgba(46,202,176,.35) 30%, rgba(30,42,51,.06) 70%, transparent);
 }
 /* Piso: sin backdrop-filter la barra queda opaca y sigue siendo legible. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .shell-acciones { background: var(--sup-page); }
+    .shell-acciones { background: #FFFFFF; }
 }
-/* Este es el hueco de #movCupo (UI_Shell.html:284, :605-612). Hoy dice
-   "2 de hasta 15. Se cargan todos juntos..." y la barra se lee como una
-   oracion con dos botones al final. */
 .shell-acciones .crece {
     margin-right: auto; min-width: 0;
-    font-size: var(--fs-aux); line-height: 1.35; color: var(--ink-3);
+    font-size: 12.5px; line-height: 1.35; color: var(--ink-2);
 }
-/* El total del lote. Es la diferencia entre "formulario de carga" y "producto
-   de finanzas": con seis movimientos cargados hoy no hay un solo lugar que
-   diga cuanto suman. Si el lote mezcla monedas muestra el conteo, no un total
-   falso: sumar monedas distintas es peor que no sumar. */
+/* El total del lote: rotulo LOTE + valor tabular. */
 .shell-acciones .total {
     display: flex; flex-direction: column; align-items: flex-end;
-    margin-right: var(--e3);
+    margin-right: 4px;
 }
 .shell-acciones .total .rot {
-    font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3);
 }
 .shell-acciones .total .val {
-    font-size: 15px; font-weight: 700; letter-spacing: -0.2px; line-height: 1.2;
+    font-size: 14px; font-weight: 600; line-height: 1.25;
     color: var(--ink-1); font-variant-numeric: tabular-nums;
 }
-
-
-/* ============================================================
-   9. ALERTAS -- se conserva la decision de UI_SharedStyles.html:266-271
-   (fondo tenido y tinta, sin franja lateral). Lo que cambia: la tinta del
-   error sube de 4.47:1 a 5.76:1, y el punto de 7px reemplaza a la franja --
-   senial redundante sin ser cromo.
-   ============================================================ */
-.alert {
-    display: flex; align-items: flex-start; gap: 10px;
-    padding: 11px 14px; margin-bottom: var(--e4);
-    border-radius: var(--r-sm);
-    font-size: 13px; line-height: 1.45;
-    animation: alertaEntra 180ms var(--mov-out) both;
-}
-@keyframes alertaEntra { from { opacity: 0; transform: translateY(-4px); } }
-.alert::before {
-    content: ""; flex: 0 0 auto;
-    width: 7px; height: 7px; margin-top: 6px; border-radius: 50%;
-    background: currentColor;
-    box-shadow: 0 0 0 3px rgba(255,255,255,0.7);
-}
-/* Tres variantes y no cuatro: los avisos del shell son error/ok/warning; la
-   variante info nunca se compuso desde ningun JS y se retiro. */
-.alert-error   { background: var(--est-rojo-bg);  color: var(--est-rojo-ink); }
-.alert-ok      { background: var(--est-verde-bg); color: var(--est-verde-ink); }
-.alert-warning { background: var(--est-ambar-bg); color: var(--est-ambar-ink); }
-
-
-/* ============================================================
-   10. VISTAS NUEVAS -- lo que proyeccion, recurrentes y conciliacion
-   necesitan y ninguna clase existente cubre. Todo sobre los tokens de
-   :root, cero hex sueltos. (El CSS de .shell-pendiente se retiro entero:
-   ya no queda ninguna vista en construccion que lo use.)
-   ============================================================ */
-/* El estado de un recurrente, en el segmentado y en el punto del resumen:
-   pausado es un estado de ATENCION (ambar), no un error. */
-.seg button[aria-pressed="true"][data-v="Si"] {
-    background: var(--est-verde-bg); color: var(--est-verde-ink);
-    box-shadow: inset 0 0 0 1px rgba(53,104,84,0.22);
-}
-.seg button[aria-pressed="true"][data-v="No"] {
-    background: var(--est-ambar-bg); color: var(--est-ambar-ink);
-    box-shadow: inset 0 0 0 1px rgba(109,77,0,0.22);
-}
-.bloque-punto[data-activo="Si"] {
-    background: var(--est-verde);
-    box-shadow: 0 0 0 3px var(--est-verde-bg);
-}
-.bloque-punto[data-activo="No"] {
-    background: var(--est-ambar);
-    box-shadow: 0 0 0 3px var(--est-ambar-bg);
-}
-/* Pie de un bloque recurrente: Guardar y Borrar van en fila, por bloque,
-   porque cada recurrente es su propio registro (upsert), no parte de un lote. */
-.bloque .rec-pie { flex-direction: row; align-items: center; gap: 10px; }
-.rec-borrar[data-conf="1"] {
-    background: var(--est-rojo-bg); color: var(--est-rojo-ink);
-    box-shadow: inset 0 0 0 1px rgba(173,39,39,0.22);
-}
-/* En la barra de recurrentes conviven resumen, dos selects y dos botones: los botones y
-   los selects NO se achican ni parten renglon; el que cede es el resumen, que puede
-   envolver en dos lineas dentro de los 60px de la barra. */
+/* Botones y selects de la barra NO se achican; el que cede es el resumen. */
 .shell-acciones .btn { flex: 0 0 auto; white-space: nowrap; }
-/* Los selects de periodo del volcado, compactos para convivir en la barra. */
 .shell-acciones .form-input {
     flex: 0 0 auto;
-    width: auto;   /* pisa el width:100% del design system: en la barra mide su contenido */
+    width: auto;
     height: 34px; padding: 0 30px 0 10px;
-    border: 0; border-radius: var(--r-sm);
+    border: 0; border-radius: var(--r-input);
     appearance: none; -webkit-appearance: none; -moz-appearance: none;
-    background: var(--sup-hueco) var(--chevron) no-repeat right 10px center / 10px 7px;
-    box-shadow: var(--filo);
-    font: inherit; font-size: var(--fs-aux); color: var(--ink-2);
+    background: var(--tt-gris) var(--chevron) no-repeat right 10px center / 10px 7px;
+    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08);
+    font: inherit; font-size: 12px; color: var(--ink-1);
     cursor: pointer;
 }
 .shell-acciones .form-input:focus {
-    outline: none; background-color: var(--sup-card);
-    box-shadow: inset 0 0 0 1.5px var(--tt-teal), 0 0 0 3px rgba(var(--tt-teal-rgb), 0.18);
+    outline: none; background-color: #FFFFFF;
+    box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,202,176,.22);
 }
-/* Un aviso con botones adentro: la confirmacion inline del volcado y el
-   reintento de la conciliacion. El shell no usa dialogos nativos. */
+
+
+/* ============================================================
+   9. AVISOS -- fondo tenido, filo del mismo ink en rgba, icono de 16px en
+   stroke (enmienda Clara: check ok, cruz error, triangulo advertencia).
+   El icono se pinta con currentColor via mask: cero hex nuevos.
+   ============================================================ */
+.alert {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 11px 15px; margin-bottom: 12px;
+    border-radius: 14px;
+    font-size: 13px; font-weight: 500; line-height: 1.45;
+    animation: alertaEntra .18s var(--mov) both;
+}
+@keyframes alertaEntra { from { opacity: 0; transform: translateY(-4px); } }
+.alert b, .alert strong { font-weight: 600; }
+.alert::before {
+    content: ""; flex: 0 0 auto;
+    width: 16px; height: 16px; margin-top: 1px;
+    background: currentColor;
+    -webkit-mask: var(--icono-aviso) center / contain no-repeat;
+    mask: var(--icono-aviso) center / contain no-repeat;
+}
+.alert-error {
+    background: var(--rojo-bg); color: var(--rojo-ink);
+    box-shadow: inset 0 0 0 1px rgba(178,59,50,.15);
+    --icono-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.8'/%3E%3Cpath d='M8.5 8.5l7 7M15.5 8.5l-7 7'/%3E%3C/svg%3E");
+}
+.alert-ok {
+    background: var(--verde-bg); color: var(--verde-ink);
+    box-shadow: inset 0 0 0 1px rgba(14,107,79,.15);
+    --icono-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9.8'/%3E%3Cpath d='M7.5 12.5l3 3 6-6.5'/%3E%3C/svg%3E");
+}
+.alert-warning {
+    background: var(--ambar-bg); color: var(--ambar-ink);
+    box-shadow: inset 0 0 0 1px rgba(122,74,16,.15);
+    --icono-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5L22 20H2z'/%3E%3Cpath d='M12 10v4.5M12 17.6v.4'/%3E%3C/svg%3E");
+}
+/* Un aviso con botones adentro (confirmacion inline del volcado, reintento). */
 .alert > span:first-of-type { flex: 1 1 auto; align-self: center; }
 .alert .btn { flex: 0 0 auto; align-self: center; height: 32px; padding: 0 14px; }
+
+
+/* ============================================================
+   10. VISTAS NUEVAS -- recurrentes y conciliacion sobre los mismos tokens.
+   ============================================================ */
+/* Estado Activo/Pausado del recurrente: pausado es ATENCION (ambar), no error. */
+.seg button[aria-pressed="true"][data-v="Si"] {
+    background: var(--verde-bg); color: var(--verde-ink);
+    box-shadow: 0 0 0 1px rgba(14,107,79,.22), inset 0 0 0 1px rgba(14,107,79,.25);
+}
+.seg button[aria-pressed="true"][data-v="No"] {
+    background: var(--ambar-bg); color: var(--ambar-ink);
+    box-shadow: 0 0 0 1px rgba(122,74,16,.22), inset 0 0 0 1px rgba(122,74,16,.25);
+}
+.bloque-punto[data-activo="Si"] {
+    background: var(--verde-ink);
+    box-shadow: 0 0 0 3px var(--verde-bg);
+}
+.bloque-punto[data-activo="No"] {
+    background: var(--ambar-ink);
+    box-shadow: 0 0 0 3px var(--ambar-bg);
+}
+/* Pie de un bloque recurrente: Guardar y Borrar en fila, por bloque. */
+.bloque .rec-pie { flex-direction: row; align-items: center; gap: 10px; }
+.rec-borrar[data-conf="1"] {
+    background: var(--rojo-bg); color: var(--rojo-ink);
+    box-shadow: inset 0 0 0 1px rgba(178,59,50,.22);
+}
 /* Hints de contexto de la conciliacion: viven fuera de la grilla .f. */
 .conc-hint {
     margin: 0 0 10px;
-    font-size: var(--fs-aux); line-height: 1.45; color: var(--ink-3);
+    font-size: 12.5px; line-height: 1.45; color: var(--ink-2);
 }
-.conc-hint.alerta { color: var(--est-ambar-ink); }
-/* La tabla de conciliacion: una fila por medio, numeros a la derecha. */
+.conc-hint.alerta { color: var(--ambar-ink); }
+
+/* La tabla de conciliacion, envuelta en tarjeta de vidrio. */
 .conc-card {
-    background: var(--sup-card);
-    border-radius: var(--r-md);
-    box-shadow: var(--elev-1), var(--filo);
-    /* Contenido ancho que scrollea DENTRO de su contenedor: por debajo de ~530px la tabla
-       excedia la card y la columna Estado quedaba clipeada sin barra para alcanzarla. */
+    background: var(--vidrio);
+    -webkit-backdrop-filter: blur(10px) saturate(1.2);
+    backdrop-filter: blur(10px) saturate(1.2);
+    border-radius: var(--r-card);
+    box-shadow: inset 0 0 0 1px var(--vidrio-borde), var(--vidrio-luz), var(--elev-agua);
+    /* Contenido ancho que scrollea DENTRO de su contenedor: por debajo de
+       ~530px la tabla excedia la card y Estado quedaba clipeado. */
     overflow-x: auto;
     overflow-y: hidden;
 }
 .conc-tabla { width: 100%; border-collapse: collapse; }
 .conc-tabla th {
-    padding: 10px 12px;
-    font-size: var(--fs-rotulo); font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--ink-3); text-align: left;
-    box-shadow: 0 1px 0 var(--linea);
+    padding: 11px 16px 9px;
+    /* La spec pide 10.5/600, pero el guard 17 del banco prohibe 10.5px en todo
+       el shell (Chrome redondea el subpixel distinto segun donde caiga la caja,
+       cicatriz de esta campana): se queda en 11px hasta decision de Franco. */
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.11em;
+    color: var(--ink-2); text-align: left;
+    box-shadow: 0 1px 0 rgba(30,42,51,.08);
 }
-.conc-tabla td { padding: 8px 12px; vertical-align: middle; box-shadow: 0 1px 0 var(--linea); }
+.conc-tabla td {
+    padding: 10px 16px; vertical-align: middle;
+    box-shadow: 0 1px 0 rgba(30,42,51,.05);
+    transition: background-color .15s var(--mov);
+}
 .conc-tabla tr:last-child td { box-shadow: none; }
+.conc-tabla tr:hover td { background: rgba(46,202,176,.05); }
 .conc-tabla .num { text-align: right; font-variant-numeric: tabular-nums; }
 .conc-medio { font-size: 13px; font-weight: 600; color: var(--ink-1); }
 .conc-tag {
-    margin-left: 6px;
-    font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: var(--ink-3);
+    display: inline-block; margin-left: 6px; padding: 1px 7px;
+    border-radius: var(--r-full);
+    font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+    color: var(--ink-2); background: var(--tt-gris);
+    box-shadow: inset 0 0 0 1px rgba(30,42,51,.07);
 }
 .conc-sis { font-size: 13px; color: var(--ink-2); }
 .conc-real {
-    width: 116px; height: 32px; padding: 0 10px;
-    border: 0; border-radius: var(--r-sm);
-    background: var(--sup-hueco); box-shadow: var(--filo);
-    font: inherit; font-size: 13px; text-align: right; color: var(--ink-2);
+    width: 130px; height: 34px; padding: 0 10px;
+    border: 0; border-radius: var(--r-input);
+    background: var(--tt-gris);
+    box-shadow: inset 0 0 0 1px rgba(30,42,51,.08), inset 0 1px 2px rgba(30,42,51,.05);
+    font: inherit; font-size: 13px; font-weight: 600;
+    text-align: right; color: var(--ink-1);
     font-variant-numeric: tabular-nums;
+    transition: background-color .15s var(--mov), box-shadow .15s var(--mov);
 }
-.conc-real::placeholder { color: var(--ink-ph); }
+.conc-real::placeholder { color: var(--ink-3); font-weight: 400; }
 .conc-real:focus {
-    outline: none; background: var(--sup-card);
-    box-shadow: inset 0 0 0 1.5px var(--tt-teal), 0 0 0 3px rgba(var(--tt-teal-rgb), 0.18);
+    outline: none; background: #FFFFFF;
+    box-shadow: inset 0 0 0 1px var(--tt-teal), 0 0 0 3px rgba(46,202,176,.22);
 }
 .conc-estado { min-width: 132px; }
-.conc-dir { font-size: var(--fs-aux); color: var(--ink-ph); }
+.conc-dir { font-size: 12px; color: var(--ink-3); }
 .conc-pill {
-    display: inline-block; padding: 2px 9px; border-radius: var(--r-full);
-    font-size: var(--fs-aux); font-weight: 600; font-variant-numeric: tabular-nums;
+    display: inline-block; padding: 3px 10px; border-radius: var(--r-full);
+    font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
 }
 /* Verde = hay MAS de verdad que en la planilla (falta anotar un ingreso);
    rojo = la planilla dice mas de lo que hay (salio plata sin anotarse). */
 .conc-pill[data-dir="igual"], .conc-pill[data-dir="mas"] {
-    background: var(--est-verde-bg); color: var(--est-verde-ink);
+    background: var(--verde-bg); color: var(--verde-ink);
 }
-.conc-pill[data-dir="menos"] { background: var(--est-rojo-bg); color: var(--est-rojo-ink); }
-.conc-sub { display: block; margin-top: 3px; font-size: var(--fs-rotulo); color: var(--ink-3); }
+.conc-pill[data-dir="menos"] { background: var(--rojo-bg); color: var(--rojo-ink); }
+.conc-sub { display: block; margin-top: 3px; font-size: 11px; color: var(--ink-3); }
 
 
 /* ============================================================
-   11. PIE -- se conserva que sea fijo (el argumento de UI_Shell.html:195-197
-   es correcto: un cromo que salta de lugar al navegar hace que la UI se
-   sienta amateur). Lo que le falta es separacion: hoy el pie y la card son
-   EL MISMO #eff2f9 (--bg-main en :87 y en :200), asi que la ultima tarjeta
-   se funde con el pie.
+   11. PIE -- vidrio suave con la misma hairline de agua, desvanecida a la
+   derecha, y el punto de estado teal.
    ============================================================ */
 .shell-foot {
     flex: 0 0 auto;
-    height: var(--h-pie);
-    display: flex; align-items: center; gap: var(--e4);
-    padding: 0 var(--e6);
-    background: var(--sup-card);
-    box-shadow: 0 -1px 0 var(--linea);
-    font-size: var(--fs-rotulo); letter-spacing: 0.02em; color: var(--ink-3);
+    position: relative;
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 28px;
+    background: rgba(255,255,255,.7);
+    font-size: 11px; letter-spacing: 0.02em; color: var(--ink-2);
+}
+.shell-foot::before {
+    content: ""; position: absolute; left: 28px; right: 28px; top: 0; height: 1px;
+    background: linear-gradient(90deg,
+        rgba(46,202,176,.30), rgba(30,42,51,.05) 50%, transparent 90%);
 }
 .shell-foot .spacer { flex: 1; }
 .shell-foot .vivo {
-    display: inline-flex; align-items: center; gap: 7px; min-width: 0;
-    color: var(--ink-2); font-weight: 500;
+    display: inline-flex; align-items: center; gap: 8px; min-width: 0;
+    color: var(--ink-2);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 /* Dice "conectado a ESTA planilla" sin una palabra de mas. */
 .shell-foot .vivo::before {
     content: ""; flex: 0 0 auto;
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--est-verde);
-    box-shadow: 0 0 0 3px rgba(53,104,84,0.16);
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--tt-teal);
+    box-shadow: 0 0 0 3px rgba(46,202,176,.18);
 }
 .shell-foot .ver {
-    font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--ink-ph);
+    font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--ink-3);
 }
 
 
 /* ============================================================
    12. OVERLAY -- el loader SIEMPRE tiene que poder apagarse
-   (cicatriz v0.45.2 y v0.47.1). Esto es solo su ropa.
+   (cicatriz v0.45.2 y v0.47.1). Esto es solo su ropa: velo blanco al 85%
+   con spinner de aro fino y segmento teal (enmienda Clara).
    ============================================================ */
 .shell-overlay {
     position: fixed; inset: 0; z-index: 2000;
     display: grid; place-items: center; align-content: center; gap: 14px;
-    background: rgba(239, 242, 249, 0.74);
-    -webkit-backdrop-filter: blur(6px) saturate(130%);
-    backdrop-filter: blur(6px) saturate(130%);
-    animation: overlayEntra 160ms var(--mov-std) both;
+    background: rgba(255,255,255,.85);
+    -webkit-backdrop-filter: blur(6px) saturate(1.2);
+    backdrop-filter: blur(6px) saturate(1.2);
+    animation: overlayEntra .16s var(--mov) both;
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .shell-overlay { background: rgba(239, 242, 249, 0.96); }
+    .shell-overlay { background: rgba(255,255,255,.96); }
 }
 @keyframes overlayEntra { from { opacity: 0; } }
 .shell-spinner {
     width: 28px; height: 28px; border-radius: 50%;
-    border: 2.5px solid rgba(52,71,93,0.14);
+    border: 1px solid rgba(30,42,51,.13);
     border-top-color: var(--tt-teal);
+    border-top-width: 2px;   /* el segmento teal pesa un pelo mas que el aro: se ve girar */
     animation: shell-spin 800ms linear infinite;
 }
 @keyframes shell-spin { to { transform: rotate(360deg); } }
 .shell-overlay .leyenda {
-    font-size: var(--fs-rotulo); font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-3);
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-2);
 }
 
 
 /* ============================================================
-   13. ENTRADA -- una sola animacion en todo el sistema, 8px y 200ms.
-   Suficiente para leerse como movimiento, no tanto como para notar el reflow.
+   13. ENTRADA -- se conserva el stagger del shell (spec seccion 13):
+   translateY+fade 300ms, escalonado 30ms.
    ============================================================ */
 @keyframes vistaEntra { from { opacity: 0; transform: translateY(8px); } }
-#vista-home .shell-card { animation: vistaEntra 300ms var(--mov-out) both; }
+#vista-home .shell-card { animation: vistaEntra 300ms var(--mov) both; }
 #vista-home .shell-cards:nth-of-type(1) .shell-card { animation-delay: 0.02s; }
 #vista-home .shell-cards:nth-of-type(2) .shell-card:nth-child(1) { animation-delay: 0.06s; }
 #vista-home .shell-cards:nth-of-type(2) .shell-card:nth-child(2) { animation-delay: 0.09s; }
@@ -1158,7 +1016,7 @@ body {
 
 
 /* ============================================================
-   14. MOVIMIENTO REDUCIDO -- hoy cubre solo el spinner (UI_Shell.html:217).
+   14. MOVIMIENTO REDUCIDO
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -1174,12 +1032,16 @@ body {
 
 /* ============================================================
    15. MODAL ANGOSTO -- Sheets recorta el dialogo si la ventana del navegador
-   es mas chica que el setWidth pedido (16_ShellService.js:141). Un solo
-   breakpoint. auto-fit ya cubre las tarjetas; esto ordena el resto.
+   es mas chica que el setWidth pedido (16_ShellService.js:141).
    ============================================================ */
 @media (max-width: 700px) {
-    .shell-scroll { padding: var(--e4) var(--e4) 18px; }
-    .shell-acciones { margin-left: calc(-1 * var(--e4)); margin-right: calc(-1 * var(--e4)); padding: 0 var(--e4); }
+    .shell-scroll { padding: 16px 16px 18px; }
+    .shell-band { padding: 0 16px; }
+    .shell-band::after { left: 16px; right: 16px; }
+    /* El calc(50% - 50vw) de la regla base ya da full-bleed exacto tambien
+       aca (vista-form = 100vw - 32px): solo cambia el padding interno. */
+    .shell-acciones { padding: 12px 16px; }
+    .shell-acciones::before { left: 16px; right: 16px; }
     .f.c3, .f.c4, .f.c5 { grid-column: span 6; }
 }
 </style>

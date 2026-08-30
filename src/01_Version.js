@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 59,
- patch: 1,
+ minor: 60,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-29',
- releaseName: 'v0.59.1 - Las cuatro puertas de navegacion que faltaban para la botonera',
+ releaseName: 'v0.60.0 - Rediseno Corriente: el shell se funde con el dialogo y habla la paleta de la marca',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.60.0 (2026-08-29) - Rediseno Corriente: el shell se funde con el dialogo y habla la paleta de la marca
++ Pedido de Franco: fondo blanco para hacer juego con el marco del dialogo de Google, y "no son los colores de la marca: ajusta colores". Dos direcciones de arte compitieron con mockups renderizados; gano "Corriente" (liquid glass organico, la letra del brandbook para el segmento personal) con ocho enmiendas de la perdedora.
++ Lienzo blanco puro con radiales de agua teal/durazno al 3-10%; la banda navy DESAPARECE (cabecera transparente con monograma en degrade y hairline liquida); tarjetas y bloques de vidrio con sombras color agua; Poppins 400-700; semaforo recalibrado con pares ink/bg AA; boton primario teal con texto #1E2A33 (blanco sobre teal prohibido: 1.9:1).
++ REGLA DE PALETA como guard ejecutable (seccion 23 del banco): solo los 4 hex del brandbook + blanco como base, derivados con comentario de derivacion, semaforo agrupado como colores DE FUNCION; el guard extrae hex, ternas rgb() y keywords de color del estilo y pone el banco en rojo ante cualquier intruso. Probado en rojo con tres intrusos distintos.
++ Perimetro contra el marco de Google: tinte maximo 5.57% en la banda de 20px (calculado, no a ojo); los centros de los radiales se corrieron respecto de la spec literal porque la regla del perimetro ES el pedido central.
++ La barra de acciones pasa a full-bleed real del modal (calc(50% - 50vw)), alineando su hairline con la del pie.
+
 v0.59.1 (2026-08-29) - Las cuatro puertas de navegacion que faltaban para la botonera
 + navigateToPlanDeCuentas, navigateToRegistros, navigateToTiposDeCambio y navigateToMiradaInteranual: una linea cada una, para asignar a los dibujos "Ir a..." de las hojas. Leen de SHEETS (regla de navigateToPresupuesto): el nombre de una hoja propia pertenece al SSOT, no se duplica en NAV_CONFIG.
 

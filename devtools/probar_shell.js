@@ -1024,5 +1024,89 @@ ok(typeof ctx.registrarMovimiento === 'undefined' && typeof ctx.registrarTraspas
         'sin rastro ejecutable de ' + patron.replace(/\\/g, '') + ': la regla muerta no volvio');
 });
 
-console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (22 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+seccion('23. GUARD DE PALETA: el shell viste el brandbook, cero hex fuera de lista');
+// decision Franco 2026-08-29: "esta quedando buenisimo de UX pero no son los colores de la
+// marca. Ajusta colores." Los colores base son CINCO; todo tono intermedio es un derivado
+// DECLARADO por la spec Corriente. Un hex que no este en esta lista es un color inventado
+// (los grises #e2e5e9/#dadfe4 y familia, el navy viejo) y pone el banco en ROJO. Esta lista
+// es la regla ejecutable: cada entrada dice de que deriva y para que sirve.
+const PALETA = {
+    // -- base (brandbook Tidetrack) --
+    '#1E2A33': 'base: ink (texto primario, wordmark, icono del hero, texto del boton primario)',
+    '#2ECAB0': 'base: teal de accion (degrade primario, filo de foco, punto del pie)',
+    '#F4F7FA': 'base: gris de superficies secundarias (huecos, rieles, chips, tags)',
+    '#FFB380': 'base: durazno decorativo (monograma, hairlines, radial calido)',
+    '#FFFFFF': 'base: blanco (lienzo, fondo de foco, vidrio)',
+    // -- derivados declarados (spec Corriente 2026-08-29) --
+    '#44576A': 'ink-2: ink aclarado AA para secundaria y labels; deriva de #1E2A33',
+    '#5A6B7C': 'ink-3: ink aclarado para placeholders y auxiliares; deriva de #1E2A33',
+    '#0B7B69': 'teal-tinta: el UNICO teal que puede ser texto sobre blanco; deriva de #2ECAB0',
+    '#29B89F': 'teal oscurecido: tramo bajo del degrade del boton primario y el chip hero; deriva de #2ECAB0',
+    '#35D6BB': 'teal aclarado: hover del degrade primario; deriva de #2ECAB0',
+    // -- semaforo: colores DE FUNCION, no de marca (pares ink/bg AA de la spec) --
+    '#0E6B4F': 'verde de funcion, texto: Ingreso activo, pill +, aviso ok',
+    '#DDF5EC': 'verde de funcion, riel del par anterior',
+    '#B23B32': 'rojo de funcion, texto: Egreso activo, pill -, aviso error',
+    '#FCEAE7': 'rojo de funcion, riel del par anterior',
+    '#7A4A10': 'ambar de funcion, texto: advertencia, combo fuera de catalogo',
+    '#FFF1E2': 'ambar de funcion, riel del par anterior'
+};
+// Se audita el <style> PROPIO del shell (el design system incluido tiene su propio pase),
+// sin comentarios: se miran los hex que RENDERIZAN, no los que se documentan. Los data-URI
+// llevan el hex como %23: se decodifica antes de extraer para que no se escape ninguno.
+const estiloShell = (HTML.match(/<style>([\s\S]*?)<\/style>/) || ['', ''])[1];
+ok(estiloShell.length > 0, 'el <style> del shell se pudo aislar para auditarlo');
+const cssPaleta = estiloShell.replace(/\/\*[\s\S]*?\*\//g, '').replace(/%23/gi, '#');
+const normalizarHex = (h) => {
+    let t = h.slice(1);
+    if (t.length === 3) t = t.split('').map(c => c + c).join('');
+    return '#' + t.toUpperCase();
+};
+const hexUsados = [...new Set((cssPaleta.match(/#[0-9a-fA-F]{3,8}\b/g) || []).map(normalizarHex))];
+ok(hexUsados.length > 0, 'se extrajeron hex del estilo (' + hexUsados.length + ' distintos)');
+const intrusos = hexUsados.filter(h => !(h in PALETA));
+ok(intrusos.length === 0,
+    'cada hex del shell esta en la lista blanca del brandbook' +
+    (intrusos.length ? ' -- INTRUSOS: ' + intrusos.join(', ') : ''));
+// La regla 2 de Franco tambien para rgba(): un gris intruso escrito como
+// rgba(226,229,233,.5) no debe pasar en verde. Cada terna r,g,b de rgb()/rgba()
+// se convierte a hex y pasa por la MISMA lista blanca (las ternas legales son
+// los 5 base y los ink de funcion, todos ya declarados arriba en PALETA).
+const ternasUsadas = [...new Set(
+    (cssPaleta.match(/rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}/g) || []).map(function (t) {
+        return '#' + t.match(/\d{1,3}/g)
+            .map(n => Number(n).toString(16).padStart(2, '0')).join('').toUpperCase();
+    })
+)];
+ok(ternasUsadas.length > 0,
+    'se extrajeron ternas rgb de los rgba() del estilo (' + ternasUsadas.length + ' distintas)');
+const ternasIntrusas = ternasUsadas.filter(h => !(h in PALETA));
+ok(ternasIntrusas.length === 0,
+    'cada rgba()/rgb() del shell deriva de un color de la lista blanca' +
+    (ternasIntrusas.length ? ' -- INTRUSAS: ' + ternasIntrusas.join(', ') : ''));
+// Y para keywords CSS de color en posicion de valor: un futuro 'color: navy'
+// tampoco pasa. Los url(...) se excluyen (el stroke='white' de los data-URI de
+// mask solo aporta alpha, no color); currentColor/transparent/inherit no son
+// paleta sino mecanica, y quedan fuera de la lista negra a proposito.
+const cssSinUrls = cssPaleta.replace(/url\([^)]*\)/g, 'url(_)');
+const kwIntrusos = [...new Set(
+    (cssSinUrls.match(/[:\s,(](white|black|navy|gray|grey|silver|red|blue|green|yellow|orange|purple|pink|brown|cyan|magenta|teal|aqua|lime|maroon|olive|coral|salmon|ivory|beige|khaki|gold|azure|snow|linen)(?![\w-])/gi) || [])
+        .map(k => k.slice(1).toLowerCase())
+)];
+ok(kwIntrusos.length === 0,
+    'ningun keyword CSS de color renderiza en el estilo del shell' +
+    (kwIntrusos.length ? ' -- INTRUSOS: ' + kwIntrusos.join(', ') : ''));
+// Sanidad inversa: la marca de verdad se USA (un shell gris que pasara la lista por no
+// tener ningun hex tambien seria un shell sin marca).
+['#1E2A33', '#2ECAB0', '#F4F7FA', '#FFB380', '#FFFFFF'].forEach(function (base) {
+    ok(hexUsados.indexOf(base) !== -1, 'el color base ' + base + ' se usa de verdad en el estilo');
+});
+// La tipografia del brandbook: Poppins por <link> (la spec fija familia y pesos) y el
+// token --font-family del shell la declara primera, con fallback que no cae a serif.
+ok(/fonts\.googleapis\.com\/css2\?family=Poppins/.test(HTML),
+    'la webfont que se carga es Poppins, la del brandbook');
+ok(/--font-family:\s*'Poppins'/.test(cssPaleta),
+    "--font-family arranca en 'Poppins': el * del design system la propaga a todo");
+
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (23 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
 process.exit(fallas === 0 ? 0 : 1);

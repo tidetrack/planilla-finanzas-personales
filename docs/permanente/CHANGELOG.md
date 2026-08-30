@@ -10,6 +10,22 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## v0.60.0 - Rediseno Corriente (2026-08-29)
+
+El shell deja de imitar la paleta medida de la hoja y pasa al **brandbook** (`BRAND_TIDETRACK.md`):
+`#1E2A33` / `#2ECAB0` / `#F4F7FA` / `#FFB380`, Poppins, y el estilo "liquid glass" del segmento
+personal. Dos direcciones de arte compitieron con mockups renderizados; gano **Corriente** con
+ocho enmiendas de la perdedora.
+
+Lienzo blanco puro fundido con el marco del dialogo de Google (tinte maximo del perimetro:
+5.57%, calculado), la banda navy desaparece, tarjetas de vidrio con sombras color agua,
+semaforo recalibrado AA, boton primario teal con texto `#1E2A33` (blanco sobre teal: 1.9:1,
+prohibido). La regla de paleta quedo como **guard ejecutable**: hex, ternas rgb y keywords se
+validan contra la lista blanca del brandbook; probado en rojo con tres intrusos.
+
 ---
 
 ## v0.59.1 - Las cuatro puertas que faltaban (2026-08-29)
