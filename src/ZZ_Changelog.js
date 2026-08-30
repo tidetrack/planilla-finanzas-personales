@@ -56,14 +56,23 @@
  *   ni siquiera dentro de un comentario HTML. El chequeo 2 de verificar_modales.py la busca
  *   por regex sin entender comentarios, asi que tomo la cabecera entera del archivo como
  *   codigo JavaScript y el modal "no parseaba". Queda anotado en la propia cabecera.
- * ! HALLAZGO COLATERAL sobre el arnes, NO corregido en este release (no toco un verificador
- *   mientras la otra sesion trabaja): la RE_INCLUDE de verificar_modales.py no contempla el
- *   punto y coma de la forma real `<?!= include('X'); ?>`, asi que el include NUNCA se
- *   resuelve y sus chequeos miran el archivo sin el fragmento. Hoy no oculta nada porque
+ * ! HALLAZGO COLATERAL sobre el arnes, reportado a la otra sesion y ARREGLADO POR ELLA en
+ *   fix/abm-desplegable-entidad (no lo toque yo: no se edita un verificador mientras el otro
+ *   trabaja sobre el arnes). La RE_INCLUDE de verificar_modales.py no contemplaba el punto y
+ *   coma de la forma real `<?!= include('X'); ?>`. Era peor de lo que reporte: como LOS TRES
+ *   modales del repo escriben esa forma, la regex no matcheaba NINGUNO -- el include no se
+ *   resolvio nunca, en toda la vida del verificador, y sus cinco chequeos venian mirando cada
+ *   archivo sin su fragmento. Verde sobre medio archivo. Hoy no ocultaba nada porque
  *   UI_SharedStyles es solo CSS, pero el proposito declarado de esa funcion es el caso "una
- *   vista vive en su *_Vista.html y la consumen dos wrappers" -- ahi daria verde sobre medio
- *   archivo. Se descubrio porque el render local, que copiaba la misma regex, mostraba los
- *   modales sin ningun estilo compartido.
+ *   vista vive en su *_Vista.html y la consumen dos wrappers", que es justo la arquitectura
+ *   hacia la que va la unificacion del shell. Se descubrio porque el render local de este
+ *   release copiaba la misma regex y mostraba los modales sin ningun estilo compartido.
+ * ! POR ESO LA VERIFICACION DE ARRIBA SE REHIZO con el verificador ya corregido, antes de
+ *   dar por buena la palabra "verificado": los dos modales de este release pasan en verde con
+ *   la resolucion funcionando. Comprobado que la resolucion los alcanza de verdad y que el
+ *   verde no significa otra cosa -- el texto que se verifica pasa de 63064 a 71387 caracteres
+ *   en Proyecciones y de 35451 a 43774 en Plan de Cuentas (los 8323 de UI_SharedStyles, que
+ *   antes no entraban).
  *
  * [2026-08-29] v0.61.0 - El guardado deja de pisar lo ajeno y el ABM reconoce los cinco
  * origenes.
