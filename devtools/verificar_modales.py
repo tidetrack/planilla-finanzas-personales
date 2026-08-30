@@ -55,7 +55,15 @@ SRC = os.path.join(RAIZ, 'src')
 RE_ID_DOM = re.compile(r'\bid\s*=\s*["\']([^"\']+)["\']')
 RE_SCRIPT = re.compile(r'<script[^>]*>(.*?)</script>', re.S)
 RE_GET_BY_ID = re.compile(r'getElementById\(\s*["\']([^"\']+)["\']\s*\)')
-RE_INCLUDE = re.compile(r'<\?!?=?\s*include\(\s*[\'"]([^\'"]+)[\'"]\s*\)\s*\?>')
+# El `;` es OPCIONAL pero en la practica SIEMPRE esta: los tres modales del repo escriben
+# `<?!= include('UI_SharedStyles'); ?>`. Sin `;?` esta regex no matcheaba NINGUNO, asi que el
+# include no se resolvia nunca y los cinco chequeos miraban el archivo SIN el fragmento --
+# verde sobre medio archivo. Lo encontro la sesion del restyle el 2026-08-29 al copiar esta
+# misma regex para su render local y ver los modales sin estilos.
+# decision Franco 2026-08-29: importa mas de lo que parece hoy (UI_SharedStyles es solo CSS)
+# porque el proposito declarado de la resolucion es el caso "una vista vive en su propio
+# archivo y la consumen dos wrappers", que es justo hacia donde va la unificacion del shell.
+RE_INCLUDE = re.compile(r'<\?!?=?\s*include\(\s*[\'"]([^\'"]+)[\'"]\s*\)\s*;?\s*\?>')
 RE_SCRIPTLET = re.compile(r'<\?[^>]*\?>')
 RE_INICIO_RUN = re.compile(r'google\.script\.run\b')
 # onclick="foo()" / onchange="foo(1,2)" -- se captura el nombre, no los argumentos.
