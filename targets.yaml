@@ -33,7 +33,7 @@ targets:
     # corrida de sync_targets.command corrige la planilla y recien ahi este campo sube.
     # El fix real de esta cicatriz es devtools/verificar_remoto.py exigiendo ancestria, no solo
     # "commit conocido" (ver c1f5931, incorporado en este mismo merge).
-    version_desplegada: "0.63.2"
+    version_desplegada: "0.65.0"
     # decision Franco 2026-08-30: se agrega el COMMIT y no solo el numero, porque el numero
     # solo puede mentir sin que nada lo delate. Paso el 2026-08-30: v0.63.1 se desplego, y
     # DESPUES entraron al repo un merge y un fix -- el repo dejo de ser el 0.63.1 desplegado
@@ -41,4 +41,4 @@ targets:
     # blob, dio "local adelante"), pero cualquiera que comparara 0.63.1 contra 0.63.1 habria
     # leido "sin drift" y se habria equivocado. Lo encontro la sesion paralela auditando el
     # merge. El commit es exacto: no admite dos codigos con el mismo rotulo.
-    commit_desplegado: "7d92b53"
+    commit_desplegado: "265a03d"
