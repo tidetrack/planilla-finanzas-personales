@@ -14,6 +14,47 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.62.0 - Los dos ABM hablan la lengua del shell (2026-08-29)
+
+> **Sin desplegar a proposito.** Hay una decision pendiente de Franco: (a) desplegar este
+> restyle ahora y que la integracion de los ABM al shell lo absorba y descarte mas tarde, o
+> (b) dejarlo en la rama como respaldo y esperar a esa integracion. Hasta que la resuelva,
+> `targets.yaml` no se toca. El acta de coordinacion entre las dos sesiones que trabajan el
+> repo esta en `ZZ_Changelog.js`.
+
+Pedido de Franco, textual: *"El plan de cuentas ABM no esta con el diseno"*. Los dos modales
+que viven fuera del shell — **Plan de Cuentas** y **Proyecciones Elaboradas** — seguian en el
+design system anterior (Google Sans, lienzo `#eff2f9`, azul `#34475d`, avisos con hex de
+Tailwind) mientras el shell paso a la direccion **Corriente** en v0.60.0. Abrir uno y abrir el
+otro se sentia como cambiar de producto. Ahora comparten la paleta del brandbook, Poppins,
+lienzo blanco con agua ambiente y tarjetas de vidrio.
+
+**El defecto de fondo era la jerarquia, no la paleta.** Proyecciones declaraba seis tamanos
+(11/12/12.5/13/14/20) y Plan de Cuentas cuatro (12/13/14/22), con ratios de ~1.04 a 1.08 entre
+vecinos: seis tamanos que se ven iguales no son una jerarquia. Los dos pasan a la misma escala
+de cuatro pasos con ratio real — **11 → 14 → 18 → 23** (×1.27 / ×1.29 / ×1.28) — y el mes de
+cada tarjeta, que es lo que identifica un periodo, sube de 14 a 18 mientras su eco baja a 11.
+
+Medido y no declarado: se renderizaron los dos modales fuera de Apps Script contra un doble del
+servidor y se enumeraron los `font-size` computados de todo lo visible, con el detalle abierto,
+un monto en edicion y la confirmacion de baja desplegada. Resultado: exactamente
+`{11, 14, 18, 23}` en ambos, ratio minimo **1.273**.
+
+Los controles no tienen metrica aparte — salen de la misma escala, porque un boton a 13px al
+lado de una celda a 14px reintroduce la planitud que se esta corrigiendo. En Plan de Cuentas
+los tres controles de una fila miden ahora **40px identicos**: eran 43/47/56, la cicatriz
+v0.49.0 que se habia arreglado en el shell y nunca aca.
+
+Ademas: se retiran los ultimos estilos en linea con color o tamano propio (la modificacion de
+una cuenta pasa a leerse como advertencia y la baja como destructiva), y los dos modales suman
+`meta charset` explicito — HtmlService lo manda por header, pero sin la linea cualquier prueba
+local adivina windows-1252 y rompe los acentos.
+
+**Cero cambios de comportamiento**: ninguna funcion, endpoint, id ni handler. Los dos unicos
+toques al JS fueron literales de estilo que se mudaron a una clase.
+
+---
+
 ## v0.61.0 - El guardado deja de pisar lo ajeno (2026-08-29)
 
 Cierra el hallazgo **grave** diferido de v0.59.0, con autorizacion de Franco para tocar los

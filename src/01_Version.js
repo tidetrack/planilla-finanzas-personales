@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 61,
+ minor: 62,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-29',
- releaseName: 'v0.61.0 - El guardado deja de pisar lo ajeno y el ABM reconoce los cinco origenes',
+ releaseName: 'v0.62.0 - Los dos ABM hablan la lengua del shell, y su jerarquia se ve',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,15 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.62.0 (2026-08-29) - Los dos ABM hablan la lengua del shell, y su jerarquia se ve
++ Pedido de Franco, textual: "El plan de cuentas ABM no esta con el diseno". Los dos modales que quedan fuera del shell -- Plan de Cuentas y Proyecciones Elaboradas -- seguian en el design system anterior (Google Sans, lienzo #eff2f9, azul #34475d, avisos con hex de Tailwind) mientras el shell paso a "Corriente" en v0.60.0: abrir uno y abrir el otro se sentia como cambiar de producto. Ahora comparten paleta del brandbook, Poppins, lienzo blanco con agua ambiente y tarjetas de vidrio.
++ LA JERARQUIA, que era el defecto de fondo: Proyecciones tenia 11/12/12.5/13/14/20 y Plan de Cuentas 12/13/14/22 -- pasos con ratio ~1.04-1.08, o sea tamanos que el ojo no separa. Los dos pasan a la MISMA escala de cuatro pasos con ratio real: 11 -> 14 -> 18 -> 23 (x1.27 / x1.29 / x1.28). Medido sobre el render, no declarado: los dos modales usan EXACTAMENTE esos cuatro tamanos y ninguno mas. Enteros a proposito (cicatriz v0.49.0: Chrome redondea los fraccionarios distinto segun donde caiga la caja).
++ Los controles salen de la misma escala, sin metrica aparte: un boton a 13px al lado de una celda a 14px reintroduce la planitud que este cambio corrige. En Plan de Cuentas los tres controles de una fila (input, select, boton) miden ahora 40px identicos -- eran 43/47/56, la cicatriz v0.49.0 que se habia arreglado solo en el shell.
++ Se retiran los ultimos estilos en linea con color o tamano propio: los tres avisos de Plan de Cuentas llevaban hex de Tailwind (#FEE2E2/#DC2626/#FEF3C7...) que no pertenecen a la paleta y ahora salen del semaforo de funcion; el "(Opcional)" y la nota al pie del detalle pasan a clases. La modificacion de una cuenta pasa a leerse como ADVERTENCIA (ambar) y la baja como accion destructiva (rojo).
++ meta charset explicito en los dos modales, portado del shell: HtmlService lo manda por header, pero sin la linea cualquier prueba local adivina windows-1252 y rompe los acentos y el separador de cada tarjeta. Se descubrio en el render local de este mismo release.
+! CERO cambios de comportamiento: ninguna funcion, ningun endpoint, ningun id, ningun handler. Verificado con verificar_modales.py (los 4 modales), probar_doctype_modales.js, probar_proyeccion_abm.js (banco completo) y una corrida del flujo entero de los dos modales contra un doble del servidor.
+! El DOCTYPE de la linea 1 y su comentario-decision (cicatriz v0.57.1) quedan intactos, y la cabecera aprendio algo nuevo: no se nombra la etiqueta de script en prosa ni dentro de un comentario HTML -- el chequeo 2 de verificar_modales.py la busca por regex sin entender comentarios, y toma la cabecera entera como codigo. Costo una corrida en rojo.
+
 v0.61.0 (2026-08-29) - El guardado deja de pisar lo ajeno y el ABM reconoce los cinco origenes
 ! Cierra el hallazgo GRAVE diferido de v0.59.0, con autorizacion de Franco para tocar los modulos de la otra linea: re-correr Guardar Proyeccion desde la hoja Presupuesto ya NO retira las proyecciones cargadas por el menu ni el volcado de recurrentes. El retiro selectivo usa el MISMO criterio en los cuatro sitios (plan, chequeo post-retiro, verificacion y reversion), y estado/confirm/detalle anuncian exactamente lo que se toca y lo que convive.
 + El ABM de Proyecciones Elaboradas lista CINCO origenes como grupos propios (guardado a mano / manual del shell / recurrentes / presupuesto base / otros), cada uno con su total, su baja selectiva y su rotulo temporal por corrida. Con esto aparece el camino de UI que faltaba: quitar un volcado de recurrentes de un mes. La nota libre del usuario salio del sello y se muestra aparte. Payload acotado a lo que la pantalla pinta.
