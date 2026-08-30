@@ -177,14 +177,21 @@ clasp_pull_en() {
 # drift por prudencia — un pull fallido jamas se reporta como "sin drift").
 DRIFT_STATUS=()
 
-# --- Gate de sintaxis: ningun deploy sale con un archivo que no parsea ---
+# --- Gate previo: sintaxis, emojis, coherencia de version e invariante de despliegue ---
 # Apps Script parsea el proyecto ENTERO en cada ejecucion: un solo archivo roto deja la
 # planilla sin menu, sin triggers y sin custom functions. Ya paso dos veces, y la segunda se
 # commiteo y pusheo sin que nada avisara. Va ANTES del drift-check: no tiene sentido preguntar
 # si el remoto cambio cuando lo que se va a subir no arranca.
+#
+# decision Franco 2026-08-30: el mensaje de cancelacion ya NO afirma "hay archivos que no
+# parsean". El verificador crecio a cinco chequeos y cuatro de ellos no son de sintaxis, asi
+# que ese texto MENTIA: probado en vivo, un fallo del invariante de despliegue (los 45 archivos
+# parsean perfecto) cancelaba diciendo que no parseaban. Un mensaje de error que nombra la
+# causa equivocada manda a buscar donde no es. El detalle real ya lo imprime el verificador
+# arriba; aca solo se dice que fue el gate.
 if ! python3 "$REPO_DIR/devtools/verificar_sintaxis.py"; then
     echo "----------------------------------------------"
-    echo "Despliegue cancelado: hay archivos que no parsean."
+    echo "Despliegue cancelado por el gate previo (ver el detalle arriba)."
     exit 5
 fi
 echo "----------------------------------------------"
