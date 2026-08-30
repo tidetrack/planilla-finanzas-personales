@@ -15,6 +15,31 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.63.2 - Modelo de tarjetas de credito: documentacion, cero codigo (2026-08-30)
+
+Sin bump: no hay cambio de codigo, asi que no hay release nuevo (el numero se repite a
+proposito, mismo patron que ya uso el repo para v0.62.0 y v0.53.0 en corridas distintas del
+mismo tramo). Franco aprobo hoy el modelo de tarjetas de credito; el analisis determino que
+el sistema **ya lo soporta** con piezas existentes.
+
+**El modelo**: una tarjeta de credito es un medio de pago tipo `Financiacion`, con saldo
+**negativo** (deuda). `TIPOS_RIQUEZA` ya la excluye de patrimonio por lista blanca (decision
+Franco 2026-08-19) — la funcionalidad nunca se uso, no faltaba construirla.
+
+Se resuelve con la **misma partida doble** de los traspasos: el consumo es una fila Egreso
+(Debe el gasto, Haber la tarjeta) y el pago del resumen es un Traspaso de dos filas (Debe la
+tarjeta, Haber la caja real). Consumo y pago viven en lados distintos del libro, por eso no
+hay doble conteo. La diferencia de cambio del pago (impuesto PAIS, percepciones, IVA, IIBB)
+no es parte del traspaso: se carga aparte como Egreso a una cuenta `GastosBancarios`. Una
+tarjeta multimoneda se da de alta como dos medios, uno por moneda ("Tarjeta X ARS" / "Tarjeta
+X USD"), porque el traspaso ya sabe cruzar monedas y congelar cotizaciones. Sin migracion del
+historico de "Pago tarjeta".
+
+Detalle completo, tabla Debe/Haber de los cuatro movimientos y las alternativas descartadas:
+ADR-007 en `GUIA_ARQUITECTURA.md` y seccion 08 de `FUNCIONALIDADES.md`.
+
+---
+
 ## v0.63.2 - El repo deja de llamarse igual que lo desplegado (2026-08-30)
 
 Cicatriz nueva, de la familia de la v0.55.1 pero por el otro lado: **aquella tenia cuatro

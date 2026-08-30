@@ -193,6 +193,7 @@ El resolver de alias de `00_Config.js` sigue vigente: `SHEETS.TIPOS_CAMBIO` acep
 - **ADR-004**: Data Lake de cotizaciones con carga batch via procesarCargas(). No hay consulta en vivo celda a celda.
 - **ADR-005**: Offset estructural. SUPERADO por el rediseno Fix (2026-08-18): el layout actual arranca en B/C con titulos internos por hoja. Queda documentado como historia; la geometria vigente es la de la seccion 4.
 - **ADR-006**: Hidden Engines (CALCU/ANUAL). SUPERADO: esas hojas ya no existen; las vistas agregan directo sobre Registros.
+- **ADR-007**: Tarjeta de credito como medio de pago tipo Financiacion, resuelta con la partida doble de los traspasos (consumo = Egreso, pago de resumen = Traspaso). Saldo negativo, ya excluido de TIPOS_RIQUEZA. Sin migracion del historico.
 
 ## Convenciones de Codigo
 

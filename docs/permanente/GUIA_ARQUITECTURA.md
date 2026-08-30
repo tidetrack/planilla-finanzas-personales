@@ -192,6 +192,85 @@ Implementación:
 
 ---
 
+### ADR-007: Tarjeta de Credito como Medio de Pago tipo Financiacion (Partida Doble)
+
+**Fecha**: 2026-08-30
+
+#### Contexto
+El producto no tenia un modelo declarado para tarjetas de credito. El catalogo Plan de
+Cuentas ya distingue `TIPOS_MEDIO` (donde esta la plata: Hogar, Ahorros, Inversiones,
+Financiacion) de `TIPOS_RIQUEZA` (que compone patrimonio: solo Ahorros e Inversiones,
+decision Franco 2026-08-19 por lista blanca), y esa lista blanca ya excluye Financiacion a
+proposito -- pero la funcionalidad de dar de alta una tarjeta como medio nunca se ejercito.
+`FUNCIONALIDADES.md` (seccion "Pendientes del formulerio", item 1) dejo constancia de que las
+formulas LEGACY de Inicio/Tablero siguen sin aplicar esa lista blanca: un frente de arreglo
+tecnico distinto y anterior a esta decision, que esta no resuelve.
+
+Franco necesitaba una forma de registrar consumos y pagos de tarjeta sin duplicar el gasto
+(contarlo al consumir Y de nuevo al pagar el resumen) y sin que la deuda de la tarjeta
+contaminara el calculo de patrimonio.
+
+#### Decisión
+**Una tarjeta de credito se modela como un MEDIO DE PAGO de tipo `Financiacion`, con saldo
+negativo (deuda), resuelta con la misma partida doble que ya usan los traspasos.**
+
+Implementacion (ninguna pieza es codigo nuevo; el sistema ya la soportaba):
+- **Consumo con tarjeta**: una fila Egreso en Registros, Cuenta = el gasto real, Medio = la
+  tarjeta. Debe: el gasto. Haber: la tarjeta (la deuda sube).
+- **Pago del resumen**: un Traspaso (dos filas, la que sale y la que entra). Debe: la tarjeta
+  (la deuda baja). Haber: la caja real. Consumo y pago quedan en LADOS DISTINTOS del libro --
+  por eso no hay doble conteo: el gasto se cuenta cuando se consume, no cuando se paga.
+- **Diferencia de cambio del pago** (impuesto PAIS, percepciones, IVA, IIBB): NO es parte del
+  traspaso. El traspaso mueve la plata al tipo de cambio del dia; el sobrecosto que cobra el
+  banco es un GASTO propio y se carga aparte, como Egreso a una cuenta `GastosBancarios`
+  (Gastos Variables, porque el monto escala con el consumo en dolares del mes, no es un
+  compromiso fijo conocido de antemano).
+- **Multimoneda**: una tarjeta con saldo en ARS y en USD se da de alta como DOS medios
+  ("Tarjeta X ARS" / "Tarjeta X USD"), uno por moneda -- `RANGES.MEDIOS_PAGO` asume un medio
+  = una moneda (ADR-002), y el emisor entrega dos saldos separados de por si. El traspaso ya
+  sabe cruzar monedas: `_prepararTraspaso` (`16_ShellService.js`, ~linea 727) pide el monto de
+  ambos lados cuando las monedas difieren y congela las cuatro cotizaciones del dia.
+- **Recurrentes en tarjeta**: se declaran una vez en la hoja Recurrentes con `medio` = la
+  tarjeta (`RANGES.RECURRENTES` ya tiene ese campo, columna F); no se marca nada cada mes, y
+  el pago del resumen sigue siendo un traspaso aparte, sin duplicar el gasto.
+- **Alta de catalogo**: a mano, en el Plan de Cuentas (no hay ABM que la automatice todavia)
+  -- los medios "Tarjeta \<nombre\> ARS/USD" tipo Financiacion y la cuenta "GastosBancarios".
+- **Sin migracion**: el historico de "Pago tarjeta" queda como esta; reescribirlo
+  descuadraria conciliaciones ya verificadas al centavo. El modelo aplica hacia adelante.
+
+#### Alternativas descartadas
+- **La tarjeta como CUENTA de gasto fijo** (en vez de medio). Se descarto porque rompe el
+  saldo de las cajas reales: cada consumo llevaria como Medio la caja que en teoria paga
+  (efectivo, banco), descontando esa caja en el momento del consumo en vez de en el pago del
+  resumen. Confunde "cuando se gasta" con "cuando se paga", que es exactamente lo que la
+  partida doble esta para separar.
+- **Un medio multimoneda unico** (una sola "Tarjeta X" con saldo en dos monedas a la vez). Se
+  descarto porque exige cambiar el modelo entero de medios (`RANGES.MEDIOS_PAGO` asume un
+  medio = una moneda, ADR-002) y rompería el motor de conciliacion ya validado al centavo
+  contra el ledger real.
+
+#### Consecuencias
+**Positivas:**
+- Cero codigo nuevo: el modelo se apoya en `TIPOS_MEDIO`/`TIPOS_RIQUEZA` (`00_Config.js`), la
+  partida doble de traspasos (`16_ShellService.js`) y el campo `medio` de Recurrentes -- todo
+  ya construido y probado para otro caso de uso.
+- La deuda de tarjeta nunca cuenta como patrimonio (`TIPOS_RIQUEZA` la excluye por lista
+  blanca).
+- El gasto se cuenta una sola vez, en el momento del consumo, sin importar cuando se paga el
+  resumen.
+
+**Negativas:**
+- Requiere disciplina manual: Franco da de alta los medios y la cuenta GastosBancarios a
+  mano, sin validacion de que efectivamente sean tipo Financiacion.
+- Una tarjeta multimoneda ocupa dos filas de medio en el Plan de Cuentas en vez de una; quien
+  lea el catalogo sin este ADR puede no entender por que existen "Tarjeta X ARS" y
+  "Tarjeta X USD" por separado.
+- El historico de "Pago tarjeta" queda inconsistente con el modelo nuevo (sin migracion): un
+  analisis que mezcle ambos periodos sin saberlo puede sacar conclusiones erroneas sobre el
+  comportamiento de gasto con tarjeta.
+
+---
+
 ## ️ Arquitectura del Sistema
 
 ### Stack Tecnológico
