@@ -4,6 +4,22 @@
  * (Añadir nuevos registros arriba)
  *
  * [2026-08-30] v0.63.2 - El repo deja de llamarse igual que lo desplegado.
+ * - AMPLIACION del mismo dia: el arreglo original agregaba el DATO (commit_desplegado) pero
+ *   no el GUARD, y un dato que ningun banco verifica se desactualiza igual que el numero --
+ *   la misma falla un nivel mas arriba. Lo senalo la sesion paralela. verificar_sintaxis.py
+ *   suma su QUINTA verificacion, con el invariante:
+ *       si version_desplegada == la version del repo => el src/ desplegado == el src/ actual
+ *   leido por el contrapositivo: si el codigo cambio desde el deploy, el numero TIENE que
+ *   haber cambiado tambien.
+ * - La formulacion que parece obvia NO sirve y quedo documentada en el codigo: "commit_desplegado
+ *   == HEAD" da FALSO ROJO en el estado correcto, porque el propio commit que registra el
+ *   deploy en targets.yaml mueve HEAD sin tocar una linea de codigo desplegable. Se compara el
+ *   ARBOL de src/, no la identidad del commit, asi los commits de docs, bancos o targets.yaml
+ *   no molestan.
+ * - Y el chequeo declara si PUDO correr: con un targets.yaml del formato viejo (sin
+ *   commit_desplegado) avisa y el mensaje final deja de afirmar lo que no verifico, en vez de
+ *   pasar por verde. Probado en las tres direcciones: verde real, rojo en el escenario exacto
+ *   de ayer nombrando los cinco archivos que difieren, y aviso honesto sin el campo.
  * - Cicatriz nueva, de la familia de la v0.55.1 pero por el otro lado: aquella tenia CUATRO
  *   numeros distintos en un solo arbol; esta tiene DOS ARBOLES distintos con el mismo numero.
  *   Se desplego v0.63.1 y despues entraron al repo un merge y un fix, asi que el repo dejo

@@ -140,6 +140,93 @@ def verificar_version():
     return fallas
 
 
+def verificar_despliegue():
+    """Incoherencias entre lo que el repo DICE que hay desplegado y lo que su codigo ES.
+
+    [POR QUE EXISTE]
+    Agregado el 2026-08-30. Las otras verificaciones comparan las cuatro fuentes de la version
+    ENTRE SI, y por eso no pudieron ver la cicatriz del dia anterior: se desployo v0.63.1, y
+    despues entraron al repo un merge y un fix. Las cuatro fuentes seguian de acuerdo -- todas
+    decian "0.63.1" -- pero el repo ya no era el 0.63.1 de la planilla. DOS ARBOLES DISTINTOS
+    CON EL MISMO NUMERO. Ninguna de esas cuatro mira produccion, asi que ninguna podia verlo.
+
+    EL INVARIANTE:
+        si version_desplegada == la version del repo  =>  el src/ desplegado == el src/ actual
+    Leido por el contrapositivo, que es como se usa: si el codigo cambio desde el deploy, el
+    numero TIENE que haber cambiado tambien.
+
+    LA FORMULACION POR HEAD NO SIRVE, y conviene dejarlo dicho porque es la primera que se le
+    ocurre a cualquiera (fue la propuesta original de la sesion paralela, que encontro el
+    defecto): "commit_desplegado == HEAD" da FALSO ROJO en el estado correcto, porque el
+    propio commit que registra el deploy en targets.yaml ya mueve HEAD sin tocar una sola
+    linea de codigo desplegable. Lo que hay que comparar es el ARBOL de src/, no la identidad
+    del commit: asi los commits de docs, de bancos o del propio targets.yaml no molestan.
+    """
+    ruta = os.path.join(RAIZ, 'targets.yaml')
+    if not os.path.exists(ruta):
+        return [], False
+    t = open(ruta, encoding='utf-8').read()
+
+    mv = re.search(r'^\s*version_desplegada:\s*"([0-9.]+)"', t, re.M)
+    mc = re.search(r'^\s*commit_desplegado:\s*"([0-9a-f]{7,40})"', t, re.M)
+    if not mv:
+        return [], False
+    if not mc:
+        # targets.yaml sin commit_desplegado: es el formato viejo, no se puede verificar.
+        # No se falla -- se avisa, porque un chequeo que no puede correr tiene que decirlo en
+        # vez de pasar por verde.
+        print('  AVISO: targets.yaml no declara commit_desplegado; el invariante de despliegue')
+        print('         no se puede verificar. Agregalo en el proximo deploy.')
+        return [], False
+
+    version_repo = _version_del_repo()
+    if version_repo is None:
+        return [], False
+    if mv.group(1) != version_repo:
+        # Los numeros difieren: el repo ya declara que no es lo desplegado. El invariante se
+        # cumple por su antecedente, y eso SI es una verificacion que corrio.
+        return [], True
+
+    r = subprocess.run(['git', 'diff', '--name-only', mc.group(1), '--', 'src/'],
+                       cwd=RAIZ, capture_output=True, text=True)
+    if r.returncode != 0:
+        return (['no se pudo comparar contra el commit %s declarado en targets.yaml (%s)'
+                 % (mc.group(1), r.stderr.strip().splitlines()[0] if r.stderr.strip() else '?')],
+                False)
+
+    difieren = [l for l in r.stdout.split('\n') if l.strip()]
+    if not difieren:
+        return [], True
+    fallas = ['targets.yaml declara v%s desplegada en %s, y el repo tambien dice v%s -- pero '
+              'su src/ YA NO es ese: difieren %d archivo(s).'
+              % (mv.group(1), mc.group(1), version_repo, len(difieren))]
+    for f in difieren[:8]:
+        fallas.append('    %s' % f)
+    if len(difieren) > 8:
+        fallas.append('    ... y %d mas' % (len(difieren) - 8))
+    fallas.append('Dos codigos distintos con el mismo numero. O subis la version del repo, o '
+                  'deployas y actualizas targets.yaml.')
+    return fallas, True
+
+
+def _version_del_repo():
+    """major.minor.patch de src/01_Version.js, o None si no se puede leer."""
+    ruta = os.path.join(SRC, '01_Version.js')
+    if not os.path.exists(ruta):
+        return None
+    s = open(ruta, encoding='utf-8').read()
+    ini = s.find('const VERSION = {')
+    if ini < 0:
+        return None
+    partes = []
+    for k in ('major', 'minor', 'patch'):
+        m = re.search(r'^\s*%s:\s*(\d+)\s*,\s*$' % k, s[ini:s.find('changelog:', ini)], re.M)
+        if not m:
+            return None
+        partes.append(m.group(1))
+    return '.'.join(partes)
+
+
 def main(argv):
     objetivos = argv[1:] or sorted(glob.glob(os.path.join(SRC, '*.js')))
     if not objetivos:
@@ -191,7 +278,8 @@ def main(argv):
         print('Los %d archivos indicados parsean, y sin emojis.' % len(objetivos))
         return 0
 
-    incoherencias = verificar_version()
+    fallas_despliegue, despliegue_verificado = verificar_despliegue()
+    incoherencias = verificar_version() + fallas_despliegue
     if incoherencias:
         print('Los %d archivos de src/ parsean, PERO la version es incoherente.' % len(objetivos))
         print('')
@@ -203,8 +291,10 @@ def main(argv):
         print('que evita que dos sesiones se pisen queda mintiendo.')
         return 1
 
-    print('Los %d archivos de src/ parsean, sin emojis, y la version es coherente en las '
-          'cuatro fuentes.' % len(objetivos))
+    cierre = (', y el repo no se llama igual que lo desplegado.' if despliegue_verificado
+              else '. El invariante de despliegue NO se pudo verificar (ver aviso).')
+    print('Los %d archivos de src/ parsean, sin emojis, la version es coherente en las cuatro '
+          'fuentes%s' % (len(objetivos), cierre))
     return 0
 
 
