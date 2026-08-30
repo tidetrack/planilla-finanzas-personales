@@ -91,7 +91,12 @@ function handlePlanCuentasEdit(e) {
                         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
                         <style>
                             body { font-family: 'Poppins', 'DM Sans', 'Segoe UI', sans-serif; background: #FFFFFF; padding: 22px; color: #1E2A33; margin: 0; }
-                            .aviso { background: #FCEAE7; border-left: 3px solid #B23B32; border-radius: 12px; padding: 16px 18px; }
+                            /* Filo COMPLETO de 1px al 15%, no una barra lateral gruesa: es
+                               el tratamiento que .alert-error usa en el shell
+                               (UI_Shell.html:854-857) y este dialogo tiene que leerse como
+                               parte del mismo sistema. El border-left de acento era ademas
+                               el unico del proyecto. */
+                            .aviso { background: #FCEAE7; box-shadow: inset 0 0 0 1px rgba(178,59,50,.15); border-radius: 14px; padding: 16px 18px; }
                             h2 { color: #B23B32; margin: 0 0 10px; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
                             p { font-size: 13px; line-height: 1.55; color: #44576A; margin: 0 0 10px; }
                             .tecla { background: #FFFFFF; border: 1px solid #B23B32; padding: 1px 7px; border-radius: 6px; font-weight: 600; color: #B23B32; }
