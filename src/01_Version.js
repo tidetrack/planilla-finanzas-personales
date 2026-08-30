@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 63,
- patch: 1,
+ patch: 2,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-29',
- releaseName: 'v0.63.1 - Los remanentes de afuera del shell hablan Corriente',
+ releaseName: 'v0.63.2 - El repo deja de llamarse igual que lo desplegado',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,12 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.63.2 (2026-08-30) - El repo deja de llamarse igual que lo desplegado
+- Despues de desplegar v0.63.1 entraron al repo el merge de la rama paralela (los dos ABM restilados, huerfanos) y el fix del filo de la alerta de proteccion. O sea que el repo dejo de ser el 0.63.1 que corre en la planilla, pero AMBOS seguian declarando "0.63.1": dos codigos distintos con el mismo rotulo, y ningun guard podia delatarlo porque el guard de coherencia compara las cuatro fuentes ENTRE SI, no contra produccion.
+- El drift-check si lo vio -- compara hashes de blob y dio "local adelante" -- pero quien mirara solo los numeros habria leido "sin drift" y se habria equivocado. Lo encontro la sesion paralela auditando el merge.
+* targets.yaml suma commit_desplegado ademas de version_desplegada: el commit es exacto y no admite dos codigos con el mismo rotulo. El numero queda como rotulo legible; el commit, como la verdad.
+- Fix del filo: la alerta de proteccion del Plan tenia una barra lateral de acento de 3px, el unico border-left de acento del proyecto y un tratamiento que el shell no usa; pasa al filo completo de 1px al 15% de .alert-error.
+
 v0.63.1 (2026-08-29) - Los remanentes de afuera del shell hablan Corriente
 CORRECCIONES DEL 2026-08-30, ANTES DE DEPLOYAR (misma version arreglada, no consumen numero propio):
 - El aviso de error de la vista 'proyecciones' no se limpiaba NUNCA: tras un error, una operacion exitosa dejaba el banner rojo viejo arriba y el verde de deshacer abajo, a la vez. Se cubre en pabmCargarListado(), el embudo de las tres mutaciones. La misma familia en 'cuentas': cuCambioEntidad y cuSegModo tambien limpian.

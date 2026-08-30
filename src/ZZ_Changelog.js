@@ -3,6 +3,24 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-30] v0.63.2 - El repo deja de llamarse igual que lo desplegado.
+ * - Cicatriz nueva, de la familia de la v0.55.1 pero por el otro lado: aquella tenia CUATRO
+ *   numeros distintos en un solo arbol; esta tiene DOS ARBOLES distintos con el mismo numero.
+ *   Se desplego v0.63.1 y despues entraron al repo un merge y un fix, asi que el repo dejo
+ *   de ser el 0.63.1 de la planilla -- y los dos seguian diciendo "0.63.1".
+ * - Por que ningun guard lo agarraba: el de coherencia de version compara las cuatro fuentes
+ *   ENTRE SI (bloque VERSION, releaseName, changelog embebido, ZZ_Changelog), y las cuatro
+ *   estaban de acuerdo. Ninguna mira produccion. El drift-check SI lo vio, porque compara
+ *   hashes de blob y no rotulos, y dio "local adelante" -- pero un humano comparando 0.63.1
+ *   contra 0.63.1 habria concluido "sin drift". Lo encontro la sesion paralela auditando el
+ *   merge, no un banco.
+ * - targets.yaml suma commit_desplegado. El numero de version es un rotulo para leer; el
+ *   commit es la identidad. Dos codigos pueden compartir rotulo, no pueden compartir commit.
+ * - Ademas: la alerta de proteccion del Plan usaba un border-left de acento de 3px -- el
+ *   unico del proyecto y un tratamiento que el shell no usa en ningun lado. Pasa al filo
+ *   completo de 1px al 15% que usa .alert-error (UI_Shell.html:854-857): el dialogo tiene
+ *   que leerse como parte del mismo sistema.
+ *
  * [2026-08-29] v0.63.1 - Los remanentes de afuera del shell hablan Corriente.
  *
  * >>> CORRECCIONES DEL 2026-08-30, ANTES DE DEPLOYAR (no consumen numero propio: el

@@ -12,6 +12,24 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## v0.63.2 - El repo deja de llamarse igual que lo desplegado (2026-08-30)
+
+Cicatriz nueva, de la familia de la v0.55.1 pero por el otro lado: **aquella tenia cuatro
+numeros distintos en un solo arbol; esta tiene dos arboles distintos con el mismo numero.**
+Se desplego v0.63.1 y despues entraron al repo un merge y un fix — el repo dejo de ser el
+0.63.1 de la planilla, y los dos seguian diciendo "0.63.1".
+
+Ningun guard podia agarrarlo: el de coherencia compara las cuatro fuentes **entre si**, y las
+cuatro estaban de acuerdo. Ninguna mira produccion. El drift-check si lo vio (compara hashes
+de blob, no rotulos) pero quien mirara solo los numeros habria leido "sin drift". Lo encontro
+la sesion paralela auditando el merge, no un banco.
+
+`targets.yaml` suma **`commit_desplegado`**: el numero es un rotulo para leer, el commit es la
+identidad. Dos codigos pueden compartir rotulo; no pueden compartir commit.
+
 ---
 
 ## v0.63.1 - Los remanentes de afuera del shell hablan Corriente (2026-08-29)
