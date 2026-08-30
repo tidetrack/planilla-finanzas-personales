@@ -40,28 +40,47 @@
  * existe: guardar ese mes desde "Presupuesto", que retira las filas base de ese mes por diseno
  * (decision 4 de DEVTOOL_PresupuestoGuardar.js, "la proyeccion manual gana"). Por eso
  * `actualizarMontoFilaProyeccion` verifica la marca de la fila ANTES de escribir, del lado del
- * servidor -- no confia en que el cliente ya haya filtrado por `editable`.
+ * servidor -- no confia en que el cliente ya haya filtrado por `editable`. Desde 2026-08-29 el
+ * gate es POR ORIGEN (clasificador `_origenNotaPa`): 'guardado' y 'shell' se editan (ambas son
+ * decisiones deliberadas del usuario, ambas llevan PG_MARCA); 'base', 'recurrentes' y 'otros'
+ * se rechazan cada una con su mensaje propio.
  *
  * DECISION 3 -- BAJA: POR PERIODO COMPLETO (clave+origen), CON RESPALDO Y REVERSION.
- * Misma disciplina que `aplicarGuardarProyeccion`/`revertirGuardarProyeccion`. Aplica a los DOS
- * origenes: hoy no existe forma de borrar SOLO un mes del presupuesto base
- * (`quitarPresupuestoBase()`, DEVTOOL_PresupuestoBase.js, borra TODOS los meses de una corrida),
- * asi que este ABM llena ese hueco real. Nunca se borra una fila individual: la unidad minima es
- * "todas las filas de una clave de periodo, para un origen".
+ * Misma disciplina que `aplicarGuardarProyeccion`/`revertirGuardarProyeccion`. Aplica a los
+ * CINCO origenes (desde 2026-08-29): hoy no existe forma de borrar SOLO un mes del presupuesto
+ * base (`quitarPresupuestoBase()`, DEVTOOL_PresupuestoBase.js, borra TODOS los meses de una
+ * corrida), asi que este ABM llena ese hueco real. Nunca se borra una fila individual: la
+ * unidad minima es "todas las filas de una clave de periodo, para un origen". CAMBIO DE
+ * SEMANTICA declarado: la baja de 'guardado' ya no arrastra las filas del shell del mismo mes
+ * (antes las borraba en el mismo acto sin distinguirlas); vaciar un mes entero ahora requiere
+ * una baja por origen.
  *
  * ============================================================================
- * QUE ES UN "PERIODO" Y COMO SE AGRUPA (dos tecnicas distintas, una por origen)
+ * QUE ES UN "PERIODO" Y COMO SE AGRUPA (cinco poblaciones desde 2026-08-29)
  * ============================================================================
- * "Proyeccion" NO tiene una columna de periodo: la clave de periodo se DERIVA distinto segun el
- * origen de la fila, con la MISMA tecnica que ya usan `_filasPorNotaPrefijoPg`/`_filasBasePorMesPg`
- * (DEVTOOL_PresupuestoGuardar.js), reusadas verbatim aca:
- *   - GUARDADO (PG_MARCA): la clave vive LITERAL en la Nota -- "<PG_MARCA> <clave> <sello>". Se
- *     extrae con `indexOf(PG_MARCA+' ')===0` y tomando el primer token despues del prefijo (el
- *     sello, que sigue, tambien tiene guiones y numeros: cortar con una regex ambigua se comeria
- *     parte del sello o de la clave. Se corta por el PROXIMO espacio, no por forma).
- *   - BASE (PB_MARCA): la clave NO esta en la Nota (la Nota es solo "<PB_MARCA> <sello>") -- se
- *     deriva de la columna Fecha, mismo mes/anio, con `_claveMesPg` (reusada verbatim).
- * Una fila SIN ninguna de las dos marcas no entra en ningun grupo: es lo cargado a mano en el
+ * "Proyeccion" NO tiene una columna de periodo: la clave se deriva de la Nota (y de la Fecha
+ * para el base) con el clasificador `_origenNotaPa`, que reconoce el contrato de notas completo
+ * (DEVTOOL_PresupuestoGuardar.js, enmienda a su decision 3) por la FORMA del sello:
+ *   - 'guardado'    (PG_MARCA): "<PG_MARCA> <YYYY-MM> <sello>" con sello /^\d{4}-\d{2}-\d{2}_\d{6}$/
+ *     y NADA despues del sello (aplicarGuardarProyeccion nunca escribe cola; si hay cola, la
+ *     nota fue editada a mano y va a 'otros', no se disfraza de guardado).
+ *   - 'shell'       (PG_MARCA + sello shell): "<PG_MARCA> <YYYY-MM> shell_<...>[ <nota libre>]"
+ *     con sello /^shell_\d{4}-\d{2}-\d{2}_\d{6}(?:\d{3})?$/ (fuente del formato:
+ *     16_ShellService.js, registrarProyecciones: 'shell_' + yyyy-MM-dd_HHmmss + 3 digitos de
+ *     milisegundos DESDE v0.59.0; el shell desplegado en v0.56.0-v0.58.0 escribia el sello SIN
+ *     milisegundos, y esas filas historicas viven en produccion -- por eso los milisegundos
+ *     son OPCIONALES en el regex, ambos vintages clasifican 'shell'). El sello es UN token de
+ *     forma conocida y la nota libre es todo lo que sigue: las filas historicas con la nota
+ *     pegada tras el sello parsean bien.
+ *   - 'recurrentes' (REC_MARCA): "<REC_MARCA> <YYYY-MM> <sello> - <nombre>[: <nota>]"
+ *     (17_RecurrentesService.js). Antes de 2026-08-29 eran INVISIBLES para este ABM.
+ *   - 'base'        (PB_MARCA): "<PB_MARCA> <sello>", clave derivada de la columna Fecha con
+ *     `_claveMesPg` (como siempre).
+ *   - 'otros': cualquier nota CON alguna de las tres marcas pero de forma irreconocible
+ *     (clave invalida, sello irreconocible, PG con cola, PB sin fecha valida). Nunca
+ *     invisible: se lista y se puede borrar por mes; clave = la del token si parseo, si no la
+ *     del mes de la Fecha, si no el literal 'sin-fecha'.
+ * Una fila SIN ninguna de las tres marcas no entra en ningun grupo: es lo cargado a mano en el
  * ledger real, o ruido. Nunca se toca, nunca se cuenta -- fuera del alcance de este ABM.
  *
  * ============================================================================
@@ -88,8 +107,9 @@
  *    `saveAbmRecord`/`updateAbmRecord`/`deleteAbmRecord` en 11_UIService.js, NO el patron
  *    `{ok:false,error}` de los modulos DEVTOOL_Presupuesto*, que es para `ui.alert()` de menu).
  *
- * Reusa de DEVTOOL_PresupuestoGuardar.js: PG_MARCA, _claveMesPg, _mismoMesPg,
- * _filasPorNotaPrefijoPg, _filasBasePorMesPg, _leerRespaldoFilasPg, _escribirAlPieProyeccionPg.
+ * Reusa de DEVTOOL_PresupuestoGuardar.js: PG_MARCA, _claveMesPg,
+ * _leerRespaldoFilasPg, _escribirAlPieProyeccionPg.
+ * Reusa de 17_RecurrentesService.js: REC_MARCA (leida dentro de cuerpos de funcion).
  * Reusa de DEVTOOL_PresupuestoBase.js: PB_MARCA, _preflightPb, _borrarGeneradasPb.
  * Reusa de DEVTOOL_InicioPresupuesto.js: IP_MESES.
  * Reusa de DEVTOOL_FormulerioV0111.js: _nombreHojaLibreFormulerio.
@@ -129,6 +149,18 @@
  * paso 5b de DEVTOOL_DIAG_PermisoProyeccionAbm.js, `JSON.stringify(resultado).length`), el tamanio
  * queda descartado como sospechoso PARA ESTA FUNCION -- haria falta mirar contenido, no tamanio.
  *
+ * FORMA NUEVA DEL PAYLOAD (2026-08-29, cinco poblaciones): la respuesta de
+ * `listarPeriodosProyeccion` dejo de escalar con el numero de filas y es O(grupos) puro. Cada
+ * grupo trae EXACTAMENTE { clave, mesLabel, nFilas, corridas, ultimoSello, totales, otrasFilas }
+ * -- se quitaron filas[] (en el mock de referencia, 370 numeros ~1.5-2KB de los ~5KB medidos),
+ * monedas[], anio, sello y sellos[], que la pantalla no pintaba; se agregan nFilas+corridas (dos
+ * enteros) y ultimoSello (~25-35 bytes). Grupo resultante ~300-350 bytes; el mock de referencia
+ * baja de ~5KB a ~3KB. Peor caso realista (12 meses x 5 origenes = 60 grupos): ~20KB, mismo
+ * orden que lo ya medido como exitoso. El detalle fila a fila sigue viajando en requests
+ * separados por grupo (`detalleFilasPeriodoProyeccion`), como siempre. Tambien se quitaron
+ * vacioGuardado/vacioBase: el cliente usa grupos.<origen>.length (las dos puntas salen juntas
+ * en el mismo deploy).
+ *
  * @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
  * @see DEVTOOL_PresupuestoGuardar.js
  * @see DEVTOOL_PresupuestoBase.js
@@ -136,7 +168,7 @@
  * @see UI_AbmProyeccionElaborada.html (llama pingProyeccionAbm() antes de listarPeriodosProyeccion())
  * @version 0.53.0
  * @since 2026-08-25
- * @lastModified 2026-08-25
+ * @lastModified 2026-08-29
  */
 
 // ============================================
@@ -149,6 +181,10 @@ const PA_PREFIJO_RESPALDO = 'Respaldo proyeccion abm ';
 
 // Literal propio: no lee ningun simbolo de otro archivo, es seguro como const de nivel superior.
 const PA_CATEGORIA_A_CLAVE = { 'Ingreso': 'ingresos', 'Gasto Fijo': 'fijos', 'Gasto Variable': 'variables' };
+
+// Los cinco origenes que este ABM reconoce (literal puro, mismo criterio que arriba). El orden
+// es el de presentacion en el modal: guardado a mano, manual del shell, recurrentes, base, otros.
+const PA_ORIGENES = ['guardado', 'shell', 'recurrentes', 'base', 'otros'];
 
 // decision Franco 2026-08-25: PG_MARCA, PB_MARCA, IP_MESES, RANGES, SHEETS, MONEDAS_DISPONIBLES y
 // cualquier funcion de otro archivo (DEVTOOL_PresupuestoGuardar.js, DEVTOOL_PresupuestoBase.js,
@@ -188,22 +224,85 @@ function _mesLabelPa(anio, mesIndex) {
 }
 
 /**
- * Extrae { clave, sello } de una Nota "<PG_MARCA> <clave> <sello>", o null si la Nota no empieza
- * con el prefijo o la clave no tiene forma 'YYYY-MM'. La clave es el PRIMER token despues del
- * prefijo; el sello es todo lo que sigue despues de ESE espacio -- nunca se corta por una regex
- * sobre la Nota entera, porque el sello tambien tiene guiones y numeros (ver cabecera).
+ * EL CLASIFICADOR DE NOTAS (2026-08-29): clasifica una fila de "Proyeccion" por su origen,
+ * leyendo la Nota (y la Fecha, para el base y los fallbacks). Devuelve null SOLO si la nota no
+ * empieza con ninguna de las tres marcas (PG_MARCA, PB_MARCA, REC_MARCA): esas filas siguen
+ * fuera del alcance de este ABM, exactamente como siempre (decision de la cabecera, no se
+ * reabre). Con marca devuelve { origen, clave, sello, notaLibre }, con origen uno de
+ * PA_ORIGENES. Las reglas y los regex estan documentados en la cabecera ("QUE ES UN PERIODO").
+ *
+ * Las marcas se leen DENTRO del cuerpo (cicatriz v0.50.1: nunca en un const de nivel superior
+ * que lea otro archivo) y los regex viven aca como literales. La clave se corta por el PROXIMO
+ * espacio, nunca por una regex sobre la Nota entera (el sello tambien tiene guiones y numeros).
+ *
+ * decision Franco 2026-08-29: el regex del sello shell acepta 6 digitos tras la fecha (HHmmss)
+ * con 3 mas opcionales (SSS). Los milisegundos existen desde v0.59.0; el shell desplegado en
+ * v0.56.0-v0.58.0 (produccion confirmada por targets) escribia el sello SIN milisegundos, y
+ * esas filas historicas tienen que clasificar 'shell' -- editables y bajo su rotulo -- no
+ * degradar a 'otros'. Si la otra linea de trabajo cambiara el formato a una TERCERA forma,
+ * esas filas nuevas caerian en 'otros' (degradacion visible, no perdida): la fuente del
+ * formato es 16_ShellService.js, registrarProyecciones.
+ * @see 16_ShellService.js (_filaDeProyeccion: fuente del formato shell)
+ * @see DEVTOOL_PresupuestoGuardar.js (contrato de notas, enmienda a su decision 3)
+ * @see 17_RecurrentesService.js (formato del volcado de recurrentes)
  */
-function _partesNotaGuardadoPa(nota) {
-    const prefijo = PG_MARCA + ' ';
+function _origenNotaPa(nota, fecha) {
     const texto = String(nota || '');
-    if (texto.indexOf(prefijo) !== 0) return null;
-    const resto = texto.slice(prefijo.length);
-    const espacio = resto.indexOf(' ');
-    if (espacio === -1) return null;
-    const clave = resto.slice(0, espacio);
-    const sello = resto.slice(espacio + 1);
-    if (!/^\d{4}-\d{2}$/.test(clave)) return null;
-    return { clave: clave, sello: sello };
+    const fechaValida = (fecha instanceof Date) && !isNaN(fecha.getTime());
+    const claveFallback = function (claveTok) {
+        if (claveTok && _fechaDesdeClavePa(claveTok)) return claveTok;
+        if (fechaValida) return _claveMesPg(fecha);
+        return 'sin-fecha';
+    };
+    const partirTokens = function (resto) {
+        const esp1 = resto.indexOf(' ');
+        if (esp1 === -1) return { claveTok: resto, selloTok: '', cola: '' };
+        const resto2 = resto.slice(esp1 + 1);
+        const esp2 = resto2.indexOf(' ');
+        if (esp2 === -1) return { claveTok: resto.slice(0, esp1), selloTok: resto2, cola: '' };
+        return { claveTok: resto.slice(0, esp1), selloTok: resto2.slice(0, esp2), cola: resto2.slice(esp2 + 1) };
+    };
+
+    const prefijoPg = PG_MARCA + ' ';
+    if (texto.indexOf(prefijoPg) === 0) {
+        const resto = texto.slice(prefijoPg.length);
+        const t = partirTokens(resto);
+        if (_fechaDesdeClavePa(t.claveTok)) {
+            if (/^shell_\d{4}-\d{2}-\d{2}_\d{6}(?:\d{3})?$/.test(t.selloTok)) {
+                // Parseo TOLERANTE del formato historico: la nota libre pegada tras el sello
+                // parsea bien porque el sello es UN token de forma conocida.
+                return { origen: 'shell', clave: t.claveTok, sello: t.selloTok, notaLibre: t.cola.trim() };
+            }
+            if (/^\d{4}-\d{2}-\d{2}_\d{6}$/.test(t.selloTok) && t.cola.trim() === '') {
+                return { origen: 'guardado', clave: t.claveTok, sello: t.selloTok, notaLibre: '' };
+            }
+        }
+        return { origen: 'otros', clave: claveFallback(t.claveTok), sello: null, notaLibre: resto };
+    }
+
+    const prefijoRec = REC_MARCA + ' ';
+    if (texto.indexOf(prefijoRec) === 0) {
+        const resto = texto.slice(prefijoRec.length);
+        const t = partirTokens(resto);
+        if (_fechaDesdeClavePa(t.claveTok) && /^\d{4}-\d{2}-\d{2}_\d{6}$/.test(t.selloTok)) {
+            // La cola es '- <nombre>[: <nota>]': se quita SOLO el primer separador.
+            const notaLibre = t.cola.indexOf('- ') === 0 ? t.cola.slice(2) : t.cola.trim();
+            return { origen: 'recurrentes', clave: t.claveTok, sello: t.selloTok, notaLibre: notaLibre };
+        }
+        return { origen: 'otros', clave: claveFallback(t.claveTok), sello: null, notaLibre: resto };
+    }
+
+    if (texto.indexOf(PB_MARCA) === 0) {
+        const sello = texto.slice(PB_MARCA.length).trim();
+        if (fechaValida) {
+            return { origen: 'base', clave: _claveMesPg(fecha), sello: sello, notaLibre: '' };
+        }
+        // Antes estas filas eran invisibles (fecha invalida = descartada); "nunca invisible"
+        // las cubre: clave 'sin-fecha', solo listables y borrables desde 'otros'.
+        return { origen: 'otros', clave: 'sin-fecha', sello: null, notaLibre: sello };
+    }
+
+    return null;
 }
 
 // ============================================
@@ -238,13 +337,17 @@ function _leerTodasFilasPa(hoja) {
     });
 }
 
-/** Numeros de fila de "Proyeccion" que pertenecen a `clave`+`origen`. Reusa los buscadores de PresupuestoGuardar.js. */
+/**
+ * Numeros de fila de "Proyeccion" que pertenecen a `clave`+`origen`, con el clasificador: el
+ * MISMO criterio nota-por-fila del retiro selectivo de PG, llevado a nivel de origen. La baja
+ * de 'guardado' ya no arrastra filas shell, la de 'shell' borra solo shell, y 'recurrentes' y
+ * 'otros' se vuelven borrables. Para 'base' el resultado es identico al historico.
+ */
 function _filasDelPeriodoPa(hoja, clave, origen) {
-    if (origen === 'guardado') {
-        return _filasPorNotaPrefijoPg(hoja, PG_MARCA + ' ' + clave + ' ');
-    }
-    const periodo = _fechaDesdeClavePa(clave);
-    return _filasBasePorMesPg(hoja, periodo);
+    return _leerTodasFilasPa(hoja).filter(function (f) {
+        const partes = _origenNotaPa(f.nota, f.fecha);
+        return !!partes && partes.origen === origen && partes.clave === clave;
+    }).map(function (f) { return f.fila; });
 }
 
 // ============================================
@@ -394,114 +497,127 @@ function pingProyeccionAbm() {
 }
 
 /**
- * Agrupa TODAS las filas de "Proyeccion" en dos poblaciones (guardado/base). Solo lectura.
- * Una hoja "Proyeccion" que no existe o dejo de espejar a "Registros" hace TIRAR esta funcion
- * (via `_preflightPb`, con un mensaje que ya nombra el desvio exacto).
+ * Agrupa TODAS las filas de "Proyeccion" en las cinco poblaciones de PA_ORIGENES, en una sola
+ * pasada con el clasificador. Solo lectura. Una hoja "Proyeccion" que no existe o dejo de
+ * espejar a "Registros" hace TIRAR esta funcion (via `_preflightPb`, con un mensaje que ya
+ * nombra el desvio exacto).
+ *
+ * PAYLOAD ACOTADO (ver INCIDENTE en la cabecera): `crudasFilas` es interno -- alimenta los
+ * totales y NUNCA sale en la respuesta. Cada grupo devuelve EXACTAMENTE
+ * { clave, mesLabel, nFilas, corridas, ultimoSello, totales, otrasFilas }: la respuesta es
+ * O(grupos), no escala con el numero de filas.
  */
 function listarPeriodosProyeccion() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const pre = _preflightPb(ss);
     const todas = _leerTodasFilasPa(pre.hoja);
 
-    const gruposGuardadoMap = {};
-    const gruposBaseMap = {};
-
+    const mapas = { guardado: {}, shell: {}, recurrentes: {}, base: {}, otros: {} };
     todas.forEach(function (f) {
-        const partesG = _partesNotaGuardadoPa(f.nota);
-        if (partesG) {
-            if (!gruposGuardadoMap[partesG.clave]) {
-                gruposGuardadoMap[partesG.clave] = { filas: [], sello: partesG.sello, crudasFilas: [] };
-            }
-            gruposGuardadoMap[partesG.clave].filas.push(f.fila);
-            gruposGuardadoMap[partesG.clave].crudasFilas.push(f);
-            return;
-        }
-        if (String(f.nota).indexOf(PB_MARCA) === 0) {
-            if (!(f.fecha instanceof Date) || isNaN(f.fecha.getTime())) return;   // sin fecha valida: no se puede agrupar, no se inventa un mes
-            const clave = _claveMesPg(f.fecha);
-            const sello = String(f.nota).slice(PB_MARCA.length).trim();
-            if (!gruposBaseMap[clave]) gruposBaseMap[clave] = { filas: [], sellos: {}, crudasFilas: [] };
-            gruposBaseMap[clave].filas.push(f.fila);
-            if (sello) gruposBaseMap[clave].sellos[sello] = true;
-            gruposBaseMap[clave].crudasFilas.push(f);
-            return;
-        }
-        // Sin ninguna marca: cargado a mano en el ledger real, o ruido. Fuera del alcance de este
-        // ABM -- nunca se toca, nunca se cuenta (ver cabecera).
+        const partes = _origenNotaPa(f.nota, f.fecha);
+        // Sin ninguna marca: cargado a mano en el ledger real, o ruido. Fuera del alcance de
+        // este ABM -- nunca se toca, nunca se cuenta (ver cabecera).
+        if (!partes) return;
+        const mapa = mapas[partes.origen];
+        if (!mapa[partes.clave]) mapa[partes.clave] = { crudasFilas: [], sellos: {} };
+        mapa[partes.clave].crudasFilas.push(f);
+        if (partes.sello) mapa[partes.clave].sellos[partes.sello] = true;
     });
 
-    const armarGrupo = function (clave, datos, origen) {
+    const armarGrupo = function (clave, datos) {
         const periodo = _fechaDesdeClavePa(clave);
         const totales = _totalesPorBloquePa(datos.crudasFilas);
-        const grupo = {
+        // Dentro de un grupo todos los sellos comparten forma, asi que el orden lexicografico
+        // ES el cronologico: el ultimo del sort es la corrida mas reciente.
+        const sellos = Object.keys(datos.sellos).sort();
+        return {
             clave: clave,
-            mesLabel: _mesLabelPa(periodo.getFullYear(), periodo.getMonth()),
-            anio: periodo.getFullYear(),
-            filas: datos.filas.slice().sort(function (a, b) { return a - b; }),
-            monedas: _monedasEnFilasPa(datos.crudasFilas),
+            mesLabel: periodo ? _mesLabelPa(periodo.getFullYear(), periodo.getMonth()) : 'Sin mes reconocible',
+            nFilas: datos.crudasFilas.length,
+            corridas: sellos.length,
+            ultimoSello: sellos.length ? sellos[sellos.length - 1] : null,
             totales: totales,
             otrasFilas: totales.otrasFilas
         };
-        if (origen === 'guardado') grupo.sello = datos.sello;
-        else grupo.sellos = Object.keys(datos.sellos);
-        return grupo;
     };
 
-    // Orden desc por clave (mas reciente primero): 'YYYY-MM' ordena lexicograficamente igual que
-    // cronologicamente, asi que un sort ascendente + reverse alcanza.
-    const clavesDesc = function (mapa) { return Object.keys(mapa).sort().reverse(); };
-
-    const guardado = clavesDesc(gruposGuardadoMap).map(function (c) { return armarGrupo(c, gruposGuardadoMap[c], 'guardado'); });
-    const base = clavesDesc(gruposBaseMap).map(function (c) { return armarGrupo(c, gruposBaseMap[c], 'base'); });
-
-    return {
-        grupos: { guardado: guardado, base: base },
-        vacioGuardado: guardado.length === 0,
-        vacioBase: base.length === 0
+    // Orden desc por clave (mas reciente primero): 'YYYY-MM' ordena lexicograficamente igual
+    // que cronologicamente. 'sin-fecha' (solo posible en 'otros') va SIEMPRE al final.
+    const clavesDesc = function (mapa) {
+        const claves = Object.keys(mapa).filter(function (c) { return c !== 'sin-fecha'; }).sort().reverse();
+        if (mapa['sin-fecha']) claves.push('sin-fecha');
+        return claves;
     };
+
+    const grupos = {};
+    PA_ORIGENES.forEach(function (origen) {
+        grupos[origen] = clavesDesc(mapas[origen]).map(function (c) { return armarGrupo(c, mapas[origen][c]); });
+    });
+
+    return { grupos: grupos };
+}
+
+/**
+ * Valida el par `clave`+`origen` de detalle/baja: origen debe ser uno de PA_ORIGENES; la clave
+ * es 'YYYY-MM' valida, o el literal 'sin-fecha' SOLO con origen 'otros' (la validacion de
+ * `_fechaDesdeClavePa` no se relaja para los demas origenes). Tira nombrando el desvio.
+ */
+function _validarClaveOrigenPa(clave, origen) {
+    if (PA_ORIGENES.indexOf(origen) === -1) {
+        throw new Error('origen invalido: "' + origen + '" (debe ser uno de: ' + PA_ORIGENES.join(', ') + ').');
+    }
+    if (clave === 'sin-fecha') {
+        if (origen !== 'otros') {
+            throw new Error('la clave "sin-fecha" solo existe para el origen "otros".');
+        }
+        return;
+    }
+    if (!_fechaDesdeClavePa(clave)) {
+        throw new Error('clave invalida: "' + clave + '" (formato esperado "YYYY-MM").');
+    }
 }
 
 /**
  * El detalle fila por fila de un periodo+origen puntual. Solo lectura. `clave`+`origen` invalidos
  * tiran; una clave+origen SIN ninguna fila (carrera con otra pestana, doble click) NO es un
- * error: devuelve `filas: []`.
+ * error: devuelve `filas: []`. Cada fila suma `notaLibre` (la nota del shell o el nombre del
+ * recurrente) y `editable`: solo 'guardado' y 'shell' se editan -- las del shell son decisiones
+ * deliberadas del usuario; base sigue igual; recurrentes y otros NO son editables.
  */
 function detalleFilasPeriodoProyeccion(clave, origen) {
-    if (origen !== 'guardado' && origen !== 'base') {
-        throw new Error('origen invalido: "' + origen + '" (debe ser "guardado" o "base").');
-    }
-    if (!_fechaDesdeClavePa(clave)) {
-        throw new Error('clave invalida: "' + clave + '" (formato esperado "YYYY-MM").');
-    }
+    _validarClaveOrigenPa(clave, origen);
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const pre = _preflightPb(ss);
     const todas = _leerTodasFilasPa(pre.hoja);
 
-    const delGrupo = todas.filter(function (f) {
-        if (origen === 'guardado') {
-            const partes = _partesNotaGuardadoPa(f.nota);
-            return !!partes && partes.clave === clave;
+    const delGrupo = [];
+    todas.forEach(function (f) {
+        const partes = _origenNotaPa(f.nota, f.fecha);
+        if (partes && partes.origen === origen && partes.clave === clave) {
+            delGrupo.push({ f: f, notaLibre: partes.notaLibre || '' });
         }
-        if (String(f.nota).indexOf(PB_MARCA) !== 0) return false;
-        if (!(f.fecha instanceof Date) || isNaN(f.fecha.getTime())) return false;
-        return _claveMesPg(f.fecha) === clave;
-    }).sort(function (a, b) { return a.fila - b.fila; });
+    });
+    delGrupo.sort(function (a, b) { return a.f.fila - b.f.fila; });
 
-    const periodo = _fechaDesdeClavePa(clave);
-    const filas = delGrupo.map(function (f) {
+    const editable = (origen === 'guardado' || origen === 'shell');
+    const filas = delGrupo.map(function (par) {
+        const f = par.f;
         return {
             fila: f.fila, cuenta: f.cuenta, tipoCuenta: f.tipoCuenta, tipo: f.tipo, monto: f.monto,
             moneda: f.moneda,
             fecha: (f.fecha instanceof Date && !isNaN(f.fecha.getTime())) ? f.fecha.toISOString() : null,
             tcArs: f.tcArs, tcUsd: f.tcUsd, tcAud: f.tcAud, tcEur: f.tcEur,
-            editable: origen === 'guardado'
+            notaLibre: par.notaLibre,
+            editable: editable
         };
     });
 
+    const periodo = clave === 'sin-fecha' ? null : _fechaDesdeClavePa(clave);
     return {
-        clave: clave, origen: origen, mesLabel: _mesLabelPa(periodo.getFullYear(), periodo.getMonth()),
-        filas: filas, totales: _totalesPorBloquePa(delGrupo)
+        clave: clave, origen: origen,
+        mesLabel: periodo ? _mesLabelPa(periodo.getFullYear(), periodo.getMonth()) : 'Sin mes reconocible',
+        filas: filas, totales: _totalesPorBloquePa(delGrupo.map(function (par) { return par.f; }))
     };
 }
 
@@ -512,12 +628,7 @@ function detalleFilasPeriodoProyeccion(clave, origen) {
  * de la anterior sin avisar -- misma limitacion que `revertirGuardarProyeccion`.
  */
 function eliminarPeriodoProyeccion(clave, origen) {
-    if (origen !== 'guardado' && origen !== 'base') {
-        throw new Error('origen invalido: "' + origen + '" (debe ser "guardado" o "base").');
-    }
-    if (!_fechaDesdeClavePa(clave)) {
-        throw new Error('clave invalida: "' + clave + '" (formato esperado "YYYY-MM").');
-    }
+    _validarClaveOrigenPa(clave, origen);
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const pre = _preflightPb(ss);
@@ -594,11 +705,27 @@ function revertirBajaProyeccionAbm() {
     _escribirAlPieProyeccionPg(hoja, matrizBackup);
     SpreadsheetApp.flush();
 
+    // decision Franco 2026-08-29: la verificacion compara contra el conteo de filas del
+    // RESPALDO que clasifican a (clave, origen), no contra previos.filas. Un respaldo legado
+    // (una baja 'guardado' pre-cambio que arrastro filas shell mezcladas) se repone ENTERO,
+    // pero el conteo por origen puro daria menos que previos.filas y esto fallaria en falso
+    // con las filas ya repuestas.
+    const cfgRv = RANGES.REGISTROS;
+    const colIniRv = columnLetterToIndex(cfgRv.start);
+    const idxNotaRv = columnLetterToIndex(cfgRv.columns.nota) - colIniRv;
+    const idxFechaRv = columnLetterToIndex(cfgRv.columns.fecha) - colIniRv;
+    let esperadas = 0;
+    matrizBackup.forEach(function (vals) {
+        const partes = _origenNotaPa(vals[idxNotaRv], vals[idxFechaRv]);
+        if (partes && partes.origen === previos.origen && partes.clave === previos.clave) esperadas++;
+    });
+
     const repuestas = _filasDelPeriodoPa(hoja, previos.clave, previos.origen);
-    if (repuestas.length < previos.filas) {
+    if (repuestas.length < esperadas) {
         throw new Error('Se intento reponer ' + matrizBackup.length + ' fila(s) pero solo se verifican ' +
-            repuestas.length + ' de "' + previos.clave + '" (' + previos.origen + '). Revisar "' +
-            SHEETS.PROYECCION + '" a mano; el respaldo sigue en "' + previos.respaldo + '".');
+            repuestas.length + ' de "' + previos.clave + '" (' + previos.origen + ') contra ' + esperadas +
+            ' esperadas del respaldo. Revisar "' + SHEETS.PROYECCION + '" a mano; el respaldo sigue en "' +
+            previos.respaldo + '".');
     }
 
     props.deleteProperty(PA_PROP_PREVIOS_BAJA);
@@ -620,10 +747,12 @@ function _montoValidoPa(v) {
 }
 
 /**
- * Corrige el monto de UNA fila, con el gate de seguridad del lado del servidor (decision 2): solo
- * filas PG_MARCA. Rechaza filas PB_MARCA o sin marca con un mensaje explicito, y rechaza cualquier
- * `nuevoMonto` que no sea un numero finito (ver `_montoValidoPa`). Respalda la fila completa antes
- * de escribir.
+ * Corrige el monto de UNA fila, con el gate de seguridad del lado del servidor (decision 2),
+ * ahora POR ORIGEN via el clasificador: solo 'guardado' y 'shell' se editan (las del shell son
+ * decisiones deliberadas del usuario). 'base', 'recurrentes', 'otros' y sin-marca se rechazan
+ * cada una con su mensaje propio, y cualquier `nuevoMonto` que no sea un numero finito tambien
+ * (ver `_montoValidoPa`). Respalda la fila completa antes de escribir. El retorno agrega
+ * `origen` para el mensaje del cliente; el resto es identico al historico.
  */
 function actualizarMontoFilaProyeccion(fila, nuevoMonto) {
     const filaNum = parseInt(fila, 10);
@@ -646,12 +775,21 @@ function actualizarMontoFilaProyeccion(fila, nuevoMonto) {
     }
 
     const colNota = columnLetterToIndex(cfg.columns.nota);
+    const colFecha = columnLetterToIndex(cfg.columns.fecha);
     const nota = String(hoja.getRange(filaNum, colNota).getValue() || '');
-    if (nota.indexOf(PG_MARCA + ' ') !== 0) {
+    const partes = _origenNotaPa(nota, hoja.getRange(filaNum, colFecha).getValue());
+    const origen = partes ? partes.origen : null;
+    if (origen === 'base') {
         throw new Error('Esta fila no es un guardado manual: las filas de presupuesto base se recalculan ' +
             'corriendo de nuevo ese modulo, no se editan a mano.');
     }
-    const partes = _partesNotaGuardadoPa(nota);
+    if (origen === 'recurrentes') {
+        throw new Error('Esta fila es un volcado de recurrentes: el monto se corrige en la vista de ' +
+            'Recurrentes y se vuelve a volcar el mes.');
+    }
+    if (origen !== 'guardado' && origen !== 'shell') {
+        throw new Error('No se reconoce el origen de esta fila: no se edita desde este ABM.');
+    }
 
     const colMonto = columnLetterToIndex(cfg.columns.monto);
     const colCuenta = columnLetterToIndex(cfg.columns.cuenta);
@@ -689,8 +827,8 @@ function actualizarMontoFilaProyeccion(fila, nuevoMonto) {
     }));
 
     logSuccess('actualizarMontoFilaProyeccion: fila ' + filaNum + ' de ' + montoAnterior + ' a ' + montoNuevoNum + '.');
-    return { fila: filaNum, cuenta: cuenta, clave: partes ? partes.clave : null, moneda: moneda,
-              montoAnterior: montoAnterior, montoNuevo: montoNuevoNum };
+    return { fila: filaNum, cuenta: cuenta, clave: partes ? partes.clave : null, origen: origen,
+              moneda: moneda, montoAnterior: montoAnterior, montoNuevo: montoNuevoNum };
 }
 
 /** Repone la ULTIMA edicion de monto aplicada por este ABM, leyendo el valor original del respaldo. */

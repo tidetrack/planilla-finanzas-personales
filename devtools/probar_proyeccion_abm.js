@@ -4,19 +4,22 @@
  *
  * Siete partes:
  * 0. Integridad de los fuentes (sin bytes de control).
- * 1. Helpers de clave/mes/nota: _fechaDesdeClavePa, _mesLabelPa, _partesNotaGuardadoPa.
+ * 1. Helpers de clave/mes y el CLASIFICADOR _origenNotaPa (2026-08-29): cinco origenes
+ *    (guardado/shell/recurrentes/base/otros) por forma de sello, formato historico del shell
+ *    con nota libre pegada, malformadas a 'otros', nunca invisibles.
  * 2. Totales por bloque y moneda (_totalesPorBloquePa): nunca suma monedas distintas entre si,
  *    el neto cubre la union de monedas, y "otrasFilas" nunca se pierde en silencio.
- * 3. listarPeriodosProyeccion: agrupamiento mixto (guardado + base, varios periodos) y el CASO
- *    LIMITE del encargo -- una "Proyeccion" que hoy en produccion solo tiene filas base.
- * 4. detalleFilasPeriodoProyeccion: detalle por periodo+origen, y el caso "sin filas" que no es
- *    un error.
- * 5. eliminarPeriodoProyeccion / revertirBajaProyeccionAbm: borra por clave+origen exacto, deja
- *    intacto el resto (otro periodo, el OTRO origen del mismo mes), respalda, revierte
- *    fila-por-fila identico, y la "doble baja" pisa el registro de revert de la anterior.
- * 6. actualizarMontoFilaProyeccion / revertirEdicionMontoProyeccion: el gate de seguridad contra
- *    filas PB_MARCA, la validacion de monto (incluida la trampa de Number('')===0), y el
- *    roundtrip editar->revertir exacto.
+ * 3. listarPeriodosProyeccion: cinco poblaciones separadas en el MISMO mes, payload acotado
+ *    (guardia anti-inflado: sin filas[]/monedas/anio/sello/sellos), corridas/ultimoSello, y el
+ *    CASO LIMITE -- una "Proyeccion" solo con filas base.
+ * 4. detalleFilasPeriodoProyeccion: detalle por periodo+origen con notaLibre, editabilidad por
+ *    origen (guardado y shell si; base/recurrentes/otros no), y el caso "sin filas".
+ * 5. eliminarPeriodoProyeccion / revertirBajaProyeccionAbm: baja SELECTIVA por origen (la de
+ *    'guardado' ya no arrastra shell -- hallazgo 3), recurrentes y otros borrables (hallazgo
+ *    4), reversion exacta, y el revert de un respaldo LEGADO mixto sin falso error.
+ * 6. actualizarMontoFilaProyeccion / revertirEdicionMontoProyeccion: gate POR ORIGEN (shell
+ *    editable; base/recurrentes/otros rechazadas cada una con su mensaje), la validacion de
+ *    monto (incluida la trampa de Number('')===0), y el roundtrip editar->revertir exacto.
  * 7. pingProyeccionAbm (v0.57.0): forma constante, payload trivial, cero dependencia de
  *    SpreadsheetApp -- el separador del experimento "canal roto entero" vs. "problema de
  *    listarPeriodosProyeccion() o su respuesta" (ver UI_AbmProyeccionElaborada.html).
@@ -57,6 +60,11 @@ vm.createContext(ctx);
 vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/00_Config.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/03_SheetManager.js'), 'utf8') + '\n' +
+    // 17_RecurrentesService: aporta REC_MARCA, que el clasificador lee en runtime. Va ANTES de
+    // los DEVTOOL_* como en Apps Script (los digitos ordenan antes que las letras); sus const
+    // de nivel superior son literales puros, no leen otros archivos (probar_carga_apps_script
+    // es la red si eso cambiara).
+    fs.readFileSync(path.join(RAIZ, 'src/17_RecurrentesService.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_FormulerioV0111.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_StockYFlujo.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Proyeccion.js'), 'utf8') + '\n' +
@@ -68,11 +76,11 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_PresupuestoGuardar.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_ProyeccionAbm.js'), 'utf8') +
     '\n;Object.assign(globalThis,{RANGES,SHEETS,MONEDAS_DISPONIBLES,columnLetterToIndex,' +
-    'invalidarCacheNombresHojas,IP_MESES,PG_MARCA,PB_MARCA,PA_CATEGORIA_A_CLAVE,' +
-    'PA_PROP_PREVIOS_BAJA,PA_PROP_PREVIOS_EDICION,PA_PREFIJO_RESPALDO,' +
+    'invalidarCacheNombresHojas,IP_MESES,PG_MARCA,PB_MARCA,REC_MARCA,PA_CATEGORIA_A_CLAVE,' +
+    'PA_ORIGENES,PA_PROP_PREVIOS_BAJA,PA_PROP_PREVIOS_EDICION,PA_PREFIJO_RESPALDO,' +
     '_claveMesPg,_filasPorNotaPrefijoPg,_filasBasePorMesPg,_leerRespaldoFilasPg,' +
     '_escribirAlPieProyeccionPg,_preflightPb,_borrarGeneradasPb,' +
-    '_fechaDesdeClavePa,_mesLabelPa,_partesNotaGuardadoPa,_leerTodasFilasPa,_filasDelPeriodoPa,' +
+    '_fechaDesdeClavePa,_mesLabelPa,_origenNotaPa,_leerTodasFilasPa,_filasDelPeriodoPa,' +
     '_totalesPorBloquePa,_ordenMonedasPa,_monedasEnFilasPa,_montoValidoPa,_respaldarFilasPa,' +
     'pingProyeccionAbm,listarPeriodosProyeccion,detalleFilasPeriodoProyeccion,eliminarPeriodoProyeccion,' +
     'revertirBajaProyeccionAbm,actualizarMontoFilaProyeccion,revertirEdicionMontoProyeccion});',
@@ -114,17 +122,73 @@ console.log('\n=== 1. Clave de periodo, rotulo de mes, parseo de Nota guardado =
     ok(ctx._mesLabelPa(2026, 0) === 'Enero 2026', 'mesLabel(2026,0) = "Enero 2026", dio ' + ctx._mesLabelPa(2026, 0));
     ok(ctx._mesLabelPa(2026, 8) === 'Septiembre 2026', 'mesLabel(2026,8) = "Septiembre 2026"');
 
-    const p1 = ctx._partesNotaGuardadoPa(ctx.PG_MARCA + ' 2026-09 2026-08-25_143000');
-    ok(p1 && p1.clave === '2026-09' && p1.sello === '2026-08-25_143000',
-       'Nota guardado bien formada -> {clave,sello} exactos, dio ' + JSON.stringify(p1));
+    const fechaSep = new Date(2026, 8, 1);
 
-    ok(ctx._partesNotaGuardadoPa(ctx.PB_MARCA + ' 2026-08-20_2319') === null,
-       'una Nota de PB_MARCA no matchea el parser de guardado (los textos no son prefijo uno del otro)');
-    ok(ctx._partesNotaGuardadoPa('') === null, 'Nota vacia -> null');
-    ok(ctx._partesNotaGuardadoPa(ctx.PG_MARCA + ' solo-un-token') === null,
-       'Nota de guardado sin el segundo espacio (sin sello) -> null, no se inventa un sello vacio');
-    ok(ctx._partesNotaGuardadoPa(ctx.PG_MARCA + ' no-es-clave 2026-08-25_143000') === null,
-       'el primer token no tiene forma YYYY-MM -> null (no se cuela una clave invalida)');
+    // (i) PG puro -> guardado, sello exacto, notaLibre vacia.
+    const pG = ctx._origenNotaPa(ctx.PG_MARCA + ' 2026-09 2026-08-25_143000', fechaSep);
+    ok(pG && pG.origen === 'guardado' && pG.clave === '2026-09' && pG.sello === '2026-08-25_143000' && pG.notaLibre === '',
+       'PG puro -> guardado con {clave,sello} exactos y notaLibre vacia, dio ' + JSON.stringify(pG));
+
+    // (ii) shell SIN y CON nota libre (formato historico: la nota pegada tras el sello).
+    const pS1 = ctx._origenNotaPa(ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000111', fechaSep);
+    ok(pS1 && pS1.origen === 'shell' && pS1.clave === '2026-09' &&
+       pS1.sello === 'shell_2026-08-27_100000111' && pS1.notaLibre === '',
+       'shell sin nota libre -> origen shell, sello = SOLO el token shell_, dio ' + JSON.stringify(pS1));
+    const pS2 = ctx._origenNotaPa(ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000111 vacaciones en la costa', fechaSep);
+    ok(pS2 && pS2.origen === 'shell' && pS2.sello === 'shell_2026-08-27_100000111' &&
+       pS2.notaLibre === 'vacaciones en la costa',
+       'shell con nota libre (formato historico) -> la nota libre queda SEPARADA del sello, dio ' + JSON.stringify(pS2));
+
+    // (ii-bis) VINTAGE v0.56.0-v0.58.0: el shell desplegado en esa ventana escribia el sello SIN
+    // milisegundos ('shell_yyyy-MM-dd_HHmmss', 6 digitos) -- esas filas viven en produccion y
+    // tienen que clasificar 'shell' (editables, bajo su rotulo), no degradar a 'otros'.
+    const pS3 = ctx._origenNotaPa(ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000', fechaSep);
+    ok(pS3 && pS3.origen === 'shell' && pS3.clave === '2026-09' &&
+       pS3.sello === 'shell_2026-08-27_100000' && pS3.notaLibre === '',
+       'shell historico sin ms (vintage v0.56-v0.58) -> origen shell, dio ' + JSON.stringify(pS3));
+    const pS4 = ctx._origenNotaPa(ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000 finde largo', fechaSep);
+    ok(pS4 && pS4.origen === 'shell' && pS4.sello === 'shell_2026-08-27_100000' && pS4.notaLibre === 'finde largo',
+       'shell historico sin ms CON nota libre -> shell con notaLibre separada, dio ' + JSON.stringify(pS4));
+    // Un largo intermedio (7 digitos) no es ningun vintage conocido: degrada a 'otros', visible.
+    const pS5 = ctx._origenNotaPa(ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_1000001', fechaSep);
+    ok(pS5 && pS5.origen === 'otros' && pS5.clave === '2026-09',
+       'un sello shell de 7 digitos (ningun vintage) -> otros, no se disfraza de shell, dio ' + JSON.stringify(pS5));
+
+    // (iii) REC con y sin ': nota'.
+    const pR1 = ctx._origenNotaPa(ctx.REC_MARCA + ' 2026-09 2026-08-21_090000 - Netflix', fechaSep);
+    ok(pR1 && pR1.origen === 'recurrentes' && pR1.clave === '2026-09' &&
+       pR1.sello === '2026-08-21_090000' && pR1.notaLibre === 'Netflix',
+       'REC sin nota -> recurrentes, notaLibre = el nombre sin el separador, dio ' + JSON.stringify(pR1));
+    const pR2 = ctx._origenNotaPa(ctx.REC_MARCA + ' 2026-09 2026-08-21_090000 - Netflix: plan familiar', fechaSep);
+    ok(pR2 && pR2.origen === 'recurrentes' && pR2.notaLibre === 'Netflix: plan familiar',
+       'REC con nota -> notaLibre = "nombre: nota", dio ' + JSON.stringify(pR2));
+
+    // Base bien formada: clave derivada de la Fecha.
+    const pB = ctx._origenNotaPa(ctx.PB_MARCA + ' 2026-08-20_2319', fechaSep);
+    ok(pB && pB.origen === 'base' && pB.clave === '2026-09' && pB.sello === '2026-08-20_2319',
+       'PB con fecha valida -> base, clave del mes de la Fecha, dio ' + JSON.stringify(pB));
+
+    // (iv) Malformadas -> 'otros', nunca invisibles.
+    const pO1 = ctx._origenNotaPa(ctx.PG_MARCA + ' 2026-13 2026-08-25_143000', fechaSep);
+    ok(pO1 && pO1.origen === 'otros' && pO1.clave === '2026-09',
+       'PG con clave invalida (mes 13) -> otros, clave por la Fecha de la fila, dio ' + JSON.stringify(pO1));
+    const pO2 = ctx._origenNotaPa(ctx.PG_MARCA + ' 2026-09 2026-08-25_143000 editada a mano', fechaSep);
+    ok(pO2 && pO2.origen === 'otros' && pO2.clave === '2026-09' && pO2.sello === null,
+       'PG con cola tras el sello (nota editada a mano) -> otros, NO se disfraza de guardado, dio ' + JSON.stringify(pO2));
+    const pO3 = ctx._origenNotaPa(ctx.REC_MARCA + ' 2026-09 sello-raro - Netflix', fechaSep);
+    ok(pO3 && pO3.origen === 'otros' && pO3.clave === '2026-09',
+       'REC malformada (sello irreconocible) -> otros, conserva la clave parseada, dio ' + JSON.stringify(pO3));
+    const pO4 = ctx._origenNotaPa(ctx.PB_MARCA + ' 2026-08-20_2319', 'no es una fecha');
+    ok(pO4 && pO4.origen === 'otros' && pO4.clave === 'sin-fecha',
+       'PB con fecha invalida -> otros con clave "sin-fecha" (antes era invisible), dio ' + JSON.stringify(pO4));
+    const pO5 = ctx._origenNotaPa(ctx.PG_MARCA + ' no-es-clave sin-forma', 'tampoco fecha');
+    ok(pO5 && pO5.origen === 'otros' && pO5.clave === 'sin-fecha',
+       'PG con clave invalida Y fecha invalida -> otros "sin-fecha", dio ' + JSON.stringify(pO5));
+
+    // Sin ninguna marca -> null (fuera del alcance del ABM, como siempre).
+    ok(ctx._origenNotaPa('cargado a mano, sin marca', fechaSep) === null, 'sin marca -> null');
+    ok(ctx._origenNotaPa('', fechaSep) === null, 'Nota vacia -> null');
+    ok(ctx._origenNotaPa(null, fechaSep) === null, 'Nota null -> null (no revienta)');
 }
 
 // ============================================================================
@@ -264,78 +328,142 @@ function filaCompletaPorNumero(ssMock, fila) {
 // ============================================================================
 // 3. listarPeriodosProyeccion: agrupamiento mixto + CASO LIMITE del encargo
 // ============================================================================
-console.log('\n=== 3. listarPeriodosProyeccion ===');
+console.log('\n=== 3. listarPeriodosProyeccion: cinco poblaciones, payload acotado ===');
 {
-    // --- MUTACION 1: agrupamiento mixto -- 2 periodos guardado, 3 meses base ---
+    // --- MUTACION 1: los CINCO origenes conviviendo en el MISMO mes (mas otros meses) ---
     const filas = [
         filaProy({ monto: 100000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: 'Santander', moneda: 'ARS', fecha: new Date(2026, 6, 1), nota: ctx.PB_MARCA + ' selloA' }),
         filaProy({ monto: 110000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: 'Santander', moneda: 'ARS', fecha: new Date(2026, 7, 1), nota: ctx.PB_MARCA + ' selloA' }),
         filaProy({ monto: 120000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: 'Santander', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PB_MARCA + ' selloA' }),
-        filaProy({ monto: 500000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 selloB' }),
-        filaProy({ monto: 200000, tipo: 'Egreso', cuenta: 'Alquiler', tipo_cuenta: 'Gasto Fijo', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 selloB' }),
-        filaProy({ monto: 480000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 9, 1), nota: ctx.PG_MARCA + ' 2026-10 selloC' }),
+        filaProy({ monto: 500000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }),
+        filaProy({ monto: 200000, tipo: 'Egreso', cuenta: 'Alquiler', tipo_cuenta: 'Gasto Fijo', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }),
+        filaProy({ monto: 480000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 9, 1), nota: ctx.PG_MARCA + ' 2026-10 2026-08-26_090000' }),
+        // (vi) DOS corridas shell del mismo mes, una con nota libre pegada (formato historico).
+        filaProy({ monto: 30000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000111' }),
+        filaProy({ monto: 45000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 shell_2026-08-28_110000222 vacaciones' }),
+        filaProy({ monto: 5000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.REC_MARCA + ' 2026-09 2026-08-21_090000 - Netflix' }),
+        // 'otros': una nota PG editada a mano (cola tras el sello) y una PB sin fecha valida.
+        filaProy({ monto: 777, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000 retocada' }),
+        filaProy({ monto: 888, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: '', nota: ctx.PB_MARCA + ' selloA' }),
         filaProy({ monto: 999999, tipo: 'Ingreso', cuenta: 'Ruido', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: 'cargado a mano, sin marca' })
     ];
     activarSs([], filas);
 
     const r = ctx.listarPeriodosProyeccion();
+    ok(Object.keys(r.grupos).sort().join(',') === 'base,guardado,otros,recurrentes,shell',
+       'la respuesta trae EXACTAMENTE las cinco poblaciones, dio ' + Object.keys(r.grupos).sort().join(','));
+    ok(!('vacioGuardado' in r) && !('vacioBase' in r),
+       'vacioGuardado/vacioBase se retiraron del payload: el cliente usa grupos.X.length');
+
     ok(r.grupos.guardado.length === 2, 'DOS periodos guardado (2026-09, 2026-10), dio ' + r.grupos.guardado.length);
     ok(r.grupos.base.length === 3, 'TRES meses base (07, 08, 09/2026), dio ' + r.grupos.base.length);
+    ok(r.grupos.shell.length === 1 && r.grupos.recurrentes.length === 1,
+       'shell y recurrentes son grupos PROPIOS (hallazgos 2 y 4): ya no se funden ni son invisibles');
     ok(r.grupos.guardado[0].clave === '2026-10' && r.grupos.guardado[1].clave === '2026-09',
        'guardado ordenado DESC por clave (mas reciente primero), dio ' + r.grupos.guardado.map(g => g.clave).join(','));
     ok(r.grupos.base[0].clave === '2026-09' && r.grupos.base[2].clave === '2026-07',
        'base ordenado DESC por clave, dio ' + r.grupos.base.map(g => g.clave).join(','));
 
     const g0909 = r.grupos.guardado.find(g => g.clave === '2026-09');
-    ok(g0909.filas.length === 2, '2026-09 guardado tiene 2 filas (Sueldo+Alquiler), dio ' + g0909.filas.length);
+    ok(g0909.nFilas === 2, '2026-09 guardado tiene nFilas=2 (Sueldo+Alquiler, sin la editada a mano), dio ' + g0909.nFilas);
     ok(g0909.mesLabel === 'Septiembre 2026', 'mesLabel de 2026-09 = "Septiembre 2026", dio ' + g0909.mesLabel);
-    ok(g0909.sello === 'selloB', 'sello del grupo guardado = "selloB" (el de la Nota), dio ' + g0909.sello);
+    ok(g0909.corridas === 1 && g0909.ultimoSello === '2026-08-25_143000',
+       'guardado 2026-09: corridas=1, ultimoSello el de la Nota, dio ' + g0909.corridas + '/' + g0909.ultimoSello);
 
-    const bAgo = r.grupos.base.find(g => g.clave === '2026-08');
-    ok(bAgo.filas.length === 1, '2026-08 base tiene 1 fila, dio ' + bAgo.filas.length);
-    ok(Array.isArray(bAgo.sellos) && bAgo.sellos[0] === 'selloA', 'base expone "sellos" (plural, array), dio ' + JSON.stringify(bAgo.sellos));
-    ok(g0909.sello !== undefined && bAgo.sello === undefined, 'guardado usa "sello" singular, base NO lo tiene (usa "sellos")');
+    // (vi) corridas del shell: dos sellos distintos, ultimoSello el mayor.
+    const sSep = r.grupos.shell[0];
+    ok(sSep.clave === '2026-09' && sSep.nFilas === 2 && sSep.corridas === 2,
+       'shell 2026-09: 2 filas de 2 corridas distintas, dio nFilas=' + sSep.nFilas + ' corridas=' + sSep.corridas);
+    ok(sSep.ultimoSello === 'shell_2026-08-28_110000222',
+       'ultimoSello del shell = el mayor lexicografico (cronologico), dio ' + sSep.ultimoSello);
 
-    const totalFilasVistas = r.grupos.guardado.reduce((a, g) => a + g.filas.length, 0) +
-        r.grupos.base.reduce((a, g) => a + g.filas.length, 0);
-    ok(totalFilasVistas === 6, 'la fila "sin marca" (Ruido) NUNCA se cuenta en ningun grupo: 6 filas agrupadas de 7 totales, dio ' + totalFilasVistas);
+    const recSep = r.grupos.recurrentes[0];
+    ok(recSep.clave === '2026-09' && recSep.nFilas === 1 && recSep.ultimoSello === '2026-08-21_090000',
+       'recurrentes 2026-09: 1 fila con su sello propio, dio ' + JSON.stringify({ n: recSep.nFilas, s: recSep.ultimoSello }));
 
-    // --- MUTACION 2: CASO LIMITE OBLIGATORIO -- estado REAL de produccion hoy: SOLO filas base ---
+    // 'otros': la editada a mano (2026-09) y la PB sin fecha ('sin-fecha', SIEMPRE al final).
+    ok(r.grupos.otros.length === 2 && r.grupos.otros[0].clave === '2026-09' &&
+       r.grupos.otros[1].clave === 'sin-fecha',
+       'otros: la nota editada a mano y la PB sin fecha, con "sin-fecha" al final, dio ' + r.grupos.otros.map(g => g.clave).join(','));
+    ok(r.grupos.otros[1].mesLabel === 'Sin mes reconocible' && r.grupos.otros[1].corridas === 0 &&
+       r.grupos.otros[1].ultimoSello === null,
+       'el grupo "sin-fecha" rotula "Sin mes reconocible", corridas=0, ultimoSello=null');
+
+    // (v) GUARDIA ANTI-INFLADO: los campos que la pantalla no pinta NO viajan.
+    const todosLosGrupos = [].concat(r.grupos.guardado, r.grupos.shell, r.grupos.recurrentes, r.grupos.base, r.grupos.otros);
+    const clavesEsperadas = 'clave,corridas,mesLabel,nFilas,otrasFilas,totales,ultimoSello';
+    todosLosGrupos.forEach(function (g) {
+        ok(Object.keys(g).sort().join(',') === clavesEsperadas &&
+           !('filas' in g) && !('monedas' in g) && !('anio' in g) && !('sello' in g) && !('sellos' in g),
+           'grupo ' + g.clave + ': claves EXACTAS del contrato nuevo (sin filas/monedas/anio/sello/sellos)');
+    });
+
+    // Los totales del grupo shell salen SOLO de sus filas (no absorben guardado ni rec).
+    ok(sSep.totales.variables.length === 1 && sSep.totales.variables[0].monto === 75000,
+       'los totales del grupo shell suman SOLO sus filas (30000+45000), dio ' + JSON.stringify(sSep.totales.variables));
+
+    // La fila sin marca no aparece en ningun grupo.
+    const totalFilasVistas = todosLosGrupos.reduce((a, g) => a + g.nFilas, 0);
+    ok(totalFilasVistas === 11, 'la fila "sin marca" (Ruido) NUNCA se cuenta: 11 filas agrupadas de 12, dio ' + totalFilasVistas);
+
+    // --- MUTACION 2: CASO LIMITE -- una Proyeccion SOLO con filas base ---
     const soloBase = [
         filaProy({ monto: 50000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 5, 1), nota: ctx.PB_MARCA + ' unicoSello' }),
         filaProy({ monto: 60000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 6, 1), nota: ctx.PB_MARCA + ' unicoSello' })
     ];
     activarSs([], soloBase);
     const r2 = ctx.listarPeriodosProyeccion();
-    ok(r2.vacioGuardado === true, 'CASO LIMITE: vacioGuardado===true con una Proyeccion solo-base');
     ok(Array.isArray(r2.grupos.guardado) && r2.grupos.guardado.length === 0, 'CASO LIMITE: grupos.guardado===[] exacto');
-    ok(r2.vacioBase === false && r2.grupos.base.length === 2, 'CASO LIMITE: grupos.base poblado y correcto (2 meses), dio ' + r2.grupos.base.length);
+    ok(r2.grupos.shell.length === 0 && r2.grupos.recurrentes.length === 0 && r2.grupos.otros.length === 0,
+       'CASO LIMITE: shell/recurrentes/otros tambien vacios (el cliente los oculta enteros)');
+    ok(r2.grupos.base.length === 2, 'CASO LIMITE: grupos.base poblado y correcto (2 meses), dio ' + r2.grupos.base.length);
 }
 
 // ============================================================================
 // 4. detalleFilasPeriodoProyeccion
 // ============================================================================
-console.log('\n=== 4. detalleFilasPeriodoProyeccion ===');
+console.log('\n=== 4. detalleFilasPeriodoProyeccion: detalle y editabilidad POR ORIGEN ===');
 {
     const filas = [
-        filaProy({ monto: 500000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 selloB', tc_ars: 1, tc_usd: 1000, tc_aud: 700, tc_eur: 1100 }),
-        filaProy({ monto: 100000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PB_MARCA + ' selloA' })
+        filaProy({ monto: 500000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000', tc_ars: 1, tc_usd: 1000, tc_aud: 700, tc_eur: 1100 }),
+        filaProy({ monto: 100000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PB_MARCA + ' selloA' }),
+        filaProy({ monto: 45000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 shell_2026-08-28_110000222 vacaciones' }),
+        filaProy({ monto: 5000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.REC_MARCA + ' 2026-09 2026-08-21_090000 - Netflix' }),
+        filaProy({ monto: 888, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: '', nota: ctx.PB_MARCA + ' selloA' })
     ];
     activarSs([], filas);
 
     const d = ctx.detalleFilasPeriodoProyeccion('2026-09', 'guardado');
-    ok(d.filas.length === 1 && d.filas[0].cuenta === 'Sueldo', 'detalle de 2026-09/guardado: 1 fila, Sueldo');
-    ok(d.filas[0].editable === true, 'una fila guardado es editable===true');
+    ok(d.filas.length === 1 && d.filas[0].cuenta === 'Sueldo', 'detalle de 2026-09/guardado: SOLO su fila (ni shell ni rec)');
+    ok(d.filas[0].editable === true && d.filas[0].notaLibre === '', 'una fila guardado es editable, notaLibre vacia');
     ok(d.filas[0].tcUsd === 1000, 'el detalle expone las cotizaciones congeladas (tcUsd=1000), dio ' + d.filas[0].tcUsd);
     ok(typeof d.filas[0].fecha === 'string', 'la fecha se serializa como string ISO, dio ' + typeof d.filas[0].fecha);
 
     const d2 = ctx.detalleFilasPeriodoProyeccion('2026-09', 'base');
     ok(d2.filas.length === 1 && d2.filas[0].editable === false, 'detalle de 2026-09/base: 1 fila, editable===false');
 
+    // Shell: editable, con la nota libre separada (lo que identifica la fila para el usuario).
+    const d3 = ctx.detalleFilasPeriodoProyeccion('2026-09', 'shell');
+    ok(d3.filas.length === 1 && d3.filas[0].editable === true && d3.filas[0].notaLibre === 'vacaciones',
+       'detalle de 2026-09/shell: editable===true y notaLibre separada, dio ' + JSON.stringify({ e: d3.filas[0].editable, n: d3.filas[0].notaLibre }));
+
+    // Recurrentes: visible pero NO editable; la notaLibre trae el nombre.
+    const d4 = ctx.detalleFilasPeriodoProyeccion('2026-09', 'recurrentes');
+    ok(d4.filas.length === 1 && d4.filas[0].editable === false && d4.filas[0].notaLibre === 'Netflix',
+       'detalle de 2026-09/recurrentes: visible, NO editable, notaLibre = nombre, dio ' + JSON.stringify({ e: d4.filas[0].editable, n: d4.filas[0].notaLibre }));
+
+    // 'sin-fecha' SOLO con 'otros'; con otro origen tira.
+    const d5 = ctx.detalleFilasPeriodoProyeccion('sin-fecha', 'otros');
+    ok(d5.filas.length === 1 && d5.mesLabel === 'Sin mes reconocible' && d5.filas[0].editable === false,
+       'detalle de sin-fecha/otros: la PB sin fecha es visible y no editable, mesLabel "Sin mes reconocible"');
+    let lanzo = false;
+    try { ctx.detalleFilasPeriodoProyeccion('sin-fecha', 'guardado'); } catch (e) { lanzo = true; }
+    ok(lanzo, 'clave "sin-fecha" con origen distinto de "otros" tira');
+
     const dVacio = ctx.detalleFilasPeriodoProyeccion('2099-01', 'guardado');
     ok(dVacio.filas.length === 0, 'un periodo sin ninguna fila NO tira: devuelve filas:[] (carrera con otra pestana), dio ' + dVacio.filas.length);
 
-    let lanzo = false;
+    lanzo = false;
     try { ctx.detalleFilasPeriodoProyeccion('2026-09', 'lo-que-sea'); } catch (e) { lanzo = true; }
     ok(lanzo, 'origen invalido tira');
     lanzo = false;
@@ -348,14 +476,20 @@ console.log('\n=== 4. detalleFilasPeriodoProyeccion ===');
 // ============================================================================
 console.log('\n=== 5. eliminarPeriodoProyeccion y revertirBajaProyeccionAbm ===');
 {
-    // base-07, base-08, base-09, guardado-09 (x2 filas), guardado-10
+    // base-07/08/09, guardado-09 (x2), guardado-10, shell-09 (x2), rec-09, otros-09
+    const notaShell1 = ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000111';
+    const notaShell2 = ctx.PG_MARCA + ' 2026-09 shell_2026-08-28_110000222 vacaciones';
     const filas = [
         filaProy({ monto: 100000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 6, 1), nota: ctx.PB_MARCA + ' selloA' }),
         filaProy({ monto: 110000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 7, 1), nota: ctx.PB_MARCA + ' selloA' }),
         filaProy({ monto: 120000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PB_MARCA + ' selloA' }),
-        filaProy({ monto: 500000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 selloB' }),
-        filaProy({ monto: 200000, tipo: 'Egreso', cuenta: 'Alquiler', tipo_cuenta: 'Gasto Fijo', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 selloB' }),
-        filaProy({ monto: 480000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 9, 1), nota: ctx.PG_MARCA + ' 2026-10 selloC' })
+        filaProy({ monto: 500000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }),
+        filaProy({ monto: 200000, tipo: 'Egreso', cuenta: 'Alquiler', tipo_cuenta: 'Gasto Fijo', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }),
+        filaProy({ monto: 480000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 9, 1), nota: ctx.PG_MARCA + ' 2026-10 2026-08-26_090000' }),
+        filaProy({ monto: 30000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaShell1 }),
+        filaProy({ monto: 45000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaShell2 }),
+        filaProy({ monto: 5000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.REC_MARCA + ' 2026-09 2026-08-21_090000 - Netflix' }),
+        filaProy({ monto: 777, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000 retocada' })
     ];
     const ssMock = activarSs([], filas);
 
@@ -369,12 +503,19 @@ console.log('\n=== 5. eliminarPeriodoProyeccion y revertirBajaProyeccionAbm ==='
     const filasBaseSepAntes = ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'base');
     const contenidoBaseSepAntes = filasBaseSepAntes.map(f => filaCompletaPorNumero(ssMock, f));
 
-    // -------- MUTACION 6: borrar 'guardado' de 2026-09 NO toca 'base' del mismo mes ni otros periodos --------
+    // -------- MUTACION 6 (hallazgo 3): borrar 'guardado' de 2026-09 NO arrastra el shell del
+    // mismo mes, ni el rec, ni el base, ni otros periodos --------
     const rBaja1 = ctx.eliminarPeriodoProyeccion('2026-09', 'guardado');
-    ok(rBaja1.filasBorradas === 2, 'baja de guardado-2026-09: 2 filas borradas, dio ' + rBaja1.filasBorradas);
+    ok(rBaja1.filasBorradas === 2, 'baja de guardado-2026-09: 2 filas borradas (SOLO el guardado puro), dio ' + rBaja1.filasBorradas);
 
     ok(ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'guardado').length === 0,
        'guardado-2026-09 quedo en cero filas');
+    ok(ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'shell').length === 2,
+       'HALLAZGO 3 RESUELTO: las 2 filas shell del MISMO mes siguen intactas tras la baja del guardado');
+    ok(ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'recurrentes').length === 1,
+       'la fila de recurrentes del mismo mes sigue intacta');
+    ok(ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'otros').length === 1,
+       'la fila "otros" (nota editada a mano) del mismo mes sigue intacta');
     ok(ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'base').length === 1,
        'DECISION 3/coexistencia: base-2026-09 (MISMO mes, OTRO origen) sigue intacto');
     ok(ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-10', 'guardado').length === 1,
@@ -382,6 +523,34 @@ console.log('\n=== 5. eliminarPeriodoProyeccion y revertirBajaProyeccionAbm ==='
     ok(ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-07', 'base').length === 1 &&
        ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-08', 'base').length === 1,
        'base-2026-07 y base-2026-08 (otros meses) siguen intactos');
+
+    // -------- baja de 'shell' (hallazgo 4, borrable por fin) borra SOLO lo suyo y revierte --------
+    const rBajaShell = ctx.eliminarPeriodoProyeccion('2026-09', 'shell');
+    ok(rBajaShell.filasBorradas === 2, 'baja de shell-2026-09: 2 filas borradas, dio ' + rBajaShell.filasBorradas);
+    ok(ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'recurrentes').length === 1 &&
+       ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'base').length === 1 &&
+       ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-10', 'guardado').length === 1,
+       'la baja de shell dejo intactos rec, base y el guardado de octubre');
+    const rRevShell = ctx.revertirBajaProyeccionAbm();
+    ok(rRevShell.origen === 'shell' && ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'shell').length === 2,
+       'revertir repone las 2 filas shell exactas');
+    const notasShellVivas = ctx._leerTodasFilasPa(ssMock._hojas['Proyeccion']).map(f => f.nota);
+    ok(notasShellVivas.indexOf(notaShell1) !== -1 && notasShellVivas.indexOf(notaShell2) !== -1,
+       'las notas shell repuestas son IDENTICAS (nota libre incluida)');
+
+    // -------- baja de 'recurrentes' y de 'otros' (hallazgo 4): funcionan y el revert repone --------
+    const rBajaRec = ctx.eliminarPeriodoProyeccion('2026-09', 'recurrentes');
+    ok(rBajaRec.filasBorradas === 1 && ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'recurrentes').length === 0,
+       'baja de recurrentes-2026-09: por fin hay un camino de UI para quitar el volcado de un mes');
+    const rRevRec = ctx.revertirBajaProyeccionAbm();
+    ok(rRevRec.origen === 'recurrentes' && ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'recurrentes').length === 1,
+       'el revert repone el volcado exacto');
+    const rBajaOtros = ctx.eliminarPeriodoProyeccion('2026-09', 'otros');
+    ok(rBajaOtros.filasBorradas === 1 && ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'otros').length === 0,
+       'baja de otros-2026-09: la nota irreconocible se puede borrar por mes');
+    const rRevOtros = ctx.revertirBajaProyeccionAbm();
+    ok(rRevOtros.origen === 'otros' && ctx._filasDelPeriodoPa(ssMock._hojas['Proyeccion'], '2026-09', 'otros').length === 1,
+       'y su revert tambien repone exacto');
 
     // -------- ahora borrar 'base' de 2026-09 (mismo mes, el otro origen) tampoco toca lo demas --------
     const rBaja2 = ctx.eliminarPeriodoProyeccion('2026-09', 'base');
@@ -421,6 +590,35 @@ console.log('\n=== 5. eliminarPeriodoProyeccion y revertirBajaProyeccionAbm ==='
     lanzo = false;
     try { ctx.revertirBajaProyeccionAbm(); } catch (e) { lanzo = true; }
     ok(lanzo, 'revertirBajaProyeccionAbm sin baja previa (la property ya se borro tras el revert anterior) tira');
+
+    // -------- (ix) RESPALDO LEGADO MIXTO: una baja 'guardado' PRE-CAMBIO arrastro filas shell.
+    // El revert repone el respaldo ENTERO y verifica contra la clasificacion DEL RESPALDO, no
+    // contra previos.filas: si comparara contra previos.filas, fallaria en falso con las filas
+    // ya repuestas. --------
+    {
+        const notaMixShell = ctx.PG_MARCA + ' 2026-11 shell_2026-08-27_100000333 mezclada';
+        const notaMixPg = ctx.PG_MARCA + ' 2026-11 2026-08-25_150000';
+        const filasMix = [
+            filaProy({ monto: 1000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 10, 1), nota: notaMixPg }),
+            filaProy({ monto: 2000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 10, 1), nota: notaMixShell })
+        ];
+        const ssMock2 = activarSs([], filasMix);
+        const hojaProy2 = ssMock2._hojas['Proyeccion'];
+        const cfg2 = ctx.RANGES.REGISTROS;
+        // Se simula la baja legada: respaldo de AMBAS filas (guardado + shell juntas, como
+        // hacia la version anterior) y borrado de ambas, con el registro origen='guardado'.
+        const filasAmbas = [cfg2.dataRow, cfg2.dataRow + 1];
+        const resp = ctx._respaldarFilasPa(ssActual, hojaProy2, filasAmbas, '2026-08-29_090000');
+        ctx._borrarGeneradasPb(hojaProy2, filasAmbas);
+        propsActual.setProperty(ctx.PA_PROP_PREVIOS_BAJA, JSON.stringify({
+            respaldo: resp.nombre, clave: '2026-11', origen: 'guardado', filas: 2
+        }));
+        const rLegado = ctx.revertirBajaProyeccionAbm();
+        ok(rLegado.filasRepuestas === 2, 'el respaldo legado mixto se repone ENTERO (2 filas), dio ' + rLegado.filasRepuestas);
+        ok(ctx._filasDelPeriodoPa(hojaProy2, '2026-11', 'guardado').length === 1 &&
+           ctx._filasDelPeriodoPa(hojaProy2, '2026-11', 'shell').length === 1,
+           'las dos filas volvieron, cada una clasificando a su origen -- sin falso error de verificacion');
+    }
 }
 
 // ============================================================================
@@ -430,12 +628,18 @@ console.log('\n=== 6. actualizarMontoFilaProyeccion y revertirEdicionMontoProyec
 {
     const filas = [
         filaProy({ monto: 100000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 7, 1), nota: ctx.PB_MARCA + ' selloA' }),
-        filaProy({ monto: 200000, tipo: 'Egreso', cuenta: 'Alquiler', tipo_cuenta: 'Gasto Fijo', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 selloB' })
+        filaProy({ monto: 200000, tipo: 'Egreso', cuenta: 'Alquiler', tipo_cuenta: 'Gasto Fijo', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }),
+        filaProy({ monto: 45000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 shell_2026-08-28_110000222 vacaciones' }),
+        filaProy({ monto: 5000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.REC_MARCA + ' 2026-09 2026-08-21_090000 - Netflix' }),
+        filaProy({ monto: 777, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000 retocada' })
     ];
     const ssMock = activarSs([], filas);
     const cfg = ctx.RANGES.REGISTROS;
     const filaBase = cfg.dataRow;          // primera fila de datos: la de PB_MARCA
-    const filaGuardado = cfg.dataRow + 1;  // la de PG_MARCA
+    const filaGuardado = cfg.dataRow + 1;  // guardado PG puro
+    const filaShell = cfg.dataRow + 2;     // puntual del shell
+    const filaRec = cfg.dataRow + 3;       // volcado de recurrentes
+    const filaOtros = cfg.dataRow + 4;     // nota editada a mano ('otros')
 
     // -------- MUTACION 9: editar una fila PB_MARCA -- tira, NO escribe --------
     let lanzo = false, msg = '';
@@ -471,6 +675,31 @@ console.log('\n=== 6. actualizarMontoFilaProyeccion y revertirEdicionMontoProyec
     lanzo = false;
     try { ctx.revertirEdicionMontoProyeccion(); } catch (e) { lanzo = true; }
     ok(lanzo, 'revertirEdicionMontoProyeccion sin edicion previa tira');
+
+    // -------- (viii) editabilidad por origen --------
+    // Shell: EDITABLE (decision deliberada del usuario), con origen en el retorno.
+    const rEditShell = ctx.actualizarMontoFilaProyeccion(filaShell, 50000);
+    ok(rEditShell.origen === 'shell' && rEditShell.montoAnterior === 45000 && rEditShell.montoNuevo === 50000 &&
+       rEditShell.clave === '2026-09',
+       'una fila shell SE EDITA y el retorno trae origen="shell", dio ' + JSON.stringify(rEditShell));
+    ok(ssMock._hojas['Proyeccion'].getRange(filaShell, colMonto).getValue() === 50000,
+       'el monto shell quedo escrito (50000)');
+    const rRevShellEd = ctx.revertirEdicionMontoProyeccion();
+    ok(rRevShellEd.montoRestaurado === 45000, 'y su edicion tambien se revierte exacta (45000)');
+
+    // Recurrentes: rechazada con su mensaje propio.
+    lanzo = false; msg = '';
+    try { ctx.actualizarMontoFilaProyeccion(filaRec, 9999); } catch (e) { lanzo = true; msg = e.message; }
+    ok(lanzo && msg.indexOf('volcado de recurrentes') !== -1 && msg.indexOf('vista de') !== -1,
+       'una fila de recurrentes se rechaza apuntando a la vista de Recurrentes, dio: ' + msg);
+    ok(ssMock._hojas['Proyeccion'].getRange(filaRec, colMonto).getValue() === 5000,
+       'el monto del recurrente sigue en 5000 (no se escribio nada)');
+
+    // Otros: rechazada con su mensaje propio.
+    lanzo = false; msg = '';
+    try { ctx.actualizarMontoFilaProyeccion(filaOtros, 9999); } catch (e) { lanzo = true; msg = e.message; }
+    ok(lanzo && msg.indexOf('No se reconoce el origen') !== -1,
+       'una fila "otros" (nota editada a mano) se rechaza con su mensaje propio, dio: ' + msg);
 
     // Una fila sin ninguna marca tampoco es editable (mismo gate que PB_MARCA).
     const filasSinMarca = [filaProy({ monto: 1, tipo: 'Ingreso', cuenta: 'X', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: 'cargado a mano' })];

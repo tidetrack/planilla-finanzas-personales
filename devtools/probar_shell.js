@@ -692,6 +692,24 @@ ok(notaPg19.indexOf(ctx.PG_MARCA + ' ' + claveFut19 + ' shell_') === 0,
 ok(/ extra$/.test(notaPg19), 'la nota libre del usuario viaja al final, visible en la hoja');
 ok(/para (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) \d{4}\./.test(rp.mensaje),
     'el mensaje nombra el mes en castellano');
+ok(/ABM de Proyecciones Elaboradas/.test(rp.mensaje || ''),
+    'el mensaje dice DONDE se ven y se borran estas proyecciones: el ABM de Proyecciones Elaboradas');
+
+// GUARD DE CONTRATO CRUZADO (retiro selectivo, 2026-08-29): el literal 'shell_' vive duplicado
+// a proposito en 16_ShellService.js (que lo escribe) y DEVTOOL_PresupuestoGuardar.js (que lo
+// excluye del retiro via _esNotaShellPg) -- compartir la const cruzaria archivos en la carga
+// alfabetica (cicatriz v0.50.1). Este guard es la UNICA red si alguien cambia un solo lado:
+// se carga el PG real en un contexto propio y se cruza contra la nota que el shell ESCRIBIO.
+{
+    const ctxPg = { console, String, Number, Object, Array, Math, Date, isFinite, JSON };
+    vm.createContext(ctxPg);
+    vm.runInContext(leerSrc('src/DEVTOOL_PresupuestoGuardar.js') +
+        '\n;globalThis.__esNotaShellPg = _esNotaShellPg;', ctxPg);
+    ok(ctxPg.__esNotaShellPg(notaPg19) === true,
+        'CONTRATO CRUZADO: la nota real que escribio _filaDeProyeccion ES shell para _esNotaShellPg (sobrevive al retiro de PG)');
+    ok(ctxPg.__esNotaShellPg(ctx.PG_MARCA + ' 2026-09 2026-08-25_143000') === false,
+        'CONTRATO CRUZADO: una nota con sello de _selloPg NO es shell (el retiro de PG si la alcanza)');
+}
 
 // --- Conciliacion ---
 ok(ctx.registrarConciliacion([]).ok === false, 'un lote de conciliacion vacio se rechaza');
@@ -950,8 +968,13 @@ const rp2 = ctx.registrarProyecciones([{ cuenta: 'Comidas', monto: 200, moneda: 
 ok(rp.ok === true && rp2.ok === true, 'dos lotes seguidos (mismo segundo de reloj) entran los dos');
 ok(notasProy19().length === notasAntes22 + 2,
     'quedaron LAS DOS filas: la verificacion es por bloque propio y un sello repetido no puede borrar la corrida anterior');
-ok(/Guardar Proyeccion para ese mes/.test(rp.mensaje || ''),
-    'el mensaje declara que un Guardar Proyeccion posterior del mes reemplaza tambien las puntuales del shell');
+// (retiro selectivo 2026-08-29) La advertencia "Ojo: ... reemplaza tambien estas proyecciones"
+// se retiro del mensaje porque dejo de ser cierta: aplicarGuardarProyeccion excluye del retiro
+// las notas con sello 'shell_' (_esNotaShellPg). El mensaje ahora apunta al ABM.
+ok(!/Ojo:/.test(rp.mensaje || ''),
+    'el mensaje ya NO advierte que Guardar Proyeccion reemplaza las puntuales: el retiro es selectivo');
+ok(/ABM de Proyecciones Elaboradas/.test(rp.mensaje || ''),
+    'y en su lugar dice donde se ven y se borran (ABM de Proyecciones Elaboradas)');
 
 // -- (14) aNumero: el punto sin coma tambien es separador de miles cuando el patron es-AR
 //    es inequivoco. Se prueba la FUNCION REAL extraida del HTML, no una copia. --
@@ -1023,6 +1046,16 @@ ok(typeof ctx.registrarMovimiento === 'undefined' && typeof ctx.registrarTraspas
     ok(!new RegExp(patron).test(sinComentarios),
         'sin rastro ejecutable de ' + patron.replace(/\\/g, '') + ': la regla muerta no volvio');
 });
+
+// -- (32) El hint de proyeccion cuenta la MISMA historia que el backend (retiro selectivo
+//    2026-08-29): Guardar Proyeccion desde la hoja Presupuesto ya NO reemplaza lo cargado por
+//    menu, y el hint dice donde se revisa/borra usando el rotulo EXACTO de MENU_CONFIG. --
+ok(!/Presupuesto la reemplaza\./.test(HTML),
+    'el hint de proyeccion ya no promete que Guardar Proyeccion "la reemplaza" (dejo de ser cierto)');
+ok(/no la toca: conviven sumando/.test(HTML),
+    'el hint dice la historia nueva: el guardado desde Presupuesto no toca lo cargado por menu');
+ok(/ABM de Proyecciones Elaboradas del menu/.test(HTML),
+    'el hint apunta al ABM con el rotulo exacto del item de MENU_CONFIG: "Proyecciones Elaboradas"');
 
 seccion('23. GUARD DE PALETA: el shell viste el brandbook, cero hex fuera de lista');
 // decision Franco 2026-08-29: "esta quedando buenisimo de UX pero no son los colores de la

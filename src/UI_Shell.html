@@ -2018,9 +2018,15 @@ var PLANTILLA_PROYECCION =
         '<label class="f c12">' +
         '<span class="rot">Nota</span>' +
         '<input class="form-input p-nota" placeholder="Opcional" autocomplete="off">' +
+        // (retiro selectivo 2026-08-29) El cierre viejo decia que Guardar Proyeccion desde la
+        // hoja Presupuesto "la reemplaza": dejo de ser cierto -- aplicarGuardarProyeccion
+        // excluye del retiro las notas con sello shell_ (_esNotaShellPg,
+        // DEVTOOL_PresupuestoGuardar.js), asi que conviven sumando. El rotulo "Proyecciones
+        // Elaboradas" es el EXACTO del item de MENU_CONFIG (00_Config.js), no una parafrasis.
         '<span class="hint">Se guarda en la base Proyeccion con las cotizaciones del dia ' +
         'congeladas. Guardar despues el presupuesto entero de ese mes desde la hoja ' +
-        'Presupuesto la reemplaza.</span>' +
+        'Presupuesto no la toca: conviven sumando. Despues se puede revisar o borrar desde ' +
+        'el ABM de Proyecciones Elaboradas del menu.</span>' +
         '</label>' +
         '</div>' +
         '</div></div></div>' +

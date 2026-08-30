@@ -3,6 +3,41 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-08-29] v0.61.0 - El guardado deja de pisar lo ajeno y el ABM reconoce los cinco
+ * origenes.
+ * - ACTA DE COORDINACION: este release toca DEVTOOL_PresupuestoGuardar.js,
+ *   DEVTOOL_ProyeccionAbm.js y UI_AbmProyeccionElaborada.html, modulos historicamente de la
+ *   linea fix/tablero-pendientes, HOY INACTIVA y con su rama integramente mergeada aca.
+ *   Autorizacion explicita de Franco del 2026-08-29 ("Si, encaralo y coordinalo con la otra
+ *   linea"). Si esa linea revive: leer la enmienda a la decision 3 en la cabecera de
+ *   DEVTOOL_PresupuestoGuardar.js (el contrato de notas definitivo) antes de tocar el
+ *   formato de Nota o el retiro de filas.
+ * - EL FIX GRAVE (diferido de v0.59.0): aplicarGuardarProyeccion retiraba TODAS las filas
+ *   del mes con su prefijo, incluidas las proyecciones del shell -- perdida de datos real.
+ *   Ahora el retiro es selectivo (_filasGuardadoPropioPg) y el criterio es EL MISMO en los
+ *   cuatro sitios: plan, chequeo post-retiro, verificacion post-escritura y reversion del
+ *   catch. El confirm anuncia lo que retira Y lo que convive (shell, recurrentes, y las
+ *   notas PG irreconocibles que quedan fuera).
+ * - El clasificador del ABM (_origenNotaPa, reemplaza a _partesNotaGuardadoPa) reconoce
+ *   CINCO origenes por la forma del sello; la nota libre del usuario salio del sello
+ *   (hallazgo 2), cada grupo tiene baja selectiva con total propio (hallazgo 3), el volcado
+ *   de recurrentes es visible y borrable desde el ABM -- la inversa que no existia
+ *   (hallazgo 4) -- y el rotulo temporal dice "N corridas" cuando el grupo funde varias
+ *   (hallazgo 5). Payload acotado a lo que la pantalla pinta.
+ * - COMPATIBILIDAD Y ADVERSARIAL: el verificador reprodujo dos divergencias y se arreglaron
+ *   -- el vintage v0.56-v0.58 del sello shell (sin milisegundos) clasificaba "otros" y ahora
+ *   clasifica shell; y las notas PG malformadas que el ABM mostraba como "otros" eran
+ *   RETIRADAS igual por el guardado (dos superficies, dos reglas sobre la misma fila):
+ *   ahora el retiro exige la forma estricta y lo malformado queda fuera, visible.
+ * - La asimetria del discriminador es DELIBERADA y quedo documentada: el retiro es laxo
+ *   (tercer token que empiece con shell_ alcanza para NO borrar: nunca borrar de mas) y la
+ *   clasificacion es estricta (lo dudoso degrada a "otros" visible). No "corregirla"
+ *   alineando un lado.
+ * - Nota operativa: tras un Guardar Proyeccion, el total del mes en Proyeccion ya no es
+ *   igual al de Presupuesto si hay puntuales o recurrentes: suman aparte, por diseno. Las
+ *   filas shell perdidas por corridas PASADAS no se recuperan con este fix: viven en los
+ *   respaldos ocultos "Respaldo presupuesto guardar <sello>".
+ *
  * [2026-08-29] v0.60.0 - Rediseno Corriente: el shell se funde con el dialogo y habla la
  * paleta de la marca.
  * - Pedido de Franco, textual: fondo blanco "porque sino no hace juego con el borde en si

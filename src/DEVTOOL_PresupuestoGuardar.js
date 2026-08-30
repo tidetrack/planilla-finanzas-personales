@@ -123,6 +123,58 @@
  * produccion (364 filas, un ano de operacion). Extenderla con una clave de periodo es continuar
  * un patron probado, no inventar uno nuevo.
  *
+ * ENMIENDA A LA DECISION 3 (2026-08-29) -- CONTRATO DE NOTAS DE "Proyeccion", DEFINITIVO
+ * "Proyeccion" recibe filas de CUATRO origenes, cada uno con su forma de Nota, discriminables
+ * sin ambiguedad:
+ *   1. Base historico  (DEVTOOL_PresupuestoBase.js):  "<PB_MARCA> <sello>" -- sin clave; el
+ *      periodo vive en la columna Fecha.
+ *   2. Guardado PG     (este modulo):                 "<PG_MARCA> <clave> <sello>", con sello
+ *      yyyy-MM-dd_HHmmss (solo digitos/guiones/underscore; matchea /^\d{4}-/). Nada despues
+ *      del sello.
+ *   3. Shell puntual   (16_ShellService.js, _filaDeProyeccion):
+ *      "<PG_MARCA> <clave> shell_<yyyy-MM-dd_HHmmss>[<mmm>][ <nota libre>]" -- el tercer token
+ *      SIEMPRE empieza con "shell_". VINTAGE: los 3 digitos de milisegundos existen desde
+ *      v0.59.0; el shell desplegado en v0.56.0-v0.58.0 escribia el sello SIN milisegundos y
+ *      esas filas historicas viven en produccion. Todo clasificador del contrato acepta ambos
+ *      vintages (6 o 6+3 digitos tras la fecha).
+ *   4. Recurrentes     (17_RecurrentesService.js):
+ *      "<REC_MARCA> <clave> <sello> - <nombre>[: <nota>]", con REC_MARCA='Gasto recurrente'.
+ * INVARIANTES del contrato:
+ *   - El discriminador PG-vs-shell es el TERCER TOKEN (lo que sigue a "<PG_MARCA> <clave> "):
+ *     empieza con "shell_" => fila del shell; empieza con digito => guardado de este modulo.
+ *     `_selloPg` jamas puede producir algo que empiece con "shell_", y el shell jamas puede
+ *     producir un sello que no lo haga.
+ *   - "shell_" NO se comparte como const de nivel superior entre archivos (cicatriz v0.50.1,
+ *     orden alfabetico de carga: 16_ carga antes que DEVTOOL_): es un literal documentado en
+ *     ambos lados con @see cruzado.
+ *   - REC_MARCA y PB_MARCA quedan fuera de todo retiro por prefijo de este modulo, porque sus
+ *     marcas son distintas de PG_MARCA (verificado: ninguna es prefijo de otra).
+ *   - "Propia" para el RETIRO (2026-08-29, segunda vuelta) = prefijo exacto de periodo Y resto
+ *     que sea EXACTAMENTE un sello /^\d{4}-\d{2}-\d{2}_\d{6}$/ sin cola: la MISMA regla
+ *     'guardado' del ABM (@see DEVTOOL_ProyeccionAbm.js, _origenNotaPa). Una nota con marca PG
+ *     pero forma irreconocible (cola tras el sello, sello raro: solo alcanzable editando la
+ *     Nota a mano) NO se retira nunca -- queda visible y borrable como 'otros' en el ABM, y
+ *     este modulo la anuncia como linea informativa en estado/confirm. Antes el retiro era
+ *     permisivo (todo lo que no fuera "shell_") y una fila que el ABM le mostraba a Franco
+ *     como 'origen no reconocido' desaparecia en el proximo Guardar: dos superficies con
+ *     reglas distintas sobre la misma fila.
+ *   - ASIMETRIA DELIBERADA del discriminador shell (2026-08-29, NO "corregir" alineando un
+ *     lado): `_esNotaShellPg` es LAXO (tercer token que EMPIECE con "shell_") porque su unico
+ *     trabajo es EXCLUIR del retiro y contar para el confirm -- el lado que borra nunca debe
+ *     borrar de mas; `_origenNotaPa` (ABM) es ESTRICTO (regex completo del sello) porque su
+ *     trabajo es CLASIFICAR -- lo dudoso degrada a 'otros', visible y con camino de baja.
+ *     Alinear el retiro al criterio estricto borraria de mas ante un drift del formato;
+ *     alinear el clasificador al laxo disfrazaria notas invalidas de shell. Cada lado erra
+ *     hacia su lado seguro.
+ * Consecuencia operativa (retiro SELECTIVO, 2026-08-29): la idempotencia de este modulo retira
+ * SOLO sus filas propias (`_filasGuardadoPropioPg`, forma estricta de sello) mas las PB del
+ * periodo (decision 4). Las puntuales del shell del mismo mes, el volcado de recurrentes
+ * (REC_MARCA) y las PG de forma irreconocible NUNCA se tocan: conviven sumando (las dos
+ * primeras) o esperan su baja via ABM (la tercera), y por eso el invariante post-escritura
+ * verifica SOLO las filas propias -- el total del mes en "Proyeccion" puede ser mayor que
+ * K8/O8/S8 si hay puntuales del shell o recurrentes (semantica decidida: "el shell suma").
+ * @see 16_ShellService.js (_filaDeProyeccion, registrarProyecciones)
+ *
  * ============================================================================
  * DECISION 4 -- CONVIVENCIA CON EL PRESUPUESTO BASE HISTORICO
  * ============================================================================
@@ -214,7 +266,7 @@
  * @see DEVTOOL_PresupuestoBase.js
  * @version 0.50.0
  * @since 2026-08-25
- * @lastModified 2026-08-25
+ * @lastModified 2026-08-29
  */
 
 // ============================================
@@ -468,6 +520,74 @@ function _filasPorNotaPrefijoPg(hoja, prefijo) {
     return out;
 }
 
+/**
+ * true si `nota` es una proyeccion puntual del shell (16_ShellService.js, _filaDeProyeccion):
+ * empieza con el marcado de PG pero su sello (tercer token) empieza con 'shell_'. El criterio
+ * vive SOLO ACA de este lado; el shell construye el literal en su _filaDeProyeccion. Ver el
+ * contrato de notas en la cabecera (enmienda a la decision 3).
+ * @see 16_ShellService.js (_filaDeProyeccion, sello 'shell_...')
+ */
+function _esNotaShellPg(nota) {
+    const prefijo = PG_MARCA + ' ';
+    const texto = String(nota || '');
+    if (texto.indexOf(prefijo) !== 0) return false;
+    const resto = texto.slice(prefijo.length);
+    const espacio = resto.indexOf(' ');
+    if (espacio === -1) return false;
+    return resto.slice(espacio + 1).indexOf('shell_') === 0;
+}
+
+// decision Franco 2026-08-29: helper NUEVO en vez de mutar _filasPorNotaPrefijoPg. Esa funcion
+// la reusan revertirGuardarProyeccion (busca por nota EXACTA prefijo+sello, donde el filtro es
+// inocuo: un sello PG empieza con digito y una nota shell sigue con 'shell_', disjuntos) y el
+// ABM (_filasDelPeriodoPa, DEVTOOL_ProyeccionAbm.js): cambiarle la semantica al buscador
+// generico arreglaria el comportamiento del ABM por efecto colateral silencioso y sin
+// especificacion. El retiro selectivo se aplica SOLO donde este modulo decide QUE retirar.
+//
+// decision Franco 2026-08-29 (segunda vuelta): "propia" es la forma ESTRICTA -- el resto tras
+// el prefijo tiene que ser EXACTAMENTE un sello yyyy-MM-dd_HHmmss, sin cola. Es el mismo
+// literal-regex de la rama 'guardado' del clasificador del ABM (@see DEVTOOL_ProyeccionAbm.js,
+// _origenNotaPa), repetido a proposito y no compartido como const de nivel superior (cicatriz
+// v0.50.1, orden alfabetico de carga). Antes el criterio era permisivo ("todo lo que no sea
+// shell_") y una nota PG editada a mano -- que el ABM clasifica 'otros' -- se retiraba contada
+// como "guardado manual previo": una fila mostrada como irreconocible desaparecia en el
+// proximo Guardar. Las filas legitimas de aplicarGuardarProyeccion siempre cumplen la forma
+// estricta (_selloPg + _matrizNuevaPg no escriben cola), asi que la idempotencia no cambia.
+/** Filas de "Proyeccion" del guardado PROPIO: prefijo exacto de periodo + sello estricto sin cola. */
+function _filasGuardadoPropioPg(hoja, prefijo) {
+    const cfg = RANGES.REGISTROS;
+    const ultima = hoja.getLastRow();
+    if (ultima < cfg.dataRow) return [];
+    const colNota = columnLetterToIndex(cfg.columns.nota);
+    const notas = hoja.getRange(cfg.dataRow, colNota, ultima - cfg.dataRow + 1, 1).getValues();
+    const out = [];
+    notas.forEach(function (f, i) {
+        const nota = String(f[0] || '');
+        if (nota.indexOf(prefijo) === 0 &&
+            /^\d{4}-\d{2}-\d{2}_\d{6}$/.test(nota.slice(prefijo.length))) out.push(cfg.dataRow + i);
+    });
+    return out;
+}
+
+/**
+ * Filas del periodo (prefijo exacto) que son puntuales del shell (`_esNotaShellPg`, criterio
+ * laxo deliberado -- ver la asimetria declarada en la enmienda a la decision 3). Solo
+ * informativas: alimentan estado/confirm/detalle, jamas un retiro.
+ */
+function _filasShellPeriodoPg(hoja, prefijo) {
+    const cfg = RANGES.REGISTROS;
+    const ultima = hoja.getLastRow();
+    if (ultima < cfg.dataRow) return [];
+    const colNota = columnLetterToIndex(cfg.columns.nota);
+    const notas = hoja.getRange(cfg.dataRow, colNota, ultima - cfg.dataRow + 1, 1).getValues();
+    const out = [];
+    notas.forEach(function (f, i) {
+        const nota = String(f[0] || '');
+        if (nota.indexOf(prefijo) === 0 && _esNotaShellPg(nota)) out.push(cfg.dataRow + i);
+    });
+    return out;
+}
+
 /** Filas de "Proyeccion" marcadas PB_MARCA (DEVTOOL_PresupuestoBase.js) cuya fecha cae en `periodo`. */
 function _filasBasePorMesPg(hoja, periodo) {
     const cfg = RANGES.REGISTROS;
@@ -551,14 +671,37 @@ function _planGuardarPg(ss, prePresupuesto) {
     const hojaProy = ss.getSheetByName(SHEETS.PROYECCION);
     const clave = _claveMesPg(periodo);
     const prefijoPropio = PG_MARCA + ' ' + clave + ' ';
-    const filasPropiasPrevias = _filasPorNotaPrefijoPg(hojaProy, prefijoPropio);
+    // Retiro SELECTIVO (enmienda a la decision 3): las "previas propias" son SOLO las de forma
+    // estricta de sello. Estado, confirm y retiro consumen TODOS esta misma lista: lo que se
+    // anuncia es exactamente lo que se ejecuta.
+    const filasPropiasPrevias = _filasGuardadoPropioPg(hojaProy, prefijoPropio);
+    // Informativo (transparencia del estado/confirm): las puntuales del shell de este periodo.
+    // NO entran en ningun retiro; matchean el prefijo pero no son propias.
+    const filasShellDelPeriodo = _filasShellPeriodoPg(hojaProy, prefijoPropio);
+    // Informativo: filas con marca PG del periodo pero forma irreconocible (ni sello estricto
+    // ni shell -- una Nota editada a mano). NO se retiran: el ABM las lista como 'otros' y ese
+    // es su camino de baja; aca solo se avisa que existen para que la foto del mes cierre.
+    const filasPgIrreconocibles = _filasPorNotaPrefijoPg(hojaProy, prefijoPropio)
+        .filter(function (f) {
+            return filasPropiasPrevias.indexOf(f) === -1 && filasShellDelPeriodo.indexOf(f) === -1;
+        });
     const filasBaseDelPeriodo = _filasBasePorMesPg(hojaProy, periodo);
+    // Informativo: el volcado de recurrentes de este periodo (17_RecurrentesService.js). Su
+    // marca es distinta de PG_MARCA asi que jamas entra a ningun retiro; se releva SOLO para
+    // que el operador que aprueba el guardado vea la convivencia completa del mes. REC_MARCA
+    // se lee ACA ADENTRO, nunca en un const de nivel superior (cicatriz v0.50.1); el prefijo
+    // es el mismo que arma _filasRecPorPrefijo del otro lado, con @see cruzado.
+    // @see 17_RecurrentesService.js (_filasRecPorPrefijo, volcarRecurrentesAlMes)
+    const filasRecDelPeriodo = _filasPorNotaPrefijoPg(hojaProy, REC_MARCA + ' ' + clave + ' ');
 
     return {
         periodo: periodo, clave: clave, moneda: moneda, lectura: lectura,
         totalesVivos: totalesVivos, w8: w8, hojaProy: hojaProy,
         prefijoPropio: prefijoPropio, filasPropiasPrevias: filasPropiasPrevias,
-        filasBaseDelPeriodo: filasBaseDelPeriodo
+        filasShellDelPeriodo: filasShellDelPeriodo,
+        filasPgIrreconocibles: filasPgIrreconocibles,
+        filasBaseDelPeriodo: filasBaseDelPeriodo,
+        filasRecDelPeriodo: filasRecDelPeriodo
     };
 }
 
@@ -688,6 +831,9 @@ function estadoGuardarProyeccion() {
 
         const resumenBase = _resumenFilasPg(plan.hojaProy, plan.filasBaseDelPeriodo);
         const resumenPropias = _resumenFilasPg(plan.hojaProy, plan.filasPropiasPrevias);
+        const resumenShell = _resumenFilasPg(plan.hojaProy, plan.filasShellDelPeriodo);
+        const resumenRec = _resumenFilasPg(plan.hojaProy, plan.filasRecDelPeriodo);
+        const resumenIrreconocibles = _resumenFilasPg(plan.hojaProy, plan.filasPgIrreconocibles);
 
         const l = ['GUARDAR PROYECCION - ESTADO (no se escribio nada)', ''];
         l.push('PERIODO: ' + IP_MESES.split(',')[plan.periodo.getMonth()] + ' ' + plan.periodo.getFullYear() +
@@ -712,6 +858,15 @@ function estadoGuardarProyeccion() {
             (resumenBase.n ? ', ' + resumenBase.texto : '') + '.');
         l.push('  Un guardado manual previo de este mismo periodo: ' + resumenPropias.n + ' fila(s)' +
             (resumenPropias.n ? ', ' + resumenPropias.texto : '') + '.');
+        l.push('  Proyecciones puntuales del shell de este periodo: ' + resumenShell.n + ' fila(s)' +
+            (resumenShell.n ? ', ' + resumenShell.texto : '') + ' -- NO se tocan, conviven sumando.');
+        l.push('  Volcado de recurrentes de este periodo: ' + resumenRec.n + ' fila(s)' +
+            (resumenRec.n ? ', ' + resumenRec.texto : '') + ' -- NO se tocan, conviven sumando.');
+        if (plan.filasPgIrreconocibles.length) {
+            l.push('  Filas con marca PG pero forma irreconocible (Nota editada a mano): ' +
+                resumenIrreconocibles.n + ' fila(s), ' + resumenIrreconocibles.texto +
+                ' -- NO se tocan; revisarlas o borrarlas desde el ABM de Proyecciones Elaboradas (grupo "Otros").');
+        }
         if (!plan.lectura.filas.length) {
             l.push('');
             l.push('NADA QUE GUARDAR: ninguna cuenta tiene un Monto a Proyectar cargado para este periodo.');
@@ -755,6 +910,8 @@ function aplicarGuardarProyeccion() {
         const suma = _sumarPorBloquePg(plan.lectura.filas);
         const resumenBase = _resumenFilasPg(plan.hojaProy, plan.filasBaseDelPeriodo);
         const resumenPropias = _resumenFilasPg(plan.hojaProy, plan.filasPropiasPrevias);
+        const resumenShell = _resumenFilasPg(plan.hojaProy, plan.filasShellDelPeriodo);
+        const resumenRec = _resumenFilasPg(plan.hojaProy, plan.filasRecDelPeriodo);
         const filasARetirar = plan.filasBaseDelPeriodo.concat(plan.filasPropiasPrevias)
             .filter(function (v, i, a) { return a.indexOf(v) === i; })
             .sort(function (a, b) { return a - b; });
@@ -770,7 +927,14 @@ function aplicarGuardarProyeccion() {
             ' | AUD ' + cotizaciones.AUD.toFixed(4) + ' | EUR ' + cotizaciones.EUR.toFixed(4) + '\n\n' +
             'SE RETIRAN (la proyeccion manual gana sobre el promedio historico para este mes):\n' +
             '  Presupuesto base historico: ' + resumenBase.n + ' fila(s)' + (resumenBase.n ? ' (' + resumenBase.texto + ')' : '') + '\n' +
-            '  Guardado manual previo de este mismo periodo: ' + resumenPropias.n + ' fila(s)' + (resumenPropias.n ? ' (' + resumenPropias.texto + ')' : '') + '\n\n' +
+            '  Guardado manual previo de este mismo periodo: ' + resumenPropias.n + ' fila(s)' + (resumenPropias.n ? ' (' + resumenPropias.texto + ')' : '') + '\n' +
+            '  Proyecciones puntuales del shell de este periodo: ' + resumenShell.n + ' fila(s)' +
+            (resumenShell.n ? ' (' + resumenShell.texto + ')' : '') + ' -- NO se tocan, conviven sumando.\n' +
+            '  Volcado de recurrentes de este periodo: ' + resumenRec.n + ' fila(s)' +
+            (resumenRec.n ? ' (' + resumenRec.texto + ')' : '') + ' -- NO se tocan, conviven sumando.\n' +
+            (plan.filasPgIrreconocibles.length ?
+                '  Filas con marca PG pero forma irreconocible: ' + plan.filasPgIrreconocibles.length +
+                ' fila(s) -- NO se tocan; verlas en el ABM (grupo "Otros").\n' : '') + '\n' +
             'NO se toca ningun otro periodo ni ninguna fila sin marca. Continuar?',
             ui.ButtonSet.YES_NO);
         if (conf !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se escribio nada.' };
@@ -785,7 +949,8 @@ function aplicarGuardarProyeccion() {
             _borrarGeneradasPb(plan.hojaProy, filasARetirar);
             SpreadsheetApp.flush();
             const quedanBase = _filasBasePorMesPg(plan.hojaProy, plan.periodo);
-            const quedanPropias = _filasPorNotaPrefijoPg(plan.hojaProy, plan.prefijoPropio);
+            // Solo las PROPIAS: una fila shell sobreviviente es lo esperado, no un retiro fallido.
+            const quedanPropias = _filasGuardadoPropioPg(plan.hojaProy, plan.prefijoPropio);
             if (quedanBase.length || quedanPropias.length) {
                 throw new Error('Quedaron filas sin retirar (' + quedanBase.length + ' base + ' +
                     quedanPropias.length + ' propias): se corta antes de escribir para no duplicar. ' +
@@ -798,8 +963,10 @@ function aplicarGuardarProyeccion() {
         filaEscritura = _escribirAlPieProyeccionPg(plan.hojaProy, matrizNueva);
         SpreadsheetApp.flush();
 
-        // --- Verificacion: releer y comparar contra el invariante (bloque por bloque y neto) ---
-        const escritas = _filasPorNotaPrefijoPg(plan.hojaProy, plan.prefijoPropio);
+        // --- Verificacion: releer y comparar contra el invariante (bloque por bloque y neto).
+        // Solo las filas PROPIAS: una shell sobreviviente entraria al conteo y a sumaReleida y
+        // haria fallar el invariante EN FALSO (auto-revert de un guardado sano). ---
+        const escritas = _filasGuardadoPropioPg(plan.hojaProy, plan.prefijoPropio);
         const fallas = [];
         if (escritas.length !== matrizNueva.length) {
             fallas.push('se escribieron ' + matrizNueva.length + ' fila(s) y al releer aparecen ' + escritas.length);
@@ -853,6 +1020,9 @@ function aplicarGuardarProyeccion() {
             '- Cotizaciones congeladas: ARS ' + cotizaciones.ARS.toFixed(4) + ' | USD ' + cotizaciones.USD.toFixed(4) +
             ' | AUD ' + cotizaciones.AUD.toFixed(4) + ' | EUR ' + cotizaciones.EUR.toFixed(4) + '\n' +
             '- Filas retiradas (base + guardado previo del mismo periodo): ' + filasARetirar.length + '\n' +
+            (plan.filasShellDelPeriodo.length ? '- Proyecciones del shell intactas: ' + plan.filasShellDelPeriodo.length + ' fila(s)\n' : '') +
+            (plan.filasRecDelPeriodo.length ? '- Volcado de recurrentes intacto: ' + plan.filasRecDelPeriodo.length + ' fila(s)\n' : '') +
+            (plan.filasPgIrreconocibles.length ? '- Filas PG de forma irreconocible intactas (ver ABM, grupo "Otros"): ' + plan.filasPgIrreconocibles.length + ' fila(s)\n' : '') +
             '- Respaldo de lo retirado en la hoja oculta "' + respaldo.nombre + '"\n' +
             '- Invariante verificado: Ingresos/Fijos/Variables y el neto cierran contra K8/O8/S8\n\n' +
             'Si algo quedo peor: revertirGuardarProyeccion (menu tidetrack Dev).';
@@ -865,7 +1035,10 @@ function aplicarGuardarProyeccion() {
         let restaurado = '';
         if (ss && plan && respaldo) {
             try {
-                const nuevasVivas = _filasPorNotaPrefijoPg(plan.hojaProy, plan.prefijoPropio);
+                // Solo las PROPIAS: las filas shell no estan en el respaldo (nunca se retiraron),
+                // asi que quitarlas aca las PERDERIA -- el mismo bug del retiro ciego, reapareciendo
+                // por el camino del error.
+                const nuevasVivas = _filasGuardadoPropioPg(plan.hojaProy, plan.prefijoPropio);
                 if (nuevasVivas.length) _borrarGeneradasPb(plan.hojaProy, nuevasVivas);
                 const backup = ss.getSheetByName(respaldo.nombre);
                 const matrizBackup = backup ? _leerRespaldoFilasPg(backup) : [];

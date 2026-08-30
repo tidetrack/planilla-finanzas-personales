@@ -94,6 +94,19 @@
       del Shell (1723 bytes / 85 nodos) -- lejos de "cientos de KB". El DIAG (paso 5b,
       DEVTOOL_DIAG_PermisoProyeccionAbm.js) mide el numero real en produccion antes de asumir nada.
 
+      [AMPLIACION 2026-08-29 -- CINCO ORIGENES, PAYLOAD ACOTADO]
+      El servidor (DEVTOOL_ProyeccionAbm.js, clasificador _origenNotaPa) dejo de reconocer solo
+      dos poblaciones: ahora separa 'guardado' (a mano desde Presupuesto), 'shell' (proyecciones
+      puntuales de la ventana de carga rapida, UI_Shell.html), 'recurrentes' (volcado de
+      17_RecurrentesService.js, antes invisible para este ABM), 'base' y 'otros' (nota con marca
+      pero de forma irreconocible -- nunca invisible). Este modal pinta las cinco secciones
+      (shell/recurrentes/otros se OCULTAN enteras cuando llegan vacias, para no ensuciar el
+      estado normal), edita monto solo en 'guardado' y 'shell' (el gate real sigue en el
+      servidor), y muestra la notaLibre de cada fila (la nota del shell o el 'nombre[: nota]'
+      del recurrente). El payload del listado es O(grupos): cada grupo trae EXACTAMENTE
+      { clave, mesLabel, nFilas, corridas, ultimoSello, totales, otrasFilas } -- sin
+      filas[]/monedas/anio/sello/sellos ni vacioGuardado/vacioBase.
+
       @see src/DEVTOOL_ProyeccionAbm.js (capa de datos: pingProyeccionAbm, listarPeriodosProyeccion,
            detalleFilasPeriodoProyeccion, eliminarPeriodoProyeccion, revertirBajaProyeccionAbm,
            actualizarMontoFilaProyeccion, revertirEdicionMontoProyeccion)
@@ -226,6 +239,10 @@
         }
         .tabla-proy tr:last-child td { border-bottom: none; }
 
+        /* Nota libre de la fila (la nota del shell o el 'nombre[: nota]' del recurrente):
+           es lo que identifica 'Netflix' en el detalle. Chica y atenuada, bajo la cuenta. */
+        .nota-libre { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
         .monto-view { cursor: pointer; }
         .monto-view:hover { text-decoration: underline; }
         .edit-icon { opacity: 0.45; font-size: 12px; }
@@ -282,13 +299,35 @@
     </div>
 
     <div id="cuerpoListado" class="hidden">
-        <div class="seccion-titulo">Guardado a mano <span class="contador" id="contadorGuardado"></span></div>
-        <div class="seccion-subtitulo">Decisiones deliberadas, guardadas desde la hoja Presupuesto.</div>
-        <div id="listaGuardado"></div>
+        <div id="secGuardado">
+            <div class="seccion-titulo">Guardado a mano <span class="contador" id="contadorGuardado"></span></div>
+            <div class="seccion-subtitulo">Decisiones deliberadas, guardadas desde la hoja Presupuesto.</div>
+            <div id="listaGuardado"></div>
+        </div>
 
-        <div class="seccion-titulo">Presupuesto base <span class="contador" id="contadorBase"></span></div>
-        <div class="seccion-subtitulo">Promedio historico automatico (DEVTOOL_PresupuestoBase.js). No se edita a mano.</div>
-        <div id="listaBase"></div>
+        <div id="secShell" class="hidden">
+            <div class="seccion-titulo">Manual del shell <span class="contador" id="contadorShell"></span></div>
+            <div class="seccion-subtitulo">Proyecciones puntuales cargadas desde la ventana de carga rapida.</div>
+            <div id="listaShell"></div>
+        </div>
+
+        <div id="secRecurrentes" class="hidden">
+            <div class="seccion-titulo">Recurrentes <span class="contador" id="contadorRecurrentes"></span></div>
+            <div class="seccion-subtitulo">Volcado de la BD de Recurrentes. Los montos se corrigen alla y se vuelve a volcar.</div>
+            <div id="listaRecurrentes"></div>
+        </div>
+
+        <div id="secBase">
+            <div class="seccion-titulo">Presupuesto base <span class="contador" id="contadorBase"></span></div>
+            <div class="seccion-subtitulo">Promedio historico automatico (DEVTOOL_PresupuestoBase.js). No se edita a mano.</div>
+            <div id="listaBase"></div>
+        </div>
+
+        <div id="secOtros" class="hidden">
+            <div class="seccion-titulo">Otros <span class="contador" id="contadorOtros"></span></div>
+            <div class="seccion-subtitulo">Filas con marca de proyeccion cuya nota no se reconoce del todo. Se pueden borrar por mes.</div>
+            <div id="listaOtros"></div>
+        </div>
     </div>
 
     <div class="pie-modal">
@@ -368,7 +407,10 @@
     }
 
     function fmtSello(sello) {
-        var m = /^(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(sello || '');
+        // Cubre el sello PG/REC ('yyyy-MM-dd_HHmmss') y el del shell ('shell_' + fecha + 3
+        // digitos de milisegundos, ver 16_ShellService.js). Si no matchea ninguno, crudo como
+        // siempre: mejor un sello feo que uno inventado.
+        var m = /^(?:shell_)?(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})(\d{2})(?:\d{3})?$/.exec(sello || '');
         if (!m) return sello || '';
         return m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5];
     }
@@ -538,14 +580,30 @@
         el.classList.remove('hidden');
     }
 
-    function renderListadoCompleto(data) {
-        document.getElementById('contadorGuardado').textContent = '(' + data.grupos.guardado.length + ')';
-        document.getElementById('contadorBase').textContent = '(' + data.grupos.base.length + ')';
+    // Las cinco secciones, en el orden de presentacion del servidor (PA_ORIGENES,
+    // DEVTOOL_ProyeccionAbm.js). 'siempre': guardado y base se muestran aun vacias, con su
+    // mensaje propio (el caso "todo base, cero guardado" es el estado real de produccion);
+    // shell, recurrentes y otros se OCULTAN enteras (titulo incluido) cuando llegan vacias,
+    // para no ensuciar el estado normal del modal con tres secciones sin contenido.
+    var SECCIONES_VISTA = [
+        { origen: 'guardado', sec: 'secGuardado', lista: 'listaGuardado', contador: 'contadorGuardado', siempre: true,
+          msgVacio: 'Todavia no guardaste ninguna proyeccion a mano. Cuando uses "Guardar Proyeccion" desde la hoja Presupuesto, va a aparecer aca.' },
+        { origen: 'shell', sec: 'secShell', lista: 'listaShell', contador: 'contadorShell', siempre: false },
+        { origen: 'recurrentes', sec: 'secRecurrentes', lista: 'listaRecurrentes', contador: 'contadorRecurrentes', siempre: false },
+        { origen: 'base', sec: 'secBase', lista: 'listaBase', contador: 'contadorBase', siempre: true,
+          msgVacio: 'No hay presupuesto base cargado. Se genera desde tidetrack Dev > Presupuesto base (desde el historial).' },
+        { origen: 'otros', sec: 'secOtros', lista: 'listaOtros', contador: 'contadorOtros', siempre: false }
+    ];
 
-        renderSeccion('listaGuardado', data.grupos.guardado, 'guardado', data.vacioGuardado,
-            'Todavia no guardaste ninguna proyeccion a mano. Cuando uses "Guardar Proyeccion" desde la hoja Presupuesto, va a aparecer aca.');
-        renderSeccion('listaBase', data.grupos.base, 'base', data.vacioBase,
-            'No hay presupuesto base cargado. Se genera desde tidetrack Dev > Presupuesto base (desde el historial).');
+    function renderListadoCompleto(data) {
+        SECCIONES_VISTA.forEach(function (s) {
+            var grupos = (data.grupos && data.grupos[s.origen]) || [];
+            var secEl = document.getElementById(s.sec);
+            if (!s.siempre && !grupos.length) { secEl.classList.add('hidden'); return; }
+            secEl.classList.remove('hidden');
+            document.getElementById(s.contador).textContent = '(' + grupos.length + ')';
+            renderSeccion(s.lista, grupos, s.origen, s.msgVacio);
+        });
 
         Object.keys(abiertos).forEach(function (key) {
             var idx = key.indexOf(':');
@@ -558,10 +616,10 @@
         });
     }
 
-    function renderSeccion(contId, grupos, origen, vacio, msgVacio) {
+    function renderSeccion(contId, grupos, origen, msgVacio) {
         var cont = document.getElementById(contId);
-        if (vacio) {
-            cont.innerHTML = '<p class="estado-vacio">' + escapeHtml(msgVacio) + '</p>';
+        if (!grupos.length) {
+            cont.innerHTML = '<p class="estado-vacio">' + escapeHtml(msgVacio || '') + '</p>';
             return;
         }
         cont.innerHTML = grupos.map(function (g) { return tarjetaGrupo(g, origen); }).join('');
@@ -571,14 +629,19 @@
     // TARJETA DE PERIODO
     // ============================================
 
+    // Verbo por origen para el rotulo del sello (hallazgo 5 del retiro selectivo 2026-08-29:
+    // nunca atribuir corridas mixtas a un solo momento). Con UNA corrida se dice el verbo y el
+    // momento; con varias, cuantas son y cual fue la ultima; sin sello (corridas 0, posible
+    // solo en 'otros'), solo el conteo de filas.
+    var VERBO_SELLO = { guardado: 'guardado el', shell: 'cargada el', recurrentes: 'volcado el', base: 'ultima corrida' };
+
     function tarjetaGrupo(grupo, origen) {
-        var meta = grupo.filas.length + ' fila(s)';
-        if (origen === 'guardado') {
-            meta += ' · guardado el ' + fmtSello(grupo.sello);
-        } else if (grupo.sellos && grupo.sellos.length) {
-            var ordenados = grupo.sellos.slice().sort();
-            meta += ' · ultima corrida ' + fmtSello(ordenados[ordenados.length - 1]);
-            if (grupo.sellos.length > 1) meta += ' (+' + (grupo.sellos.length - 1) + ' anteriores)';
+        var meta = grupo.nFilas + ' fila(s)';
+        var verbo = VERBO_SELLO[origen];
+        if (verbo && grupo.corridas === 1) {
+            meta += ' · ' + verbo + ' ' + fmtSello(grupo.ultimoSello);
+        } else if (verbo && grupo.corridas > 1) {
+            meta += ' · ' + grupo.corridas + ' corridas, ultima ' + fmtSello(grupo.ultimoSello);
         }
 
         var otras = grupo.otrasFilas > 0
@@ -637,11 +700,26 @@
     // DETALLE FILA POR FILA
     // ============================================
 
+    // Rotulo de cada origen en la confirmacion de baja: dice QUE se borra, no solo cuanto
+    // (hallazgo 3: la baja ahora es selectiva por origen y la confirmacion lo nombra).
+    var ROTULO_ORIGEN = {
+        guardado: 'guardado a mano', shell: 'manual del shell', recurrentes: 'recurrentes',
+        base: 'presupuesto base', otros: 'origen no reconocido'
+    };
+
+    // Nota al pie del detalle, por origen: guardado y shell se corrigen tocando el monto; el
+    // resto explica DONDE se corrige (o que solo se puede borrar), en vez de una tabla muda.
+    function notaPieDetalle(origen) {
+        if (origen === 'guardado' || origen === 'shell') return 'Toca un monto para corregirlo.';
+        if (origen === 'recurrentes') return 'Se corrigen desde la vista de Recurrentes y se vuelve a volcar el mes.';
+        if (origen === 'otros') return 'Origen no reconocido: solo se puede borrar el mes completo.';
+        return 'Presupuesto base: se recalcula corriendo de nuevo ese modulo, no se edita a mano.';
+    }
+
     function renderDetalle(det, origen) {
         var filasHtml = det.filas.map(filaHtml).join('');
-        var nota = origen === 'guardado'
-            ? '<p class="text-muted" style="font-size:12px; margin:8px 0 0;">Toca un monto para corregirlo.</p>'
-            : '<p class="text-muted" style="font-size:12px; margin:8px 0 0;">Presupuesto base: se recalcula corriendo de nuevo ese modulo, no se edita a mano.</p>';
+        var nota = '<p class="text-muted" style="font-size:12px; margin:8px 0 0;">' +
+            escapeHtml(notaPieDetalle(origen)) + '</p>';
 
         // Total real que se borraria si se confirma -- por moneda, nunca sumado entre monedas
         // distintas (ver totalMontoFilas). "23 filas" solo no le dice a Franco cuanta plata es.
@@ -655,7 +733,7 @@
                 '<button type="button" class="btn btn-danger btn-mini btn-abrir-confirmacion" onclick="pedirBorrado(this)">Borrar este periodo</button>' +
                 '<div class="confirmar-borrado hidden">' +
                     '<p>Se van a borrar <b>' + det.filas.length + '</b> fila(s) de <b>' + escapeHtml(det.mesLabel) + '</b> (' +
-                    (origen === 'guardado' ? 'guardado a mano' : 'presupuesto base') + ')' +
+                    escapeHtml(ROTULO_ORIGEN[origen] || origen) + ')' +
                     ', por un total de <b>' + totalTxt + '</b>. ' +
                     'Se puede deshacer justo despues, pero no una vez que hagas otro cambio.</p>' +
                     '<button type="button" class="btn btn-secondary btn-mini" onclick="cancelarBorrado(this)">Cancelar</button>' +
@@ -666,13 +744,17 @@
 
     function filaHtml(f) {
         var montoTxt = fmtMonto({ moneda: f.moneda, monto: f.monto });
+        // La notaLibre (la nota del shell o el 'nombre[: nota]' del recurrente) va bajo la
+        // cuenta: es lo que identifica 'Netflix' entre tres filas de la misma cuenta.
+        var cuentaHtml = escapeHtml(f.cuenta) +
+            (f.notaLibre ? '<div class="nota-libre">' + escapeHtml(f.notaLibre) + '</div>' : '');
         if (!f.editable) {
             return '<tr data-fila="' + f.fila + '">' +
-                '<td>' + escapeHtml(f.cuenta) + '</td><td>' + escapeHtml(f.tipoCuenta) + '</td>' +
+                '<td>' + cuentaHtml + '</td><td>' + escapeHtml(f.tipoCuenta) + '</td>' +
                 '<td style="text-align:right;">' + montoTxt + '</td></tr>';
         }
         return '<tr data-fila="' + f.fila + '">' +
-            '<td>' + escapeHtml(f.cuenta) + '</td><td>' + escapeHtml(f.tipoCuenta) + '</td>' +
+            '<td>' + cuentaHtml + '</td><td>' + escapeHtml(f.tipoCuenta) + '</td>' +
             '<td style="text-align:right;" class="celda-monto" data-monto="' + f.monto + '" data-moneda="' + f.moneda + '">' +
                 celdaVistaHtml(f.monto, f.moneda) +
             '</td></tr>';

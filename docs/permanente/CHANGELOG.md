@@ -11,6 +11,27 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## v0.61.0 - El guardado deja de pisar lo ajeno (2026-08-29)
+
+Cierra el hallazgo **grave** diferido de v0.59.0, con autorizacion de Franco para tocar los
+modulos de la linea `fix/tablero-pendientes` (hoy inactiva, rama integramente mergeada; el
+acta de coordinacion esta en `ZZ_Changelog.js` y el contrato de notas definitivo en la
+cabecera de `DEVTOOL_PresupuestoGuardar.js`).
+
+**Re-correr Guardar Proyeccion ya no borra lo ajeno**: el retiro es selectivo y el criterio es
+el mismo en los cuatro sitios (plan, chequeo, verificacion, reversion). El ABM de Proyecciones
+lista **cinco origenes** como grupos con baja propia — incluido el volcado de recurrentes, que
+era invisible y sin inversa. La nota libre salio del sello, el vintage v0.56-v0.58 clasifica
+bien, y lo irreconocible cae a "otros" visible, nunca invisible.
+
+La verificacion adversarial reprodujo dos divergencias reales antes del deploy: el vintage sin
+milisegundos y las notas PG malformadas que el ABM mostraba como "otros" pero el guardado
+retiraba igual. Ambas arregladas; la asimetria restante del discriminador es deliberada
+(retiro laxo: nunca borrar de mas; clasificacion estricta: lo dudoso degrada a visible).
+
 ---
 
 ## v0.60.0 - Rediseno Corriente (2026-08-29)

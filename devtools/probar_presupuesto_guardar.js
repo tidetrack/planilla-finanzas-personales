@@ -51,6 +51,11 @@ vm.createContext(ctx);
 vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/00_Config.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/03_SheetManager.js'), 'utf8') + '\n' +
+    // 17_RecurrentesService: aporta REC_MARCA, que _planGuardarPg lee en runtime desde 2026-08-29
+    // (la linea informativa del volcado de recurrentes). Va ANTES de los DEVTOOL_* como en Apps
+    // Script (los digitos ordenan antes que las letras); sus const de nivel superior son
+    // literales puros -- mismo criterio que probar_proyeccion_abm.js.
+    fs.readFileSync(path.join(RAIZ, 'src/17_RecurrentesService.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_FormulerioV0111.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_StockYFlujo.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_Proyeccion.js'), 'utf8') + '\n' +
@@ -63,10 +68,11 @@ vm.runInContext(
     '\n;Object.assign(globalThis,{RANGES,SHEETS,MONEDAS_DISPONIBLES,columnLetterToIndex,' +
     'invalidarCacheNombresHojas,PM_TITULO,PM_SELECTORES,PM_BLOQUES,PM_CLAVES_BLOQUE,PM_FILA_INI,' +
     'PM_FILA_FIN,PM_UMBRAL_IDENTIDAD,_bloquesPc,PC_TITULO_PROYECTAR,PC_COL_PROYECTAR_AGRUPADO,' +
-    'PB_MARCA,IP_MESES,PG_MARCA,' +
+    'PB_MARCA,IP_MESES,PG_MARCA,REC_MARCA,' +
     '_periodoDesdeSelectoresPg,_claveMesPg,_mismoMesPg,_leerCotizacionesVivasPg,' +
     '_preflightPresupuestoPg,_preflightProyeccionPg,_leerFilasPresupuestoPg,_sumarPorBloquePg,' +
     '_filasPorNotaPrefijoPg,_filasBasePorMesPg,_planGuardarPg,_matrizNuevaPg,' +
+    '_esNotaShellPg,_filasGuardadoPropioPg,_filasShellPeriodoPg,_leerRespaldoFilasPg,PG_PREFIJO_RESPALDO,' +
     'estadoGuardarProyeccion,aplicarGuardarProyeccion,revertirGuardarProyeccion});',
     ctx);
 
@@ -597,6 +603,206 @@ console.log('\n=== 7. La API de cotizaciones falla: no se escribe ni se borra na
     const filasDespues = ssMock._hojas['Proyeccion'].getLastRow();
     ok(filasAntes === filasDespues, 'TODO O NADA: "Proyeccion" quedo con EXACTAMENTE las mismas filas que antes (' + filasAntes + '), ni se borro el base ni se escribio nada nuevo');
     ok(contarFilasConMarca(ssMock, ctx.PG_MARCA) === 0, 'cero filas propias: no quedo nada a medio escribir');
+}
+
+// ============================================================================
+// 8. RETIRO SELECTIVO -- unit de _esNotaShellPg (el discriminador del contrato de notas)
+// ============================================================================
+console.log('\n=== 8. _esNotaShellPg: el discriminador PG-vs-shell es el TERCER TOKEN ===');
+{
+    // REC_MARCA se deriva del archivo real, nunca se retipea (memoria del repo: un banco con
+    // copia propia de un literal miente).
+    const REC_MARCA_REAL = /const REC_MARCA = '([^']+)'/.exec(
+        fs.readFileSync(path.join(RAIZ, 'src/17_RecurrentesService.js'), 'utf8'))[1];
+
+    ok(ctx._esNotaShellPg(ctx.PG_MARCA + ' 2026-09 2026-08-25_143000') === false,
+       'un guardado PG puro -> false (su sello empieza con digito)');
+    ok(ctx._esNotaShellPg(ctx.PG_MARCA + ' 2026-09 shell_2026-08-29_120000123') === true,
+       'una nota shell SIN nota libre -> true');
+    ok(ctx._esNotaShellPg(ctx.PG_MARCA + ' 2026-09 shell_2026-08-29_120000123 vacaciones en la costa') === true,
+       'una nota shell CON nota libre -> true (la nota libre no interfiere)');
+    ok(ctx._esNotaShellPg(ctx.PG_MARCA + ' 2026-09 2026-08-25_143000 shell_disfrazado') === false,
+       'criterio POSICIONAL: "shell_" en la cola de una nota PG (imposible hoy) NO la vuelve shell');
+    ok(ctx._esNotaShellPg(REC_MARCA_REAL + ' 2026-09 2026-08-21_090000 - Netflix') === false,
+       'una nota de recurrentes -> false (marca distinta, ni siquiera matchea el prefijo PG)');
+    ok(ctx._esNotaShellPg(ctx.PB_MARCA + ' 2026-08-20_2319') === false,
+       'una nota de presupuesto base -> false');
+    ok(ctx._esNotaShellPg('') === false && ctx._esNotaShellPg(null) === false,
+       'nota vacia y null -> false, sin reventar');
+    ok(ctx._esNotaShellPg(ctx.PG_MARCA + ' 2026-09') === false,
+       'una nota PG sin tercer token -> false (no hay sello que discriminar)');
+}
+
+// ============================================================================
+// 9. RETIRO SELECTIVO DE PUNTA A PUNTA: PG previas y PB se retiran, shell y REC quedan
+// ============================================================================
+console.log('\n=== 9. Retiro selectivo: aplicar con filas shell y REC presentes ===');
+{
+    tidetrackUsd = () => 1000; tidetrackAud = () => 700; tidetrackEur = () => 1100;
+    const REC_MARCA_REAL = /const REC_MARCA = '([^']+)'/.exec(
+        fs.readFileSync(path.join(RAIZ, 'src/17_RecurrentesService.js'), 'utf8'))[1];
+
+    const bloques = {
+        ingresos: [{ cuenta: 'Sueldo', proyectar: 500000 }],
+        fijos: [{ cuenta: 'Alquiler', proyectar: 200000 }],
+        variables: [{ cuenta: 'Comidas', proyectar: 80000 }]
+    };
+    const hojaPresu = hojaPresupuestoMock(bloques);
+
+    const notaShell1 = ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000111';
+    const notaShell2 = ctx.PG_MARCA + ' 2026-09 shell_2026-08-28_110000222 nota libre del usuario';
+    const notaRec = REC_MARCA_REAL + ' 2026-09 2026-08-21_090000 - Netflix';
+    const notaPgPrevia = ctx.PG_MARCA + ' 2026-09 2026-08-20_100000';
+    // Notas con marca PG pero forma irreconocible (solo alcanzables editando la Nota a mano):
+    // el ABM las clasifica 'otros' -- el retiro de este modulo NO puede tocarlas (los dos
+    // lados del contrato tienen que coincidir sobre la misma fila).
+    const notaPgConCola = ctx.PG_MARCA + ' 2026-09 2026-08-25_143000 editada a mano';
+    const notaPgSelloRaro = ctx.PG_MARCA + ' 2026-09 borrador';
+    const semilla = [
+        filaProy({ monto: 450000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PB_MARCA + ' 2026-08-20_2319' }),
+        filaProy({ monto: 111111, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaPgPrevia }),
+        filaProy({ monto: 30000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaShell1 }),
+        filaProy({ monto: 45000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaShell2 }),
+        filaProy({ monto: 5000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaRec }),
+        filaProy({ monto: 777, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaPgConCola }),
+        filaProy({ monto: 888, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaPgSelloRaro })
+    ];
+    const ssMock = crearSsMock([], semilla);
+    ssActual = { getSheetByName: (n) => (n === ctx.SHEETS.PRESUPUESTO ? hojaPresu : ssMock.getSheetByName(n)), getSheets: () => ssMock.getSheets().concat([{ getName: () => ctx.SHEETS.PRESUPUESTO }]), insertSheet: (n) => ssMock.insertSheet(n), toast() {} };
+    propsActual = propsMock();
+
+    // El confirm se CAPTURA: el conteo anunciado tiene que salir de la misma seleccion que el
+    // retiro ejecutado (el peor defecto posible aca es un confirm que mienta).
+    // Solo los alerts YES_NO son confirms; los OK de _mostrarPg (estado/detalle) no pisan la captura.
+    let ultimoConfirm = '';
+    uiActual = { alert: (t, m, bs) => { if (bs === 'YES_NO') ultimoConfirm = m; return 'YES'; },
+                 Button: { YES: 'YES', NO: 'NO' }, ButtonSet: { YES_NO: 'YES_NO', OK: 'OK' } };
+
+    // El ESTADO tambien anuncia las shell del periodo como intocables.
+    const est = ctx.estadoGuardarProyeccion();
+    ok(est.ok === true && est.detalle.indexOf('Proyecciones puntuales del shell de este periodo: 2 fila(s)') !== -1 &&
+       est.detalle.indexOf('NO se tocan, conviven sumando') !== -1,
+       'estadoGuardarProyeccion anuncia las 2 filas shell del periodo como NO tocadas');
+    // ... y la foto de convivencia del mes esta COMPLETA: recurrentes e irreconocibles tambien.
+    ok(est.ok === true && est.detalle.indexOf('Volcado de recurrentes de este periodo: 1 fila(s)') !== -1,
+       'el ESTADO anuncia el volcado de recurrentes del periodo (antes era invisible en el dialogo)');
+    ok(est.ok === true && est.detalle.indexOf('forma irreconocible (Nota editada a mano): 2 fila(s)') !== -1 &&
+       est.detalle.indexOf('grupo "Otros"') !== -1,
+       'el ESTADO anuncia las 2 filas PG de forma irreconocible como NO tocadas, apuntando al ABM');
+
+    horaMock = new DateReal(2026, 7, 29, 10, 0, 0);
+    const r1 = ctx.aplicarGuardarProyeccion();
+    ok(r1.ok === true, 'aplicar con filas shell y REC presentes: ok=true' + (r1.ok ? '' : ' -- ' + r1.error));
+    ok(ultimoConfirm.indexOf('Proyecciones puntuales del shell de este periodo: 2 fila(s)') !== -1,
+       'el CONFIRM anuncio las 2 filas shell con el mismo criterio que el retiro');
+    ok(ultimoConfirm.indexOf('Volcado de recurrentes de este periodo: 1 fila(s)') !== -1,
+       'el CONFIRM anuncio el volcado de recurrentes: la foto de convivencia que aprueba el operador esta completa');
+    ok(ultimoConfirm.indexOf('forma irreconocible: 2 fila(s)') !== -1,
+       'el CONFIRM anuncio las 2 filas PG irreconocibles como intocadas');
+    ok(r1.ok && r1.detalle.indexOf('Proyecciones del shell intactas: 2 fila(s)') !== -1,
+       'el detalle final declara las shell intactas');
+    ok(r1.ok && r1.detalle.indexOf('Volcado de recurrentes intacto: 1 fila(s)') !== -1,
+       'el detalle final declara el volcado de recurrentes intacto (misma omision corregida que en el confirm)');
+
+    const cfg = ctx.RANGES.REGISTROS;
+    const colNota = ctx.columnLetterToIndex(cfg.columns.nota);
+    const notasVivas = () => {
+        const hoja = ssMock._hojas['Proyeccion'];
+        const out = [];
+        for (let f = cfg.dataRow; f <= hoja.getLastRow(); f++) out.push(String(hoja.getRange(f, colNota).getValue() || ''));
+        return out.filter(v => v);
+    };
+    let vivas = notasVivas();
+    ok(vivas.filter(n => n === notaShell1).length === 1 && vivas.filter(n => n === notaShell2).length === 1,
+       'las DOS filas shell del periodo siguen vivas, con sus notas EXACTAS (nota libre incluida)');
+    ok(vivas.filter(n => n === notaRec).length === 1, 'la fila de recurrentes del periodo sigue viva');
+    ok(vivas.filter(n => n === notaPgConCola).length === 1,
+       'CRITERIO ALINEADO PG-vs-ABM: la nota PG con cola ("editada a mano", clasifica \'otros\' en el ABM) SOBREVIVE al re-guardado');
+    ok(vivas.filter(n => n === notaPgSelloRaro).length === 1,
+       'la nota PG con sello irreconocible ("borrador") tambien sobrevive: el retiro solo toca la forma estricta');
+    ok(vivas.indexOf(notaPgPrevia) === -1, 'el guardado PG previo del periodo SI se retiro (idempotencia)');
+    ok(vivas.filter(n => n.indexOf(ctx.PB_MARCA) === 0).length === 0, 'el base del periodo SI se retiro (decision 4)');
+    ok(ctx._filasGuardadoPropioPg(ssMock._hojas['Proyeccion'], ctx.PG_MARCA + ' 2026-09 ').length === 3,
+       'quedaron exactamente las 3 filas propias nuevas (una por bloque)');
+
+    // El respaldo de lo retirado NO contiene ninguna fila shell (nunca se retiraron).
+    const nombresRespaldo = Object.keys(ssMock._hojas).filter(n => n.indexOf(ctx.PG_PREFIJO_RESPALDO) === 0);
+    ok(nombresRespaldo.length === 1, 'hay exactamente una hoja de respaldo de esta corrida');
+    const colIni = ctx.columnLetterToIndex(cfg.start);
+    const idxNota = ctx.columnLetterToIndex(cfg.columns.nota) - colIni;
+    const filasRespaldo = ctx._leerRespaldoFilasPg(ssMock._hojas[nombresRespaldo[0]]);
+    const respaldoConShell = filasRespaldo.filter(vals => ctx._esNotaShellPg(vals[idxNota]));
+    ok(respaldoConShell.length === 0, 'el respaldo NO contiene filas shell: nunca entraron a filasARetirar');
+    ok(filasRespaldo.filter(vals => vals[idxNota] === notaPgConCola || vals[idxNota] === notaPgSelloRaro).length === 0,
+       'el respaldo tampoco contiene las notas PG irreconocibles: nunca se retiraron');
+
+    // IDEMPOTENCIA: aplicar DE NUEVO el mismo periodo -- las shell sobreviven la segunda corrida.
+    horaMock = new DateReal(2026, 7, 29, 10, 5, 0);
+    const r2 = ctx.aplicarGuardarProyeccion();
+    ok(r2.ok === true, 'segunda corrida (mismo periodo): ok=true');
+    vivas = notasVivas();
+    ok(vivas.filter(n => n === notaShell1).length === 1 && vivas.filter(n => n === notaShell2).length === 1,
+       'IDEMPOTENCIA: las shell sobreviven tambien la segunda corrida, sin duplicarse');
+    ok(vivas.filter(n => n === notaRec).length === 1, 'la fila REC tambien sobrevive la segunda corrida');
+    ok(vivas.filter(n => n === notaPgConCola).length === 1 && vivas.filter(n => n === notaPgSelloRaro).length === 1,
+       'las notas PG irreconocibles sobreviven tambien la segunda corrida, sin duplicarse');
+    ok(ctx._filasGuardadoPropioPg(ssMock._hojas['Proyeccion'], ctx.PG_MARCA + ' 2026-09 ').length === 3,
+       'siguen siendo 3 filas propias, no 6: la segunda corrida reemplazo solo lo suyo');
+}
+
+// ============================================================================
+// 10. EL CAMINO DEL ERROR: la reversion automatica tampoco toca las filas shell
+// ============================================================================
+console.log('\n=== 10. Fallo post-escritura: el catch revierte sin borrar las shell ===');
+{
+    tidetrackUsd = () => 1000; tidetrackAud = () => 700; tidetrackEur = () => 1100;
+    const bloques = { ingresos: [{ cuenta: 'Sueldo', proyectar: 500000 }] };
+    const hojaPresu = hojaPresupuestoMock(bloques);
+
+    const notaShell1 = ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000111';
+    const notaShell2 = ctx.PG_MARCA + ' 2026-09 shell_2026-08-28_110000222 nota libre';
+    const notaPgPrevia = ctx.PG_MARCA + ' 2026-09 2026-08-20_100000';
+    const semilla = [
+        filaProy({ monto: 450000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: ctx.PB_MARCA + ' 2026-08-20_2319' }),
+        filaProy({ monto: 111111, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaPgPrevia }),
+        filaProy({ monto: 30000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaShell1 }),
+        filaProy({ monto: 45000, tipo: 'Egreso', cuenta: 'Comidas', tipo_cuenta: 'Gasto Variable', medio: '', moneda: 'ARS', fecha: new Date(2026, 8, 1), nota: notaShell2 })
+    ];
+    const ssMock = crearSsMock([], semilla);
+    ssActual = { getSheetByName: (n) => (n === ctx.SHEETS.PRESUPUESTO ? hojaPresu : ssMock.getSheetByName(n)), getSheets: () => ssMock.getSheets().concat([{ getName: () => ctx.SHEETS.PRESUPUESTO }]), insertSheet: (n) => ssMock.insertSheet(n), toast() {} };
+    uiActual = uiMockSiempreSi();
+    propsActual = propsMock();
+    horaMock = new DateReal(2026, 7, 29, 11, 0, 0);
+
+    // Se inyecta el fallo DESPUES de escribir: el flush 1 es del respaldo, el 2 del retiro,
+    // el 3 el de la escritura de las filas nuevas -- ahi corta, y el catch tiene que revertir
+    // (quitar lo nuevo, reponer el respaldo) SIN llevarse las shell, que no estan respaldadas.
+    const flushOriginal = ctx.SpreadsheetApp.flush;
+    let flushes = 0;
+    ctx.SpreadsheetApp.flush = function () { flushes++; if (flushes === 3) throw new Error('corte simulado post-escritura'); };
+
+    const r = ctx.aplicarGuardarProyeccion();
+    ctx.SpreadsheetApp.flush = flushOriginal;
+
+    ok(r.ok === false && String(r.error).indexOf('corte simulado') !== -1,
+       'el fallo post-escritura termina en ok=false y se revierte, dio: ' + r.error);
+
+    const cfg = ctx.RANGES.REGISTROS;
+    const colNota = ctx.columnLetterToIndex(cfg.columns.nota);
+    const hoja = ssMock._hojas['Proyeccion'];
+    const vivas = [];
+    for (let f = cfg.dataRow; f <= hoja.getLastRow(); f++) {
+        const v = String(hoja.getRange(f, colNota).getValue() || '');
+        if (v) vivas.push(v);
+    }
+    ok(vivas.filter(n => n === notaShell1).length === 1 && vivas.filter(n => n === notaShell2).length === 1,
+       'las filas shell NI se borraron NI se duplicaron en la reversion (1 y 1)');
+    ok(vivas.filter(n => n === notaPgPrevia).length === 1,
+       'el guardado previo volvio desde el respaldo, sin duplicarse');
+    ok(vivas.filter(n => n.indexOf(ctx.PB_MARCA) === 0).length === 1,
+       'el base del periodo volvio desde el respaldo');
+    ok(vivas.filter(n => n.indexOf(ctx.PG_MARCA + ' 2026-09 2026-08-29_') === 0).length === 0,
+       'las filas nuevas de la corrida fallida se quitaron enteras');
 }
 
 // ============================================================================

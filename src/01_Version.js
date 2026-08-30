@@ -12,7 +12,7 @@
 
 const VERSION = {
  major: 0,
- minor: 60,
+ minor: 61,
  patch: 0,
 
  /**
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-29',
- releaseName: 'v0.60.0 - Rediseno Corriente: el shell se funde con el dialogo y habla la paleta de la marca',
+ releaseName: 'v0.61.0 - El guardado deja de pisar lo ajeno y el ABM reconoce los cinco origenes',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.61.0 (2026-08-29) - El guardado deja de pisar lo ajeno y el ABM reconoce los cinco origenes
+! Cierra el hallazgo GRAVE diferido de v0.59.0, con autorizacion de Franco para tocar los modulos de la otra linea: re-correr Guardar Proyeccion desde la hoja Presupuesto ya NO retira las proyecciones cargadas por el menu ni el volcado de recurrentes. El retiro selectivo usa el MISMO criterio en los cuatro sitios (plan, chequeo post-retiro, verificacion y reversion), y estado/confirm/detalle anuncian exactamente lo que se toca y lo que convive.
++ El ABM de Proyecciones Elaboradas lista CINCO origenes como grupos propios (guardado a mano / manual del shell / recurrentes / presupuesto base / otros), cada uno con su total, su baja selectiva y su rotulo temporal por corrida. Con esto aparece el camino de UI que faltaba: quitar un volcado de recurrentes de un mes. La nota libre del usuario salio del sello y se muestra aparte. Payload acotado a lo que la pantalla pinta.
++ Compatibilidad historica verificada: las filas shell del vintage v0.56-v0.58 (sello sin milisegundos) clasifican como shell; toda nota que no matchea ningun formato cae al grupo "otros", visible y borrable, nunca invisible. Asimetria DELIBERADA del discriminador: retiro laxo (nunca borrar de mas) vs clasificacion estricta (lo dudoso degrada a visible).
+* Los mensajes del shell y del ABM cuentan la misma historia nueva: "conviven sumando". La advertencia "Ojo: ... reemplaza tambien estas proyecciones" se elimino por dejar de ser cierta.
+! Nota operativa: tras un Guardar Proyeccion, el total del mes en la hoja Proyeccion ya no es igual al de la hoja Presupuesto si hay puntuales del shell o recurrentes: suman aparte, por diseno. Filas shell perdidas por corridas PASADAS no se recuperan (viven en los respaldos ocultos).
+
 v0.60.0 (2026-08-29) - Rediseno Corriente: el shell se funde con el dialogo y habla la paleta de la marca
 + Pedido de Franco: fondo blanco para hacer juego con el marco del dialogo de Google, y "no son los colores de la marca: ajusta colores". Dos direcciones de arte compitieron con mockups renderizados; gano "Corriente" (liquid glass organico, la letra del brandbook para el segmento personal) con ocho enmiendas de la perdedora.
 + Lienzo blanco puro con radiales de agua teal/durazno al 3-10%; la banda navy DESAPARECE (cabecera transparente con monograma en degrade y hairline liquida); tarjetas y bloques de vidrio con sombras color agua; Poppins 400-700; semaforo recalibrado con pares ink/bg AA; boton primario teal con texto #1E2A33 (blanco sobre teal prohibido: 1.9:1).

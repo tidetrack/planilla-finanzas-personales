@@ -779,7 +779,9 @@ function registrarProyecciones(lista) {
         // son plausibles) MAS los milisegundos: dos lotes chicos completan dentro del mismo
         // segundo de reloj (el lock los serializa pero no separa el timestamp) y un sello
         // compartido hacia que el rollback del segundo borrara tambien el primero. El prefijo
-        // 'shell_' deja el origen auditable a simple vista y lo hace inconfundible con PG.
+        // 'shell_' deja el origen auditable a simple vista y lo hace inconfundible con PG:
+        // es el discriminador del contrato de notas -- el retiro de Guardar Proyeccion y el
+        // ABM lo leen del otro lado. @see DEVTOOL_PresupuestoGuardar.js (_esNotaShellPg)
         const ahora = new Date();
         const sello = 'shell_' + Utilities.formatDate(ahora, Session.getScriptTimeZone(), 'yyyy-MM-dd_HHmmss') +
             ('000' + ahora.getMilliseconds()).slice(-3);
@@ -887,14 +889,14 @@ function registrarProyecciones(lista) {
         // reversion; duplicar esa maquinaria aca seria una segunda superficie de borrado sobre
         // una BD de produccion. El costo es que una puntual convive (y suma) con el base del
         // mismo mes: el mensaje lo dice.
-        // ATENCION (auditoria 2026-08-29): la reciproca NO vale y el mensaje lo declara --
-        // la Nota lleva el prefijo de PG, asi que un Guardar Proyeccion POSTERIOR del mismo
-        // mes retira tambien estas puntuales (quedan solo en el respaldo oculto de PG).
-        // Excluir el sello 'shell_' de ese retiro exige tocar DEVTOOL_PresupuestoGuardar.js,
-        // que es de la otra linea de trabajo: decision de Franco pendiente.
+        // decision Franco 2026-08-29: la reciproca AHORA vale -- aplicarGuardarProyeccion
+        // excluye del retiro las notas cuyo sello empieza con 'shell_' (_esNotaShellPg,
+        // DEVTOOL_PresupuestoGuardar.js). Estas puntuales sobreviven a un Guardar Proyeccion
+        // posterior del mismo mes y conviven sumando. El literal 'shell_' se repite alla a
+        // proposito: compartir la const cruzaria archivos en la carga alfabetica (cicatriz
+        // v0.50.1). @see DEVTOOL_PresupuestoGuardar.js (_esNotaShellPg y el contrato de notas)
         if (hayPrevias) mensaje += ' Se suman a lo que ese mes ya tenia proyectado.';
-        mensaje += ' Ojo: si despues corres Guardar Proyeccion para ese mes, ese guardado ' +
-            'reemplaza tambien estas proyecciones del shell.';
+        mensaje += ' Estas proyecciones se ven y se borran desde el ABM de Proyecciones Elaboradas.';
         logSuccess('registrarProyecciones: ' + lista.length + ' fila(s) en "' + SHEETS.PROYECCION + '".');
         return { ok: true, mensaje: mensaje };
     });
