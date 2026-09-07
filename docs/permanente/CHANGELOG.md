@@ -16,6 +16,28 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.66.1 - Mirada Interanual: diagnostico completo y el menu Dev deja de ofrecer dos botones que revientan al clic (2026-09-07)
+
+Diagnostico del ultimo modulo desalineado del rediseno Fix (`07_MiradaInteranual.js`):
+confirmado en vivo (gemelo digital + `FUNCIONALIDADES.md` seccion 06) que la hoja **ya**
+tiene formulas LET/SUMPRODUCT funcionando en C8:R11 con separador `;` y selectores
+I2/I3/I4 — el desalineado es solo el script, que sigue esperando E4/F4/R4 y C10:C12/C14 y
+por eso su preflight bloquea sin escribir una sola celda. Se entrego a Franco/PM la tabla de
+desalineacion, la recomendacion sobre donde deben vivir las constantes MIRADA_\* y el plan
+de realineacion; ningun cambio de formulas entra en este release.
+
+Del diagnostico salio un unico arreglo inequivoco y de bajo riesgo: dos items del submenu
+Tidetrack Dev > Mirada Interanual llamaban a funciones con parametros obligatorios —
+`verificarPrecondicionesMirada(ss, sheet)` y `auditarBalanceFormulaMirada(formula)` — pero
+`menu.addItem()` de Apps Script siempre invoca con cero argumentos: un clic terminaba en un
+TypeError sin ningun mensaje util. Los dos items salen del menu sin wrapper, porque
+"Diagnosticar (hoja DEBUG)" ya ejercita las dos funciones con argumentos reales y vuelca el
+detalle completo en la hoja DEBUG — un wrapper solo habria duplicado esa salida con menos
+informacion. Las funciones siguen enteras en el modulo. Nuevo
+`devtools/verificar_menu_mirada.js`: banco de regresion que fija la correccion.
+
+---
+
 ## v0.65.1 - Piso de legibilidad del texto funcional (2026-09-07)
 
 Cuatro rotulos del shell estaban en 10px —pastilla de estado, unidad de moneda del acordeon,

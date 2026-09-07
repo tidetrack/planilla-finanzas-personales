@@ -3,16 +3,16 @@
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
  *
- * @version 0.11.5
+ * @version 0.11.6
  * @since 0.1.0
- * @lastModified 2026-08-30
+ * @lastModified 2026-09-07
  */
 
 // [AGILE-VALOR] Control de versiones esencial para el mantenimiento del entorno.
 
 const VERSION = {
  major: 0,
- minor: 65,
+ minor: 66,
  patch: 1,
 
  /**
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-08-30',
- releaseName: 'v0.65.1 - El texto funcional mas chico sube al piso de legibilidad',
+ releaseDate: '2026-09-07',
+ releaseName: 'v0.66.1 - Mirada Interanual: el menu Dev deja de ofrecer dos botones que revientan al clic',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,11 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.66.1 (2026-09-07) - Mirada Interanual: el menu Dev deja de ofrecer dos botones que revientan al clic
+- Diagnostico completo del ultimo modulo desalineado del rediseno Fix (07_MiradaInteranual.js): confirmado en vivo que la hoja ya tiene formulas LET/SUMPRODUCT funcionando en C8:R11 con selectores I2/I3/I4; el desalineado es solo el script, que sigue esperando E4/F4/R4 y C10:C12/C14 y por eso su preflight bloquea sin escribir. Plan de realineacion entregado a Franco/PM, sin cambio de formulas en este release.
+- Arreglado el unico riesgo inequivoco: dos items del menu Tidetrack Dev > Mirada Interanual llamaban funciones con parametros obligatorios (verificarPrecondicionesMirada(ss, sheet), auditarBalanceFormulaMirada(formula)) que menu.addItem() invoca siempre con cero argumentos -- un clic terminaba en TypeError. Salen del menu sin wrapper: 'Diagnosticar (hoja DEBUG)' ya ejercita las dos con argumentos reales y vuelca el detalle en la hoja DEBUG. Las funciones siguen enteras en el modulo.
+- Nuevo devtools/verificar_menu_mirada.js: banco de regresion que falla si alguna de las dos vuelve a wireearse directo al menu, o si alguna funcion del submenu deja de tener aridad cero.
+
 v0.65.1 (2026-09-07) - El texto funcional mas chico sube al piso de legibilidad
 - Cuatro rotulos del shell estaban en 10px: la pastilla de estado de una tarjeta, la unidad de moneda del acordeon, el rotulo LOTE de la barra de acciones y el tag de moneda de la tabla de conciliacion. Los cuatro son texto FUNCIONAL -- llevan contenido, no son decoracion --, y 10px es piso de legibilidad, no decision de estilo: falla en pantallas de alta densidad y en el modal angosto. Suben a 11px conservando su tracking.
 - Es el mismo criterio que la cicatriz ya vetada de los 10.5px, ahora aplicado al piso y no al redondeo.

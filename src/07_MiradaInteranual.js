@@ -26,9 +26,9 @@
  * @see docs/permanente/MAPA_ARQUITECTURA_PLANILLA.md (seccion 4.3 Mirada Interanual)
  * @see 00_Config.js (RANGES.REGISTROS: unica fuente de columnas y fila de datos)
  *
- * @version 0.5.0
+ * @version 0.5.1
  * @since 0.8.2
- * @lastModified 2026-08-13
+ * @lastModified 2026-09-07
  */
 
 // ============================================
@@ -284,6 +284,12 @@ function construirFormulaMirada(c10Expr, offsetExpr, selPrefix, sep) {
  * Las comillas alternan abre/cierra; el escape de Sheets ("" adentro de un string) queda
  * cubierto porque cierra y vuelve a abrir. Los parentesis dentro de comillas se ignoran.
  *
+ * decision Franco 2026-09-07 (v0.66.1): a proposito NO esta en MENU_CONFIG. Exige
+ * "formula" y menu.addItem() llama a su funcion con cero argumentos -- clickeada desde el
+ * menu revienta con TypeError en formula.length. diagnosticarMiradaInteranual() ya la llama
+ * con una formula real (las dos variantes de separador) y vuelca el resultado en la hoja
+ * DEBUG: ese es el camino soportado para auditar el balance, no un boton propio.
+ *
  * @param {string} formula
  * @returns {{comillas:number, comillasBalanceadas:boolean, parentesis:number, parentesisBalanceados:boolean, cierreAnticipado:boolean, largo:number, ok:boolean}}
  */
@@ -413,6 +419,13 @@ function _coincideRotuloMirada(leido, esperado) {
  * apuesta que no se puede hacer. Lo que se exige esta declarado arriba, en
  * MIRADA_ROTULOS_ESPERADOS y MIRADA_CELDA_SEL_*, para que corregirlo con la verificacion
  * en vivo sea editar constantes y nada mas.
+ *
+ * decision Franco 2026-09-07 (v0.66.1): a proposito NO esta en MENU_CONFIG. Exige (ss,
+ * sheet) y menu.addItem() llama a su funcion con cero argumentos -- clickeada desde el menu
+ * revienta con TypeError en sheet.getMaxRows(). inicializarMiradaInteranual() ya la corre
+ * como paso 1 antes de tocar una celda, y diagnosticarMiradaInteranual() la corre de nuevo
+ * (paso 0a) y vuelca "observado" entero en la hoja DEBUG: los dos botones que quedan en el
+ * menu ya la ejercitan, con contexto (ss, sheet) real.
  *
  * @param {Spreadsheet} ss
  * @param {Sheet} sheet hoja "Mirada Interanual"

@@ -6,6 +6,105 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-09-07 - Mirada Interanual: diagnostico completo + el menu Dev deja de ofrecer dos botones que revientan al clic (v0.66.1)
+
+### Que se pidio
+
+Diagnostico del ultimo modulo estructuralmente desalineado de la planilla,
+`07_MiradaInteranual.js` ("Mirada Interanual es la mas en bolas", textual Franco). Encargo
+explicito: arrancar por el diagnostico, no por reescribir formulas; arreglar solo lo
+inequivoco y de bajo riesgo; dejar un plan de realineacion listo para ejecutar despues.
+
+### Diagnostico
+
+Se leyo el modulo entero (1258 lineas) y se contrasto contra la geometria real, verificada
+por ROTULO (no por coordenada memorizada, siguiendo la cicatriz ya conocida del gemelo
+digital corrido 10 filas). Fuentes cruzadas: `docs/permanente/celdas.tsv` (export del
+2026-08-18, mismo dia del swap v0.11), `docs/permanente/MAPA_HOJAS.md` y
+`docs/permanente/FUNCIONALIDADES.md` seccion 06 (documento funcional de Franco, validado
+formula por formula por 8 auditores el mismo dia).
+
+Hallazgo principal: la HOJA ya tiene las 36 formulas LET/SUMPRODUCT funcionando de verdad
+(valores numericos correctos, no `#ERROR!`) en C8:R11, con separador `;` (locale espanol) y
+selectores I2 (mes), I3 (anio), I4 (moneda). El SCRIPT es el unico desalineado: sus
+constantes `MIRADA_*` siguen esperando la geometria pre-Fix (selectores E4/F4/R4, rotulos en
+C10:C12, resultado en fila 14), por eso `verificarPrecondicionesMirada` bloquea el preflight
+de `inicializarMiradaInteranual()` sin escribir una sola celda. La hipotesis mas solida: las
+formulas que escribio el modulo pre-Fix sobrevivieron el rediseno manual de Franco (corte y
+pegado de bloques, que Sheets rastrea y reajusta automaticamente en las referencias
+absolutas), lo que explica por que el TEXTO de la formula ya apunta a las celdas nuevas
+aunque nadie volvio a correr el modulo.
+
+Se documento la tabla de desalineacion completa (7 constantes: 3 filas de rotulo, la fila de
+referencia, la fila de resultado, y 3 celdas de selector) con cada valor marcado MEDIDA (con
+cita a `celdas.tsv`/`FUNCIONALIDADES.md`) o SUPUESTO. Se detectaron ademas dos
+contradicciones entre fuentes que NO se resolvieron por criterio propio (regla de la casa:
+ante contradiccion, preguntar): (1) el filtro de Proyecto esta en K2/L2 segun el gemelo pero
+`FUNCIONALIDADES.md` lo describe en M2; (2) `FUNCIONALIDADES.md` advierte rangos de
+`Registros` cerrados en la fila 883, pero el texto de formula capturado en el gemelo los
+muestra abiertos (`$H$7:$H`, sin cierre). Ninguna de las dos afecta la recomendacion
+principal porque el filtro de Proyecto es decorativo (ninguna formula lo referencia) y los
+rangos abiertos, si son reales, ya coinciden con lo que hace el modulo hoy.
+
+### Decision: re-alinear las constantes del modulo, NO moverlas a 00_Config.js
+
+Se evaluaron las dos vias que pedia el encargo. Se recomienda re-alinear `MIRADA_*` dentro
+de `07_MiradaInteranual.js` en vez de derivarlas de `00_Config.js`, porque: (1) el modulo ya
+sigue la regla SSOT donde corresponde -- las columnas de datos del ledger
+(`_refColumnaRegistrosMirada`) se verificaron contra `RANGES.REGISTROS` y coinciden
+exactamente con lo que ya esta escrito en la hoja real; (2) lo que falta alinear es
+geometria de PRESENTACION de una vista unica y generada por script -- selectores, rotulos y
+filas de UNA hoja --, exactamente el caso que la propia decision inline del modulo
+(2026-08-13) ya excluyo de `RANGES` ("RANGES modela tablas de datos, no vistas de
+presentacion"); (3) mover esas constantes a `00_Config.js` les daria cardinalidad 1 (nada
+mas las consume) en el archivo de MAS alto riesgo del repo, sin ganar nada a cambio.
+
+### Que se corrigio (unico cambio de codigo de este release)
+
+Del diagnostico salio un solo riesgo inequivoco y de bajo riesgo: dos items del submenu
+Tidetrack Dev > Mirada Interanual llamaban funciones con parametros obligatorios --
+`verificarPrecondicionesMirada(ss, sheet)` y `auditarBalanceFormulaMirada(formula)` -- y
+`menu.addItem()` de Apps Script invoca siempre con cero argumentos: un clic terminaba en
+`TypeError` sobre `undefined` (`sheet.getMaxRows()` / `formula.length`), sin mensaje util.
+
+Se sacaron los dos items del menu SIN wrapper (`src/00_Config.js`, submenu 'Mirada
+Interanual'): "Diagnosticar (hoja DEBUG)" ya ejercita las dos funciones con argumentos
+reales (preflight completo en su paso 0a, balance sintactico de la formula en su paso 7 para
+ambos separadores) y vuelca el detalle en la hoja DEBUG, mas informacion que un toast
+recortado. Las dos funciones siguen enteras en `07_MiradaInteranual.js` -- se retiro el
+gatillo roto, no la logica -- con una decision inline en cada una explicando por que no
+tienen boton propio. Nuevo `devtools/verificar_menu_mirada.js`: banco de regresion (node,
+sin stubs de `SpreadsheetApp`) que falla si alguna de las dos vuelve a wireearse directo al
+menu, o si cualquier funcion que quede en el submenu deja de tener aridad cero; corrido en
+verde antes de commitear.
+
+### Plan de realineacion (pendiente de ejecucion, entregado a Franco/PM)
+
+1. Actualizar `MIRADA_COL_ROTULOS`/`MIRADA_ROTULOS_ESPERADOS` (filas 8/9/10, no 10/11/12),
+   `MIRADA_FILA_RESULTADO` (11, no 14) y `MIRADA_CELDA_SEL_MES/ANIO/MONEDA` (I2/I3/I4, no
+   E4/F4/R4) con los valores MEDIDOS de esta sesion.
+2. Antes de tocar la hoja real: correr `inicializarMiradaInteranual()` contra el gemelo
+   digital (o una copia de prueba) y verificar el VALOR resultante de cada celda contra el
+   valor que el gemelo ya tiene hoy (C8:R11), no el texto de la formula -- la regla de la
+   casa ante cualquier motor de formulas.
+3. Resolver con Franco, antes de escribir, las dos contradicciones de fuente detectadas
+   (K2/L2 vs M2 para el filtro de Proyecto; rangos abiertos vs cerrados en fila 883) por si
+   alguna afecta el `bloqueConceptosMirada` o el respaldo.
+4. Ejecutar `inicializarMiradaInteranual()` en la planilla real solo despues de (2) y (3),
+   con el contrato de escritura que el modulo ya tiene (respaldo verificado -> escritura ->
+   verificacion de las 48 celdas -> restauracion automatica si algo no cierra).
+5. Changelog dual de esa ejecucion (no de este diagnostico) y actualizar
+   `FUNCIONALIDADES.md` seccion 06 y `MAPA_HOJAS.md` linea 29 para sacar la nota "script
+   desalineado".
+
+@see src/07_MiradaInteranual.js
+@see src/00_Config.js (MENU_CONFIG, submenu Mirada Interanual)
+@see devtools/verificar_menu_mirada.js
+@see docs/permanente/FUNCIONALIDADES.md (seccion 06)
+@see docs/permanente/celdas.tsv
+
+---
+
 ## 2026-08-30 - Modelo de tarjetas de credito aprobado: documentacion pura, cero codigo (v0.63.2, sin bump)
 
 ### Que se pidio

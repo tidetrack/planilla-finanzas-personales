@@ -3,6 +3,30 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-09-07] v0.66.1 - Mirada Interanual: el menu Dev deja de ofrecer dos botones que revientan al clic.
+ * - Diagnostico completo del ultimo modulo desalineado del rediseno Fix (07_MiradaInteranual.js):
+ *   confirmado en vivo (celdas.tsv del 2026-08-18 + FUNCIONALIDADES.md seccion 06) que la HOJA ya
+ *   tiene formulas LET/SUMPRODUCT funcionando en C8:R11 con separador ";" y selectores I2/I3/I4 --
+ *   el desalineado es solo el SCRIPT, que sigue esperando E4/F4/R4 y C10:C12/C14 y por eso su
+ *   preflight bloquea sin escribir una sola celda. Plan de realineacion entregado a Franco/PM;
+ *   sin cambio de formulas en este release.
+ * - Arreglado el unico riesgo inequivoco encontrado en ese diagnostico: dos items del submenu
+ *   Tidetrack Dev > Mirada Interanual llamaban a funciones con parametros obligatorios --
+ *   verificarPrecondicionesMirada(ss, sheet) y auditarBalanceFormulaMirada(formula) -- pero
+ *   menu.addItem() de Apps Script invoca SIEMPRE con cero argumentos. Un clic en cualquiera de
+ *   los dos terminaba en un TypeError sobre 'undefined' (sheet.getMaxRows() / formula.length),
+ *   sin ningun mensaje util para quien lo dispara.
+ * - Los dos items SALEN del menu (no se les puso un wrapper): 'Diagnosticar (hoja DEBUG)' ya
+ *   ejercita las dos funciones con argumentos reales -- el mismo preflight (paso 0a) y el mismo
+ *   balance sintactico de la formula completa (paso 7, ambos separadores) -- y vuelca el detalle
+ *   en la hoja DEBUG en vez de un toast recortado. Un wrapper habria duplicado esa salida con
+ *   menos informacion. Las dos funciones siguen enteras en el modulo (las sigue llamando
+ *   diagnosticarMiradaInteranual): se retiro el gatillo que no podia dispararlas bien, no la
+ *   logica.
+ * - Nuevo devtools/verificar_menu_mirada.js: banco de regresion (node, sin stubs de
+ *   SpreadsheetApp) que fija esta correccion -- falla si alguna de las dos vuelve a wireearse
+ *   directo al menu, o si cualquier funcion que quede en el submenu deja de tener aridad cero.
+ *
  * [2026-09-07] v0.65.1 - El texto funcional mas chico sube al piso de legibilidad.
  * - Cuatro rotulos del shell vivian en 10px: la pastilla de estado de una tarjeta, la unidad
  *   de moneda del acordeon, el rotulo LOTE de la barra de acciones y el tag de moneda de la
