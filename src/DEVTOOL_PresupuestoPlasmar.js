@@ -138,15 +138,47 @@
  * apagados: avisar de un riesgo que ya no existe es ruido, no informacion.
  *
  * ============================================================================
+ * MENSAJE DIAGNOSTICO CUANDO NO HAY NADA PLASMABLE (pedido de Franco, 2026-09-07)
+ * ============================================================================
+ * El sintoma que disparo este agregado: Franco conecto el boton y le salio "Ninguna cuenta de
+ * 'Presupuesto' tiene un total plasmable para Agosto 2026. No se escribio nada." El mensaje era
+ * CORRECTO pero inutil -- verificado: agosto SI tenia 64 filas en "Proyeccion" (el presupuesto
+ * base historico), pero NINGUNA de origen 'guardado', que es lo unico que Plasmar trae (decision
+ * de producto 1). Franco nunca habia corrido "Guardar Proyeccion" para ese mes, asi que su grupo
+ * 'guardado' estaba vacio -- y el mensaje no se lo decia.
+ *
+ * `_lineasNadaQuePlasmarPp` (compartida por estado y aplicar) distingue DOS situaciones cuando
+ * `plan.aPlasmar` queda vacio Y `plan.totalFilasBd` (filas 'guardado' del periodo) es cero:
+ *   1. El mes no tiene NINGUNA fila en "Proyeccion" para ese periodo (ni 'guardado' ni ningun
+ *      otro origen): se dice eso y listo, no hay nada mas que explicar.
+ *   2. El mes SI tiene filas, pero de otros origenes (shell/recurrentes/base/otros -- el
+ *      clasificador `_origenNotaPa`, DEVTOOL_ProyeccionAbm.js, ya los distingue): se cuentan POR
+ *      ORIGEN y se explica, en una linea, que "Plasmar" solo trae 'guardado' -- lo que sale de
+ *      esta misma hoja via "tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar" (ruta
+ *      LITERAL de MENU_CONFIG, no una copia: devtools/probar_presupuesto_plasmar.js la cruza
+ *      contra el config real, mismo criterio que ya aplica devtools/probar_proyeccion_abm.js
+ *      para PA_MSJ_NO_EDITABLE -- "un banco con su propia copia de una ruta miente").
+ * Si SI hay filas 'guardado' pero `aPlasmar` sigue vacio, la causa ya la cubren las anomalias
+ * (mezcla de moneda, moneda distinta, cuenta inexistente) que `_lineasAnomaliasPp` reporta
+ * aparte: no hace falta una tercera rama para ese caso, alcanza con nombrar que ninguna cuenta
+ * cerro un total plasmable y dejar que las anomalias digan por que.
+ *
+ * ============================================================================
  * EL SEGURO: CONFIRMACION EXPLICITA CON NUMEROS CONCRETOS (pedido explicito del encargo)
  * ============================================================================
  * Mismo patron que aplicarPresupuestoSembrar() (DEVTOOL_PresupuestoSembrar.js) y
  * aplicarGuardarProyeccion() (DEVTOOL_PresupuestoGuardar.js): antes de escribir se cuentan las
  * celdas K/O/S que YA TIENEN contenido entre las que se van a plasmar, y se muestran EN NUMEROS
  * (cuantas celdas, cuanto suman los valores que se pierden, cuanto van a quedar) en un
- * `ui.alert` YES_NO -- solo cuando hay algo real que perder. Si ninguna celda a plasmar tiene
- * contenido previo, corre derecho (pedir confirmar una operacion que no pisa nada es friccion sin
- * beneficio, mismo criterio que los dos modulos hermanos).
+ * `ui.alert` YES_NO cuando hay algo real que perder.
+ *
+ * decision Franco 2026-09-07 (pedido 2, textual: "si no tiene nada, cargarlo sin problema"):
+ * CUANDO NINGUNA celda a plasmar tiene contenido previo, la confirmacion NO SE ELIMINA -- deja de
+ * hablar de sobreescritura o de perdida (no hay ninguna) y pasa a ser BREVE: cuantas celdas se
+ * van a llenar, "Continuar?". v0.66.0 corria derecho sin dialogo en ese caso (mismo criterio que
+ * siguen usando Sembrar y Guardar, sus hermanos, que no se tocan aca). Se revierte SOLO en este
+ * modulo: Plasmar siempre escribe sobre la planilla de Franco aunque no pise nada, y el pedido es
+ * que la operacion siga pidiendo confirmar -- sin asustar con una perdida que no existe.
  *
  * ESCRIBE VALORES, NUNCA FORMULAS (mismo criterio que Sembrar/Guardar): cada celda usa
  * `setValue(numero)`. El preflight aborta si encuentra una formula viva en la zona K/O/S -- esa
@@ -194,7 +226,8 @@
  * @see DEVTOOL_PresupuestoGuardar.js (la ida: K/O/S -> BD)
  * @see DEVTOOL_ProyeccionAbm.js (el clasificador de origen por nota, _origenNotaPa)
  * @see DEVTOOL_PresupuestoSembrar.js (el patron de escritura en K/O/S que este modulo imita)
- * @version 0.66.0
+ * @see devtools/probar_presupuesto_plasmar.js
+ * @version 0.67.1
  * @since 0.66.0
  * @lastModified 2026-09-07
  */
@@ -205,6 +238,16 @@
 
 const PP_UMBRAL_IDENTIDAD = 0.01;
 const PP_PROP_PREVIOS = 'presupuesto_plasmar_previos';
+
+// Rotulo legible de los cuatro origenes que Plasmar NO trae (todo PA_ORIGENES menos 'guardado').
+// Literal puro, no lee ningun simbolo de otro archivo: seguro como const de nivel superior. Solo
+// se usa para el mensaje diagnostico de "nada que plasmar" (ver cabecera, "MENSAJE DIAGNOSTICO").
+const PP_ETIQUETA_ORIGEN = {
+    shell: 'cargado puntual (shell)',
+    recurrentes: 'recurrentes',
+    base: 'presupuesto base historico',
+    otros: 'origen no reconocido'
+};
 
 // ============================================
 // PREFLIGHT
@@ -384,6 +427,27 @@ function _filasBdPeriodoPp(hojaProy, clave) {
 }
 
 /**
+ * Cuenta, para `clave`, cuantas filas de "Proyeccion" hay de cada origen DISTINTO de 'guardado'
+ * (shell/recurrentes/base/otros) -- alimenta el mensaje diagnostico de "nada que plasmar" (ver
+ * cabecera del archivo, "MENSAJE DIAGNOSTICO CUANDO NO HAY NADA PLASMABLE"). Lectura bulk
+ * SEPARADA de `_filasBdPeriodoPp` a proposito: esa funcion ya esta probada (banco existente,
+ * secciones 1-2) y este agregado no la toca ni le suma una responsabilidad nueva -- el costo de
+ * una segunda pasada sobre "Proyeccion" es irrelevante para el volumen real de esta planilla
+ * (decenas a un par de cientos de filas), y mezclar las dos en una sola lectura hubiera obligado
+ * a retocar una funcion ya verificada solo para ahorrar un recorrido que no pesa.
+ */
+function _otrosOrigenesPeriodoPp(hojaProy, clave) {
+    const todas = _leerTodasFilasPa(hojaProy);
+    const conteo = {};
+    todas.forEach(function (f) {
+        const partes = _origenNotaPa(f.nota, f.fecha);
+        if (!partes || partes.clave !== clave || partes.origen === 'guardado') return;
+        conteo[partes.origen] = (conteo[partes.origen] || 0) + 1;
+    });
+    return conteo;
+}
+
+/**
  * Agrupa las filas del periodo por bloque y cuenta, acumulando monto POR MONEDA (nunca sumar
  * monedas distintas entre si -- mismo criterio que `_totalesPorBloquePa`). Sigue haciendo falta
  * con un solo origen: nada impide que dos filas 'guardado' distintas (dos corridas de "Guardar
@@ -431,6 +495,7 @@ function _planPlasmarPp(ss, pre) {
     const filasBd = _filasBdPeriodoPp(hojaProy, obj.clave);
     const agrupado = _agruparPorCuentaPp(filasBd);
     const lookup = _cuentasPresupuestoPp(hoja);
+    const otrosOrigenes = _otrosOrigenesPeriodoPp(hojaProy, obj.clave);
 
     const aPlasmar = [];
     const anomaliaMezclaMoneda = [];
@@ -478,7 +543,7 @@ function _planPlasmarPp(ss, pre) {
 
     return {
         periodo: obj.periodo, clave: obj.clave, moneda: obj.moneda,
-        aPlasmar: aPlasmar, totalFilasBd: filasBd.length,
+        aPlasmar: aPlasmar, totalFilasBd: filasBd.length, otrosOrigenes: otrosOrigenes,
         anomaliaMezclaMoneda: anomaliaMezclaMoneda,
         anomaliaMonedaDistinta: anomaliaMonedaDistinta,
         anomaliaCuentaNoExiste: anomaliaCuentaNoExiste,
@@ -535,6 +600,39 @@ function _lineasAnomaliasPp(plan) {
     return l;
 }
 
+/**
+ * Las lineas del diagnostico cuando NO HAY NADA PLASMABLE (`plan.aPlasmar.length === 0`),
+ * compartidas por estado y aplicar -- ver cabecera del archivo, "MENSAJE DIAGNOSTICO CUANDO NO
+ * HAY NADA PLASMABLE". Distingue el mes sin ninguna fila del mes con filas de otro origen, y en
+ * ese segundo caso nombra la ruta REAL de menu (MENU_CONFIG) para generar lo que falta.
+ */
+function _lineasNadaQuePlasmarPp(plan) {
+    const l = [];
+    if (!plan.totalFilasBd) {
+        const origenes = Object.keys(plan.otrosOrigenes || {}).sort();
+        if (!origenes.length) {
+            l.push('El mes ' + _mesLabelPp(plan.periodo) + ' no tiene ninguna fila en "' +
+                SHEETS.PROYECCION + '": ni "guardado", ni ningun otro origen. No hay nada para plasmar.');
+        } else {
+            const total = origenes.reduce(function (a, o) { return a + plan.otrosOrigenes[o]; }, 0);
+            l.push(_mesLabelPp(plan.periodo) + ' SI tiene ' + total + ' fila(s) en "' + SHEETS.PROYECCION +
+                '", pero NINGUNA es del origen "guardado" -- lo unico que "Plasmar" trae (decision de ' +
+                'producto 1, ver la cabecera de este modulo). Por origen:');
+            origenes.forEach(function (o) {
+                l.push('  ' + (PP_ETIQUETA_ORIGEN[o] || o) + ': ' + plan.otrosOrigenes[o] + ' fila(s)');
+            });
+            l.push('');
+            l.push('"Plasmar" solo trae lo que ya se guardo desde ESTA MISMA hoja via ' +
+                '"tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar". Corre esa operacion ' +
+                'primero si queres que estos numeros aparezcan en "Monto a Proyectar" (o abri ' +
+                '"Proyecciones Elaboradas" para verlos sin escribir nada).');
+        }
+    } else {
+        l.push('Ninguna cuenta de "Presupuesto" tiene un total plasmable para ' + _mesLabelPp(plan.periodo) + '.');
+    }
+    return l;
+}
+
 // ============================================
 // PUBLICAS
 // ============================================
@@ -557,7 +655,8 @@ function estadoPresupuestoPlasmar() {
         const totalPisa = plan.aPlasmar.length - totalVacias;
 
         if (!plan.aPlasmar.length) {
-            l.push('NADA QUE PLASMAR: ninguna cuenta de "Presupuesto" tiene un total plasmable para este periodo.');
+            l.push('NADA QUE PLASMAR:');
+            l.push.apply(l, _lineasNadaQuePlasmarPp(plan));
         } else {
             l.push('CELDAS A PLASMAR: ' + plan.aPlasmar.length + ' -- ' + totalVacias + ' vacia(s) se llenan, ' +
                 totalPisa + ' SE PISAN (ya tienen un valor cargado)');
@@ -612,8 +711,9 @@ function aplicarPresupuestoPlasmar() {
         const plan = _planPlasmarPp(ss, pre);
 
         if (!plan.aPlasmar.length) {
-            const l = ['Ninguna cuenta de "Presupuesto" tiene un total plasmable para ' +
-                _mesLabelPp(plan.periodo) + '. No se escribio nada.'];
+            const l = _lineasNadaQuePlasmarPp(plan);
+            l.push('');
+            l.push('No se escribio nada.');
             l.push.apply(l, _lineasAnomaliasPp(plan));
             const t = l.join('\n');
             _mostrarPp('Presupuesto: plasmar proyeccion elaborada', t);
@@ -654,6 +754,24 @@ function aplicarPresupuestoPlasmar() {
                 confirmacion.join('\n'), ui.ButtonSet.YES_NO
             );
             if (conf !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se escribio nada.' };
+        } else {
+            // decision Franco 2026-09-07 (pedido 2, textual: "si no tiene nada, cargarlo sin
+            // problema"): ninguna celda a plasmar tiene contenido previo, asi que no hay nada
+            // real que perder -- la confirmacion NO SE ELIMINA (sigue escribiendo en la hoja de
+            // Franco), pero deja de hablar de sobreescritura y pasa a ser BREVE. Ver la cabecera
+            // del archivo, "EL SEGURO", para el porque completo de este cambio de criterio.
+            const confirmacionBreve = [
+                'Se van a escribir ' + plan.aPlasmar.length + ' celda(s) de "Monto a Proyectar" en "' +
+                pre.nombre + '" para ' + _mesLabelPp(plan.periodo) + ' (' + plan.moneda + ').',
+                'Ninguna tiene contenido previo: no se pisa nada.',
+                '',
+                'Continuar?'
+            ];
+            const confB = ui.alert(
+                'Presupuesto: plasmar proyeccion elaborada',
+                confirmacionBreve.join('\n'), ui.ButtonSet.YES_NO
+            );
+            if (confB !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se escribio nada.' };
         }
 
         plan.aPlasmar.forEach(function (c) {

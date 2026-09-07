@@ -3,6 +3,48 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-09-07] v0.67.1 - Plasmar avisa mejor, y llega el limpiador de Monto a Proyectar.
+ * - EL SINTOMA REAL: Franco conecto el boton de plasmar y le salio "Ninguna cuenta de
+ *   'Presupuesto' tiene un total plasmable para Agosto 2026. No se escribio nada." Correcto
+ *   pero inutil -- verificado: agosto SI tenia 64 filas en "Proyeccion" (presupuesto base
+ *   historico), pero NINGUNA de origen 'guardado' (Franco nunca corrio "Guardar Proyeccion"
+ *   para ese mes), y el mensaje no lo decia.
+ * - MENSAJE DIAGNOSTICO: cuando no hay nada plasmable, ahora distingue "el mes no tiene
+ *   ninguna fila en Proyeccion" de "el mes tiene filas, pero de otro origen" (shell,
+ *   recurrentes, presupuesto base, otros -- clasificador _origenNotaPa de
+ *   DEVTOOL_ProyeccionAbm.js). En el segundo caso cuenta por origen y nombra la ruta REAL de
+ *   menu ("tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar", verificada TAL CUAL
+ *   contra MENU_CONFIG por el banco, no una copia) para generar lo que falta. Aplica tanto al
+ *   camino "1. Ver estado" como al de "2. Aplicar".
+ * - LA CONFIRMACION YA NO CORRE DERECHO SIN DIALOGO cuando no hay nada que pisar (pedido de
+ *   Franco, textual: "si no tiene nada, cargarlo sin problema", pero "deberia... advertir").
+ *   La confirmacion NO SE ELIMINA -- sigue pidiendo confirmar antes de escribir en la hoja --
+ *   pero deja de hablar de sobreescritura o de perdida cuando no hay ninguna: dice cuantas
+ *   celdas se van a llenar y pide "Continuar?".
+ * - BOTON NUEVO: "Presupuesto: limpiar Monto a Proyectar" (aplicarPresupuestoLimpiar, SIN
+ *   parametros, pensada para asignarse a un dibujo de la hoja "Presupuesto"). Pedido textual
+ *   de Franco: "deberia existir un boton que limpie los montos a proyectar." Vacia TODAS las
+ *   celdas de K/O/S que tengan contenido; antes de borrar cuenta cuantas celdas y por cuanto
+ *   y pide confirmacion explicita (borrar trabajo manual sin avisar seria el peor defecto
+ *   posible); verifica por relectura y "3. Revertir" repone el estado previo exacto,
+ *   protegiendo una edicion manual posterior -- mismo patron que Sembrar y Plasmar. Modulo
+ *   nuevo: src/DEVTOOL_PresupuestoLimpiar.js.
+ * - RESPALDO DEL LIMPIADOR: PropertiesService, celda suelta (PL_PROP_PREVIOS), NO la boveda de
+ *   18_RespaldoService.js -- el mismo argumento, verbatim, que ya dejo por escrito Plasmar:
+ *   la boveda esta atada a la geometria de RANGES.REGISTROS (una banda contigua de 12
+ *   columnas por fila) y "Monto a Proyectar" son tres columnas sueltas sin esa forma. Queda
+ *   dejado explicito en la cabecera del modulo nuevo como una desviacion consciente del
+ *   pedido original, que nombraba la boveda.
+ * - Preflight del limpiador MAS ANGOSTO que el de Sembrar/Plasmar a proposito: no valida
+ *   PM_SELECTORES ni los rotulos de cuenta (no los lee); SI valida el titulo de la hoja, los
+ *   tres titulos "Monto a Proyectar" (K7/O7/S7) y que la zona K/O/S este libre de formulas --
+ *   si encuentra una, aborta sin tocar nada.
+ * - Bancos: devtools/probar_presupuesto_plasmar.js extendido (13 secciones: el mensaje
+ *   diagnostico en sus dos casos, la confirmacion breve sin dialogo eliminado, y la ruta de
+ *   menu cruzada contra MENU_CONFIG) y devtools/probar_presupuesto_limpiar.js nuevo (mes sin
+ *   nada que limpiar, limpiar con celdas ocupadas, revertir protegiendo una edicion
+ *   posterior, revertir con la hoja ya vacia, preflight).
+ *
  * [2026-09-07] v0.66.2 - Plasmar: la proyeccion guardada vuelve a las columnas manuales.
  * - La operacion INVERSA de aplicarGuardarProyeccion, pedida por Franco: trae de la hoja-BD
  *   Proyeccion lo del mes elegido y lo escribe en las columnas "Monto a proyectar" (K/O/S).

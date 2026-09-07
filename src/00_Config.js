@@ -3,7 +3,7 @@
  * Configuración global del sistema Tidetrack
  * Define constantes, rangos de columnas, y enums
  *
- * @version 0.11.4
+ * @version 0.11.5
  * @since 0.1.0
  * @lastModified 2026-09-07
  */
@@ -743,14 +743,17 @@ const MENU_CONFIG = {
         },
         {
             // La VUELTA de "Presupuesto: guardar proyeccion": plasma en K/O/S el total por cuenta
-            // de lo que ya quedo elaborado en la BD "Proyeccion" para el periodo vivo de J2/J3,
-            // sumando los cinco origenes que DEVTOOL_ProyeccionAbm.js distingue (guardado a mano,
-            // shell, recurrentes, presupuesto base, otros) -- asi los recurrentes, que hoy se
-            // proyectan solos a la BD y nunca aparecen en esta hoja, se vuelven visibles. Pedido
-            // textual de Franco (2026-09-07): "estaria buenisimo poder 'plasmar' los montos
-            // proyectados en estas columnas mas manuales", con advertencia explicita si hay
-            // informacion que se pueda sobreescribir. No convierte moneda: si una cuenta mezcla
-            // monedas o esta en una moneda distinta de la del presupuesto, no la escribe y lo avisa.
+            // de lo que ya quedo GUARDADO (origen 'guardado', DEVTOOL_ProyeccionAbm.js) en la BD
+            // "Proyeccion" para el periodo vivo de J2/J3. Pedido textual de Franco (2026-09-07):
+            // "estaria buenisimo poder 'plasmar' los montos proyectados en estas columnas mas
+            // manuales", con advertencia explicita si hay informacion que se pueda sobreescribir.
+            // CORRECCION del mismo dia, TEXTUAL: "Solo lo manual. Lo proyectado no." -- NO suma
+            // shell/recurrentes/presupuesto base/otros (una primera version si lo hacia; se
+            // descarto, ver decision de producto 1 en la cabecera del modulo). Cuando el mes no
+            // tiene ninguna fila 'guardado', el mensaje distingue "no hay ninguna fila" de "hay
+            // filas, pero de otro origen" y nombra por donde generarlas. No convierte moneda: si
+            // una cuenta mezcla monedas o esta en una moneda distinta de la del presupuesto, no
+            // la escribe y lo avisa.
             // @see DEVTOOL_PresupuestoPlasmar.js
             // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
             submenu: 'Presupuesto: plasmar proyeccion elaborada', items: [
@@ -758,6 +761,24 @@ const MENU_CONFIG = {
                 { name: '2. Aplicar', function: 'aplicarPresupuestoPlasmar' },
                 { separator: true },
                 { name: '3. Revertir (usa el respaldo)', function: 'revertirPresupuestoPlasmar' }
+            ]
+        },
+        {
+            // Limpia TODAS las celdas de "Monto a Proyectar" (K/O/S) que tengan contenido: el
+            // complemento de Sembrar y Plasmar (que ESCRIBEN ahi). Pedido textual de Franco
+            // (2026-09-07): "deberia existir un boton que limpie los montos a proyectar." Antes
+            // de borrar cuenta cuantas celdas tienen monto y por cuanto, pide confirmacion
+            // explicita con esos numeros, y "3. Revertir" repone el estado previo exacto
+            // (protegiendo una edicion manual posterior), mismo patron que sus hermanos.
+            // aplicarPresupuestoLimpiar() no toma parametros: es la funcion pensada para
+            // asignarse a un dibujo de la hoja "Presupuesto".
+            // @see DEVTOOL_PresupuestoLimpiar.js
+            // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
+            submenu: 'Presupuesto: limpiar Monto a Proyectar', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoPresupuestoLimpiar' },
+                { name: '2. Aplicar (borra lo cargado)', function: 'aplicarPresupuestoLimpiar' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirPresupuestoLimpiar' }
             ]
         },
         {

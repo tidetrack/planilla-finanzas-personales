@@ -3,7 +3,7 @@
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
  *
- * @version 0.66.0
+ * @version 0.67.1
  * @since 0.1.0
  * @lastModified 2026-09-07
  */
@@ -12,8 +12,8 @@
 
 const VERSION = {
  major: 0,
- minor: 66,
- patch: 2,
+ minor: 67,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-09-07',
- releaseName: 'v0.66.2 - Plasmar: la proyeccion guardada vuelve a las columnas manuales',
+ releaseName: 'v0.67.1 - Plasmar avisa mejor, y llega el limpiador de Monto a Proyectar',
 
  // decision Franco 2026-09-07: el literal guardaba 75 releases (155.8 KB, el 99% de este
  // archivo) mientras su propio docstring prometia "solo refleja el release vigente". Apps
@@ -43,6 +43,11 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.67.1 (2026-09-07) - Plasmar avisa mejor, y llega el limpiador de Monto a Proyectar
++ El mensaje de "nada que plasmar" distingue el mes SIN NINGUNA fila en Proyeccion del mes CON filas de otro origen (shell, recurrentes, presupuesto base, otros): cuenta cada origen y nombra la ruta real de menu para generar lo que falta. El sintoma real de Franco: agosto tenia 64 filas de presupuesto base y el mensaje viejo no lo decia, aunque era tecnicamente correcto.
++ Boton nuevo "Presupuesto: limpiar Monto a Proyectar" (aplicarPresupuestoLimpiar, sin parametros, asignable a un dibujo): vacia K/O/S, cuenta cuantas celdas tienen monto y por cuanto antes de borrar, verifica por relectura y revierte protegiendo una edicion posterior. Modulo nuevo DEVTOOL_PresupuestoLimpiar.js.
+* Plasmar deja de correr derecho sin dialogo cuando no pisa nada: la confirmacion sigue apareciendo (nunca se elimina), pero deja de hablar de sobreescritura o de perdida cuando no hay ninguna.
+
 v0.66.2 (2026-09-07) - Plasmar: la proyeccion guardada vuelve a las columnas manuales
 + La operacion INVERSA de aplicarGuardarProyeccion: trae de la hoja-BD Proyeccion lo del mes elegido y lo escribe en las columnas "Monto a proyectar" (K/O/S). Funcion asignable a un dibujo: aplicarPresupuestoPlasmar.
 + Decision de Franco, TEXTUAL: "Solo lo manual. Lo proyectado no." Se trae UNICAMENTE el origen 'guardado' -- lo que salio de esas mismas columnas. NO recurrentes, NO presupuesto base, NO proyecciones sueltas del menu. No es circular: es RESTAURAR y COPIAR HACIA ADELANTE (recuperar la hoja despues de limpiarla, o arrancar un mes desde lo presupuestado en otro). Por eso el mes lo elige el operador.

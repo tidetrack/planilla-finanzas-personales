@@ -17,6 +17,29 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.67.1 - Plasmar avisa mejor, y llega el limpiador de Monto a Proyectar (2026-09-07)
+
+**El sintoma real de Franco.** Conecto el boton de "Plasmar" y le salio "Ninguna cuenta de
+'Presupuesto' tiene un total plasmable para Agosto 2026" -- correcto pero inutil: agosto SI
+tenia 64 filas en "Proyeccion" (presupuesto base historico), pero ninguna de origen 'guardado',
+que es lo unico que Plasmar trae. El mensaje no distinguia "no hay nada" de "hay algo, pero de
+otro origen".
+
+**Tres cambios.** (1) El mensaje ahora distingue esas dos situaciones y, en la segunda, cuenta
+por origen y nombra la ruta REAL de menu para generar lo que falta. (2) La confirmacion de
+Plasmar ya NO corre derecho sin dialogo cuando no pisa nada: sigue pidiendo confirmar, pero
+deja de hablar de sobreescritura o de perdida cuando no hay ninguna. (3) Boton nuevo,
+"Presupuesto: limpiar Monto a Proyectar" (`aplicarPresupuestoLimpiar`, sin parametros,
+asignable a un dibujo): vacia K/O/S, cuenta celdas y monto antes de borrar, verifica por
+relectura y revierte protegiendo una edicion posterior -- modulo nuevo
+`DEVTOOL_PresupuestoLimpiar.js`.
+
+Ver el detalle completo (la desviacion consciente respecto de usar la boveda de
+`18_RespaldoService.js` incluida) en `docs/permanente/HISTORIAL_DESARROLLO.md` y en
+`src/ZZ_Changelog.js`.
+
+---
+
 ## Por que NO se retiran los modulos del deploy (2026-09-07)
 
 Ampliacion de v0.66.0. El recorte del literal de `01_Version.js` (161 KB a 4 KB) queda. Lo que

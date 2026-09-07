@@ -9,18 +9,25 @@
  *      misma cuenta (dos corridas de "Guardar Proyeccion") suman juntas -- decision de producto 1.
  *   2. shell/recurrentes/presupuesto base/otros presentes en la BD del mes NO entran al plan ni
  *      a los totales, aunque compartan cuenta y periodo con una fila 'guardado' real.
- *   3. Confirmacion con numeros concretos SOLO cuando hay algo que pisar (pedido explicito).
+ *   3. Confirmacion con numeros concretos cuando hay algo que pisar, y BREVE (sin lenguaje de
+ *      perdida) cuando no hay nada que pisar -- pedido explicito, NUNCA sin dialogo.
  *   4. Moneda SIN conversion silenciosa: mezcla de monedas DENTRO de 'guardado' (dos guardados
  *      del mismo mes en monedas distintas), o una moneda unica distinta de la del presupuesto,
  *      NO se escriben -- se reportan como anomalia. La mezcla sigue siendo posible con un solo
  *      origen: el mes se guardo dos veces con la moneda de la hoja cambiada entre uno y otro.
  *   5. Cuenta que ya no existe en el bloque del Presupuesto vivo: anomalia, no se escribe.
  *   6. Categoria/tipo_cuenta que no mapea a ningun bloque: anomalia, no rompe el resto del plan.
- *   7. Mes sin ninguna fila 'guardado': nada que hacer, sin dialogo.
+ *   7. Mes sin ninguna fila 'guardado': nada que hacer, sin dialogo -- y el mensaje distingue
+ *      "no hay ninguna fila" de "hay filas, pero de otro origen" (agregado 2026-09-07, el
+ *      sintoma real de Franco: agosto tenia 64 filas de presupuesto base y el mensaje viejo no
+ *      lo decia).
  *   8. Escribe VALORES (nunca formulas); verificacion por relectura con reversion de LOTE
  *      ENTERO al estado previo exacto si una celda no verifica.
  *   9. Revertir protege una edicion manual posterior a la corrida (un solo nivel de undo).
  *  10. Preflight: aborta ante un rotulo corrido o una formula viva en K/O/S.
+ *  11. La ruta de menu que nombra el mensaje diagnostico existe TAL CUAL en MENU_CONFIG (mismo
+ *      criterio que devtools/probar_proyeccion_abm.js para PA_MSJ_NO_EDITABLE: "un banco con su
+ *      propia copia de una ruta miente").
  *
  * El aviso de "riesgo de doble conteo" (y su banco de la version anterior) desaparecio junto
  * con el modo de falla que lo motivaba: con solo 'guardado', "Guardar Proyeccion" retira
@@ -28,7 +35,7 @@
  * cabecera del modulo, seccion "UN MODO DE FALLA QUE LA CORRECCION DE FRANCO ELIMINO".
  *
  * USO:  node devtools/probar_presupuesto_plasmar.js
- * @version 0.66.0
+ * @version 0.67.1
  * @since 2026-09-07
  * @see src/DEVTOOL_PresupuestoPlasmar.js
  */
@@ -91,12 +98,13 @@ vm.runInContext(
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_PresupuestoGuardar.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_ProyeccionAbm.js'), 'utf8') + '\n' +
     fs.readFileSync(path.join(RAIZ, 'src/DEVTOOL_PresupuestoPlasmar.js'), 'utf8') +
-    '\n;Object.assign(globalThis,{SHEETS,RANGES,MONEDAS_DISPONIBLES,columnLetterToIndex,' +
+    '\n;Object.assign(globalThis,{SHEETS,RANGES,MONEDAS_DISPONIBLES,columnLetterToIndex,MENU_CONFIG,' +
     'PM_TITULO,PM_SELECTORES,PM_BLOQUES,PM_CLAVES_BLOQUE,PM_FILA_INI,PM_FILA_FIN,' +
     '_bloquesPc,PC_TITULO_PROYECTAR,PG_MARCA,PB_MARCA,REC_MARCA,PA_ORIGENES,PA_CATEGORIA_A_CLAVE,' +
     '_origenNotaPa,_leerTodasFilasPa,_preflightPb,_periodoDesdeSelectoresPg,_claveMesPg,' +
-    'PP_UMBRAL_IDENTIDAD,PP_PROP_PREVIOS,_preflightPp,_periodoObjetivoPp,_cuentasPresupuestoPp,' +
-    '_filasBdPeriodoPp,_agruparPorCuentaPp,_planPlasmarPp,' +
+    'PP_UMBRAL_IDENTIDAD,PP_PROP_PREVIOS,PP_ETIQUETA_ORIGEN,_preflightPp,_periodoObjetivoPp,' +
+    '_cuentasPresupuestoPp,_filasBdPeriodoPp,_otrosOrigenesPeriodoPp,_agruparPorCuentaPp,' +
+    '_planPlasmarPp,_lineasNadaQuePlasmarPp,' +
     'estadoPresupuestoPlasmar,aplicarPresupuestoPlasmar,revertirPresupuestoPlasmar});',
     ctx
 );
@@ -355,17 +363,42 @@ seccion('7. CATEGORIA DESCONOCIDA: no rompe el resto del plan, se cuenta aparte'
     ok(plan.aPlasmar.length === 1 && plan.aPlasmar[0].cuenta === 'Sueldo', 'Sueldo sigue entrando bien al plan');
 }
 
-seccion('8. MES SIN NINGUNA FILA \'guardado\': nada que hacer, sin dialogo');
+seccion('8. MES SIN NINGUNA FILA \'guardado\': nada que hacer, sin dialogo, mensaje distingue el porque');
 {
+    // 8a. "Proyeccion" completamente vacia: caso 1 del mensaje diagnostico.
     const hoja = hojaPresupuestoBase({});
-    ssActual = ssCon(hoja, []);   // "Proyeccion" vacia
+    ssActual = ssCon(hoja, []);
     alertas = []; botonesUsados = [];
     const r = ctx.aplicarPresupuestoPlasmar();
     ok(r.ok, 'aplicar no da error cuando no hay nada que plasmar: ' + (r.error || ''));
     ok(!botonesUsados.includes('YN'), 'ningun dialogo de confirmacion se disparo');
+    ok(/no tiene ninguna fila en "Proyeccion"/.test(r.detalle || ''),
+        'CASO 1: el mensaje dice que el mes no tiene NINGUNA fila, dio: ' + (r.detalle || '').split('\n').slice(0, 3).join(' | '));
+
+    // 8b. EL SINTOMA REAL DE FRANCO: el mes SI tiene filas (presupuesto base + recurrentes),
+    // pero NINGUNA es 'guardado' -- caso 2 del mensaje diagnostico. Antes de este fix el mensaje
+    // decia lo mismo que 8a y no distinguia nada.
+    const fecha = new Date(2026, 7, 1);
+    const filasOtrosOrigenes = [
+        filaProyPp({ monto: 500000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PB_MARCA + ' sello1' }),
+        filaProyPp({ monto: 300000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PB_MARCA + ' sello2' }),
+        filaProyPp({ monto: 20000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.REC_MARCA + ' 2026-08 2026-07-21_090000 - Bono' })
+    ];
+    const hoja2 = hojaPresupuestoBase({ mesSel: 'Agosto', anioSel: 2026 });
+    ssActual = ssCon(hoja2, filasOtrosOrigenes);
+    alertas = []; botonesUsados = [];
+    const rb = ctx.aplicarPresupuestoPlasmar();
+    ok(rb.ok, 'aplicar (otros origenes) no da error: ' + (rb.error || ''));
+    ok(!botonesUsados.includes('YN'), 'ningun dialogo (no hay nada plasmable, aunque haya filas)');
+    ok(/SI tiene 3 fila\(s\) en "Proyeccion"/.test(rb.detalle || ''),
+        'CASO 2: el mensaje dice EXACTO cuantas filas hay (3), dio: ' + (rb.detalle || '').split('\n').find((l) => /SI tiene/.test(l)));
+    ok(/presupuesto base historico: 2 fila\(s\)/.test(rb.detalle || ''), 'cuenta 2 filas de "base" por su etiqueta legible');
+    ok(/recurrentes: 1 fila\(s\)/.test(rb.detalle || ''), 'cuenta 1 fila de "recurrentes"');
+    ok(/tidetrack Dev > Presupuesto: guardar proyeccion > 2\. Aplicar/.test(rb.detalle || ''),
+        'nombra la ruta REAL de menu para generar lo que falta');
 }
 
-seccion('9. Confirmacion: aparece SOLO cuando hay pisa, con numeros concretos');
+seccion('9. Confirmacion: SIEMPRE aparece cuando hay algo que plasmar -- completa si pisa, breve si no');
 {
     const fecha = new Date(2026, 8, 1);
     const filasConPisa = [
@@ -383,7 +416,8 @@ seccion('9. Confirmacion: aparece SOLO cuando hay pisa, con numeros concretos');
         'la confirmacion dice EXACTO cuanto se pierde (111.00 ARS), dio: ' + (confirm && confirm.split('\n').find((l) => /se pierde/.test(l))));
     ok(confirm && /400000\.00 ARS/.test(confirm), 'y cuanto va a quedar valiendo (400000.00 ARS)');
 
-    // Sin pisa: sin dialogo YES_NO.
+    // Sin pisa: SIGUE habiendo dialogo YES_NO (pedido 2, 2026-09-07: "si no tiene nada, cargarlo
+    // sin problema" -- pero la confirmacion NO se elimina, solo deja de hablar de perdida).
     const filasSinPisa = [
         filaProyPp({ monto: 400000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' })
     ];
@@ -392,7 +426,27 @@ seccion('9. Confirmacion: aparece SOLO cuando hay pisa, con numeros concretos');
     alertas = []; botonesUsados = [];
     const r2 = ctx.aplicarPresupuestoPlasmar();
     ok(r2.ok, 'aplicar (sin pisa) corre sin error: ' + (r2.error || ''));
-    ok(!botonesUsados.includes('YN'), 'NINGUN dialogo de confirmacion cuando no hay nada que pisar');
+    ok(botonesUsados.includes('YN'), 'SIGUE habiendo dialogo de confirmacion aunque no se pise nada');
+    // El lote de alertas trae DOS mensajes (la confirmacion previa Y el aviso final de exito,
+    // ambos via ui.alert): se busca la confirmacion por su contenido, no por posicion.
+    const confirmBreve = alertas.find((a) => /Ninguna tiene contenido previo/.test(a));
+    ok(!!confirmBreve, 'se encuentra la confirmacion breve entre las alertas disparadas');
+    ok(confirmBreve && !/SOBRESCRIB/i.test(confirmBreve) && !/se pierde/i.test(confirmBreve),
+        'la confirmacion breve NO habla de sobreescritura ni de perdida, dio: ' + confirmBreve);
+    ok(confirmBreve && /Se van a escribir 1 celda\(s\)/.test(confirmBreve), 'dice cuantas celdas se van a llenar (1)');
+    ok(confirmBreve && /Continuar\?/.test(confirmBreve), 'pide confirmar igual, sin asustar');
+
+    // Cancelar la confirmacion breve (NO): no se escribe nada.
+    ssActual = ssCon(hojaPresupuestoBase({}), filasSinPisa);
+    const alertUiOriginal = ctx.SpreadsheetApp.getUi;
+    ctx.SpreadsheetApp.getUi = () => ({
+        alert: () => 'N',
+        ButtonSet: { YES_NO: 'YN', OK: 'OK' },
+        Button: { YES: 'Y', NO: 'N' }
+    });
+    const r3 = ctx.aplicarPresupuestoPlasmar();
+    ctx.SpreadsheetApp.getUi = alertUiOriginal;
+    ok(!r3.ok && /Cancelado/.test(r3.error || ''), 'cancelar la confirmacion breve NO escribe nada: ' + r3.error);
 }
 
 seccion('10. Aplicar feliz: escribe VALORES, verifica por relectura, revierte el LOTE si algo no verifica');
@@ -457,6 +511,29 @@ seccion('12. Preflight: aborta ante un rotulo corrido, y ante una formula viva e
     ok(lanzo2 && /formulas en la zona/i.test(msg2), 'MUTACION (formula viva en O15): el preflight aborta, dio: ' + msg2.slice(0, 90));
 }
 
+seccion('13. La ruta de menu del mensaje diagnostico sale de MENU_CONFIG, no de una copia');
+{
+    const rutas = [];
+    const recorrer = function (items, camino) {
+        (items || []).forEach(function (it) {
+            if (it.submenu) { recorrer(it.items, camino.concat([it.submenu])); return; }
+            if (it.name) rutas.push(camino.concat([it.name]).join(' > '));
+        });
+    };
+    recorrer(ctx.MENU_CONFIG.DEV_ITEMS, [ctx.MENU_CONFIG.DEV_MENU]);
+    const rutaGuardar = 'tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar';
+    ok(rutas.indexOf(rutaGuardar) !== -1, 'la ruta "' + rutaGuardar + '" existe TAL CUAL en MENU_CONFIG');
+
+    const fecha = new Date(2026, 7, 1);
+    const filas = [
+        filaProyPp({ monto: 1000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PB_MARCA + ' selloX' })
+    ];
+    ssActual = ssCon(hojaPresupuestoBase({ mesSel: 'Agosto', anioSel: 2026 }), filas);
+    const r = ctx.aplicarPresupuestoPlasmar();
+    ok(r.ok && (r.detalle || '').indexOf(rutaGuardar) !== -1,
+        'el mensaje diagnostico nombra esa MISMA ruta, literal, sin parafrasear');
+}
+
 // ============================================
-console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (12 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
+console.log('\n' + (fallas === 0 ? 'TODO EN VERDE (13 secciones)' : fallas + ' PRUEBA(S) FALLARON'));
 process.exit(fallas === 0 ? 0 : 1);
