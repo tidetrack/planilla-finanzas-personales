@@ -113,6 +113,54 @@ informacion. Las funciones siguen enteras en el modulo. Nuevo
 
 ---
 
+## v0.66.0 - Plasmar trae la proyeccion elaborada de vuelta a Monto a Proyectar (2026-09-07)
+
+`DEVTOOL_PresupuestoPlasmar.js` (nuevo) es la **vuelta** de "Guardar Proyeccion": donde
+`aplicarGuardarProyeccion` ya llevaba "Monto a Proyectar" (K/O/S) a la BD `Proyeccion`, este
+modulo hace el camino inverso — plasma en K/O/S el total por cuenta de lo que ya quedo
+elaborado en la BD para el periodo vivo de la hoja Presupuesto (J2/J3). Encargo textual de
+Franco: *"estaria buenisimo poder 'plasmar' los montos proyectados en estas columnas mas
+manuales"*, con advertencia si hay informacion que se pueda sobreescribir.
+
+**Decision de producto, corregida por Franco el mismo dia, textual:** *"Solo lo manual. Lo
+proyectado no."* Se trae UNICAMENTE el origen 'guardado' — lo que ya salio de estas mismas
+columnas K/O/S via `aplicarGuardarProyeccion`. NO recurrentes, NO presupuesto base, NO
+proyecciones sueltas del shell, NO origen no reconocido. La primera version de esta misma tarde
+habia elegido sumar los cinco origenes que el ABM de Proyecciones Elaboradas distingue (guardado,
+shell, recurrentes, base, otros), leyendo el pedido como "traer todo lo proyectado"; Franco
+corrigio la lectura: plasmar solo el guardado **no es circular**, es **restaurar y copiar hacia
+adelante** (recuperar la hoja tras limpiarla, o arrancar un mes desde lo presupuestado el
+anterior y editar la diferencia), y "Monto a Proyectar" (K/O/S) es la superficie de trabajo
+**manual** de Franco — volcar ahi lo que el sistema infirio borraria la linea entre lo decidido y
+lo deducido.
+
+**La correccion elimina un modo de falla, no solo simplifica:** la version de los cinco origenes
+necesitaba un aviso de "riesgo de doble conteo" porque "Guardar Proyeccion" nunca retira
+shell/recurrentes/otros de la BD, y volver a guardar un mes ya plasmado los hubiera contado dos
+veces en el Tablero. Con solo 'guardado', "Guardar Proyeccion" retira exactamente esas filas al
+re-guardar el mismo mes (su propia decision 4) — la clase de bug desaparece en vez de mitigarse.
+El aviso se retira entero del modulo.
+
+**Moneda, sin conversion silenciosa (sigue vigente con un solo origen):** "Monto a Proyectar" es
+una sola moneda por hoja. Si una cuenta mezcla monedas para el periodo — por ejemplo, dos
+guardados del mismo mes con la moneda de la hoja cambiada entre uno y otro — o esta proyectada en
+una moneda distinta de la del presupuesto, esa celda no se escribe: se cuenta y se reporta como
+anomalia, nunca se inventa una tasa de conversion.
+
+**La advertencia central del encargo:** antes de escribir se cuentan las celdas que ya tienen
+monto entre las que se van a plasmar, y la confirmacion muestra numeros concretos — cuantas
+celdas, cuanto se pierde, cuanto van a quedar valiendo. Solo pide confirmar si hay algo real
+que sobreescribir.
+
+Mismo patron de escritura que `DEVTOOL_PresupuestoSembrar.js` (valores nunca formulas,
+verificacion por relectura, reversion de un nivel que protege una edicion manual posterior),
+reimplementado en modulo propio porque la fuente de datos (la BD "Proyeccion" clasificada por
+cinco origenes) es de otra familia que la de Sembrar (J/N/R en vivo, intra-hoja).
+
+Menu: `tidetrack Dev > Presupuesto: plasmar proyeccion elaborada`.
+
+---
+
 ## v0.65.1 - Piso de legibilidad del texto funcional (2026-09-07)
 
 Cuatro rotulos del shell estaban en 10px —pastilla de estado, unidad de moneda del acordeon,

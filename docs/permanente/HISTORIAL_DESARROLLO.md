@@ -102,6 +102,76 @@ verde antes de commitear.
 @see devtools/verificar_menu_mirada.js
 @see docs/permanente/FUNCIONALIDADES.md (seccion 06)
 @see docs/permanente/celdas.tsv
+## 2026-09-07 - "Plasmar": la BD de Proyeccion vuelve a Monto a Proyectar (v0.66.0)
+
+### Que se pidio
+
+Franco, textual: "aplicarGuardarProyeccion deberia guardar la informacion registrada
+manualmente en las columnas de 'Monto a proyectar' y registra todo en la BD. Luego, cuando
+colocamos Proyecciones Elaboradas, estaria buenisimo poder 'plasmar' los montos proyectados en
+estas columnas mas 'manuales'. Obvio, deberia haber una advertencia a ejecutar esa funcion dado
+a que si ya hay informacion cargada, podria sobreescribirse esa informacion." La mitad
+"K/O/S -> BD" ya existia (`DEVTOOL_PresupuestoGuardar.js`, v0.50.0); faltaba la vuelta.
+
+### La decision de producto
+
+Se evaluaron tres lecturas: (a) traer solo el grupo "guardado a mano" (circular: es lo mismo
+que salio de esas columnas), (b) sumar por cuenta TODO lo proyectado del mes a traves de los
+cinco origenes que `DEVTOOL_ProyeccionAbm.js` ya distingue (guardado, shell, recurrentes,
+presupuesto base, otros), o (c) dejar elegir origenes. Se eligio (b): los RECURRENTES se
+proyectan solos a la BD "Proyeccion" y nunca aparecen en la hoja de trabajo -- sumarlos ahi los
+hace visibles por primera vez, que es el beneficio real que Franco buscaba. La totalizacion
+por cuenta replica el mismo criterio que `_totalesPorBloquePa` (ProyeccionAbm.js): se suma el
+monto crudo agrupado por el bloque que deriva `tipoCuenta`, sin aplicar el signo por tipo que
+usa el ledger real -- no se inventa una tercera regla de totalizado.
+
+Moneda: "Monto a Proyectar" es una sola moneda por hoja (el selector J4). Si una cuenta mezcla
+monedas para el periodo, o esta proyectada en una moneda distinta de la del presupuesto, esa
+celda directamente NO se escribe -- se reporta como anomalia con cuenta y montos. Nunca se
+inventa una conversion.
+
+La advertencia que Franco pidio como corazon del encargo: antes de escribir se cuenta cuantas
+celdas K/O/S YA tienen valor entre las que se van a plasmar, y la confirmacion (`ui.alert`
+YES_NO) muestra numeros concretos -- cuantas celdas, cuanto se pierde, cuanto van a quedar
+valiendo -- y solo aparece si hay algo real que sobreescribir. Un aviso adicional, informativo
+y no bloqueante, senala cuando lo plasmado trae shell/recurrentes/otros: si despues se vuelve a
+correr "Guardar Proyeccion" para el mismo mes, esa porcion se contaria dos veces en el Tablero,
+porque Guardar nunca retira esos tres origenes (decision 4 de su propia cabecera).
+
+### Que se escribio
+
+- `src/DEVTOOL_PresupuestoPlasmar.js` (nuevo): `estadoPresupuestoPlasmar()`,
+  `aplicarPresupuestoPlasmar()` (la funcion asignable a un boton/dibujo, sin parametros) y
+  `revertirPresupuestoPlasmar()`. Modulo PROPIO, no una funcion mas de
+  `DEVTOOL_PresupuestoSembrar.js`: la fuente de datos (la BD "Proyeccion" clasificada por los
+  cinco origenes de `DEVTOOL_ProyeccionAbm.js`, mas `_preflightPb`/`_periodoDesdeSelectoresPg`/
+  `_claveMesPg` de `DEVTOOL_PresupuestoGuardar.js`) es de otra familia que la de Sembrar (J/N/R
+  en vivo, intra-hoja); solo se reusa el PATRON de escritura (confirmar-solo-si-pisa, verificar
+  releyendo, revertir a un nivel protegiendo una edicion manual posterior), reimplementado
+  angosto, no importado.
+- Respaldo por `PropertiesService` (mismo formato que `PS_PROP_PREVIOS` de Sembrar): por celda,
+  `{celda, valorEscrito, pisa, valorPrevio}`. NO usa la boveda de `18_RespaldoService.js` -- esa
+  respalda FILAS con la geometria de Registros/Proyeccion; este modulo escribe celdas sueltas
+  de "Presupuesto", igual que Sembrar.
+- `MENU_CONFIG.DEV_ITEMS` (`00_Config.js`) suma "Presupuesto: plasmar proyeccion elaborada" al
+  lado de "Presupuesto: sembrar Monto a Proyectar".
+- `devtools/probar_presupuesto_plasmar.js` (nuevo): mutaciones dirigidas sobre las cuatro
+  poblaciones sumando por cuenta, celdas ya cargadas (pisa con conteo exacto), cuenta con dos
+  monedas (mezcla, no escribe), moneda distinta de la del presupuesto (no escribe), cuenta que
+  ya no existe en el Plan vivo (no escribe), mes vacio (nada que hacer, sin dialogo),
+  confirmacion condicionada a que haya algo que pisar, verificacion por relectura con reversion
+  de lote completo ante una escritura que no verifica, y el deshacer protegiendo una edicion
+  manual posterior a la corrida.
+- Version: v0.66.0. `src/01_Version.js` se toco SOLO para el bump (numero, releaseDate,
+  releaseName, entrada de changelog embebido) -- otra tarea en paralelo esta recortando ese
+  archivo; si el merge choca, es en esa zona.
+
+### Que NO hace
+
+No escribe nunca en "Proyeccion" (es de solo lectura para este modulo). No convierte moneda.
+No toca J/N/R, la columna V/W, las tablas resumen ni el selector de Modo. No deja elegir
+origenes: siempre trae los cinco. No se deployo: cambio de codigo puro, pendiente de
+`sync_targets.command` por pedido explicito de Franco.
 
 ---
 

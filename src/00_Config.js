@@ -3,9 +3,9 @@
  * Configuración global del sistema Tidetrack
  * Define constantes, rangos de columnas, y enums
  *
- * @version 0.11.3
+ * @version 0.11.4
  * @since 0.1.0
- * @lastModified 2026-08-30
+ * @lastModified 2026-09-07
  */
 
 // [CONCEPTO DE NEGOCIO] Single Source of Truth de nombres de hoja y rangos; ningun modulo hardcodea posiciones.
@@ -739,6 +739,25 @@ const MENU_CONFIG = {
                 { name: '2. Aplicar', function: 'aplicarPresupuestoSembrar' },
                 { separator: true },
                 { name: '3. Revertir (usa el respaldo)', function: 'revertirPresupuestoSembrar' }
+            ]
+        },
+        {
+            // La VUELTA de "Presupuesto: guardar proyeccion": plasma en K/O/S el total por cuenta
+            // de lo que ya quedo elaborado en la BD "Proyeccion" para el periodo vivo de J2/J3,
+            // sumando los cinco origenes que DEVTOOL_ProyeccionAbm.js distingue (guardado a mano,
+            // shell, recurrentes, presupuesto base, otros) -- asi los recurrentes, que hoy se
+            // proyectan solos a la BD y nunca aparecen en esta hoja, se vuelven visibles. Pedido
+            // textual de Franco (2026-09-07): "estaria buenisimo poder 'plasmar' los montos
+            // proyectados en estas columnas mas manuales", con advertencia explicita si hay
+            // informacion que se pueda sobreescribir. No convierte moneda: si una cuenta mezcla
+            // monedas o esta en una moneda distinta de la del presupuesto, no la escribe y lo avisa.
+            // @see DEVTOOL_PresupuestoPlasmar.js
+            // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
+            submenu: 'Presupuesto: plasmar proyeccion elaborada', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoPresupuestoPlasmar' },
+                { name: '2. Aplicar', function: 'aplicarPresupuestoPlasmar' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirPresupuestoPlasmar' }
             ]
         },
         {

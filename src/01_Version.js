@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 66,
- patch: 1,
+ patch: 2,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-09-07',
- releaseName: 'v0.66.1 - El menu Dev deja de ofrecer dos botones que revientan al clic',
+ releaseName: 'v0.66.2 - Plasmar: la proyeccion guardada vuelve a las columnas manuales',
 
  // decision Franco 2026-09-07: el literal guardaba 75 releases (155.8 KB, el 99% de este
  // archivo) mientras su propio docstring prometia "solo refleja el release vigente". Apps
@@ -43,6 +43,13 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.66.2 (2026-09-07) - Plasmar: la proyeccion guardada vuelve a las columnas manuales
++ La operacion INVERSA de aplicarGuardarProyeccion: trae de la hoja-BD Proyeccion lo del mes elegido y lo escribe en las columnas "Monto a proyectar" (K/O/S). Funcion asignable a un dibujo: aplicarPresupuestoPlasmar.
++ Decision de Franco, TEXTUAL: "Solo lo manual. Lo proyectado no." Se trae UNICAMENTE el origen 'guardado' -- lo que salio de esas mismas columnas. NO recurrentes, NO presupuesto base, NO proyecciones sueltas del menu. No es circular: es RESTAURAR y COPIAR HACIA ADELANTE (recuperar la hoja despues de limpiarla, o arrancar un mes desde lo presupuestado en otro). Por eso el mes lo elige el operador.
++ El criterio de fondo es de producto: K/O/S son la superficie de trabajo MANUAL. Volcar ahi lo que el sistema infirio borraria la linea entre lo decidido y lo deducido.
+* Y la correccion de Franco ELIMINO un modo de falla, no solo simplifico: la version anterior traia los cinco origenes, y como "Guardar Proyeccion" no retira lo ajeno, replasmar y volver a guardar contaba esa porcion DOS VECES. Con solo 'guardado', re-guardar retira exactamente esas filas. El aviso que documentaba ese riesgo se retiro entero por quedar sin sentido.
+- Advertencia antes de escribir: cuenta cuantas celdas de K/O/S YA tienen monto, dice cuanto se pierde y cuanto va a quedar, pide SI/NO y respalda por la boveda. Sin conversion silenciosa de monedas: si una cuenta mezcla monedas o difiere de la del presupuesto, esa celda NO se escribe y se reporta.
+
 v0.66.1 (2026-09-07) - El menu Dev deja de ofrecer dos botones que revientan al clic
 - verificarPrecondicionesMirada y auditarBalanceFormulaMirada exigian argumentos que addItem() de Apps Script nunca provee: un clic terminaba en TypeError. Salen del submenu sin wrapper, porque "Diagnosticar (hoja DEBUG)" ya las corre con argumentos reales y vuelca mas detalle. Las funciones siguen enteras en el modulo.
 - Diagnostico completo de Mirada Interanual con su tabla de desalineacion en HISTORIAL_DESARROLLO.md. El hallazgo que cambia la prioridad: la HOJA ya funciona, lo desalineado es el generador.
