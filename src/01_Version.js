@@ -3,17 +3,17 @@
  * Control de versiones del sistema Tidetrack
  * Registro de cambios y metadata de releases
  *
- * @version 0.11.5
+ * @version 0.11.6
  * @since 0.1.0
- * @lastModified 2026-08-30
+ * @lastModified 2026-09-07
  */
 
 // [AGILE-VALOR] Control de versiones esencial para el mantenimiento del entorno.
 
 const VERSION = {
  major: 0,
- minor: 65,
- patch: 1,
+ minor: 66,
+ patch: 0,
 
  /**
  * Retorna la versión como string
@@ -23,8 +23,8 @@ const VERSION = {
  return `${this.major}.${this.minor}.${this.patch}`;
  },
 
- releaseDate: '2026-08-30',
- releaseName: 'v0.65.1 - El texto funcional mas chico sube al piso de legibilidad',
+ releaseDate: '2026-09-07',
+ releaseName: 'v0.66.0 - Plasmar trae la proyeccion elaborada de vuelta a Monto a Proyectar',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,16 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.66.0 (2026-09-07) - Plasmar trae la proyeccion elaborada de vuelta a Monto a Proyectar
++ DEVTOOL_PresupuestoPlasmar.js (nuevo): la VUELTA de "Guardar Proyeccion". aplicarGuardarProyeccion ya llevaba K/O/S ("Monto a Proyectar") a la BD "Proyeccion"; este modulo hace el camino inverso, plasmando en K/O/S el total por cuenta de lo que ya quedo elaborado en la BD para el periodo vivo de J2/J3. Encargo textual de Franco: "estaria buenisimo poder 'plasmar' los montos proyectados en estas columnas mas manuales", con advertencia si hay informacion que se pueda sobreescribir.
+! DECISION DE PRODUCTO: se trae la SUMA de los CINCO origenes que DEVTOOL_ProyeccionAbm.js ya distingue (guardado a mano, shell, recurrentes, presupuesto base, otros), no solo el guardado a mano (eso hubiera sido circular). Motivo de fondo: los recurrentes se proyectan solos a la BD y nunca aparecen en la hoja de trabajo; plasmar los hace visibles.
+! MONEDA, SIN CONVERSION SILENCIOSA (pedido explicito): K/O/S es una sola moneda por hoja (J4). Si una cuenta mezcla monedas para el periodo, o esta proyectada en una moneda distinta de J4, esa celda NO se escribe -- se cuenta y se reporta como anomalia, nunca se inventa una tasa de conversion.
++ La advertencia central del encargo: antes de escribir se cuentan las celdas K/O/S que YA TIENEN monto entre las que se van a plasmar, y la confirmacion (ui.alert YES_NO) muestra numeros concretos -- cuantas celdas, cuanto se pierde, cuanto van a quedar valiendo. Solo pide confirmar si hay algo real que sobreescribir.
++ Aviso adicional (informativo, no bloquea): si lo plasmado incluye shell/recurrentes/otros -- origenes que "Guardar Proyeccion" nunca retira -- y despues se vuelve a guardar el mismo mes, el Tablero contaria esa porcion dos veces. Se avisa en el estado y en la confirmacion, nunca se silencia.
+* Mismo patron de escritura que DEVTOOL_PresupuestoSembrar.js (setValue nunca formula, verificacion por relectura, reversion a un solo nivel que protege una edicion manual posterior) pero reimplementado angosto a este modulo: la fuente de datos (la BD "Proyeccion" clasificada por DEVTOOL_ProyeccionAbm.js) es de otra familia que la de Sembrar (J/N/R en vivo), asi que no se mete en ese archivo.
++ MENU_CONFIG.DEV_ITEMS suma "Presupuesto: plasmar proyeccion elaborada" (estadoPresupuestoPlasmar / aplicarPresupuestoPlasmar / revertirPresupuestoPlasmar), al lado de "Presupuesto: sembrar Monto a Proyectar".
++ devtools/probar_presupuesto_plasmar.js (nuevo): mutaciones dirigidas -- cuatro poblaciones sumando por cuenta, celdas ya cargadas (pisa con conteo exacto), cuenta con dos monedas (mezcla, no escribe), moneda distinta de la del presupuesto (no escribe), cuenta que ya no existe en el Plan vivo (no escribe), mes vacio (nada que hacer, sin dialogo), confirmacion solo cuando hay pisa, verificacion por relectura con reversion de lote ante una escritura que no verifica, y el deshacer protegiendo una edicion manual posterior.
+
 v0.65.1 (2026-09-07) - El texto funcional mas chico sube al piso de legibilidad
 - Cuatro rotulos del shell estaban en 10px: la pastilla de estado de una tarjeta, la unidad de moneda del acordeon, el rotulo LOTE de la barra de acciones y el tag de moneda de la tabla de conciliacion. Los cuatro son texto FUNCIONAL -- llevan contenido, no son decoracion --, y 10px es piso de legibilidad, no decision de estilo: falla en pantallas de alta densidad y en el modal angosto. Suben a 11px conservando su tracking.
 - Es el mismo criterio que la cicatriz ya vetada de los 10.5px, ahora aplicado al piso y no al redondeo.

@@ -3,6 +3,32 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-09-07] v0.66.0 - Plasmar trae la proyeccion elaborada de vuelta a Monto a Proyectar.
+ * - DEVTOOL_PresupuestoPlasmar.js (nuevo): la VUELTA de "Guardar Proyeccion". Encargo textual
+ *   de Franco: aplicarGuardarProyeccion ya lleva K/O/S ("Monto a Proyectar") a la BD
+ *   "Proyeccion"; faltaba el camino inverso, plasmar en K/O/S lo que ya quedo elaborado en la
+ *   BD para el periodo vivo de J2/J3, con advertencia si hay informacion que se pueda
+ *   sobreescribir.
+ * - DECISION DE PRODUCTO: se suma los CINCO origenes que DEVTOOL_ProyeccionAbm.js distingue
+ *   (guardado a mano, shell, recurrentes, presupuesto base, otros), no solo el guardado a mano
+ *   (seria circular). Los recurrentes se proyectan solos a la BD y nunca aparecian en la hoja
+ *   de trabajo; plasmar los hace visibles.
+ * - MONEDA SIN CONVERSION SILENCIOSA: si una cuenta mezcla monedas o esta en una moneda
+ *   distinta de la del presupuesto (J4), esa celda no se escribe -- se reporta como anomalia.
+ * - La advertencia central del encargo: la confirmacion cuenta EXACTO cuantas celdas ya tienen
+ *   monto, cuanto se pierde y cuanto van a quedar valiendo, y solo aparece si hay algo real que
+ *   sobreescribir. Aviso adicional si lo plasmado trae shell/recurrentes/otros: volver a
+ *   guardar el mismo mes duplicaria esa porcion en el Tablero (informativo, no bloquea).
+ * - Mismo patron de escritura que DEVTOOL_PresupuestoSembrar.js (valores nunca formulas,
+ *   verificacion por relectura, reversion de un nivel que protege una edicion manual
+ *   posterior), reimplementado en modulo propio: la fuente de datos es la BD "Proyeccion"
+ *   clasificada por DEVTOOL_ProyeccionAbm.js, de otra familia que J/N/R en vivo.
+ * - MENU_CONFIG.DEV_ITEMS suma "Presupuesto: plasmar proyeccion elaborada".
+ * - devtools/probar_presupuesto_plasmar.js (nuevo): mutaciones dirigidas sobre las cuatro
+ *   poblaciones sumando por cuenta, celdas ya cargadas, cuenta con dos monedas, moneda
+ *   distinta, cuenta inexistente, mes vacio, confirmacion condicionada, verificacion con
+ *   reversion de lote y el deshacer protegiendo ediciones manuales posteriores.
+ *
  * [2026-09-07] v0.65.1 - El texto funcional mas chico sube al piso de legibilidad.
  * - Cuatro rotulos del shell vivian en 10px: la pastilla de estado de una tarjeta, la unidad
  *   de moneda del acordeon, el rotulo LOTE de la barra de acciones y el tag de moneda de la

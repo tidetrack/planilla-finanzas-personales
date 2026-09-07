@@ -16,6 +16,42 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.66.0 - Plasmar trae la proyeccion elaborada de vuelta a Monto a Proyectar (2026-09-07)
+
+`DEVTOOL_PresupuestoPlasmar.js` (nuevo) es la **vuelta** de "Guardar Proyeccion": donde
+`aplicarGuardarProyeccion` ya llevaba "Monto a Proyectar" (K/O/S) a la BD `Proyeccion`, este
+modulo hace el camino inverso — plasma en K/O/S el total por cuenta de lo que ya quedo
+elaborado en la BD para el periodo vivo de la hoja Presupuesto (J2/J3). Encargo textual de
+Franco: *"estaria buenisimo poder 'plasmar' los montos proyectados en estas columnas mas
+manuales"*, con advertencia si hay informacion que se pueda sobreescribir.
+
+**Decision de producto — que se trae al plasmar:** la SUMA de los cinco origenes que el ABM de
+Proyecciones Elaboradas ya distingue (guardado a mano, shell, recurrentes, presupuesto base,
+otros), no solo el guardado a mano (habria sido circular: es lo que salio de esas mismas
+columnas). El motivo de fondo es que los **recurrentes** se proyectan solos a la BD y nunca
+aparecian en la hoja de trabajo — plasmar los hace visibles por primera vez ahi.
+
+**Moneda, sin conversion silenciosa:** "Monto a Proyectar" es una sola moneda por hoja. Si una
+cuenta mezcla monedas para el periodo, o esta proyectada en una moneda distinta de la del
+presupuesto, esa celda no se escribe: se cuenta y se reporta como anomalia, nunca se inventa
+una tasa de conversion.
+
+**La advertencia central del encargo:** antes de escribir se cuentan las celdas que ya tienen
+monto entre las que se van a plasmar, y la confirmacion muestra numeros concretos — cuantas
+celdas, cuanto se pierde, cuanto van a quedar valiendo. Solo pide confirmar si hay algo real
+que sobreescribir. Un aviso adicional (informativo, no bloquea) senala si lo plasmado incluye
+shell/recurrentes/otros: volver a guardar el mismo mes duplicaria esa porcion en el Tablero,
+porque "Guardar Proyeccion" nunca retira esos origenes.
+
+Mismo patron de escritura que `DEVTOOL_PresupuestoSembrar.js` (valores nunca formulas,
+verificacion por relectura, reversion de un nivel que protege una edicion manual posterior),
+reimplementado en modulo propio porque la fuente de datos (la BD "Proyeccion" clasificada por
+cinco origenes) es de otra familia que la de Sembrar (J/N/R en vivo, intra-hoja).
+
+Menu: `tidetrack Dev > Presupuesto: plasmar proyeccion elaborada`.
+
+---
+
 ## v0.65.1 - Piso de legibilidad del texto funcional (2026-09-07)
 
 Cuatro rotulos del shell estaban en 10px —pastilla de estado, unidad de moneda del acordeon,
