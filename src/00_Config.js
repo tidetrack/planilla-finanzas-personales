@@ -875,13 +875,23 @@ const MENU_CONFIG = {
                 { name: '3. Revertir (usa el respaldo)', function: 'revertirFormulerioV0111' }
             ]
         },
+        // decision Franco 2026-09-07 (v0.66.1): 'Verificar precondiciones' y 'Auditar
+        // balanceo de la formula' SALEN del menu. menu.addItem() invoca la funcion con CERO
+        // argumentos (es la API de Apps Script, no un descuido de este modulo) y las dos
+        // exigen parametro: verificarPrecondicionesMirada(ss, sheet) revienta en
+        // sheet.getMaxRows() y auditarBalanceFormulaMirada(formula) revienta en
+        // formula.length, ambas con TypeError apenas se clickean. No hacen falta como boton
+        // propio: 'Diagnosticar (hoja DEBUG)' ya corre el MISMO preflight (paso 0a) y el MISMO
+        // balance sintactico (paso 7, las dos variantes de separador) sin argumentos, y en la
+        // hoja DEBUG en vez de un toast recortado. Un wrapper sin parametros solo duplicaria
+        // esa salida con menos detalle. Las dos funciones seguian existiendo enteras en
+        // 07_MiradaInteranual.js (las sigue llamando diagnosticarMiradaInteranual): no se borro
+        // logica, se retiro el gatillo que no podia dispararlas bien.
         {
             submenu: 'Mirada Interanual', items: [
-                { name: '1. Verificar precondiciones', function: 'verificarPrecondicionesMirada' },
-                { name: '2. Inicializar formulas', function: 'inicializarMiradaInteranual' },
+                { name: '1. Inicializar formulas', function: 'inicializarMiradaInteranual' },
                 { separator: true },
-                { name: 'Diagnosticar (hoja DEBUG)', function: 'diagnosticarMiradaInteranual' },
-                { name: 'Auditar balanceo de la formula', function: 'auditarBalanceFormulaMirada' }
+                { name: 'Diagnosticar (hoja DEBUG)', function: 'diagnosticarMiradaInteranual' }
             ]
         },
         // decision Franco 2026-08-18: 'Robustez de vistas' SALE DEL MENU con el swap v0.11.

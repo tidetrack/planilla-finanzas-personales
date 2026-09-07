@@ -3,6 +3,22 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-09-07] v0.66.1 - El menu Dev deja de ofrecer dos botones que revientan al clic.
+ * - verificarPrecondicionesMirada(ss, sheet) y auditarBalanceFormulaMirada(formula) exigian
+ *   argumentos que addItem() de Apps Script NUNCA provee: invoca siempre con cero args, asi
+ *   que un clic terminaba en TypeError. Salen del submenu SIN wrapper, porque "Diagnosticar
+ *   (hoja DEBUG)" ya las corre con argumentos reales y vuelca mas detalle; un wrapper solo
+ *   habria duplicado esa salida con menos informacion. Las funciones siguen enteras.
+ * - Viene con el DIAGNOSTICO completo de Mirada Interanual (tabla de desalineacion en
+ *   HISTORIAL_DESARROLLO.md) y su hallazgo, que cambia la prioridad de la deuda: la HOJA YA
+ *   FUNCIONA, con sus formulas vivas dando valores correctos. Lo desalineado es el GENERADOR
+ *   (07_MiradaInteranual.js espera C10:C12 y E4/F4/R4; la hoja usa C8:C11 y I2/I3/I4). O sea
+ *   que realinear el modulo no arregla nada roto: es un SEGURO para poder regenerar la hoja.
+ * - Quedan DOS contradicciones entre fuentes sin resolver, y no se resuelven por cuenta
+ *   propia (Regla Estricta 8): donde vive el filtro "Proyecto" (K2/L2 segun el gemelo, M2
+ *   segun FUNCIONALIDADES.md) y si algun rango de Registros esta cerrado en la fila 883.
+ *   Ninguna bloquea hoy: el filtro es decorativo y ninguna formula lo usa.
+ *
  * [2026-09-07] v0.66.0 (ampliacion) - Por que NO se retiran los modulos del deploy.
  * - El recorte del literal de 01_Version.js (161 KB -> 4 KB) queda. Lo que NO se hace, y es
  *   una decision de Franco delegada y ejecutada el mismo dia, es mover los ~513 KB de modulos
@@ -83,6 +99,29 @@
  *   esperando decision de Franco, porque choca con las Reglas Estrictas 3 y 4; (2)
  *   docs/permanente/CHANGELOG.md arrastra 52 releases de menos respecto de este archivo, un
  *   agujero preexistente e independiente de esta poda.
+ * [2026-09-07] v0.66.1 - Mirada Interanual: el menu Dev deja de ofrecer dos botones que revientan al clic.
+ * - Diagnostico completo del ultimo modulo desalineado del rediseno Fix (07_MiradaInteranual.js):
+ *   confirmado en vivo (celdas.tsv del 2026-08-18 + FUNCIONALIDADES.md seccion 06) que la HOJA ya
+ *   tiene formulas LET/SUMPRODUCT funcionando en C8:R11 con separador ";" y selectores I2/I3/I4 --
+ *   el desalineado es solo el SCRIPT, que sigue esperando E4/F4/R4 y C10:C12/C14 y por eso su
+ *   preflight bloquea sin escribir una sola celda. Plan de realineacion entregado a Franco/PM;
+ *   sin cambio de formulas en este release.
+ * - Arreglado el unico riesgo inequivoco encontrado en ese diagnostico: dos items del submenu
+ *   Tidetrack Dev > Mirada Interanual llamaban a funciones con parametros obligatorios --
+ *   verificarPrecondicionesMirada(ss, sheet) y auditarBalanceFormulaMirada(formula) -- pero
+ *   menu.addItem() de Apps Script invoca SIEMPRE con cero argumentos. Un clic en cualquiera de
+ *   los dos terminaba en un TypeError sobre 'undefined' (sheet.getMaxRows() / formula.length),
+ *   sin ningun mensaje util para quien lo dispara.
+ * - Los dos items SALEN del menu (no se les puso un wrapper): 'Diagnosticar (hoja DEBUG)' ya
+ *   ejercita las dos funciones con argumentos reales -- el mismo preflight (paso 0a) y el mismo
+ *   balance sintactico de la formula completa (paso 7, ambos separadores) -- y vuelca el detalle
+ *   en la hoja DEBUG en vez de un toast recortado. Un wrapper habria duplicado esa salida con
+ *   menos informacion. Las dos funciones siguen enteras en el modulo (las sigue llamando
+ *   diagnosticarMiradaInteranual): se retiro el gatillo que no podia dispararlas bien, no la
+ *   logica.
+ * - Nuevo devtools/verificar_menu_mirada.js: banco de regresion (node, sin stubs de
+ *   SpreadsheetApp) que fija esta correccion -- falla si alguna de las dos vuelve a wireearse
+ *   directo al menu, o si cualquier funcion que quede en el submenu deja de tener aridad cero.
  *
  * [2026-09-07] v0.65.1 - El texto funcional mas chico sube al piso de legibilidad.
  * - Cuatro rotulos del shell vivian en 10px: la pastilla de estado de una tarjeta, la unidad

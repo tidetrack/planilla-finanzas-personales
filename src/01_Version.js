@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 66,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-09-07',
- releaseName: 'v0.66.0 - El changelog embebido deja de pesar en cada clic',
+ releaseName: 'v0.66.1 - El menu Dev deja de ofrecer dos botones que revientan al clic',
 
  // decision Franco 2026-09-07: el literal guardaba 75 releases (155.8 KB, el 99% de este
  // archivo) mientras su propio docstring prometia "solo refleja el release vigente". Apps
@@ -43,6 +43,10 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.66.1 (2026-09-07) - El menu Dev deja de ofrecer dos botones que revientan al clic
+- verificarPrecondicionesMirada y auditarBalanceFormulaMirada exigian argumentos que addItem() de Apps Script nunca provee: un clic terminaba en TypeError. Salen del submenu sin wrapper, porque "Diagnosticar (hoja DEBUG)" ya las corre con argumentos reales y vuelca mas detalle. Las funciones siguen enteras en el modulo.
+- Diagnostico completo de Mirada Interanual con su tabla de desalineacion en HISTORIAL_DESARROLLO.md. El hallazgo que cambia la prioridad: la HOJA ya funciona, lo desalineado es el generador.
+
 v0.66.0 (2026-09-07) - El changelog embebido deja de pesar en cada clic
 ! El literal "changelog" de este archivo guardaba 75 bloques de release, 155,8 KB: el 99% del archivo y el 5,73% de todo src/. Apps Script parsea el proyecto ENTERO en cada ejecucion -- cada apertura de menu, cada onEdit, cada boton --, y un template literal no es un comentario: se ASIGNA como constante en cada carga. Queda SOLO el release vigente, que es exactamente lo que el docstring de arriba viene prometiendo desde siempre ("solo refleja el release vigente"). El comentario dejo de mentir. Medido con el code-cache de V8 invalidado y las dos variantes ALTERNADAS en la misma corrida: compilar este archivo pasa de 0,49 ms a 0,031 ms (-94%), y el archivo de 161.726 bytes a unos 5 KB (-97%). Los bytes exactos se mueven con cada retoque del bloque vigente; el orden de magnitud no.
 - Nadie consumia la historia: getChangelog() no lo llama ningun modulo de src/ ni ningun devtool. Era peso muerto que se pagaba en cada clic del usuario.
