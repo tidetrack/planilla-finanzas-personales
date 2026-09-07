@@ -394,7 +394,7 @@ seccion('8. MES SIN NINGUNA FILA \'guardado\': nada que hacer, sin dialogo, mens
         'CASO 2: el mensaje dice EXACTO cuantas filas hay (3), dio: ' + (rb.detalle || '').split('\n').find((l) => /SI tiene/.test(l)));
     ok(/presupuesto base historico: 2 fila\(s\)/.test(rb.detalle || ''), 'cuenta 2 filas de "base" por su etiqueta legible');
     ok(/recurrentes: 1 fila\(s\)/.test(rb.detalle || ''), 'cuenta 1 fila de "recurrentes"');
-    ok(/tidetrack Dev > Presupuesto: guardar proyeccion > 2\. Aplicar/.test(rb.detalle || ''),
+    ok(/tidetrack Dev > Presupuesto: guardar proyeccion del mes > 2\. Aplicar/.test(rb.detalle || ''),
         'nombra la ruta REAL de menu para generar lo que falta');
 }
 
@@ -521,7 +521,7 @@ seccion('13. La ruta de menu del mensaje diagnostico sale de MENU_CONFIG, no de 
         });
     };
     recorrer(ctx.MENU_CONFIG.DEV_ITEMS, [ctx.MENU_CONFIG.DEV_MENU]);
-    const rutaGuardar = 'tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar';
+    const rutaGuardar = 'tidetrack Dev > Presupuesto: guardar proyeccion del mes > 2. Aplicar';
     ok(rutas.indexOf(rutaGuardar) !== -1, 'la ruta "' + rutaGuardar + '" existe TAL CUAL en MENU_CONFIG');
 
     const fecha = new Date(2026, 7, 1);

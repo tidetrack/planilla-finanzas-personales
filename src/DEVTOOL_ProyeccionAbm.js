@@ -192,7 +192,7 @@
  * @see UI_Shell.html (vista 'proyecciones': el consumidor vivo de los cinco endpoints)
  * @version 0.64.0
  * @since 2026-08-25
- * @lastModified 2026-08-30
+ * @lastModified 2026-09-07
  */
 
 // ============================================
@@ -232,7 +232,7 @@ const PA_ORIGENES = ['guardado', 'shell', 'recurrentes', 'base', 'otros'];
 const PA_MSJ_NO_EDITABLE = {
     guardado: 'Esta fila viene de la hoja Presupuesto y su nota afirma que cerro contra ese total. ' +
         'Se corrige en la hoja Presupuesto y se vuelve a guardar el mes: ' +
-        'tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar.',
+        'tidetrack Dev > Presupuesto: guardar proyeccion del mes > 2. Aplicar.',
     recurrentes: 'Esta fila la mantiene la vista de Gastos recurrentes. ' +
         'Se corrige en Gastos recurrentes: cambia el monto y la proyeccion se actualiza sola.',
     base: 'Esta fila es del presupuesto base historico (un promedio automatico). ' +

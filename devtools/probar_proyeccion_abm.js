@@ -480,7 +480,7 @@ console.log('\n=== 4. detalleFilasPeriodoProyeccion: detalle y editabilidad POR 
     ok(d.filas.length === 1 && d.filas[0].cuenta === 'Sueldo', 'detalle de 2026-09/guardado: SOLO su fila (ni shell ni rec)');
     ok(d.filas[0].editable === false && d.filas[0].notaLibre === '',
        'una fila guardado YA NO es editable (2026-08-30): la marca de la nota es una afirmacion');
-    ok(d.editable === false && /Presupuesto: guardar proyeccion/.test(d.motivoNoEditable),
+    ok(d.editable === false && /Presupuesto: guardar proyeccion del mes/.test(d.motivoNoEditable),
        'y el grupo trae el motivo REACTIVO con la ruta de menu, dio: ' + d.motivoNoEditable);
     ok(d.filas[0].tcUsd === 1000, 'el detalle expone las cotizaciones congeladas (tcUsd=1000), dio ' + d.filas[0].tcUsd);
     ok(typeof d.filas[0].fecha === 'string', 'la fecha se serializa como string ISO, dio ' + typeof d.filas[0].fecha);
@@ -815,9 +815,9 @@ console.log('\n=== 6. actualizarMontoFilaProyeccion y revertirEdicionMontoProyec
             });
         };
         recorrer(ctx.MENU_CONFIG.DEV_ITEMS, [ctx.MENU_CONFIG.DEV_MENU]);
-        ok(rutas.indexOf('tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar') !== -1,
+        ok(rutas.indexOf('tidetrack Dev > Presupuesto: guardar proyeccion del mes > 2. Aplicar') !== -1,
            'la ruta del mensaje de "guardado" existe TAL CUAL en MENU_CONFIG');
-        ok(ctx.PA_MSJ_NO_EDITABLE.guardado.indexOf('tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar') !== -1,
+        ok(ctx.PA_MSJ_NO_EDITABLE.guardado.indexOf('tidetrack Dev > Presupuesto: guardar proyeccion del mes > 2. Aplicar') !== -1,
            'y el mensaje la nombra literal, sin parafrasear');
         ok(rutas.some(r => r.indexOf('tidetrack Dev > Presupuesto base (desde el historial)') === 0),
            'el submenu del presupuesto base existe TAL CUAL en MENU_CONFIG');

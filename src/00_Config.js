@@ -717,7 +717,7 @@ const MENU_CONFIG = {
             // luego va a tener su boton" -- por eso NO hay boton nuevo en la hoja "Presupuesto".
             // @see DEVTOOL_PresupuestoGuardar.js
             // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
-            submenu: 'Presupuesto: guardar proyeccion', items: [
+            submenu: 'Presupuesto: guardar proyeccion del mes', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoGuardarProyeccion' },
                 { name: '2. Aplicar', function: 'aplicarGuardarProyeccion' },
                 { separator: true },
@@ -742,7 +742,7 @@ const MENU_CONFIG = {
             ]
         },
         {
-            // La VUELTA de "Presupuesto: guardar proyeccion": plasma en K/O/S el total por cuenta
+            // La VUELTA de "Presupuesto: guardar proyeccion del mes": plasma en K/O/S el total por cuenta
             // de lo que ya quedo GUARDADO (origen 'guardado', DEVTOOL_ProyeccionAbm.js) en la BD
             // "Proyeccion" para el periodo vivo de J2/J3. Pedido textual de Franco (2026-09-07):
             // "estaria buenisimo poder 'plasmar' los montos proyectados en estas columnas mas
@@ -756,7 +756,7 @@ const MENU_CONFIG = {
             // la escribe y lo avisa.
             // @see DEVTOOL_PresupuestoPlasmar.js
             // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
-            submenu: 'Presupuesto: plasmar proyeccion elaborada', items: [
+            submenu: 'Presupuesto: traer proyeccion guardada', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoPresupuestoPlasmar' },
                 { name: '2. Aplicar', function: 'aplicarPresupuestoPlasmar' },
                 { separator: true },

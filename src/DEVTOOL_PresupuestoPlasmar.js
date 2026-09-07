@@ -154,7 +154,7 @@
  *   2. El mes SI tiene filas, pero de otros origenes (shell/recurrentes/base/otros -- el
  *      clasificador `_origenNotaPa`, DEVTOOL_ProyeccionAbm.js, ya los distingue): se cuentan POR
  *      ORIGEN y se explica, en una linea, que "Plasmar" solo trae 'guardado' -- lo que sale de
- *      esta misma hoja via "tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar" (ruta
+ *      esta misma hoja via "tidetrack Dev > Presupuesto: guardar proyeccion del mes > 2. Aplicar" (ruta
  *      LITERAL de MENU_CONFIG, no una copia: devtools/probar_presupuesto_plasmar.js la cruza
  *      contra el config real, mismo criterio que ya aplica devtools/probar_proyeccion_abm.js
  *      para PA_MSJ_NO_EDITABLE -- "un banco con su propia copia de una ruta miente").
@@ -623,7 +623,7 @@ function _lineasNadaQuePlasmarPp(plan) {
             });
             l.push('');
             l.push('"Plasmar" solo trae lo que ya se guardo desde ESTA MISMA hoja via ' +
-                '"tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar". Corre esa operacion ' +
+                '"tidetrack Dev > Presupuesto: guardar proyeccion del mes > 2. Aplicar". Corre esa operacion ' +
                 'primero si queres que estos numeros aparezcan en "Monto a Proyectar" (o abri ' +
                 '"Proyecciones Elaboradas" para verlos sin escribir nada).');
         }
@@ -679,14 +679,14 @@ function estadoPresupuestoPlasmar() {
         l.push.apply(l, _lineasAnomaliasPp(plan));
 
         const detalle = l.join('\n');
-        _mostrarPp('Presupuesto: plasmar proyeccion elaborada - estado', detalle);
+        _mostrarPp('Presupuesto: traer proyeccion guardada - estado', detalle);
         logInfo('estadoPresupuestoPlasmar: ' + plan.aPlasmar.length + ' celda(s) a plasmar (' + totalVacias +
             ' vacias, ' + totalPisa + ' pisan), periodo ' + plan.clave + '.');
         return { ok: true, detalle: detalle };
     } catch (e) {
         const msg = 'No se pudo medir: ' + e.message;
         logError(msg, { stack: e.stack });
-        _mostrarPp('Presupuesto: plasmar proyeccion elaborada - ERROR', msg);
+        _mostrarPp('Presupuesto: traer proyeccion guardada - ERROR', msg);
         return { ok: false, error: msg };
     }
 }
@@ -716,7 +716,7 @@ function aplicarPresupuestoPlasmar() {
             l.push('No se escribio nada.');
             l.push.apply(l, _lineasAnomaliasPp(plan));
             const t = l.join('\n');
-            _mostrarPp('Presupuesto: plasmar proyeccion elaborada', t);
+            _mostrarPp('Presupuesto: traer proyeccion guardada', t);
             return { ok: true, detalle: t };
         }
 
@@ -750,7 +750,7 @@ function aplicarPresupuestoPlasmar() {
             confirmacion.push('Continuar?');
 
             const conf = ui.alert(
-                'Presupuesto: plasmar proyeccion elaborada -- SE VAN A SOBREESCRIBIR ' + aPisar.length + ' CELDA(S)',
+                'Presupuesto: traer proyeccion guardada -- SE VAN A SOBREESCRIBIR ' + aPisar.length + ' CELDA(S)',
                 confirmacion.join('\n'), ui.ButtonSet.YES_NO
             );
             if (conf !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se escribio nada.' };
@@ -768,7 +768,7 @@ function aplicarPresupuestoPlasmar() {
                 'Continuar?'
             ];
             const confB = ui.alert(
-                'Presupuesto: plasmar proyeccion elaborada',
+                'Presupuesto: traer proyeccion guardada',
                 confirmacionBreve.join('\n'), ui.ButtonSet.YES_NO
             );
             if (confB !== ui.Button.YES) return { ok: false, error: 'Cancelado. No se escribio nada.' };
@@ -827,13 +827,13 @@ function aplicarPresupuestoPlasmar() {
 
         logSuccess('aplicarPresupuestoPlasmar: ' + escritas.length + ' celda(s) plasmadas (' +
             aPisar.length + ' sobreescritas), periodo ' + plan.clave + '.');
-        _mostrarPp('Presupuesto: plasmar proyeccion elaborada - aplicado', detalle);
+        _mostrarPp('Presupuesto: traer proyeccion guardada - aplicado', detalle);
         return { ok: true, detalle: detalle };
 
     } catch (e) {
         const msg = 'NO APLICADO. ' + e.message;
         logError(msg, { stack: e.stack });
-        _mostrarPp('Presupuesto: plasmar proyeccion elaborada - ERROR', msg);
+        _mostrarPp('Presupuesto: traer proyeccion guardada - ERROR', msg);
         return { ok: false, error: msg };
     }
 }
@@ -885,12 +885,12 @@ function revertirPresupuestoPlasmar() {
         const detalle = l.join('\n');
         logSuccess('revertirPresupuestoPlasmar: ' + restauradas + ' celda(s) repuestas, ' +
             dejadasComoEstan.length + ' dejadas como estan.');
-        _mostrarPp('Presupuesto: plasmar proyeccion elaborada - revertido', detalle);
+        _mostrarPp('Presupuesto: traer proyeccion guardada - revertido', detalle);
         return { ok: true, detalle: detalle };
     } catch (e) {
         const msg = 'NO SE REVIRTIO. ' + e.message;
         logError(msg, { stack: e.stack });
-        _mostrarPp('Presupuesto: plasmar proyeccion elaborada - ERROR', msg);
+        _mostrarPp('Presupuesto: traer proyeccion guardada - ERROR', msg);
         return { ok: false, error: msg };
     }
 }

@@ -15,6 +15,24 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## Los rotulos dicen la direccion (2026-09-07)
+
+Parte de v0.67.1. Franco: *"no se entiende bien cuando utilizar el registrar y cuando el
+plasmar"*. Eran **guardar y recuperar** sobre la misma hoja, y ninguno de los dos nombres decia
+cual llevaba a cual:
+
+| Antes | Ahora | Direccion |
+|---|---|---|
+| Presupuesto: guardar proyeccion | **Presupuesto: guardar proyeccion del mes** | hoja -> base |
+| Presupuesto: plasmar proyeccion elaborada | **Presupuesto: traer proyeccion guardada** | base -> hoja |
+
+Lo cazo el propio banco: el primer pase renombro los `.js` y se olvido de `UI_Shell.html`, y
+`probar_shell.js` se puso rojo porque verifica la ruta contra `MENU_CONFIG` y no contra una
+copia propia.
+
 ---
 
 ## v0.67.1 - Plasmar avisa mejor, y llega el limpiador de Monto a Proyectar (2026-09-07)

@@ -4,6 +4,15 @@
  * (Añadir nuevos registros arriba)
  *
  * [2026-09-07] v0.67.1 - Plasmar avisa mejor, y llega el limpiador de Monto a Proyectar.
+ * - RENOMBRE DE LOS DOS ROTULOS, decision de Franco: "no se entiende bien cuando utilizar el
+ *   registrar y cuando el plasmar". Eran guardar y recuperar sobre la misma hoja y ninguno de
+ *   los dos nombres decia la direccion. Ahora la dicen:
+ *     "Presupuesto: guardar proyeccion del mes"   (hoja -> base)
+ *     "Presupuesto: traer proyeccion guardada"    (base -> hoja)
+ *   El renombre alcanza al menu, a los mensajes de los dos modulos, al hint del shell y a los
+ *   bancos que cruzan las rutas contra MENU_CONFIG. Lo cazo el propio banco del shell: el
+ *   primer pase renombro los .js y se olvido de UI_Shell.html, y probar_shell.js se puso rojo
+ *   porque verifica la ruta contra MENU_CONFIG en vez de contra una copia. Funciono el guard.
  * - EL SINTOMA REAL: Franco conecto el boton de plasmar y le salio "Ninguna cuenta de
  *   'Presupuesto' tiene un total plasmable para Agosto 2026. No se escribio nada." Correcto
  *   pero inutil -- verificado: agosto SI tenia 64 filas en "Proyeccion" (presupuesto base
@@ -13,7 +22,7 @@
  *   ninguna fila en Proyeccion" de "el mes tiene filas, pero de otro origen" (shell,
  *   recurrentes, presupuesto base, otros -- clasificador _origenNotaPa de
  *   DEVTOOL_ProyeccionAbm.js). En el segundo caso cuenta por origen y nombra la ruta REAL de
- *   menu ("tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar", verificada TAL CUAL
+ *   menu ("tidetrack Dev > Presupuesto: guardar proyeccion del mes > 2. Aplicar", verificada TAL CUAL
  *   contra MENU_CONFIG por el banco, no una copia) para generar lo que falta. Aplica tanto al
  *   camino "1. Ver estado" como al de "2. Aplicar".
  * - LA CONFIRMACION YA NO CORRE DERECHO SIN DIALOGO cuando no hay nada que pisar (pedido de
@@ -223,7 +232,7 @@
  *   verificacion por relectura, reversion de un nivel que protege una edicion manual
  *   posterior), reimplementado en modulo propio: la fuente de datos es la BD "Proyeccion"
  *   clasificada por DEVTOOL_ProyeccionAbm.js, de otra familia que J/N/R en vivo.
- * - MENU_CONFIG.DEV_ITEMS suma "Presupuesto: plasmar proyeccion elaborada".
+ * - MENU_CONFIG.DEV_ITEMS suma "Presupuesto: traer proyeccion guardada".
  * - devtools/probar_presupuesto_plasmar.js (nuevo, reescrito tras la correccion): mutaciones
  *   dirigidas sobre suma dentro de 'guardado' por cuenta, celdas ya cargadas, cuenta con dos
  *   guardados en monedas distintas, moneda distinta, cuenta inexistente, filas de
@@ -686,7 +695,7 @@
  *   comentario de MENU_CONFIG lo dice ("por ahora en tidetrack dev, luego va a tener su
  *   boton"). Y es el mensaje que mas se lee de toda la vista, porque "todo base, cero
  *   guardado" es el estado real de produccion. Ahora dicen la ruta literal y viva: menu
- *   tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar. Es el mismo defecto que
+ *   tidetrack Dev > Presupuesto: guardar proyeccion del mes > 2. Aplicar. Es el mismo defecto que
  *   esta version acababa de arreglar en el toast de 14_EventHandlers.js.
  * - EL ACORDEON Y LA EDICION DE MONTO NO SE PODIAN OPERAR CON TECLADO. La cabecera de cada
  *   periodo era un <div onclick> y el monto editable un <span onclick>: sin tabindex, sin
@@ -1705,7 +1714,7 @@
  *   (PC_TITULO_PROYECTAR, la MISMA constante de DEVTOOL_PresupuestoResumen.js -- nunca una
  *   segunda con un valor "parecido", la leccion de v0.46.0), sin celdas en error en la banda de
  *   datos, y que K8/O8/S8/W8 tengan formula.
- * + Solo menu tidetrack Dev ("Presupuesto: guardar proyeccion": estado/aplicar/revertir), CERO
+ * + Solo menu tidetrack Dev ("Presupuesto: guardar proyeccion del mes": estado/aplicar/revertir), CERO
  *   botones en la hoja "Presupuesto" -- pedido explicito de Franco: "por ahora... luego va a
  *   tener su boton".
  * + devtools/probar_presupuesto_guardar.js (nuevo, banco 13): siete secciones. La mas importante
