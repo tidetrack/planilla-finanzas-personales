@@ -9,25 +9,40 @@
  *   "Proyeccion"; faltaba el camino inverso, plasmar en K/O/S lo que ya quedo elaborado en la
  *   BD para el periodo vivo de J2/J3, con advertencia si hay informacion que se pueda
  *   sobreescribir.
- * - DECISION DE PRODUCTO: se suma los CINCO origenes que DEVTOOL_ProyeccionAbm.js distingue
- *   (guardado a mano, shell, recurrentes, presupuesto base, otros), no solo el guardado a mano
- *   (seria circular). Los recurrentes se proyectan solos a la BD y nunca aparecian en la hoja
- *   de trabajo; plasmar los hace visibles.
- * - MONEDA SIN CONVERSION SILENCIOSA: si una cuenta mezcla monedas o esta en una moneda
+ * - DECISION DE PRODUCTO, CORREGIDA POR FRANCO EL MISMO DIA, TEXTUAL: "Solo lo manual. Lo
+ *   proyectado no." Se trae UNICAMENTE el origen 'guardado' -- lo que ya salio de estas mismas
+ *   columnas K/O/S via aplicarGuardarProyeccion. NO recurrentes, NO presupuesto base, NO
+ *   proyecciones sueltas del shell, NO origen no reconocido. La primera version de esta misma
+ *   tarde habia elegido sumar los CINCO origenes que DEVTOOL_ProyeccionAbm.js distingue
+ *   (guardado, shell, recurrentes, base, otros), leyendo el pedido como "traer todo lo
+ *   proyectado"; Franco corrigio la lectura: plasmar solo el guardado NO es circular, es
+ *   RESTAURAR y COPIAR HACIA ADELANTE (recuperar la hoja tras limpiarla, o arrancar un mes
+ *   desde lo presupuestado el anterior y editar la diferencia), y "Monto a Proyectar" (K/O/S)
+ *   es la superficie de trabajo MANUAL de Franco -- volcar ahi lo que el sistema infirio
+ *   borraria la linea entre lo decidido y lo deducido.
+ * - LA CORRECCION ELIMINA UN MODO DE FALLA, no solo simplifica: la version de los cinco
+ *   origenes necesitaba un aviso de "riesgo de doble conteo" porque "Guardar Proyeccion" nunca
+ *   retira shell/recurrentes/otros de la BD, y volver a guardar un mes ya plasmado los hubiera
+ *   contado dos veces en el Tablero. Con solo 'guardado', "Guardar Proyeccion" retira
+ *   EXACTAMENTE esas filas al re-guardar el mismo mes (su propia decision 4) -- la clase de bug
+ *   desaparece en vez de mitigarse. El aviso (_avisoDobleConteoPp) se retira entero del modulo.
+ * - MONEDA SIN CONVERSION SILENCIOSA (sigue vigente con un solo origen): si una cuenta mezcla
+ *   monedas -- por ejemplo, dos guardados del mismo mes con J4 distinto -- o esta en una moneda
  *   distinta de la del presupuesto (J4), esa celda no se escribe -- se reporta como anomalia.
  * - La advertencia central del encargo: la confirmacion cuenta EXACTO cuantas celdas ya tienen
  *   monto, cuanto se pierde y cuanto van a quedar valiendo, y solo aparece si hay algo real que
- *   sobreescribir. Aviso adicional si lo plasmado trae shell/recurrentes/otros: volver a
- *   guardar el mismo mes duplicaria esa porcion en el Tablero (informativo, no bloquea).
+ *   sobreescribir.
  * - Mismo patron de escritura que DEVTOOL_PresupuestoSembrar.js (valores nunca formulas,
  *   verificacion por relectura, reversion de un nivel que protege una edicion manual
  *   posterior), reimplementado en modulo propio: la fuente de datos es la BD "Proyeccion"
  *   clasificada por DEVTOOL_ProyeccionAbm.js, de otra familia que J/N/R en vivo.
  * - MENU_CONFIG.DEV_ITEMS suma "Presupuesto: plasmar proyeccion elaborada".
- * - devtools/probar_presupuesto_plasmar.js (nuevo): mutaciones dirigidas sobre las cuatro
- *   poblaciones sumando por cuenta, celdas ya cargadas, cuenta con dos monedas, moneda
- *   distinta, cuenta inexistente, mes vacio, confirmacion condicionada, verificacion con
- *   reversion de lote y el deshacer protegiendo ediciones manuales posteriores.
+ * - devtools/probar_presupuesto_plasmar.js (nuevo, reescrito tras la correccion): mutaciones
+ *   dirigidas sobre suma dentro de 'guardado' por cuenta, celdas ya cargadas, cuenta con dos
+ *   guardados en monedas distintas, moneda distinta, cuenta inexistente, filas de
+ *   shell/recurrentes/base/otros presentes en la BD del mes que NO entran al plan ni a los
+ *   totales, mes vacio, confirmacion condicionada, verificacion con reversion de lote y el
+ *   deshacer protegiendo ediciones manuales posteriores.
  *
  * [2026-09-07] v0.65.1 - El texto funcional mas chico sube al piso de legibilidad.
  * - Cuatro rotulos del shell vivian en 10px: la pastilla de estado de una tarjeta, la unidad

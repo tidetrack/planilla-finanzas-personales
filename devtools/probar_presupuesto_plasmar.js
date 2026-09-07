@@ -3,21 +3,29 @@
  * Banco de pruebas de src/DEVTOOL_PresupuestoPlasmar.js.
  *
  * Prueba por MUTACION las decisiones del encargo (ver la cabecera del modulo real para el
- * porque de cada una):
- *   1. Agrupacion por cuenta: los CINCO origenes (guardado/shell/recurrentes/base/otros) suman
- *      juntos para la misma cuenta -- decision de producto 1 (traer TODO, no solo "guardado").
- *   2. Confirmacion con numeros concretos SOLO cuando hay algo que pisar (pedido explicito).
- *   3. Moneda SIN conversion silenciosa: mezcla de monedas para una cuenta, o una moneda unica
- *      distinta de la del presupuesto, NO se escriben -- se reportan como anomalia.
- *   4. Cuenta que ya no existe en el bloque del Presupuesto vivo: anomalia, no se escribe.
- *   5. Categoria/tipo_cuenta que no mapea a ningun bloque: anomalia, no rompe el resto del plan.
- *   6. Mes sin ninguna fila de origen: nada que hacer, sin dialogo.
- *   7. Escribe VALORES (nunca formulas); verificacion por relectura con reversion de LOTE
+ * porque de cada una -- reescrito 2026-09-07 PM tras la correccion de Franco, TEXTUAL: "Solo lo
+ * manual. Lo proyectado no."):
+ *   1. Agrupacion por cuenta: SOLO el origen 'guardado' entra, y DOS filas 'guardado' para la
+ *      misma cuenta (dos corridas de "Guardar Proyeccion") suman juntas -- decision de producto 1.
+ *   2. shell/recurrentes/presupuesto base/otros presentes en la BD del mes NO entran al plan ni
+ *      a los totales, aunque compartan cuenta y periodo con una fila 'guardado' real.
+ *   3. Confirmacion con numeros concretos SOLO cuando hay algo que pisar (pedido explicito).
+ *   4. Moneda SIN conversion silenciosa: mezcla de monedas DENTRO de 'guardado' (dos guardados
+ *      del mismo mes en monedas distintas), o una moneda unica distinta de la del presupuesto,
+ *      NO se escriben -- se reportan como anomalia. La mezcla sigue siendo posible con un solo
+ *      origen: el mes se guardo dos veces con la moneda de la hoja cambiada entre uno y otro.
+ *   5. Cuenta que ya no existe en el bloque del Presupuesto vivo: anomalia, no se escribe.
+ *   6. Categoria/tipo_cuenta que no mapea a ningun bloque: anomalia, no rompe el resto del plan.
+ *   7. Mes sin ninguna fila 'guardado': nada que hacer, sin dialogo.
+ *   8. Escribe VALORES (nunca formulas); verificacion por relectura con reversion de LOTE
  *      ENTERO al estado previo exacto si una celda no verifica.
- *   8. Revertir protege una edicion manual posterior a la corrida (un solo nivel de undo).
- *   9. El aviso de riesgo de doble conteo aparece solo cuando shell/recurrentes/otros
- *      contribuyeron a algo realmente plasmado.
+ *   9. Revertir protege una edicion manual posterior a la corrida (un solo nivel de undo).
  *  10. Preflight: aborta ante un rotulo corrido o una formula viva en K/O/S.
+ *
+ * El aviso de "riesgo de doble conteo" (y su banco de la version anterior) desaparecio junto
+ * con el modo de falla que lo motivaba: con solo 'guardado', "Guardar Proyeccion" retira
+ * exactamente esas filas al re-guardar el mismo mes, asi que no hay nada que duplicar. Ver la
+ * cabecera del modulo, seccion "UN MODO DE FALLA QUE LA CORRECCION DE FRANCO ELIMINO".
  *
  * USO:  node devtools/probar_presupuesto_plasmar.js
  * @version 0.66.0
@@ -88,7 +96,7 @@ vm.runInContext(
     '_bloquesPc,PC_TITULO_PROYECTAR,PG_MARCA,PB_MARCA,REC_MARCA,PA_ORIGENES,PA_CATEGORIA_A_CLAVE,' +
     '_origenNotaPa,_leerTodasFilasPa,_preflightPb,_periodoDesdeSelectoresPg,_claveMesPg,' +
     'PP_UMBRAL_IDENTIDAD,PP_PROP_PREVIOS,_preflightPp,_periodoObjetivoPp,_cuentasPresupuestoPp,' +
-    '_filasBdPeriodoPp,_agruparPorCuentaPp,_planPlasmarPp,_avisoDobleConteoPp,' +
+    '_filasBdPeriodoPp,_agruparPorCuentaPp,_planPlasmarPp,' +
     'estadoPresupuestoPlasmar,aplicarPresupuestoPlasmar,revertirPresupuestoPlasmar});',
     ctx
 );
@@ -215,16 +223,15 @@ function ssCon(hojaPresupuesto, filasProyeccion) {
 // ============================================================================
 console.log('BANCO: DEVTOOL_PresupuestoPlasmar (v0.66.0 -- la vuelta de Guardar Proyeccion)');
 
-seccion('1. Agrupacion: los CINCO origenes suman juntos para la misma cuenta');
+seccion('1. Agrupacion: SOLO \'guardado\' entra, y DOS guardados de la misma cuenta suman juntos');
 {
     const clave = '2026-09';
     const fecha = new Date(2026, 8, 1);
+    // Dos corridas reales de "Guardar Proyeccion" para el mismo mes y la misma cuenta -- el
+    // caso que la cabecera documenta ("SUMA, NO SIGNO POR TIPO"): no se toma la ultima, se suman.
     const filas = [
         filaProyPp({ monto: 500000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }),
-        filaProyPp({ monto: 50000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000111' }),
-        filaProyPp({ monto: 20000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.REC_MARCA + ' 2026-09 2026-08-21_090000 - Bono' }),
-        filaProyPp({ monto: 10000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PB_MARCA + ' selloA' }),
-        filaProyPp({ monto: 5000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000 retocada' })
+        filaProyPp({ monto: 5000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 2026-08-26_090000' })
     ];
     const hoja = hojaPresupuestoBase({});
     ssActual = ssCon(hoja, filas);
@@ -232,16 +239,35 @@ seccion('1. Agrupacion: los CINCO origenes suman juntos para la misma cuenta');
     const plan = ctx._planPlasmarPp(ssActual, pre);
 
     ok(plan.clave === clave, 'clave del periodo vivo = ' + clave + ', dio ' + plan.clave);
+    ok(plan.totalFilasBd === 2, 'las DOS filas \'guardado\' entran a totalFilasBd, dio ' + plan.totalFilasBd);
     const sueldo = plan.aPlasmar.find((c) => c.cuenta === 'Sueldo');
     ok(!!sueldo, 'Sueldo entra al plan');
-    ok(sueldo && sueldo.valor === 585000, 'Sueldo suma los CINCO origenes: 500000+50000+20000+10000+5000=585000, dio ' + (sueldo && sueldo.valor));
-    ok(sueldo && sueldo.origenes.sort().join(',') === 'base,guardado,otros,recurrentes,shell',
-        'los cinco origenes quedan registrados, dio ' + (sueldo && sueldo.origenes.sort().join(',')));
-    ok(plan.origenesPresentes.sort().join(',') === 'base,guardado,otros,recurrentes,shell',
-        'origenesPresentes del plan tambien lista los cinco');
+    ok(sueldo && sueldo.valor === 505000, 'Sueldo suma los DOS guardados: 500000+5000=505000, dio ' + (sueldo && sueldo.valor));
 }
 
-seccion('2. Celdas ya cargadas: pisa=true con valorPrevio exacto, y separa por bloque');
+seccion('2. shell/recurrentes/presupuesto base/otros NO entran al plan ni a los totales');
+{
+    const fecha = new Date(2026, 8, 1);
+    // Ninguna fila de este lote es 'guardado': shell, recurrentes, base y una nota PG mal
+    // formada (cola no vacia, clasifica 'otros'). Decision de producto 1 -- "Solo lo manual.
+    // Lo proyectado no.": nada de esto tiene que aparecer en el plan ni sumar a ningun total.
+    const filas = [
+        filaProyPp({ monto: 50000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000111' }),
+        filaProyPp({ monto: 20000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.REC_MARCA + ' 2026-09 2026-08-21_090000 - Bono' }),
+        filaProyPp({ monto: 10000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PB_MARCA + ' selloA' }),
+        filaProyPp({ monto: 999999, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000 retocada' })
+    ];
+    const hoja = hojaPresupuestoBase({});
+    ssActual = ssCon(hoja, filas);
+    const pre = ctx._preflightPp(ssActual);
+    const plan = ctx._planPlasmarPp(ssActual, pre);
+
+    ok(plan.totalFilasBd === 0, 'ninguna fila clasifica \'guardado\': totalFilasBd = 0, dio ' + plan.totalFilasBd);
+    ok(plan.aPlasmar.length === 0, 'nada entra a aPlasmar (shell/recurrentes/base/otros no cuentan), dio ' + plan.aPlasmar.length);
+    ok(!plan.aPlasmar.find((c) => c.cuenta === 'Sueldo'), 'Sueldo NO aparece en el plan pese a tener cuatro filas en la BD');
+}
+
+seccion('3. Celdas ya cargadas: pisa=true con valorPrevio exacto, y separa por bloque');
 {
     const fecha = new Date(2026, 8, 1);
     const filas = [
@@ -259,24 +285,29 @@ seccion('2. Celdas ya cargadas: pisa=true con valorPrevio exacto, y separa por b
     ok(nafta && nafta.pisa === false, 'S9 (Nafta) estaba vacia: pisa=false, dio ' + JSON.stringify(nafta));
 }
 
-seccion('3. MEZCLA DE MONEDAS: la misma cuenta con ARS y USD no se escribe, se reporta');
+seccion('4. MEZCLA DE MONEDAS dentro de \'guardado\': dos guardados del mismo mes en monedas distintas');
 {
     const fecha = new Date(2026, 8, 1);
+    // Con solo 'guardado' la mezcla SIGUE siendo posible: el mes se guardo dos veces con la
+    // moneda de la hoja (J4) cambiada entre una corrida y la otra, o el retiro de la corrida
+    // anterior no llego a completarse antes de la siguiente. Las DOS filas son 'guardado'
+    // genuino (sello estricto, cola vacia) -- no una 'shell' ni una 'otros' disfrazada.
     const filas = [
         filaProyPp({ monto: 100000, tipo: 'Egreso', cuenta: 'Alquiler', tipo_cuenta: 'Gasto Fijo', moneda: 'ARS', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }),
-        filaProyPp({ monto: 200, tipo: 'Egreso', cuenta: 'Alquiler', tipo_cuenta: 'Gasto Fijo', moneda: 'USD', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000111' })
+        filaProyPp({ monto: 200, tipo: 'Egreso', cuenta: 'Alquiler', tipo_cuenta: 'Gasto Fijo', moneda: 'USD', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 2026-08-26_090000' })
     ];
     const hoja = hojaPresupuestoBase({});
     ssActual = ssCon(hoja, filas);
     const pre = ctx._preflightPp(ssActual);
     const plan = ctx._planPlasmarPp(ssActual, pre);
 
+    ok(plan.totalFilasBd === 2, 'las DOS filas son \'guardado\': totalFilasBd = 2, dio ' + plan.totalFilasBd);
     ok(!plan.aPlasmar.find((c) => c.cuenta === 'Alquiler'), 'Alquiler NO entra a aPlasmar (mezcla de monedas)');
     ok(plan.anomaliaMezclaMoneda.length === 1 && plan.anomaliaMezclaMoneda[0].cuenta === 'Alquiler',
         'se reporta como anomalia de mezcla de monedas, dio ' + JSON.stringify(plan.anomaliaMezclaMoneda));
 }
 
-seccion('4. MONEDA DISTINTA de la del presupuesto: no se escribe, se reporta');
+seccion('5. MONEDA DISTINTA de la del presupuesto: no se escribe, se reporta');
 {
     const fecha = new Date(2026, 8, 1);
     const filas = [
@@ -292,7 +323,7 @@ seccion('4. MONEDA DISTINTA de la del presupuesto: no se escribe, se reporta');
         'se reporta como anomalia de moneda distinta, dio ' + JSON.stringify(plan.anomaliaMonedaDistinta));
 }
 
-seccion('5. CUENTA QUE YA NO EXISTE en el bloque vivo del Presupuesto: no se escribe, se reporta');
+seccion('6. CUENTA QUE YA NO EXISTE en el bloque vivo del Presupuesto: no se escribe, se reporta');
 {
     const fecha = new Date(2026, 8, 1);
     const filas = [
@@ -308,7 +339,7 @@ seccion('5. CUENTA QUE YA NO EXISTE en el bloque vivo del Presupuesto: no se esc
         'se reporta como anomalia de cuenta inexistente, dio ' + JSON.stringify(plan.anomaliaCuentaNoExiste));
 }
 
-seccion('6. CATEGORIA DESCONOCIDA: no rompe el resto del plan, se cuenta aparte');
+seccion('7. CATEGORIA DESCONOCIDA: no rompe el resto del plan, se cuenta aparte');
 {
     const fecha = new Date(2026, 8, 1);
     const filas = [
@@ -324,7 +355,7 @@ seccion('6. CATEGORIA DESCONOCIDA: no rompe el resto del plan, se cuenta aparte'
     ok(plan.aPlasmar.length === 1 && plan.aPlasmar[0].cuenta === 'Sueldo', 'Sueldo sigue entrando bien al plan');
 }
 
-seccion('7. MES SIN NINGUNA FILA DE ORIGEN: nada que hacer, sin dialogo');
+seccion('8. MES SIN NINGUNA FILA \'guardado\': nada que hacer, sin dialogo');
 {
     const hoja = hojaPresupuestoBase({});
     ssActual = ssCon(hoja, []);   // "Proyeccion" vacia
@@ -334,7 +365,7 @@ seccion('7. MES SIN NINGUNA FILA DE ORIGEN: nada que hacer, sin dialogo');
     ok(!botonesUsados.includes('YN'), 'ningun dialogo de confirmacion se disparo');
 }
 
-seccion('8. Confirmacion: aparece SOLO cuando hay pisa, con numeros concretos');
+seccion('9. Confirmacion: aparece SOLO cuando hay pisa, con numeros concretos');
 {
     const fecha = new Date(2026, 8, 1);
     const filasConPisa = [
@@ -364,7 +395,7 @@ seccion('8. Confirmacion: aparece SOLO cuando hay pisa, con numeros concretos');
     ok(!botonesUsados.includes('YN'), 'NINGUN dialogo de confirmacion cuando no hay nada que pisar');
 }
 
-seccion('9. Aplicar feliz: escribe VALORES, verifica por relectura, revierte el LOTE si algo no verifica');
+seccion('10. Aplicar feliz: escribe VALORES, verifica por relectura, revierte el LOTE si algo no verifica');
 {
     const fecha = new Date(2026, 8, 1);
     const filas = [
@@ -390,7 +421,7 @@ seccion('9. Aplicar feliz: escribe VALORES, verifica por relectura, revierte el 
     ok(hoja2.celdas['O9'].valor === 55, 'O9 (SI se habia escrito bien, pisando 55) se REVIRTIO a 55, el valor previo exacto');
 }
 
-seccion('10. Revertir: protege una edicion manual posterior, y un segundo revertir no tiene nada que hacer');
+seccion('11. Revertir: protege una edicion manual posterior, y un segundo revertir no tiene nada que hacer');
 {
     const fecha = new Date(2026, 8, 1);
     const filas = [
@@ -409,33 +440,6 @@ seccion('10. Revertir: protege una edicion manual posterior, y un segundo revert
 
     const rRev2 = ctx.revertirPresupuestoPlasmar();
     ok(!rRev2.ok && /no hay ninguna corrida/i.test(rRev2.error || ''), 'un segundo revertir no tiene nada que deshacer: ' + rRev2.error);
-}
-
-seccion('11. Aviso de doble conteo: aparece solo cuando shell/recurrentes/otros aportan a lo plasmado');
-{
-    const fecha = new Date(2026, 8, 1);
-    // Solo 'guardado' y 'base' (ninguno de los dos esta en riesgo: Guardar SI los retira).
-    const filasSinRiesgo = [
-        filaProyPp({ monto: 500000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 2026-08-25_143000' }),
-        filaProyPp({ monto: 10000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PB_MARCA + ' selloA' })
-    ];
-    const hoja1 = hojaPresupuestoBase({});
-    ssActual = ssCon(hoja1, filasSinRiesgo);
-    const pre1 = ctx._preflightPp(ssActual);
-    const plan1 = ctx._planPlasmarPp(ssActual, pre1);
-    ok(ctx._avisoDobleConteoPp(plan1.aPlasmar) === '', 'sin shell/recurrentes/otros: NINGUN aviso de doble conteo');
-
-    // Con 'shell' de por medio: el aviso tiene que aparecer.
-    const filasConRiesgo = filasSinRiesgo.concat([
-        filaProyPp({ monto: 5000, tipo: 'Ingreso', cuenta: 'Sueldo', tipo_cuenta: 'Ingreso', moneda: 'ARS', fecha: fecha, nota: ctx.PG_MARCA + ' 2026-09 shell_2026-08-27_100000111' })
-    ]);
-    const hoja2 = hojaPresupuestoBase({});
-    ssActual = ssCon(hoja2, filasConRiesgo);
-    const pre2 = ctx._preflightPp(ssActual);
-    const plan2 = ctx._planPlasmarPp(ssActual, pre2);
-    const aviso = ctx._avisoDobleConteoPp(plan2.aPlasmar);
-    ok(aviso !== '' && /ADVERTENCIA/.test(aviso) && /shell/.test(aviso),
-        'con shell de por medio, el aviso de doble conteo SI aparece y lo nombra: ' + aviso.slice(0, 60));
 }
 
 seccion('12. Preflight: aborta ante un rotulo corrido, y ante una formula viva en K/O/S');

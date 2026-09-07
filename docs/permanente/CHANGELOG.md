@@ -25,23 +25,35 @@ elaborado en la BD para el periodo vivo de la hoja Presupuesto (J2/J3). Encargo 
 Franco: *"estaria buenisimo poder 'plasmar' los montos proyectados en estas columnas mas
 manuales"*, con advertencia si hay informacion que se pueda sobreescribir.
 
-**Decision de producto — que se trae al plasmar:** la SUMA de los cinco origenes que el ABM de
-Proyecciones Elaboradas ya distingue (guardado a mano, shell, recurrentes, presupuesto base,
-otros), no solo el guardado a mano (habria sido circular: es lo que salio de esas mismas
-columnas). El motivo de fondo es que los **recurrentes** se proyectan solos a la BD y nunca
-aparecian en la hoja de trabajo — plasmar los hace visibles por primera vez ahi.
+**Decision de producto, corregida por Franco el mismo dia, textual:** *"Solo lo manual. Lo
+proyectado no."* Se trae UNICAMENTE el origen 'guardado' — lo que ya salio de estas mismas
+columnas K/O/S via `aplicarGuardarProyeccion`. NO recurrentes, NO presupuesto base, NO
+proyecciones sueltas del shell, NO origen no reconocido. La primera version de esta misma tarde
+habia elegido sumar los cinco origenes que el ABM de Proyecciones Elaboradas distingue (guardado,
+shell, recurrentes, base, otros), leyendo el pedido como "traer todo lo proyectado"; Franco
+corrigio la lectura: plasmar solo el guardado **no es circular**, es **restaurar y copiar hacia
+adelante** (recuperar la hoja tras limpiarla, o arrancar un mes desde lo presupuestado el
+anterior y editar la diferencia), y "Monto a Proyectar" (K/O/S) es la superficie de trabajo
+**manual** de Franco — volcar ahi lo que el sistema infirio borraria la linea entre lo decidido y
+lo deducido.
 
-**Moneda, sin conversion silenciosa:** "Monto a Proyectar" es una sola moneda por hoja. Si una
-cuenta mezcla monedas para el periodo, o esta proyectada en una moneda distinta de la del
-presupuesto, esa celda no se escribe: se cuenta y se reporta como anomalia, nunca se inventa
-una tasa de conversion.
+**La correccion elimina un modo de falla, no solo simplifica:** la version de los cinco origenes
+necesitaba un aviso de "riesgo de doble conteo" porque "Guardar Proyeccion" nunca retira
+shell/recurrentes/otros de la BD, y volver a guardar un mes ya plasmado los hubiera contado dos
+veces en el Tablero. Con solo 'guardado', "Guardar Proyeccion" retira exactamente esas filas al
+re-guardar el mismo mes (su propia decision 4) — la clase de bug desaparece en vez de mitigarse.
+El aviso se retira entero del modulo.
+
+**Moneda, sin conversion silenciosa (sigue vigente con un solo origen):** "Monto a Proyectar" es
+una sola moneda por hoja. Si una cuenta mezcla monedas para el periodo — por ejemplo, dos
+guardados del mismo mes con la moneda de la hoja cambiada entre uno y otro — o esta proyectada en
+una moneda distinta de la del presupuesto, esa celda no se escribe: se cuenta y se reporta como
+anomalia, nunca se inventa una tasa de conversion.
 
 **La advertencia central del encargo:** antes de escribir se cuentan las celdas que ya tienen
 monto entre las que se van a plasmar, y la confirmacion muestra numeros concretos — cuantas
 celdas, cuanto se pierde, cuanto van a quedar valiendo. Solo pide confirmar si hay algo real
-que sobreescribir. Un aviso adicional (informativo, no bloquea) senala si lo plasmado incluye
-shell/recurrentes/otros: volver a guardar el mismo mes duplicaria esa porcion en el Tablero,
-porque "Guardar Proyeccion" nunca retira esos origenes.
+que sobreescribir.
 
 Mismo patron de escritura que `DEVTOOL_PresupuestoSembrar.js` (valores nunca formulas,
 verificacion por relectura, reversion de un nivel que protege una edicion manual posterior),

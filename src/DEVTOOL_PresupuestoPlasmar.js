@@ -19,32 +19,48 @@
  * ============================================================================
  * Tres lecturas posibles del pedido, evaluadas ANTES de escribir una linea:
  *   a) Solo el grupo 'guardado' (lo que la propia hoja Presupuesto genero la ultima vez que se
- *      corrio "Guardar Proyeccion"). CIRCULAR: es literalmente traer de vuelta lo que salio de
- *      estas mismas columnas. Util solo como "deshacer un Sembrar/edicion posterior", un caso de
- *      uso real pero muy angosto.
+ *      corrio "Guardar Proyeccion"). Lectura inicial (ver mas abajo): "CIRCULAR", por traer de
+ *      vuelta lo que salio de estas mismas columnas.
  *   b) TODO lo proyectado del mes, sumado por cuenta, a traves de los CINCO origenes que
  *      DEVTOOL_ProyeccionAbm.js ya distingue (guardado / shell / recurrentes / base / otros).
  *   c) Con eleccion de origenes (un selector en el dialogo).
  *
- * SE ELIGE (b). Motivo de fondo: los RECURRENTES (17_RecurrentesService.js) se proyectan SOLOS a
- * la BD "Proyeccion" cada vez que se sincronizan, y NUNCA aparecen en la hoja "Presupuesto" --
- * Franco no tiene forma de verlos ahi salvo abriendo "Proyeccion" a mano o el ABM. Lo mismo para
- * una proyeccion puntual cargada por el shell ("Movimiento nuevo" contra un mes futuro): vive en
- * la BD pero es invisible en la hoja de trabajo. Sumar TODO por cuenta es lo que hace visibles
- * esos dos origenes en la columna que Franco edita a mano -- el beneficio concreto que (a) no da
- * y que (c) diferiria a una decision que Franco tendria que tomar cada vez sin necesidad real
- * (nada en el encargo pide elegir origenes; agregar esa superficie sin que se pida es la clase de
- * opcion que despues alguien dispara mal).
+ * PRIMERA VUELTA (v0.66.0, 2026-09-07 AM) -- SE ELIGIO (b). Motivo de entonces: los RECURRENTES
+ * (17_RecurrentesService.js) se proyectan SOLOS a la BD "Proyeccion" cada vez que se sincronizan,
+ * y NUNCA aparecen en la hoja "Presupuesto" -- Franco no tiene forma de verlos ahi salvo abriendo
+ * "Proyeccion" a mano o el ABM. Lo mismo para una proyeccion puntual cargada por el shell: vive
+ * en la BD pero es invisible en la hoja de trabajo. Sumar TODO por cuenta hacia visibles esos dos
+ * origenes en la columna que Franco edita a mano -- el beneficio concreto que (a) no daba.
+ *
+ * CORRECCION DE FRANCO (mismo dia, 2026-09-07 PM), TEXTUAL: "Solo lo manual. Lo proyectado no."
+ * SE ELIGE (a). El fundamento correcto no es el que la primera vuelta le atribuyo por descarte --
+ * plasmar solo 'guardado' NO es circular. Es RESTAURAR y COPIAR HACIA ADELANTE: recuperar la hoja
+ * despues de limpiarla (un Sembrar que se quiere deshacer, una edicion que se fue de mano), o
+ * arrancar septiembre desde lo que ya se presupuesto en agosto y editar la diferencia -- el mes
+ * de origen lo elige el operador corriendo la funcion, no es siempre "el mes en curso". Y el
+ * criterio de fondo es de producto, no tecnico: "Monto a Proyectar" (K/O/S) es la superficie de
+ * trabajo MANUAL de Franco. Volcar ahi lo que el sistema INFIRIO (recurrentes que se sincronizan
+ * solos, el presupuesto base promediado, una proyeccion puntual del shell) borraria la linea
+ * entre lo que Franco decidio a mano y lo que el sistema dedujo -- y una vez plasmado en la misma
+ * columna, esa distincion ya no se puede reconstruir. Los recurrentes siguen visibles donde ya lo
+ * estaban, "Proyecciones Elaboradas" (el ABM): no necesitan invadir tambien la hoja de trabajo.
+ * (c) se descarta con el mismo argumento en las dos vueltas: nada en el encargo, ni en su
+ * correccion, pide elegir origenes -- agregar esa superficie sin que se pida es la clase de
+ * opcion que despues alguien dispara mal.
  *
  * SUMA, NO SIGNO POR TIPO: se replica el MISMO criterio que ya usa `_totalesPorBloquePa`
  * (DEVTOOL_ProyeccionAbm.js) para totalizar "Proyeccion" por bloque -- sumar `monto` crudo de
  * cada fila agrupada por el bloque que deriva `tipoCuenta`, SIN aplicar el signo `tipoQueResta`
- * que si usa el ledger real (_formulaRealidadIp). Se decide replicar y no inventar una TERCERA
- * regla de totalizado: los guardados desde Presupuesto siempre escriben un tipo homogeneo por
- * bloque (`_leerFilasPresupuestoPg`: Ingreso para el bloque ingresos, Egreso para los otros dos),
- * asi que en la practica no hay senal de "reintegro" que perder en este pipeline especifico; si
- * algun dia el shell o los recurrentes escriben un tipo contrario dentro de un bloque, ese comportamiento
- * ya esta establecido (y auditado) en el ABM, no se inaugura aca.
+ * que si usa el ledger real (_formulaRealidadIp). Sigue aplicando con un solo origen: nada
+ * impide que "Proyeccion" tenga MAS DE UNA fila 'guardado' para la misma cuenta y el mismo mes
+ * (dos corridas de "Guardar Proyeccion" antes de que el retiro de la primera llegara a
+ * completarse, por ejemplo) -- esas filas se suman igual, no se toma la ultima ni se promedia. Se
+ * decide replicar y no inventar una TERCERA regla de totalizado: los guardados desde Presupuesto
+ * siempre escriben un tipo homogeneo por bloque (`_leerFilasPresupuestoPg`: Ingreso para el
+ * bloque ingresos, Egreso para los otros dos), asi que en la practica no hay senal de "reintegro"
+ * que perder en este pipeline especifico; si algun dia "Guardar Proyeccion" escribe un tipo
+ * contrario dentro de un bloque, ese comportamiento ya esta establecido (y auditado) en Guardar,
+ * no se inaugura aca.
  *
  * ============================================================================
  * DECISION DE PRODUCTO 2 -- LA MONEDA, SIN CONVERSION SILENCIOSA (pedido explicito)
@@ -52,8 +68,11 @@
  * "Monto a Proyectar" (K/O/S) tiene UNA sola moneda para toda la hoja: el selector J4
  * (PM_SELECTORES.moneda), la MISMA lectura que ya fija DEVTOOL_PresupuestoGuardar.js en su
  * "QUINTO PUNTO" (K/O/S se asume tipeado en la moneda de J4, porque es la unica senal de moneda
- * que la hoja tiene). La BD "Proyeccion", en cambio, S1 puede tener la MISMA cuenta proyectada en
- * mas de una moneda para el mismo mes (un recurrente en USD y un guardado en ARS, por ejemplo).
+ * que la hoja tiene). La BD "Proyeccion", en cambio, puede tener la MISMA cuenta con MAS de una
+ * fila 'guardado' para el mismo mes en monedas distintas -- decision de producto 1 achica el
+ * universo a un solo origen, pero no lo vuelve un origen unico POR FILA: se guardo el mes dos
+ * veces con J4 en monedas distintas, o el retiro de la corrida anterior no llego a completarse
+ * antes de la siguiente. La guarda de moneda de esta seccion sigue haciendo falta por eso.
  *
  * Regla, por cuenta, DENTRO de un mismo bloque:
  *   - Si TODAS las filas de esa cuenta para el periodo estan en LA MISMA moneda Y esa moneda es
@@ -75,11 +94,11 @@
  * relectura, reversion a un solo nivel que respeta una edicion manual posterior). Se descarta:
  *   - La AFINIDAD real de la FUENTE de datos es con DEVTOOL_PresupuestoGuardar.js (la BD
  *     "Proyeccion", `_preflightPb`, `_periodoDesdeSelectoresPg`, `_claveMesPg`) y con
- *     DEVTOOL_ProyeccionAbm.js (el clasificador de cinco origenes `_origenNotaPa`, la lectura
+ *     DEVTOOL_ProyeccionAbm.js (el clasificador de origen por nota `_origenNotaPa`, la lectura
  *     bulk `_leerTodasFilasPa`, el mapeo de categoria `PA_CATEGORIA_A_CLAVE`). Sembrar.js en
  *     cambio lee EXCLUSIVAMENTE J/N/R en vivo, DENTRO de la misma hoja -- cero lectura cruzada de
  *     hojas, cero clasificador de notas. Meter esta logica ahi mezclaria una fuente intra-hoja
- *     (formulas vivas) con una fuente cruzada (una BD con cinco poblaciones), en el mismo archivo
+ *     (formulas vivas) con una fuente cruzada (una BD con varias poblaciones por nota), en el mismo archivo
  *     que ya documenta extensamente por que NO duplica la geometria de otros dos modulos --
  *     agregarle un tercer conjunto de dependencias cruzadas (Guardar + Abm) le resta, no le suma,
  *     claridad a ese archivo.
@@ -93,22 +112,30 @@
  * YES_NO que el encargo pide explicitamente ("deberia haber una advertencia a ejecutar").
  *
  * ============================================================================
- * ADVERTENCIA ADICIONAL -- EL RIESGO DE DOBLE CONTEO SI DESPUES SE VUELVE A GUARDAR
+ * UN MODO DE FALLA QUE LA CORRECCION DE FRANCO ELIMINO (no solo simplifico)
  * ============================================================================
- * aplicarGuardarProyeccion() retira, al guardar un mes, sus PROPIAS filas 'guardado' previas y las
- * 'base' de ese mes (decision 4 de su cabecera) -- pero NUNCA toca 'shell', 'recurrentes' ni
- * 'otros': esas "conviven sumando" en el Tablero, por diseno (enmienda a su decision 3). Si este
- * modulo plasma un total que YA INCLUYE shell/recurrentes/otros, y despues Franco corre de nuevo
- * "Guardar Proyeccion" para ese mismo mes, el nuevo guardado (que ya trae esa suma adentro)
- * CONVIVIRIA en el Tablero con las mismas filas shell/recurrentes/otros que siguen vivas en la
- * BD -- contando esa porcion DOS VECES. Esto no se resuelve excluyendo esos origenes de la suma
- * (eso reintroduciria el problema que motivo la decision de producto 1: los recurrentes seguirian
- * invisibles). Se resuelve con TRANSPARENCIA: estadoPresupuestoPlasmar() y la confirmacion de
- * aplicarPresupuestoPlasmar() avisan EXPLICITO, y solo cuando de verdad aplica (alguna celda
- * plasmada trae shell/recurrentes/otros en su origen), que volver a guardar footer duplicaria esa
- * porcion -- la misma filosofia que ya usa este repo para "conviven sumando": informar en vez de
- * bloquear una operacion que no es, en si misma, destructiva sobre la BD (esta funcion NUNCA
- * escribe en "Proyeccion", solo LEE de ahi).
+ * La primera vuelta (b) necesitaba una tercera pieza que esta version YA NO TIENE: un aviso de
+ * "riesgo de doble conteo" (`_avisoDobleConteoPp`, retirado en la correccion). Vale la pena dejar
+ * registrado POR QUE existia y por que dejo de hacer falta, porque es la prueba de que la
+ * correccion de Franco no fue solo una preferencia mas simple, sino que cerro un bug latente.
+ *
+ * `aplicarGuardarProyeccion()` retira, al guardar un mes, sus PROPIAS filas 'guardado' previas y
+ * las 'base' de ese mes (decision 4 de su cabecera) -- pero NUNCA toca 'shell', 'recurrentes' ni
+ * 'otros': esas "conviven sumando" en el Tablero, por diseno (enmienda a su decision 3). Bajo (b),
+ * este modulo plasmaba un total que PODIA incluir shell/recurrentes/otros; si despues Franco
+ * corria de nuevo "Guardar Proyeccion" para ese mismo mes, el nuevo guardado (que ya traia esa
+ * suma adentro, ahora bajo la marca 'guardado') CONVIVIA en el Tablero con las mismas filas
+ * shell/recurrentes/otros que seguian vivas en la BD -- contando esa porcion DOS VECES. Bajo (b)
+ * eso no se podia resolver excluyendo esos origenes de la suma (hubiera reintroducido el problema
+ * que motivo elegir (b): los recurrentes volverian a ser invisibles), asi que la unica mitigacion
+ * posible era TRANSPARENCIA: un aviso explicito, informativo, que no bloqueaba nada.
+ *
+ * Bajo (a) el modo de falla DESAPARECE, no se mitiga: lo unico que se plasma es 'guardado', y
+ * `aplicarGuardarProyeccion()` retira EXACTAMENTE las filas 'guardado' propias de ese mismo mes
+ * al volver a guardar (decision 4 de su cabecera, arriba). No hay una porcion que "convive
+ * sumando" con lo recien plasmado, porque lo recien plasmado nunca incluyo shell/recurrentes/
+ * otros. Por eso `_avisoDobleConteoPp` y su llamador se retiran enteros en vez de quedar
+ * apagados: avisar de un riesgo que ya no existe es ruido, no informacion.
  *
  * ============================================================================
  * EL SEGURO: CONFIRMACION EXPLICITA CON NUMEROS CONCRETOS (pedido explicito del encargo)
@@ -149,7 +176,8 @@
  * 2. NO convierte moneda. Ver decision de producto 2.
  * 3. NO toca J/N/R, la columna V/W, las tablas resumen, el selector de Modo ni "Guardar
  *    Proyeccion": son piezas de otros modulos ya desplegados.
- * 4. NO agrega logica de eleccion de origenes: trae los cinco siempre. Ver decision de producto 1.
+ * 4. NO trae recurrentes, presupuesto base, proyecciones sueltas del shell ni las de origen no
+ *    reconocido: trae SOLO 'guardado', siempre. Ver decision de producto 1.
  * 5. NO escribe formulas, nunca. Ver "EL SEGURO" arriba.
  *
  * Reusa de DEVTOOL_PresupuestoModo.js: PM_TITULO, PM_SELECTORES, PM_BLOQUES, PM_CLAVES_BLOQUE,
@@ -157,15 +185,14 @@
  * Reusa de DEVTOOL_PresupuestoResumen.js: _bloquesPc() (colProyectar: K/O/S), PC_TITULO_PROYECTAR.
  * Reusa de DEVTOOL_PresupuestoGuardar.js: _periodoDesdeSelectoresPg, _claveMesPg.
  * Reusa de DEVTOOL_PresupuestoBase.js: _preflightPb (Proyeccion espeja a Registros).
- * Reusa de DEVTOOL_ProyeccionAbm.js: _leerTodasFilasPa, _origenNotaPa, PA_CATEGORIA_A_CLAVE,
- * PA_ORIGENES (solo para nombrar el orden de presentacion de origenes en el reporte).
+ * Reusa de DEVTOOL_ProyeccionAbm.js: _leerTodasFilasPa, _origenNotaPa, PA_CATEGORIA_A_CLAVE.
  * Reusa de DEVTOOL_InicioPresupuesto.js: IP_MESES.
  * Reusa de DEVTOOL_FormulerioV0111.js: _rotulosCompatibles, _normalizarRotulo, _errorDeCelda.
  * Reusa de 00_Config.js/03_SheetManager.js: SHEETS, MONEDAS_DISPONIBLES, columnLetterToIndex.
  *
  * @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
  * @see DEVTOOL_PresupuestoGuardar.js (la ida: K/O/S -> BD)
- * @see DEVTOOL_ProyeccionAbm.js (el clasificador de cinco origenes, _origenNotaPa)
+ * @see DEVTOOL_ProyeccionAbm.js (el clasificador de origen por nota, _origenNotaPa)
  * @see DEVTOOL_PresupuestoSembrar.js (el patron de escritura en K/O/S que este modulo imita)
  * @version 0.66.0
  * @since 0.66.0
@@ -178,13 +205,6 @@
 
 const PP_UMBRAL_IDENTIDAD = 0.01;
 const PP_PROP_PREVIOS = 'presupuesto_plasmar_previos';
-
-// Origenes cuyas filas NO retira aplicarGuardarProyeccion (decision 4 de su cabecera): si
-// contribuyeron a lo plasmado, volver a guardar el mes duplicaria esa porcion. Ver la
-// "ADVERTENCIA ADICIONAL" de la cabecera. Literal propio (los mismos cinco nombres que
-// PA_ORIGENES de DEVTOOL_ProyeccionAbm.js, pero NO se lee esa constante aca: un literal
-// coincidente no es una dependencia de carga).
-const PP_ORIGENES_RIESGO_DOBLE_CONTEO = ['shell', 'recurrentes', 'otros'];
 
 // ============================================
 // PREFLIGHT
@@ -320,15 +340,31 @@ function _cuentasPresupuestoPp(hoja) {
 }
 
 // ============================================
-// LECTURA Y CLASIFICACION DE "PROYECCION" (los cinco origenes del periodo)
+// LECTURA Y CLASIFICACION DE "PROYECCION" (SOLO 'guardado', decision de producto 1)
 // ============================================
 
 /**
- * Filas de "Proyeccion" cuya Nota clasifica al periodo `clave`, SIN IMPORTAR el origen (decision
- * de producto 1: se traen los cinco). Reusa `_leerTodasFilasPa`/`_origenNotaPa`
- * (DEVTOOL_ProyeccionAbm.js) verbatim -- el MISMO clasificador que ya audita el ABM, no una
- * segunda version que pueda divergir. Una fila SIN ninguna marca reconocible (`partes === null`)
- * queda fuera, igual que para el ABM: es lo cargado a mano en el ledger real, o ruido.
+ * Filas de "Proyeccion" cuya Nota clasifica al periodo `clave` Y cuyo origen es 'guardado'.
+ * Reusa `_leerTodasFilasPa`/`_origenNotaPa` (DEVTOOL_ProyeccionAbm.js) verbatim -- el MISMO
+ * clasificador que ya audita el ABM, no una segunda version que pueda divergir. Una fila SIN
+ * ninguna marca reconocible (`partes === null`) queda fuera, igual que para el ABM: es lo
+ * cargado a mano en el ledger real, o ruido.
+ *
+ * decision Franco 2026-09-07, TEXTUAL: "Solo lo manual. Lo proyectado no." Se trae UNICAMENTE
+ * el origen 'guardado' -- lo que salio de estas mismas columnas K/O/S via
+ * aplicarGuardarProyeccion. NO se traen recurrentes, presupuesto base, proyecciones sueltas del
+ * shell ni las de origen no reconocido.
+ * POR QUE, y no es la razon que parece: plasmar solo el guardado NO es circular. Es RESTAURAR y
+ * COPIAR HACIA ADELANTE -- recuperar la hoja despues de limpiarla, o arrancar septiembre desde
+ * lo que se presupuesto en agosto y editar la diferencia. Por eso el mes lo elige el operador y
+ * no es siempre el corriente.
+ * Y el criterio de fondo es de producto: K/O/S son la superficie de trabajo MANUAL de Franco.
+ * Volcar ahi lo que el sistema infirio (recurrentes, base) borraria la linea entre lo que el
+ * decidio y lo que se dedujo, y despues no hay como distinguirlos. Los recurrentes ya se ven en
+ * Proyecciones Elaboradas: no necesitan invadir la hoja.
+ * @see aplicarGuardarProyeccion en DEVTOOL_PresupuestoGuardar.js (la ida de este viaje)
+ * @see decision de producto 1 en la cabecera del archivo (la correccion completa, con la
+ * primera lectura que se descarto y por que)
  */
 function _filasBdPeriodoPp(hojaProy, clave) {
     const todas = _leerTodasFilasPa(hojaProy);
@@ -336,12 +372,12 @@ function _filasBdPeriodoPp(hojaProy, clave) {
     todas.forEach(function (f) {
         const partes = _origenNotaPa(f.nota, f.fecha);
         if (!partes || partes.clave !== clave) return;
+        if (partes.origen !== 'guardado') return;
         out.push({
             monto: isFinite(f.monto) ? f.monto : 0,
             tipoCuenta: f.tipoCuenta,
             cuenta: String(f.cuenta || '').trim(),
-            moneda: f.moneda || 'ARS',
-            origen: partes.origen
+            moneda: f.moneda || 'ARS'
         });
     });
     return out;
@@ -349,8 +385,10 @@ function _filasBdPeriodoPp(hojaProy, clave) {
 
 /**
  * Agrupa las filas del periodo por bloque y cuenta, acumulando monto POR MONEDA (nunca sumar
- * monedas distintas entre si -- mismo criterio que `_totalesPorBloquePa`) y el conjunto de
- * origenes que contribuyeron. Separa dos anomalias de entrada, informativas:
+ * monedas distintas entre si -- mismo criterio que `_totalesPorBloquePa`). Sigue haciendo falta
+ * con un solo origen: nada impide que dos filas 'guardado' distintas (dos corridas de "Guardar
+ * Proyeccion", una con J4 distinto de la otra) convivan para la misma cuenta -- ver decision de
+ * producto 2 de la cabecera. Separa dos anomalias de entrada, informativas:
  *   - `categoriaDesconocida`: tipoCuenta no mapea a ningun bloque (ver PA_CATEGORIA_A_CLAVE).
  *   - `sinCuentaBd`: tipoCuenta SI mapea pero la fila no trae nombre de cuenta.
  * Ninguna de las dos aborta la corrida: se cuentan y se reportan, el resto del plan sigue.
@@ -366,10 +404,9 @@ function _agruparPorCuentaPp(filasBd) {
         if (!bloque) { categoriaDesconocida.push(f); return; }
         if (!f.cuenta) { sinCuentaBd.push(f); return; }
 
-        if (!acumulo[bloque][f.cuenta]) acumulo[bloque][f.cuenta] = { porMoneda: {}, origenes: {} };
+        if (!acumulo[bloque][f.cuenta]) acumulo[bloque][f.cuenta] = { porMoneda: {} };
         const entrada = acumulo[bloque][f.cuenta];
         entrada.porMoneda[f.moneda] = (entrada.porMoneda[f.moneda] || 0) + f.monto;
-        entrada.origenes[f.origen] = true;
     });
 
     return { acumulo: acumulo, categoriaDesconocida: categoriaDesconocida, sinCuentaBd: sinCuentaBd };
@@ -399,15 +436,12 @@ function _planPlasmarPp(ss, pre) {
     const anomaliaMezclaMoneda = [];
     const anomaliaMonedaDistinta = [];
     const anomaliaCuentaNoExiste = [];
-    const origenesPresentes = {};
 
     PM_CLAVES_BLOQUE.forEach(function (k) {
         const colDestino = _bloquesPc()[k].colProyectar;
         Object.keys(agrupado.acumulo[k]).sort().forEach(function (cuenta) {
             const entrada = agrupado.acumulo[k][cuenta];
             const monedas = Object.keys(entrada.porMoneda);
-            const origenesLista = Object.keys(entrada.origenes);
-            origenesLista.forEach(function (o) { origenesPresentes[o] = true; });
 
             if (monedas.length > 1) {
                 anomaliaMezclaMoneda.push({
@@ -437,8 +471,7 @@ function _planPlasmarPp(ss, pre) {
             aPlasmar.push({
                 celda: celda, bloque: k, fila: filaDestino, cuenta: cuenta, valor: total,
                 pisa: destinoTieneContenido,
-                valorPrevio: destinoTieneContenido ? crudoDestino : '',
-                origenes: origenesLista
+                valorPrevio: destinoTieneContenido ? crudoDestino : ''
             });
         });
     });
@@ -446,7 +479,6 @@ function _planPlasmarPp(ss, pre) {
     return {
         periodo: obj.periodo, clave: obj.clave, moneda: obj.moneda,
         aPlasmar: aPlasmar, totalFilasBd: filasBd.length,
-        origenesPresentes: Object.keys(origenesPresentes),
         anomaliaMezclaMoneda: anomaliaMezclaMoneda,
         anomaliaMonedaDistinta: anomaliaMonedaDistinta,
         anomaliaCuentaNoExiste: anomaliaCuentaNoExiste,
@@ -462,32 +494,6 @@ function _planPlasmarPp(ss, pre) {
 /** Nombre de bloque legible, mismo criterio que sus hermanos. */
 function _nombreBloquePp(k) {
     return k === 'ingresos' ? 'Ingresos' : (k === 'fijos' ? 'Gastos Fijos' : 'Gastos Variables');
-}
-
-/** 'guardado + shell + recurrentes', en el orden de presentacion de PA_ORIGENES (ProyeccionAbm.js). */
-function _lineaOrigenesPp(origenesPresentes) {
-    if (!origenesPresentes.length) return 'ninguno';
-    const orden = PA_ORIGENES;
-    return origenesPresentes.slice().sort(function (a, b) { return orden.indexOf(a) - orden.indexOf(b); }).join(' + ');
-}
-
-/**
- * '' si ninguna celda a plasmar trae un origen de riesgo (shell/recurrentes/otros); el texto de
- * advertencia completo si al menos una SI. Ver "ADVERTENCIA ADICIONAL" en la cabecera.
- */
-function _avisoDobleConteoPp(aPlasmar) {
-    const riesgo = {};
-    aPlasmar.forEach(function (c) {
-        c.origenes.forEach(function (o) { if (PP_ORIGENES_RIESGO_DOBLE_CONTEO.indexOf(o) !== -1) riesgo[o] = true; });
-    });
-    const nombres = Object.keys(riesgo);
-    if (!nombres.length) return '';
-    return 'ADVERTENCIA (no bloquea, solo avisa): lo plasmado incluye ' + nombres.join(' y ') +
-        ', que "Guardar Proyeccion" NUNCA retira de "' + (typeof SHEETS !== 'undefined' ? SHEETS.PROYECCION : 'Proyeccion') +
-        '" (conviven sumando, por diseno). Si despues de plasmar corres "Guardar Proyeccion" para ' +
-        'este mismo mes, el guardado nuevo va a llevar esa porcion adentro Y esas filas van a seguir ' +
-        'vivas por separado: el Tablero las contaria dos veces. Revisa/ajusta los montos plasmados ' +
-        'antes de volver a guardar si eso te importa para este mes.';
 }
 
 /** Texto de las anomalias (si las hay), compartido por estado/confirmacion/aplicado. */
@@ -543,8 +549,8 @@ function estadoPresupuestoPlasmar() {
 
         const l = ['PRESUPUESTO: PLASMAR PROYECCION ELABORADA - ESTADO (no se escribio nada)', ''];
         l.push('PERIODO: ' + _mesLabelPp(plan.periodo) + ' (clave "' + plan.clave + '"), moneda ' + plan.moneda + '.');
-        l.push('Filas de "' + SHEETS.PROYECCION + '" que clasifican a este periodo: ' + plan.totalFilasBd +
-            ' (origenes presentes: ' + _lineaOrigenesPp(plan.origenesPresentes) + ').');
+        l.push('Filas "guardado" (Monto a Proyectar) de "' + SHEETS.PROYECCION + '" para este periodo: ' +
+            plan.totalFilasBd + '.');
         l.push('');
 
         const totalVacias = plan.aPlasmar.filter(function (c) { return !c.pisa; }).length;
@@ -573,9 +579,6 @@ function estadoPresupuestoPlasmar() {
 
         l.push.apply(l, _lineasAnomaliasPp(plan));
 
-        const aviso = _avisoDobleConteoPp(plan.aPlasmar);
-        if (aviso) { l.push(''); l.push(aviso); }
-
         const detalle = l.join('\n');
         _mostrarPp('Presupuesto: plasmar proyeccion elaborada - estado', detalle);
         logInfo('estadoPresupuestoPlasmar: ' + plan.aPlasmar.length + ' celda(s) a plasmar (' + totalVacias +
@@ -590,11 +593,11 @@ function estadoPresupuestoPlasmar() {
 }
 
 /**
- * Plasma en K/O/S el total por cuenta de las filas de "Proyeccion" del periodo vivo (los cinco
- * origenes, ver decision de producto 1). Pide confirmacion explicita con numeros concretos SOLO
- * cuando hay al menos una celda con contenido previo. Escribe VALORES (setValue), nunca formulas.
- * Verifica releyendo cada celda escrita y revierte el lote entero al estado previo exacto si algo
- * no coincide.
+ * Plasma en K/O/S el total por cuenta de las filas 'guardado' de "Proyeccion" del periodo vivo
+ * (ver decision de producto 1). Pide confirmacion explicita con numeros concretos SOLO cuando hay
+ * al menos una celda con contenido previo. Escribe VALORES (setValue), nunca formulas. Verifica
+ * releyendo cada celda escrita y revierte el lote entero al estado previo exacto si algo no
+ * coincide.
  */
 function aplicarPresupuestoPlasmar() {
     let ui = null, hoja = null, escritas = [];
@@ -618,7 +621,6 @@ function aplicarPresupuestoPlasmar() {
         }
 
         const aPisar = plan.aPlasmar.filter(function (c) { return c.pisa; });
-        const aviso = _avisoDobleConteoPp(plan.aPlasmar);
 
         if (aPisar.length) {
             const perdido = aPisar.reduce(function (a, c) { return a + (isFinite(Number(c.valorPrevio)) ? Number(c.valorPrevio) : 0); }, 0);
@@ -632,15 +634,12 @@ function aplicarPresupuestoPlasmar() {
                 'Lo que se pierde en esas ' + aPisar.length + ' celda(s): ' + perdido.toFixed(2) + ' ' + plan.moneda + ' en total.',
                 'Lo que van a quedar valiendo (lo que trae la proyeccion elaborada): ' + nuevoDeEsas.toFixed(2) + ' ' + plan.moneda + ' en total.',
                 '',
-                'Origenes que aportan a este plasmado: ' + _lineaOrigenesPp(plan.origenesPresentes) + '.',
-                '',
                 'POR BLOQUE (cuentas que se pisan):'
             ];
             PM_CLAVES_BLOQUE.forEach(function (k) {
                 const n = aPisar.filter(function (c) { return c.bloque === k; }).length;
                 if (n) confirmacion.push('  ' + _nombreBloquePp(k) + ': ' + n + ' cuenta(s)');
             });
-            if (aviso) { confirmacion.push(''); confirmacion.push(aviso); }
             confirmacion.push('');
             confirmacion.push('Si alguna de esas celdas era un numero que Franco escribio a mano y queres');
             confirmacion.push('conservarlo, cancela y anotalo antes de aplicar: "3. Revertir" solo repone el');
@@ -697,13 +696,11 @@ function aplicarPresupuestoPlasmar() {
 
         const l = ['PRESUPUESTO: PROYECCION ELABORADA PLASMADA EN "MONTO A PROYECTAR".', ''];
         l.push('PERIODO: ' + _mesLabelPp(plan.periodo) + ' (' + plan.moneda + ').');
-        l.push('Origenes que aportaron: ' + _lineaOrigenesPp(plan.origenesPresentes) + '.');
         l.push('');
         l.push('Celdas escritas y verificadas: ' + escritas.length);
         l.push('  vacias que se llenaron: ' + (escritas.length - aPisar.length));
         l.push('  con valor previo que SE SOBREESCRIBIERON: ' + aPisar.length);
         l.push.apply(l, _lineasAnomaliasPp(plan));
-        if (aviso) { l.push(''); l.push(aviso); }
         l.push('');
         l.push('Para deshacer: "3. Revertir" (tidetrack Dev). Repone EXACTAMENTE el estado previo a esta');
         l.push('corrida (vacia, o el valor que tenia antes) en cada celda que TODAVIA tenga el numero que');
