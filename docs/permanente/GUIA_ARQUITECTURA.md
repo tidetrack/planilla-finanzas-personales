@@ -487,6 +487,45 @@ function validateIntegrity() {
 
 ---
 
+## ADR-008: no se retiran modulos del deploy por analisis estatico (2026-09-07)
+
+**Contexto.** `src/` pesa 2,65 MB y Apps Script parsea el proyecto ENTERO en cada ejecucion.
+Una medicion del 2026-09-07 identifico ~513 KB en modulos de una sola vez (migraciones ya
+corridas) y propuso retirarlos del deploy moviendolos fuera de `src/`, porque `.claspignore`
+no puede excluir archivos sueltos de adentro de `rootDir` (probado: 8 patrones contra
+`clasp status`; solo `*` funciona y se lleva `src/` entero).
+
+**Decision.** No se retiran. La ganancia es real pero el criterio de seguridad no se puede
+establecer desde el repo.
+
+**Por que.** Para retirar un modulo hay que probar que es INALCANZABLE, y en este proyecto eso
+es imposible por analisis estatico:
+
+1. Apps Script no tiene imports: todo es global y cualquier funcion se invoca por nombre.
+2. Los DIBUJOS de las hojas tienen scripts asignados a mano, referencian funciones **por
+   nombre**, y **no son legibles ni por la Sheets API ni por Apps Script** — el repo no puede
+   saber que dibujos existen ni a que apuntan. Es la misma limitacion que obligo a documentar
+   la botonera a mano (2026-08-29).
+3. Verificado el 2026-09-07: de los seis modulos mas pesados, DOS tienen entrada de menu viva
+   (`estadoMigracionV031`/`aplicar`/`revertir` y `estadoTableroFaltanteProyectado`/`aplicar`/
+   `revertir`). La lista de "inalcanzables" que motivo la propuesta no resistio la
+   verificacion.
+
+Retirar un modulo alcanzable rompe el proyecto ENTERO, que es la cicatriz v0.50.1.
+
+**Alternativas descartadas.** Ampliar la Regla Estricta 3 para admitir "codigo retirado del
+deploy", o crear una carpeta de raiz nueva: las dos resuelven DONDE poner los archivos, que
+nunca fue el problema. El problema es COMO probar que sacarlos es seguro.
+
+**Consecuencias.** El peso se ataca por donde si se puede medir: el literal `changelog` de
+`01_Version.js` bajo de 161 KB a 4 KB (v0.66.0), que era ademas la mejor relacion — un literal
+cuesta 0,0042 ms/KB contra 0,0008 ms/KB de un comentario, asi que esos 156 KB valian mas del
+doble que los 292 KB que se podrian recortar de `ZZ_Changelog.js`.
+
+**Como se destraba.** Solo Franco puede confirmar que ningun dibujo apunta a un modulo. Si en
+algun momento revisa los dibujos hoja por hoja y lo declara, el retiro vuelve a estar sobre la
+mesa con ese inventario como evidencia.
+
 ## Roadmap Técnico
 
 ### Etapa 1: MVP Vivo (Core)

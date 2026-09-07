@@ -196,6 +196,24 @@ if ! python3 "$REPO_DIR/devtools/verificar_sintaxis.py"; then
 fi
 echo "----------------------------------------------"
 
+# --- Gate previo 2: cobertura del historial ---
+# decision Franco 2026-09-07: verificar_cobertura_changelog.py se declaraba "gate permanente" en
+# tres artefactos (ESTRUCTURA.md, ZZ_Changelog.js y 01_Version.js) mientras NADIE lo ejecutaba: no
+# estaba aca, no habia script npm y no habia hook de git. Era una afirmacion, no un gate. Sin este
+# bloque, un release que sumara un bloque al literal de 01_Version.js sin su entrada en
+# ZZ_Changelog.js pasaba el deploy en silencio -- que es exactamente el unico escenario que el
+# script existe para atrapar. Se cablea en vez de bajarle el rotulo a la prosa porque cuesta
+# milisegundos (dos lecturas de archivo, sin red) y porque el literal es hoy el UNICO lugar donde
+# vive el release vigente: si su bloque no esta en ZZ, la historia de ese release no queda en
+# ninguna copia completa del codigo. Va junto al de sintaxis y antes del drift-check, por la misma
+# razon: no tiene sentido preguntar si el remoto cambio cuando lo que se va a subir no cierra.
+if ! python3 "$REPO_DIR/devtools/verificar_cobertura_changelog.py"; then
+    echo "----------------------------------------------"
+    echo "Despliegue cancelado por el gate del historial (ver el detalle arriba)."
+    exit 5
+fi
+echo "----------------------------------------------"
+
 echo "Verificando drift contra el remoto (${#TARGET_NAMES[@]} target/s)..."
 echo "----------------------------------------------"
 

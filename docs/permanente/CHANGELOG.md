@@ -14,6 +14,81 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## Por que NO se retiran los modulos del deploy (2026-09-07)
+
+Ampliacion de v0.66.0. El recorte del literal de `01_Version.js` (161 KB a 4 KB) queda. Lo que
+**no** se hace es mover los ~513 KB de modulos de una sola vez fuera de `src/`. Ver **ADR-008**.
+
+La pregunta estaba mal planteada — yo se la lleve a Franco como "que regla estricta ampliamos
+para poder mover los archivos". El problema nunca fue **donde** ponerlos: es que **no se puede
+probar que un modulo sea inalcanzable desde el repo**. Los dibujos de las hojas invocan
+funciones por nombre y no son legibles ni por la Sheets API ni por Apps Script. La verificacion
+lo confirmo: de los seis modulos mas pesados, **dos tienen entrada de menu viva**. La lista de
+"inalcanzables" que motivo la propuesta no resistio.
+
+Retirar un modulo alcanzable rompe el proyecto entero (cicatriz v0.50.1). Se destraba solo si
+Franco revisa los dibujos hoja por hoja y declara el inventario.
+
+Ademas: `verificar_cobertura_changelog.py` se declaraba "gate permanente" en tres artefactos
+mientras **nadie lo ejecutaba**. Quedo cableado a `sync_targets.command` y probado en las dos
+direcciones: sin la entrada del release vigente en `ZZ_Changelog.js`, el deploy corta con exit
+5 sin tocar el remoto.
+
+---
+
+## v0.66.0 - El changelog embebido deja de pesar en cada clic (2026-09-07)
+
+**Peso muerto retirado del runtime.** El literal `changelog` de `src/01_Version.js` guardaba
+75 bloques de release: 155,8 KB, el 99% de ese archivo y el 5,73% de todo `src/`. Apps Script
+parsea el proyecto ENTERO en cada ejecucion -- cada apertura de menu, cada `onEdit`, cada boton
+--, y un template literal no es un comentario: el comentario se lexea y se tira sin construir
+AST, el literal se asigna como constante en cada carga. Ademas nadie lo consumia:
+`getChangelog()` no lo llama ningun modulo ni ningun devtool.
+
+Queda unicamente el bloque del release vigente, que es lo que el docstring del campo venia
+prometiendo desde siempre. `01_Version.js` pasa de 161.726 bytes a unos 5 KB (-97%); el byte exacto
+se mueve con cada retoque del bloque vigente, el orden de magnitud no.
+
+**Medicion, con el code-cache de V8 invalidado y las dos variantes alternadas en la misma
+corrida.** Compilar `01_Version.js` pasa de 0,49 ms a 0,031 ms (-94%). Sobre los 46 `.js` de
+`src/` juntos: 7,5 -> 7,1 ms, del orden del ruido del conjunto. `src/` baja ~5,5% (el neto es
+menor que los 157.527 B sacados porque `ZZ_Changelog.js` crecio con la entrada de este release).
+El ahorro es real y esta aislado, pero es chico frente al que sigue pendiente: los 513,4 KB de
+modulos de una sola vez que siguen desplegados. Medir cada variante por separado, sin alternar,
+dio dos resultados contradictorios: la deriva del proceso pesa mas que la diferencia, y esa
+primera pasada se descarto entera -- todas las cifras de este bloque salen de la misma corrida.
+
+**La historia no se pierde, y no se asume.** Los 75 bloques estan en `src/ZZ_Changelog.js`,
+comprobados uno por uno ANTES de podar por el verificador nuevo
+`devtools/verificar_cobertura_changelog.py`: 75 bloques, 69 versiones unicas, 0 sin cobertura,
+0 stubs. Falla si un release del literal no tiene bloque en ZZ con la misma version y fecha, o
+si el de ZZ mide menos de la mitad. Probado en tres direcciones (sano EXIT 0; sin el bloque de
+v0.64.0 EXIT 1 "FALTA"; con el cuerpo de v0.63.0 vaciado EXIT 1 "FLACO"). Queda como gate
+permanente y **cableado**: lo corre `sync_targets.command` antes de cada despliegue, junto a
+`verificar_sintaxis.py`. Un gate que nadie ejecuta no frena nada. El cableado se probo en las dos
+direcciones: con el gate en rojo el deploy corta con EXIT 5 diciendo "gate del historial" (no el
+de sintaxis) y antes de tocar la red; con el gate en verde el `--dry-run` sigue de largo hasta el
+drift-check. Ademas su regex leia 143 de los 144 bloques de ZZ: exigia el guion pegado a la
+version y se le escapaba `[2026-06-05] v0.8.0 (mantenimiento) - ...`. Inofensivo hoy, pero el modo
+de falla es el peor -- un rojo que nombra mal la causa, mandando a portar historia ya portada.
+
+**`src/ZZ_Changelog.js` no se toca**, por medicion y no por tramite: es 100% comentario (0 bytes
+ejecutables, comprobado), sus 373 KB cuestan 0,18 ms contra los 0,49 ms del literal de
+157,9 KB (0,0005 ms/KB contra 0,0031 ms/KB, 6,4 veces mas barato por KB), es el superconjunto que hace seguro este recorte, y es el
+archivo con el que se mide el drift contra produccion antes de cada push. El contrato de
+`CLAUDE.md` queda igual: no hizo falta tocarlo. `CLAUDE.md` nunca declaro a `ZZ_Changelog.js`
+"fuente de verdad del historial completo" con esas palabras -- eso lo decian `src/01_Version.js`
+y este archivo --; lo describe como historial in-code obligatorio y como referencia del
+drift-check, y las dos cosas siguen siendo ciertas.
+
+**Pendiente, fuera de este release:** retirar del deploy los 6 modulos de una sola vez sin
+ninguna puerta (513,4 KB) esta bloqueado esperando decision de Franco sobre las Reglas Estrictas
+3 y 4. Y este archivo arrastra 52 releases de menos respecto de `ZZ_Changelog.js`: agujero
+preexistente, independiente de esta poda.
+
 ---
 
 ## v0.65.1 - Piso de legibilidad del texto funcional (2026-09-07)

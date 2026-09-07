@@ -144,6 +144,7 @@ planilla-finanzas-personales/
 │ ├── generar_inventario_planilla.py # Del snapshot JSON produce INVENTARIO_CELDAS.md (capa mecánica)
 │ ├── generar_tsv_celdas.py # Aplana el snapshot a celdas.tsv para auditar con awk/grep sin cargar el JSON
 │ ├── diff_snapshots.py # Prueba de no-daño: compara dos snapshots y falla si cambió una fórmula
+│ ├── verificar_cobertura_changelog.py # Gate del historial, cableado en sync_targets.command (corre en cada despliegue junto a verificar_sintaxis.py): todo release del changelog embebido de 01_Version.js tiene que existir en ZZ_Changelog.js con la misma versión y fecha, y con cuerpo real (no un stub). Su verde fue la licencia para podar el literal en v0.66.0
 │ ├── probar_formulerio.js # Banco de pruebas: corre las transformaciones del formulerío contra las fórmulas reales del gemelo ANTES de deployar
 │ ├── probar_riqueza.js # Banco de pruebas de la lista blanca de riqueza y la columna Tipo
 │ └── probar_stock_flujo.js # Banco de pruebas de las fórmulas de saldo y del Flujo Cotidiano

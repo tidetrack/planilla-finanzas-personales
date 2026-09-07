@@ -3,6 +3,87 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-09-07] v0.66.0 (ampliacion) - Por que NO se retiran los modulos del deploy.
+ * - El recorte del literal de 01_Version.js (161 KB -> 4 KB) queda. Lo que NO se hace, y es
+ *   una decision de Franco delegada y ejecutada el mismo dia, es mover los ~513 KB de modulos
+ *   de una sola vez fuera de src/. Ver ADR-008.
+ * - La razon no son las Reglas Estrictas 3 y 4 (donde poner los archivos), que era como estaba
+ *   planteada la pregunta. Es que NO SE PUEDE PROBAR que un modulo sea inalcanzable desde el
+ *   repo: los dibujos de las hojas invocan funciones POR NOMBRE y no son legibles ni por la
+ *   Sheets API ni por Apps Script. La verificacion lo confirmo: de los seis modulos mas
+ *   pesados, DOS tienen entrada de menu viva. La lista de "inalcanzables" no resistio.
+ * - Retirar un modulo alcanzable rompe el proyecto entero: cicatriz v0.50.1.
+ * - Y se cableo verificar_cobertura_changelog.py a sync_targets.command: se declaraba "gate
+ *   permanente" en TRES artefactos mientras nadie lo ejecutaba -- una afirmacion, no un gate.
+ *   Probado en las dos direcciones: sin la entrada del release vigente en ZZ, el deploy corta
+ *   con exit 5 y no toca el remoto.
+ *
+ * [2026-09-07] v0.66.0 - El changelog embebido deja de pesar en cada clic.
+ * - EL PROBLEMA, MEDIDO: src/ pesaba 2,65 MB y Apps Script parsea el proyecto ENTERO en cada
+ *   ejecucion (cada apertura de menu, cada onEdit, cada boton). De ese peso, 155,8 KB eran el
+ *   literal "changelog" de src/01_Version.js: 75 bloques de release, el 99% de ese archivo y
+ *   el 5,73% de todo src/. El docstring del propio campo decia desde siempre "solo refleja el
+ *   release vigente": el comentario habia quedado viejo y le daba cobertura al peso muerto.
+ * - Un template literal NO es un comentario. Un comentario se lexea y se tira sin construir
+ *   AST; un template literal se asigna como constante en cada carga. Medido en esta maquina
+ *   con el code-cache de V8 invalidado y las dos variantes ALTERNADAS en la misma corrida
+ *   (medirlas por separado dio dos resultados contradictorios: la deriva del proceso pesa mas
+ *   que la diferencia): compilar 01_Version.js pasa de 0,49 ms a 0,031 ms, -94%. Sobre los 46
+ *   .js de src/ juntos la diferencia es 7,5 -> 7,1 ms, del orden del ruido del conjunto:
+ *   el ahorro es real y esta aislado, pero honestamente es chico frente al que queda pendiente
+ *   (los 513,4 KB de modulos de una sola vez que siguen desplegados). Estas cifras y las del
+ *   parrafo de abajo salen todas de la MISMA corrida: una primera pasada, hecha midiendo cada
+ *   variante por separado, dio otro par de numeros y se descarto entera.
+ * - QUEDA solo el bloque del release vigente. 01_Version.js pasa de 161.726 bytes a unos 5 KB,
+ *   -97% (el byte exacto se mueve con cada retoque del bloque vigente; el orden no).
+ * - Nadie consumia esa historia en runtime: getChangelog() no lo llama ningun modulo de src/
+ *   ni ningun devtool (verificado por grep sobre src/, devtools/, scripts/ y el .command).
+ * - LA HISTORIA NO SE PIERDE, Y NO SE ASUME: los 75 bloques estan en este archivo, comprobados
+ *   uno por uno antes de podar por devtools/verificar_cobertura_changelog.py -- 75 bloques,
+ *   69 versiones unicas, 0 sin cobertura, 0 stubs. Los 6 numeros repetidos del literal
+ *   (v0.46.0, v0.46.1, v0.49.0, v0.50.0, v0.53.0, v0.56.0) vienen de merges de ramas paralelas
+ *   y tienen las dos variantes aca. La identidad de un release es (version, fecha) y no el
+ *   titulo: v0.39.1, v0.40.0, v0.42.0 y v0.42.1 tienen el titulo reescrito entre las dos
+ *   copias sin cambio de contenido, y exigir titulo identico daba cuatro rojos falsos.
+ * + devtools/verificar_cobertura_changelog.py, NUEVO. Falla si un release del literal no tiene
+ *   bloque en este archivo con la misma version y fecha, o si el bloque de aca mide menos de la
+ *   mitad (el stub pasa desapercibido porque el indice se ve completo). Probado en tres
+ *   direcciones, no solo en verde: sano EXIT 0; borrado el bloque de v0.64.0 de este archivo
+ *   EXIT 1 "FALTA 0.64.0"; vaciado el cuerpo de v0.63.0 dejandole el rotulo EXIT 1 "FLACO
+ *   0.63.0, 3034 -> 69". Queda como gate permanente, no como script de una sola vez: lo corre
+ *   sync_targets.command antes de cada despliegue, junto a verificar_sintaxis.py. Se cableo ahi
+ *   porque un gate que nadie ejecuta no frena nada, y el literal es hoy el unico lugar donde
+ *   vive el release vigente: si su bloque no esta aca, ese release no queda en ninguna copia
+ *   completa del codigo. Cableado probado en las tres direcciones que exige la memoria del
+ *   repo: gate en rojo, el deploy corta con EXIT 5 y el mensaje dice "gate del historial" (no
+ *   el de sintaxis) ANTES de tocar la red; gate en verde, el --dry-run sigue de largo hasta el
+ *   drift-check como siempre.
+ * - Su regex de este archivo indexaba 143 de los 144 bloques que hay de verdad: exigia el guion
+ *   pegado a la version y se le escapaba "[2026-06-05] v0.8.0 (mantenimiento) - ...", con el
+ *   parentesis en el medio. Era inofensivo hoy (v0.8.0 no estaba en el literal) pero el modo de
+ *   falla es el peor de todos: un rojo que NOMBRA MAL LA CAUSA. Con un rotulo asi, el script
+ *   habria dicho "FALTA X.Y.Z: sin entrada en ZZ_Changelog.js" sobre un bloque escrito y
+ *   completo, mandando a portar historia ya portada. Corregida: 144.
+ * - ESTE ARCHIVO NO SE TOCA, y la decision es medida y no de tramite. Es 100% comentario: al
+ *   sacarle los comentarios quedan 0 bytes ejecutables (comprobado). Sus 373 KB cuestan
+ *   0,18 ms contra los 0,49 ms que costaban los 157,9 KB del literal: 0,0005 ms/KB contra
+ *   0,0031 ms/KB, 6,4 veces mas barato por KB siendo 2,4 veces mas grande. Recortarlo seria el peor
+ *   negocio de los tres: mucho disco, casi nada de tiempo, y riesgo alto. Y
+ *   ademas es (a) el superconjunto que hace SEGURO el recorte del literal -- podar los dos a la
+ *   vez deja la historia sin ninguna copia completa en el codigo -- y (b) el archivo con el que
+ *   se mide el drift contra produccion antes de cada push (CLAUDE.md, seccion 2).
+ * - El contrato de CLAUDE.md queda IGUAL: no hacia falta tocarlo. CLAUDE.md nunca declaro a
+ *   este archivo "fuente de verdad del historial completo" con esas palabras -- lo dicen
+ *   src/01_Version.js y docs/permanente/CHANGELOG.md --; lo describe como "Historial de
+ *   versiones in-code, OBLIGATORIO al final de cada cambio" y como referencia del drift-check.
+ *   Las dos cosas siguen siendo ciertas.
+ * - PENDIENTE, NO HECHO ACA: (1) retirar del deploy los 6 modulos de una sola vez sin ninguna
+ *   puerta (513,4 KB: DEVTOOL_Presupuesto, DEVTOOL_CableadoPresupuesto, MIGRACION_v0.9.5,
+ *   DEVTOOL_RobustezVistas, DEVTOOL_LimpiarPlanCuentas, DEVTOOL_TipoDeMedios) esta BLOQUEADO
+ *   esperando decision de Franco, porque choca con las Reglas Estrictas 3 y 4; (2)
+ *   docs/permanente/CHANGELOG.md arrastra 52 releases de menos respecto de este archivo, un
+ *   agujero preexistente e independiente de esta poda.
+ *
  * [2026-09-07] v0.65.1 - El texto funcional mas chico sube al piso de legibilidad.
  * - Cuatro rotulos del shell vivian en 10px: la pastilla de estado de una tarjeta, la unidad
  *   de moneda del acordeon, el rotulo LOTE de la barra de acciones y el tag de moneda de la
