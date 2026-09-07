@@ -312,3 +312,7 @@ La jerarquia de fuentes de verdad es:
 Completado: Core setup, exchange rates, catalogos + CRUD, Design System UI, ABM Plan Cuentas, Hoja de Cargas, batch processing (procesarCargas con cache TC y persistencia batch), migracion de BD Antigua, Mirada Interanual (formulas por codigo + diagnostico), DevTools export, Fase 0 del arnes (reconciliacion de drift, targets.yaml con identidades confirmadas), Fase 1 del arnes (este contrato, resolver de alias, sync_targets.command, changelog dual; v0.8.3 desplegada).
 
 Pendiente: Fases 2-6 del arnes (gemelo digital, n8n, contratos de motores, centro de operaciones, plan de cuentas), destino de v0.9.x (decision de Franco), Dashboard/Tablero (QUERY formulas), presupuestacion mensual, resumen anual.
+
+## Navegador Chrome
+
+Este repo usa el perfil de Chrome **tidetrack** (extensión Claude in Chrome). Antes de operar el navegador, `select_browser` con su deviceId de `~/.claude/chrome-profiles.json`; no preguntes ni uses `switch_browser` (lo bloquea el hook `~/.claude/hooks/chrome-profile-pin.py`). Regla global en `~/.claude/CLAUDE.md`.
