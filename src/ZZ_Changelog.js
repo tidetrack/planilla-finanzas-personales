@@ -3,6 +3,14 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ * [2026-09-07] v0.65.1 - El texto funcional mas chico sube al piso de legibilidad.
+ * - Cuatro rotulos del shell vivian en 10px: la pastilla de estado de una tarjeta, la unidad
+ *   de moneda del acordeon, el rotulo LOTE de la barra de acciones y el tag de moneda de la
+ *   tabla de conciliacion. Los cuatro son texto FUNCIONAL, no decoracion, y 10px es un piso
+ *   de legibilidad: falla en alta densidad y en el modal angosto. Suben a 11px conservando
+ *   el tracking. Mismo criterio que la cicatriz de los 10.5px ya vetados por el banco, pero
+ *   aplicado al piso en vez de al redondeo subpixel.
+ *
  * [2026-08-30] v0.65.0 - El shell viste el brandbook Ed.03 y la vista de proyecciones deja de ser un muro.
  *
  * PARTE 1 -- RECOLOR AL BRANDBOOK Ed.03 (es un cambio de PALETA, no un rediseno)

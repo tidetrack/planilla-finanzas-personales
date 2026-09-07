@@ -13,7 +13,7 @@
 const VERSION = {
  major: 0,
  minor: 65,
- patch: 0,
+ patch: 1,
 
  /**
  * Retorna la versión como string
@@ -24,7 +24,7 @@ const VERSION = {
  },
 
  releaseDate: '2026-08-30',
- releaseName: 'v0.65.0 - El shell viste el brandbook Ed.03 y la vista de proyecciones deja de ser un muro',
+ releaseName: 'v0.65.1 - El texto funcional mas chico sube al piso de legibilidad',
 
  /**
  * Changelog embebido (solo refleja el release vigente).
@@ -36,6 +36,10 @@ const VERSION = {
  * ! Breaking change
  */
  changelog: `
+v0.65.1 (2026-09-07) - El texto funcional mas chico sube al piso de legibilidad
+- Cuatro rotulos del shell estaban en 10px: la pastilla de estado de una tarjeta, la unidad de moneda del acordeon, el rotulo LOTE de la barra de acciones y el tag de moneda de la tabla de conciliacion. Los cuatro son texto FUNCIONAL -- llevan contenido, no son decoracion --, y 10px es piso de legibilidad, no decision de estilo: falla en pantallas de alta densidad y en el modal angosto. Suben a 11px conservando su tracking.
+- Es el mismo criterio que la cicatriz ya vetada de los 10.5px, ahora aplicado al piso y no al redondeo.
+
 v0.65.0 (2026-08-30) - El shell viste el brandbook Ed.03 y la vista de proyecciones deja de ser un muro
 ! RECOLOR DE MARCA, no rediseno: la estructura, el liquid glass y los componentes se conservan; cambian los tokens. Regla de oro del brandbook, textual: "El navy es la voz, el cloud es el espacio. Todo lo demas se usa con cuidado." El navy #182040 pasa a ser la voz (texto, wordmark, boton primario) y el teal menta #2ECAB0 SALE del proyecto entero, junto con sus tres derivados, el ink #1E2A33, el gris #F4F7FA y el durazno #FFB380. Entra #2E6B7A como acento editorial moderado: foco, hover, hairlines, el punto del pie y el chip del hero.
 - El token --teal-tinta se retira: existia porque la menta daba 1.86:1 sobre blanco y hacia falta un teal oscurecido a mano para poder escribir con el. #2E6B7A da 6.00:1 calculado, asi que dos nombres para un solo valor dejaban de tener razon.

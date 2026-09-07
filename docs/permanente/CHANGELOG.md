@@ -13,6 +13,17 @@ Historial de versiones y cambios significativos del proyecto.
 
 
 
+
+---
+
+## v0.65.1 - Piso de legibilidad del texto funcional (2026-09-07)
+
+Cuatro rotulos del shell estaban en 10px —pastilla de estado, unidad de moneda del acordeon,
+rotulo LOTE y tag de moneda de la tabla—. Los cuatro llevan contenido: son texto **funcional**,
+no decoracion, y 10px es un piso de legibilidad que falla en alta densidad y en el modal
+angosto. Suben a 11px conservando el tracking. Mismo criterio que la cicatriz de los 10.5px ya
+vetados, aplicado al piso en vez de al redondeo.
+
 ---
 
 ## v0.65.0 - El shell viste el brandbook Ed.03 y la vista de proyecciones deja de ser un muro (2026-08-30)
