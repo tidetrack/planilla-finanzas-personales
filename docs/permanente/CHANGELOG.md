@@ -9,6 +9,24 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
+## v0.68.1 - La fila de meses y el grafico existen en la planilla (2026-09-07)
+
+Corrido sobre la planilla productiva despues del deploy (commit `e182593`), desde
+**tidetrack Dev > Mirada Interanual > "1. Meses y grafico (G7:R7 + C14:R21)"**.
+
+La fila entro con separador `;` al primer intento y el toast dijo "12/12 etiquetas verificadas".
+Eso es lo que el script dice de si mismo, asi que se midio aparte leyendo la hoja: G7:R7 quedo con
+Enero a Diciembre para I2=Mayo e I3=2026, y las cuatro filas de datos siguen intactas valor por
+valor. K7 conserva su color de resaltado.
+
+**El grafico salio con la orientacion correcta**, que era la unica duda que no se podia cerrar en
+seco: meses en el eje X y las cuatro series en la leyenda, en lineas rectas, con Capitalizacion en
+navy y mas gruesa. La segunda corrida dejo un solo grafico: la idempotencia quedo probada donde
+importa. Lo unico que no tomo es `vAxis.format` -- estaba previsto, esa opcion no figura en la
+referencia de Apps Script y se enviaba como cinturon. El eje es legible y se deja como esta.
+
+---
+
 ## v0.68.0 - Mirada Interanual: meses con nombre y grafico de tendencias (2026-09-07)
 
 Pedido textual de Franco: "En G7:R7 deberian ir los nombres de los meses que contemplen el

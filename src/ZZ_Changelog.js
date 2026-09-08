@@ -3,6 +3,31 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
+ *
+ * [2026-09-07] v0.68.1 - La fila de meses y el grafico existen en la planilla.
+ * - ES UN RELEASE Y NO UN COMENTARIO SUELTO: el bloque de v0.68.0 decia "PENDIENTE DE EJECUCION
+ *   EN VIVO" y dejo de ser cierto al apretar el boton. Corregirlo sin subir la version dejaba
+ *   repo y planilla diciendo "0.68.0" con src/ distinto: exactamente la cicatriz que el guard
+ *   de despliegue de verificar_sintaxis.py existe para atajar. Y la atajo -- exit 1 nombrando
+ *   los dos archivos que diferian. El guard funciono en el estado que lo motivo.
+ * - Corrido sobre la planilla productiva despues del deploy (commit e182593), desde
+ *   tidetrack Dev > Mirada Interanual > "1. Meses y grafico (G7:R7 + C14:R21)".
+ * - La fila entro con separador ";" al PRIMER intento: el orden nuevo de separadores de la ronda
+ *   de robustez hizo exactamente lo que decia, y la corrida sana no dejo ni un logError.
+ * - El toast dijo "12/12 etiquetas verificadas". Eso es lo que el script dice de si mismo, asi que
+ *   se MIDIO aparte leyendo la hoja por el conector de Drive: G7:R7 = Enero, Febrero, Marzo, Abril,
+ *   Mayo, Junio, Julio, Agosto, Septiembre, Octubre, Noviembre, Diciembre, con I2=Mayo e I3=2026.
+ *   Las cuatro filas de datos quedaron intactas, valor por valor.
+ * - K7 sigue mostrando "Mayo" y conservo el color del resaltado: PASTE_FORMULA cumplio.
+ * - EL GRAFICO SALIO CON LA ORIENTACION CORRECTA, que era la unica duda que no se podia cerrar en
+ *   seco: meses en el eje X y las cuatro series en la leyenda (Ingresos, Gastos Fijos, Gastos
+ *   Variables, Capitalizacion), lineas rectas, Capitalizacion en navy y mas gruesa. La combinacion
+ *   setMergeStrategy(MERGE_COLUMNS) + setTransposeRowsAndColumns(true) + setNumHeaders(1) +
+ *   useFirstColumnAsDomain queda confirmada EN VIVO y no solo contra la referencia.
+ * - Idempotencia probada donde importa: la segunda corrida dejo UN solo grafico.
+ * - Lo unico que no tomo es vAxis.format: el eje vertical muestra la moneda con decimales en vez de
+ *   "#,##0". Estaba previsto -- esa opcion no figura en la referencia de opciones de Apps Script y se
+ *   enviaba como cinturon. Es legible y se deja como esta; si molesta, se quita la opcion.
  * [2026-09-07] v0.68.0 - Mirada Interanual: meses con nombre y grafico de tendencias.
  * - QUE SE PIDIO (textual Franco, 2026-09-07): "1. En G7:R7 deberian ir los nombres de los
  *   meses que contemplen el periodo referenciado en base a lo que se haya elegido en I2, y

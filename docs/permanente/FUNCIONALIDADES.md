@@ -228,7 +228,7 @@ titulo C13:R13 ("Evolucion de Tendencias") y zona de grafico C14:R21, generada p
 |---|---|---|
 | 1. Resumen de categorias en 12 meses | FUNCIONA | 36 formulas LET/SUMPRODUCT sobre Registros. OJO: la ventana NO es anio calendario sino movil (mes de referencia -4 a +7, columna K = mes seleccionado). |
 | 2. Capitalizacion | PARCIAL | NO se suma del ledger: es el residual Ingresos - Gastos Fijos - Gastos Variables (puede dar negativa). Es "capacidad de capitalizacion", no capitalizacion efectiva. |
-| 3. Tendencias (graficos) | CODIGO LISTO, PENDIENTE EN VIVO | v0.68.0: el script inserta en C14:R21 un grafico de lineas rectas (Ingresos, Gastos Fijos, Gastos Variables, Capitalizacion) sobre C7:C11 + G7:R11, idempotente. Los exports no incluyen charts: se verifica mirando la hoja despues de correr el boton 1. |
+| 3. Tendencias (graficos) | FUNCIONA | v0.68.0: el script inserta en C14:R21 un grafico de lineas rectas (Ingresos, Gastos Fijos, Gastos Variables, Capitalizacion) sobre C7:C11 + G7:R11, idempotente. Los exports no incluyen charts: se verifico MIRANDO la hoja el 2026-09-07, con la orientacion correcta (meses en el eje X, cuatro series en la leyenda) y una segunda corrida que dejo un solo grafico. |
 | 4. Filtro por periodo | FUNCIONA | I2/I3 mueven la ventana. |
 | 5. Filtro por moneda | NO VERIFICADO | I4 existe y la arquitectura de formula incluye conversion, pero el tramo quedo truncado en el export. |
 | 6. Filtro por proyecto | PENDIENTE | K2/L2 (Proyecto / 'Todos') es decorativo: ninguna formula lo referencia. |
