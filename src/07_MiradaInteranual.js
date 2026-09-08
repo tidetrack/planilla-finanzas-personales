@@ -73,8 +73,15 @@ const MIRADA_FILA_RESULTADO = 11;         // MEDIDO EN VIVO 2026-09-07: C11 "Cap
 // GEOMETRIA ESPERADA DE LA HOJA (PRECONDICIONES)
 // ============================================
 
-// GEOMETRIA MEDIDA EN VIVO EL 2026-09-07 (export de Drive del dia, coincidente con el gemelo
-// docs/permanente/celdas.tsv del 2026-08-18): C2:F4 titulo; G2:H2 "Mes de Referencia" con
+// GEOMETRIA MEDIDA EN VIVO EL 2026-09-07 (export de Drive del dia). Contra el gemelo
+// docs/permanente/celdas.tsv del 2026-08-18 la ESTRUCTURA coincide -- las mismas celdas en los
+// mismos lugares, con las mismas formulas en G8:R11 --, pero el CONTENIDO no coincide del todo, y
+// las dos diferencias importan: en vivo el selector I2 dice "Mayo" y en el gemelo dice "Agosto",
+// y en vivo G7:J7 y L7:R7 estan VACIAS mientras el gemelo guarda ahi los numeros 1..12 (Franco
+// los borro entre agosto y hoy). Por eso el gemelo se usa solo para las formulas de G8:R11 y los
+// rotulos, NUNCA como referencia de valores de la fila 7 -- decir "coinciden" a secas mandaria a
+// verificar la fila de meses contra un 1..12 que ya no existe.
+// Lo medido: C2:F4 titulo; G2:H2 "Mes de Referencia" con
 // selector I2 (mes, texto capitalizado, ej. "Mayo"; MATCH es insensible a mayusculas) e I3
 // (anio); G4:H4 "Moneda" con selector I4. K2/L2 "Proyecto"/"Todos" es decorativo: ninguna
 // formula lo usa y este modulo no lo toca. Fila 7 = encabezado de la tabla (C7 "Resultados.",
@@ -111,6 +118,15 @@ const MIRADA_ANIO_MIN = 2000;
 const MIRADA_ANIO_MAX = 2100;
 const MIRADA_FORMATO_NUMERO = '#,##0.00';   // patron canonico (punto decimal), el locale lo pinta con coma
 
+// decision Franco 2026-09-07 (ronda de robustez): la fila de meses tambien necesita un formato
+// que NO sea "@". G7:R7 tenia los numeros 1..12 y Franco los borro: el formato de esas celdas
+// puede haber quedado en "Texto sin formato", y en ese caso Sheets guarda la formula como TEXTO
+// y la muestra tal cual, sin dar error -- que es justo lo que la funcion hermana
+// inicializarMiradaInteranual ya ataja poniendo MIRADA_FORMATO_NUMERO ANTES del setFormula.
+// Este es el patron con el que Sheets representa "Automatico" (punto decimal, canonico); la fila
+// devuelve texto ("Enero"), asi que un patron numerico no cambia lo que se ve.
+const MIRADA_FORMATO_MESES = '0.###############';
+
 // decision Franco 2026-09-07: la ventana movil de 12 meses casi siempre cruza dos anios
 // calendario (con referencia Agosto 2026 va de Abril 2026 a Marzo 2027). Un "Enero" bajo un
 // selector que dice 2026 seria ambiguo, asi que cuando el anio del mes difiere del anio de
@@ -142,6 +158,11 @@ const MIRADA_GRAFICO_SERIES = [
 const MIRADA_GRAFICO_FONDO = '#FFFFFF';       // blanco de la lista blanca
 const MIRADA_GRAFICO_FORMATO_EJE = '#,##0';   // patron canonico (punto decimal, sin decimales en el eje)
 const MIRADA_GRAFICO_CURVA = 'none';          // pedido textual: "linea de rectas"
+// Miembro de Charts.ChartMergeStrategy con el que se pegan C7:C11 y G7:R11. El enum real tiene
+// EXACTAMENTE estos dos miembros (referencia oficial de Charts.ChartMergeStrategy, consultada el
+// 2026-09-07); la lista existe para que _especificacionGraficoMirada lo pueda verificar.
+const MIRADA_GRAFICO_MERGE = 'MERGE_COLUMNS';
+const MIRADA_GRAFICO_MERGE_VALIDOS = ['MERGE_COLUMNS', 'MERGE_ROWS'];
 const MIRADA_GRAFICO_LEYENDA = 'top';         // la banda C13:R13 ya es el titulo: sin titulo interno, leyenda arriba
 
 // Estados transitorios de una celda: Sheets todavia esta calculando. NO son un resultado.
@@ -287,8 +308,9 @@ const MIRADA_COLUMNAS_LEDGER = ['fecha', 'monto', 'tipo_cuenta', 'moneda', 'tc_u
  * ";" (gemelo docs/permanente/celdas.tsv). El modulo v0.8.x asumia traduccion y escribia
  * con comas, y ademas apuntaba a columnas que la migracion de agosto movio; las 48 celdas
  * del layout pre-Fix (G10:R14) quedaron en "#ERROR! (Formula parse error.)". Por eso el
- * mapeo de columnas sale de RANGES y el separador es un PARAMETRO: quien escribe prueba ","
- * y luego ";" y verifica el resultado en la celda (ver _escribirFormulaMiradaVerificada).
+ * mapeo de columnas sale de RANGES y el separador es un PARAMETRO: quien escribe prueba ";"
+ * (el medido) y, si esa planilla lo rechaza, "," y verifica el resultado en la celda (ver
+ * _escribirFormulaMiradaVerificada).
  * Los arrays literales {...} siguen prohibidos por el mismo motivo: se usa SPLIT de un string.
  *
  * Las comas que quedan DENTRO de comillas (la lista de meses y el delimitador ",") son
@@ -814,14 +836,24 @@ function _letraColumnaMirada(numero) {
 // ============================================
 
 /**
- * Escribe una formula probando primero la sintaxis en-US (comas) y, si la celda queda en
- * "#ERROR!" (que en Sheets significa exactamente "parse error") o si setFormula lanza,
- * reintenta con el separador del locale espanol (";"). Verifica leyendo la celda, no
- * suponiendo.
+ * Escribe una formula probando un separador y, si la celda queda en "#ERROR!" (que en Sheets
+ * significa exactamente "parse error") o si setFormula lanza, reintenta con el otro. Verifica
+ * leyendo la celda, no suponiendo.
  *
  * decision Franco 2026-08-13: se prueba y se mide en vez de elegir a ciegas. Nadie pudo
  * confirmar todavia si setFormula() traduce el separador en esta planilla; este helper hace
  * que la respuesta la de la planilla misma y quede en el log.
+ *
+ * decision Franco 2026-09-07 (ronda de robustez): el orden arranca por ";" y no por ",". Ya no
+ * es una eleccion a ciegas: la planilla esta MEDIDA (gemelo docs/permanente/celdas.tsv, ver la
+ * cabecera de construirFormulaMirada) y las 36 formulas que hoy funcionan estan guardadas con
+ * ";". Con "," primero, cada corrida sana gastaba una escritura de prueba y dejaba un logError
+ * garantizado -- ruido que ensena a ignorar el log, que es donde se leen los fallos de verdad.
+ * El reintento queda intacto: en una planilla de locale en-US, ";" no parsea, se loguea el
+ * rechazo y "," resuelve en el segundo intento. El contrato del helper (los dos separadores se
+ * prueban, se declara exito solo por display, se devuelve el detalle de cada intento) no cambia,
+ * y sus dos llamadores (inicializarMiradaInteranual e inicializarMesesYGraficoMirada) leen el
+ * separador ganador de intento.sep, nunca de una constante.
  *
  * Reglas, que son DOS y separadas:
  *   - reintentar con el otro separador SOLO ante '#ERROR!' o ante una excepcion de
@@ -834,7 +866,9 @@ function _letraColumnaMirada(numero) {
  * @returns {{ok:boolean, sep:string|null, display:string, estado:string, intentos:Array}}
  */
 function _escribirFormulaMiradaVerificada(rango, construir) {
-    const separadores = [',', ';'];
+    // ";" primero: es el separador MEDIDO en esta planilla (ver la decision de arriba). "," queda
+    // como reintento para una planilla de locale distinto, no como primera apuesta.
+    const separadores = [';', ','];
     const intentos = [];
 
     for (let i = 0; i < separadores.length; i++) {
@@ -1161,6 +1195,18 @@ function _especificacionGraficoMirada() {
             ' series declaradas y el rango de datos tiene ' + (MIRADA_FILA_RESULTADO - MIRADA_FILA_MESES) + ' filas.');
     }
 
+    // decision Franco 2026-09-07 (ronda de robustez): mergeStrategy era la unica clave de la spec
+    // sin guard, y es la que _construirGraficoMirada indexa contra el enum
+    // (Charts.ChartMergeStrategy[spec.mergeStrategy]): una clave equivocada no lanza, da undefined
+    // y llega vacia al builder, que entonces pega los dos rangos con el default sin decir nada.
+    // Se valida aca, con el mismo estilo que los otros tres throw, contra los dos unicos miembros
+    // que el enum declara.
+    if (MIRADA_GRAFICO_MERGE_VALIDOS.indexOf(MIRADA_GRAFICO_MERGE) < 0) {
+        throw new Error('_especificacionGraficoMirada: mergeStrategy "' + MIRADA_GRAFICO_MERGE +
+            '" no es miembro de Charts.ChartMergeStrategy (validos: ' +
+            MIRADA_GRAFICO_MERGE_VALIDOS.join(', ') + ').');
+    }
+
     return {
         rangos: [rangoRotulos, rangoDatos],
         rangoRotulos: rangoRotulos,
@@ -1173,7 +1219,7 @@ function _especificacionGraficoMirada() {
         series: series,
         transponer: true,
         encabezados: 1,
-        mergeStrategy: 'MERGE_COLUMNS',
+        mergeStrategy: MIRADA_GRAFICO_MERGE,
         fondo: MIRADA_GRAFICO_FONDO,
         formatoEjeV: MIRADA_GRAFICO_FORMATO_EJE,
         curva: MIRADA_GRAFICO_CURVA,
@@ -1239,11 +1285,21 @@ function _construirGraficoMirada(sheet, spec, dims) {
         opcionesSeries[i] = { color: s.color, lineWidth: s.lineWidth };
     });
 
+    // decision Franco 2026-09-07 (ronda de robustez): el miembro del enum se resuelve a una
+    // variable y se verifica antes de usarlo. Indexar el enum crudo con una clave equivocada
+    // devuelve undefined, y setMergeStrategy(undefined) no protesta: los dos rangos se pegarian
+    // con el default y el grafico saldria con las series cambiadas, sin ningun error visible.
+    const merge = Charts.ChartMergeStrategy[spec.mergeStrategy];
+    if (merge === undefined || merge === null) {
+        throw new Error('_construirGraficoMirada: Charts.ChartMergeStrategy no tiene el miembro "' +
+            spec.mergeStrategy + '"; sin el, setMergeStrategy recibiria undefined.');
+    }
+
     return sheet.newChart()
         .setChartType(Charts.ChartType.LINE)
         .addRange(sheet.getRange(spec.rangoRotulos))
         .addRange(sheet.getRange(spec.rangoDatos))
-        .setMergeStrategy(Charts.ChartMergeStrategy[spec.mergeStrategy])
+        .setMergeStrategy(merge)
         .setTransposeRowsAndColumns(spec.transponer)
         .setNumHeaders(spec.encabezados)
         .setPosition(spec.anclaFila, spec.anclaCol, 0, 0)
@@ -1296,17 +1352,40 @@ function _alineacionRestaurableMirada(leida) {
 }
 
 /**
- * Graficos de la hoja que ocupan el lugar del propio: los anclados en (anclaFila, anclaCol).
- * Es la identidad que hace idempotente a la entrada de menu: correrla dos veces deja UN
- * grafico, no dos.
+ * Graficos de la hoja que son "el propio": los anclados en (anclaFila, anclaCol) O los que
+ * grafican EXACTAMENTE los rangos de la spec, esten donde esten. Es la identidad que hace
+ * idempotente a la entrada de menu: correrla dos veces deja UN grafico, no dos.
+ *
+ * decision Franco 2026-09-07 (ronda de robustez): la identidad es ancla-O-contenido, no solo
+ * ancla. Un grafico se arrastra con el mouse: si Franco corria la entrada, movia el grafico y
+ * la volvia a correr, la segunda pasada no lo reconocia como propio, insertaba otro sobre C14 y
+ * cantaba exito con DOS graficos de la misma cosa en la hoja. El contenido (los dos rangos de la
+ * spec) es lo que no cambia al moverlo. getRanges() se lee dentro de un try porque un grafico
+ * ajeno de otro tipo puede no exponerlos, y ese caso significa "no es el propio", no un fallo.
+ *
+ * El orden de uso no cambia: la entrada de menu llama a esta funcion ANTES de insertar (para
+ * listar previos, con sus ids) y DESPUES (para encontrar el nuevo). El nuevo tambien matchea por
+ * contenido, asi que sigue siendo la comparacion de ids -- los de ahora que no estaban en
+ * idsPrevios -- la que lo identifica.
+ *
  * @param {Sheet} sheet
  * @param {Object} spec
  * @returns {EmbeddedChart[]}
  */
 function _graficosPropiosMirada(sheet, spec) {
+    const esperados = spec.rangos.slice().sort().join('|');
     return sheet.getCharts().filter(function (ch) {
         const info = ch.getContainerInfo();
-        return info.getAnchorRow() === spec.anclaFila && info.getAnchorColumn() === spec.anclaCol;
+        if (info.getAnchorRow() === spec.anclaFila && info.getAnchorColumn() === spec.anclaCol) {
+            return true;
+        }
+        let leidos;
+        try {
+            leidos = ch.getRanges().map(function (r) { return r.getA1Notation(); }).sort().join('|');
+        } catch (e) {
+            return false;
+        }
+        return leidos === esperados;
     });
 }
 
@@ -1682,16 +1761,32 @@ function inicializarMesesYGraficoMirada() {
     // rb.ok habla SOLO del contenido (formulas/valores verificados por relectura). La alineacion
     // se repone aparte y, si no se puede, se informa como aviso separado (rb.alineacionNoRepuesta)
     // en vez de marcar toda la restauracion como no verificada: el contenido si lo esta.
+    //
+    // decision Franco 2026-09-07 (ronda de robustez): la alineacion se repone PRIMERO, en su
+    // propio try, y el contenido despues, tambien en el suyo -- asi restaurarFila devuelve
+    // siempre un rb con las dos verdades y no lanza nunca. Antes la alineacion iba despues del
+    // contenido: si _restaurarRespaldoMirada lanzaba, el catch del llamador armaba el objeto de
+    // fallo con alineacionNoRepuesta: null, que en el resto del codigo significa "repuesta bien"
+    // -- un verde sobre algo que ni se habia intentado.
     const restaurarFila = function () {
-        const rb = _restaurarRespaldoMirada(sheet, respaldo);
-        rb.alineacionNoRepuesta = null;
+        let alineacionNoRepuesta = null;
         try {
             sheet.getRange(filaMeses).setHorizontalAlignments(alineacionesPrevias.map(function (fila) {
                 return fila.map(_alineacionRestaurableMirada);
             }));
         } catch (eAl) {
-            rb.alineacionNoRepuesta = eAl.message || String(eAl);
+            alineacionNoRepuesta = eAl.message || String(eAl);
         }
+        let rb;
+        try {
+            rb = _restaurarRespaldoMirada(sheet, respaldo);
+        } catch (eCont) {
+            rb = {
+                ok: false,
+                divergencias: ['EXCEPCION al restaurar el contenido: ' + (eCont.message || String(eCont))]
+            };
+        }
+        rb.alineacionNoRepuesta = alineacionNoRepuesta;
         return rb;
     };
     const textoRestauracion = function (rb) {
@@ -1707,6 +1802,14 @@ function inicializarMesesYGraficoMirada() {
     let intento = null;
     let excepcion = null;
     try {
+        // decision Franco 2026-09-07 (ronda de robustez): el formato numerico va ANTES de la
+        // formula, exactamente como lo hace la funcion hermana inicializarMiradaInteranual. G7:R7
+        // tenia los numeros 1..12 y Franco los borro: el formato de esas celdas puede ser
+        // cualquier cosa, y si quedo en "Texto sin formato" Sheets guarda la formula como TEXTO y
+        // la muestra tal cual, sin dar error -- lo que terminaba en estado TEXTO, restauracion y
+        // ningun grafico. El respaldo ya congelo los formatos numericos previos y
+        // _restaurarRespaldoMirada los repone, asi que forzarlo aca es reversible.
+        sheet.getRange(filaMeses).setNumberFormat(MIRADA_FORMATO_MESES);
         // Solo la alineacion horizontal se copia de K7: el resto del formato de la fila 7
         // (fondo, color, negrita, tamano) no se toca.
         sheet.getRange(filaMeses).setHorizontalAlignment(
@@ -1731,17 +1834,35 @@ function inicializarMesesYGraficoMirada() {
             ? ('EXCEPCION durante la escritura: ' + ((excepcion.message) ? excepcion.message : String(excepcion)))
             : (intento ? (intento.estado + ': ' + _recortarMirada(intento.display))
                 : 'la escritura no devolvio resultado');
+        // Un estado TEXTO no lo arregla ningun separador: la celda esta en "Texto sin formato" y
+        // guarda la formula como texto. Se nombra la causa y el arreglo exacto, arriba de todo,
+        // porque el motivo generico ("TEXTO: =LET(...") no le dice nada a nadie.
+        const pistaTexto = (intento && intento.estado === 'TEXTO')
+            ? ('La celda ' + MIRADA_COLS_VISTA[0] + MIRADA_FILA_MESES + ' esta en formato "Texto sin ' +
+                'formato": Sheets guarda ahi la formula como texto y la muestra tal cual, sin dar ' +
+                'error. Arreglo: selecciona ' + filaMeses + ', aplica Formato > Numero > Automatico ' +
+                'y volve a correr esta entrada.\n\n')
+            : '';
+        // restaurarFila ya no lanza (guarda contenido y alineacion por separado). Este catch es
+        // el cinturon por si algo revienta FUERA de esos guards: en ese caso ni el contenido ni la
+        // alineacion tienen estado conocido, y el objeto lo dice en vez de suponer.
         let rb = null;
         try {
             rb = restaurarFila();
         } catch (e2) {
-            rb = { ok: false, divergencias: ['EXCEPCION al restaurar: ' + e2.message], alineacionNoRepuesta: null };
+            rb = {
+                ok: false,
+                divergencias: ['EXCEPCION fuera de los guards de restaurarFila: ' + (e2.message || String(e2))],
+                alineacionNoRepuesta: 'estado desconocido: la restauracion lanzo fuera de sus guards'
+            };
         }
         _avisarMirada(ss, (rb.ok && !rb.alineacionNoRepuesta) ? 'Sin resolver' : 'Revisar a mano',
-            'No se pudo escribir la fila de meses (' + motivo + '). ' + textoRestauracion(rb) +
+            pistaTexto + 'No se pudo escribir la fila de meses (' + motivo + '). ' + textoRestauracion(rb) +
             ' No se toco el grafico.', 12, true);
         logError('inicializarMesesYGraficoMirada: escritura de la fila fallida', {
             motivo: motivo,
+            estado: intento ? intento.estado : null,
+            celdaEnFormatoTexto: !!(intento && intento.estado === 'TEXTO'),
             intentos: intento ? intento.intentos : [],
             restauracionVerificada: rb.ok,
             alineacionNoRepuesta: rb.alineacionNoRepuesta || null,
@@ -1762,11 +1883,17 @@ function inicializarMesesYGraficoMirada() {
         }
     }
     if (diferencias.length) {
+        // Mismo cinturon que arriba: restaurarFila no lanza, y si algo revienta fuera de sus
+        // guards no se afirma que la alineacion haya quedado repuesta.
         let rb = null;
         try {
             rb = restaurarFila();
         } catch (e3) {
-            rb = { ok: false, divergencias: ['EXCEPCION al restaurar: ' + e3.message], alineacionNoRepuesta: null };
+            rb = {
+                ok: false,
+                divergencias: ['EXCEPCION fuera de los guards de restaurarFila: ' + (e3.message || String(e3))],
+                alineacionNoRepuesta: 'estado desconocido: la restauracion lanzo fuera de sus guards'
+            };
         }
         _avisarMirada(ss, (rb.ok && !rb.alineacionNoRepuesta) ? 'Sin resolver' : 'Revisar a mano',
             'La fila de meses no mostro lo esperado (' + diferencias[0] +
@@ -1789,21 +1916,36 @@ function inicializarMesesYGraficoMirada() {
     // decision Franco 2026-09-07: nunca al reves. Si la insercion falla, el grafico anterior
     // sobrevive y la hoja no queda sin grafico. El nuevo se reconoce por su id (getChartId,
     // que la referencia declara "Integer|null"): si Sheets no diera ids, se acepta como nuevo
-    // el ultimo de los anclados en C14 SOLO cuando la cantidad crecio en exactamente uno.
-    let spec;
-    let dims;
-    let previos;
-    let idsPrevios;
+    // el ultimo de los propios SOLO cuando la cantidad crecio en exactamente uno.
+    //
+    // decision Franco 2026-09-07 (ronda de robustez): dos try, uno por etapa, y no uno solo. Con
+    // un unico bloque, una excepcion al armar la especificacion o al medir las dimensiones --
+    // antes de haber leido un solo grafico de la hoja -- se reportaba igual como "EXCEPCION al
+    // insertar" y el aviso afirmaba "No habia grafico previo" sin haber mirado ninguno: un rojo
+    // que nombra mal la causa y ademas afirma de mas. Ahora la etapa queda registrada y previos
+    // sigue en null mientras no se los haya leido, que es un tercer estado distinto de cero.
+    let spec = null;
+    let dims = null;
+    let previos = null;
+    let idsPrevios = null;
     let errorGrafico = null;
+    let etapaGrafico = 'preparar';
     try {
         spec = _especificacionGraficoMirada();
         dims = _dimensionesGraficoMirada(sheet, spec);
         previos = _graficosPropiosMirada(sheet, spec);
         idsPrevios = previos.map(function (ch) { return ch.getChartId(); });
-        sheet.insertChart(_construirGraficoMirada(sheet, spec, dims));
-        SpreadsheetApp.flush();
     } catch (e4) {
         errorGrafico = e4;
+    }
+    if (!errorGrafico) {
+        etapaGrafico = 'insertar';
+        try {
+            sheet.insertChart(_construirGraficoMirada(sheet, spec, dims));
+            SpreadsheetApp.flush();
+        } catch (e4b) {
+            errorGrafico = e4b;
+        }
     }
 
     // ---- 6. VERIFICACION DEL GRAFICO ----
@@ -1816,13 +1958,15 @@ function inicializarMesesYGraficoMirada() {
         if (hayIds) {
             const candidatos = ahora.filter(function (ch) { return idsPrevios.indexOf(ch.getChartId()) < 0; });
             nuevo = candidatos.length === 1 ? candidatos[0] : null;
-            if (!nuevo) detalleGrafico = 'se esperaba exactamente un grafico nuevo anclado en ' +
-                MIRADA_GRAFICO_COL_INICIO + MIRADA_GRAFICO_FILA_INICIO + ' y hay ' + candidatos.length;
+            if (!nuevo) detalleGrafico = 'se esperaba exactamente un grafico propio nuevo (anclado en ' +
+                MIRADA_GRAFICO_COL_INICIO + MIRADA_GRAFICO_FILA_INICIO +
+                ' o con los rangos de la vista) y hay ' + candidatos.length;
         } else if (ahora.length === previos.length + 1) {
             nuevo = ahora[ahora.length - 1];
         } else {
-            detalleGrafico = 'sin ids de grafico y la cantidad anclada en ' + MIRADA_GRAFICO_COL_INICIO +
-                MIRADA_GRAFICO_FILA_INICIO + ' paso de ' + previos.length + ' a ' + ahora.length;
+            detalleGrafico = 'sin ids de grafico y la cantidad de graficos propios (anclados en ' +
+                MIRADA_GRAFICO_COL_INICIO + MIRADA_GRAFICO_FILA_INICIO +
+                ' o con los rangos de la vista) paso de ' + previos.length + ' a ' + ahora.length;
         }
 
         if (nuevo) {
@@ -1840,20 +1984,30 @@ function inicializarMesesYGraficoMirada() {
             }
         }
     } else {
-        detalleGrafico = 'EXCEPCION al insertar: ' + (errorGrafico.message || String(errorGrafico));
+        detalleGrafico = (etapaGrafico === 'preparar'
+            ? 'EXCEPCION al preparar el grafico (especificacion o dimensiones), antes de leer los graficos de la hoja: '
+            : 'EXCEPCION al insertar: ') + (errorGrafico.message || String(errorGrafico));
     }
 
     if (!nuevo) {
+        // Tres estados, no dos: previos === null significa que no se llego a leer los graficos de
+        // la hoja, y eso NO es lo mismo que haber mirado y no haber encontrado ninguno.
+        const textoPrevios = (previos === null)
+            ? 'No se llego a mirar si habia un grafico previo: la hoja quedo como estaba.'
+            : (previos.length
+                ? 'Los ' + previos.length + ' grafico(s) previos se conservan.'
+                : 'No habia grafico previo.');
         _avisarMirada(ss, 'Sin resolver',
             'La fila de meses quedo escrita y verificada (12/12, separador "' + intento.sep +
             '") pero el grafico NO quedo insertado en ' + MIRADA_GRAFICO_COL_INICIO + MIRADA_GRAFICO_FILA_INICIO +
-            ' (' + detalleGrafico + '). ' + (previos && previos.length ? 'Los ' + previos.length +
-            ' grafico(s) previos se conservan.' : 'No habia grafico previo.'), 12, true);
+            ' (' + detalleGrafico + '). ' + textoPrevios, 12, true);
         logError('inicializarMesesYGraficoMirada: fila de meses OK, grafico NO insertado', {
             detalle: detalleGrafico,
+            etapa: etapaGrafico,
             separador: intento.sep,
             etiquetas: esperadas,
-            previosConservados: previos ? previos.length : null
+            previosLeidos: previos !== null,
+            previosConservados: previos === null ? null : previos.length
         });
         return;
     }

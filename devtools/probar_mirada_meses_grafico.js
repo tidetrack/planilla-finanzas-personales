@@ -8,9 +8,11 @@
  * Este banco prueba, ANTES de que el modulo toque la planilla productiva, que (a) lo que el
  * modulo construye para G8:R11 es IDENTICO a lo que la hoja ya guarda (el boton "Reescribir
  * formulas" es entonces un no-op seguro), (b) la formula de la fila de meses es, caracter a
- * caracter, la de la especificacion, y su gemela en JS produce las etiquetas esperadas, y (c)
+ * caracter, la de la especificacion, y su gemela en JS produce las etiquetas esperadas, (c)
  * el grafico se especifica sobre las celdas correctas con colores de la lista blanca del
- * brandbook Y el constructor del chart consume esa especificacion (no una copia).
+ * brandbook Y el constructor del chart consume esa especificacion (no una copia), y (d) la
+ * ENTRADA DE MENU ENTERA, ejecutada contra un doble de hoja en memoria, cumple su contrato de
+ * escritura en siete direcciones distintas (T8).
  *
  * [FUNDAMENTO TEORICO / ADMINISTRATIVO]
  * Convenciones de la casa: RAIZ se deriva de __dirname (un banco con ruta absoluta valida el
@@ -44,13 +46,18 @@
  *     _construirGraficoMirada con un builder grabador (en la ronda 1 pasaban en verde: el banco
  *     solo miraba la especificacion pura);
  *   - M12 (swap de colores Ingresos <-> Capitalizacion, ambos en la lista blanca): T4 lo pone
- *     en rojo por la tabla de colores POR NOMBRE de serie.
+ *     en rojo por la tabla de colores POR NOMBRE de serie;
+ *   - M30 (la restauracion repone la alineacion CRUDA de getHorizontalAlignments, o sea el fix
+ *     de la ronda anterior revertido), M31 (el preflight deja de bloquear) y M32 (no se retiran
+ *     los graficos previos): T8 (g), T8 (c) y T8 (b) los ponen en rojo. Sin ellos esos tres
+ *     comportamientos no tenian un solo chequeo -- el fix de alineacion era codigo muerto que
+ *     nadie extranaba.
  * Si un sabotaje no hace fallar al chequeo, el banco sale en rojo: un guard que no dispara no
  * protege nada.
  *
  * USO:  node devtools/probar_mirada_meses_grafico.js   (exit 0 si pasa, 1 si algo sale mal)
  *
- * @version 1.1.0
+ * @version 1.2.0
  * @since 2026-09-07
  * @lastModified 2026-09-07
  * @see src/07_MiradaInteranual.js
@@ -81,7 +88,8 @@ const EXPORTS = `
   construirFormulaMirada, construirFormulaMesMirada, auditarBalanceFormulaMirada,
   _argumentosFormulaDatosMirada, _formulasResultadoMirada, _etiquetasMesesEsperadasMirada,
   _especificacionGraficoMirada, _dimensionesGraficoMirada, _construirGraficoMirada,
-  _alineacionAplicableMirada, _alineacionRestaurableMirada, _refAbsolutaMirada, _numeroColumnaMirada
+  _alineacionAplicableMirada, _alineacionRestaurableMirada, _refAbsolutaMirada, _numeroColumnaMirada,
+  verificarPrecondicionesMirada, _verificarPrecondicionesMesesGraficoMirada, inicializarMesesYGraficoMirada
 });`;
 
 // Stubs de los enums de Charts: valores distinguibles para que el grabador pueda afirmar que
@@ -596,6 +604,823 @@ seccion('T6. MENU_CONFIG wirea inicializarMesesYGraficoMirada con aridad cero');
 }
 
 // ============================================
+// T8: la entrada de menu EJECUTADA contra un DOBLE de hoja en memoria
+// ============================================
+/**
+ * Hasta la ronda anterior el banco probaba las PIEZAS (formulas, spec, constructor del chart) y
+ * nunca la ORQUESTACION: preflight, respaldo, escritura, verificacion de valor, restauracion y
+ * grafico no tenian un solo chequeo. Un verde sobre las piezas con la orquestacion rota es
+ * exactamente el "banco verde sobre codigo que no corre" de las cicatrices.
+ *
+ * El doble reproduce la geometria MEDIDA EN VIVO el 2026-09-07 (ver "GEOMETRIA ESPERADA DE LA
+ * HOJA" en src/07_MiradaInteranual.js): selectores I2 "Mayo" / I3 2026 numerico / I4 "ARS";
+ * fila 7 con C7 "Resultados.", E7 "Interanual.", K7 con =I2 y G7:J7 + L7:R7 VACIAS; rotulos
+ * C8:C11 (C11 con acento); G8:R11 con formula y valor; C13 con la banda; grid 883 x 20. Mas la
+ * hoja "Registros" con sus columnas, que el preflight tambien mira.
+ *
+ * Tres decisiones del doble, que son las que lo hacen una prueba y no un decorado:
+ *
+ * 1. TRAMPA DE LOCALE REAL. Las formulas se EVALUAN con un mini-interprete propio (LET, MATCH,
+ *    SPLIT, INDEX, DATE, EDATE, MONTH, YEAR, PROPER, RIGHT, IF, COLUMN, referencias y
+ *    operadores) que acepta UNICAMENTE ";" como separador de argumentos: una coma fuera de
+ *    comillas es un parse error y la celda queda en "#ERROR!", igual que la planilla es_AR. Asi
+ *    el modulo tiene que reintentar de verdad, y lo que el banco verifica es el VALOR de cada
+ *    celda, no el texto de la formula. El interprete es independiente del modulo: no reutiliza
+ *    una sola linea suya, y se prueba a si mismo antes de usarse como vara de medir.
+ * 2. FORMATO TEXTO. Una celda en "@" guarda lo que le manda setFormula como TEXTO y lo muestra
+ *    tal cual, sin error y sin evaluar. Es la cicatriz "un numero bien formateado y equivocado
+ *    es peor que un error visible" en su version mas silenciosa.
+ * 3. DOMINIO DEL SETTER. setHorizontalAlignment(s) del doble LANZA ante cualquier valor fuera
+ *    de 'left' | 'center' | 'right' | 'normal' | null, como el setter real. Es lo que le da un
+ *    guard al fix de alineacion de la ronda anterior: sin esto, revertir su unico callsite a la
+ *    forma cruda dejaba el banco entero en verde y el helper como codigo muerto (T7, M30).
+ *
+ * El doble REGISTRA toda mutacion (escrituras[]) para poder exigir CERO escrituras cuando el
+ * preflight bloquea: "no se escribio nada" se mide, no se supone.
+ */
+
+// ---- A1: numero de columna, letra, celdas de un rango ----
+const A1COL = (letras) => String(letras).toUpperCase().split('').reduce((n, c) => n * 26 + (c.charCodeAt(0) - 64), 0);
+function A1LETRA(n) {
+    let s = '';
+    let x = n;
+    while (x > 0) { const r = (x - 1) % 26; s = String.fromCharCode(65 + r) + s; x = (x - r - 1) / 26; }
+    return s;
+}
+function A1PARSE(ref) {
+    const m = /^\$?([A-Za-z]+)\$?(\d+)$/.exec(String(ref).trim());
+    if (!m) throw new Error('A1PARSE: referencia invalida ' + ref);
+    return { col: A1COL(m[1]), fila: parseInt(m[2], 10) };
+}
+/** Matriz de referencias ('G7') de un rango A1, en orden de filas. */
+function celdasDelRango(a1) {
+    const partes = String(a1).toUpperCase().split(':');
+    const a = A1PARSE(partes[0]);
+    const b = A1PARSE(partes[1] || partes[0]);
+    const filas = [];
+    for (let f = Math.min(a.fila, b.fila); f <= Math.max(a.fila, b.fila); f++) {
+        const cols = [];
+        for (let c = Math.min(a.col, b.col); c <= Math.max(a.col, b.col); c++) cols.push(A1LETRA(c) + f);
+        filas.push(cols);
+    }
+    return filas;
+}
+/** Traslada las referencias RELATIVAS de una formula al copiarla (las que llevan $ no se tocan). */
+function trasladarFormula(formula, dCol, dFila) {
+    let out = '';
+    let enStr = false;
+    let i = 0;
+    while (i < formula.length) {
+        const ch = formula[i];
+        if (ch === '"') { enStr = !enStr; out += ch; i++; continue; }
+        if (enStr) { out += ch; i++; continue; }
+        const m = /^(\$?)([A-Z]+)(\$?)(\d+)/.exec(formula.slice(i));
+        if (m && !/[A-Za-z0-9_]/.test(formula[i - 1] || '')) {
+            const col = m[1] ? m[2] : A1LETRA(A1COL(m[2]) + dCol);
+            const fila = m[3] ? m[4] : (parseInt(m[4], 10) + dFila);
+            out += m[1] + col + m[3] + fila;
+            i += m[0].length;
+            continue;
+        }
+        out += ch;
+        i++;
+    }
+    return out;
+}
+
+// ---- Mini-interprete de formulas de hoja (separador ";" y nada mas) ----
+const REF_ENVUELTA = '__refDeHoja';
+function desenvolver(x) { return (x && typeof x === 'object' && x[REF_ENVUELTA]) ? x.v : x; }
+function textoDe(x) {
+    const v = desenvolver(x);
+    if (v === null || v === undefined) return '';
+    return String(v);
+}
+function numeroDe(x) {
+    const v = desenvolver(x);
+    if (typeof v === 'number') return v;
+    const n = parseFloat(String(v));
+    if (isNaN(n)) { const e = new Error('#VALUE!'); e.valorError = '#VALUE!'; throw e; }
+    return n;
+}
+function fechaDe(x) {
+    const v = desenvolver(x);
+    if (v instanceof Date) return v;
+    const e = new Error('#VALUE!');
+    e.valorError = '#VALUE!';
+    throw e;
+}
+function igualSheets(a, b) {
+    const x = desenvolver(a);
+    const y = desenvolver(b);
+    if (typeof x === 'number' && typeof y === 'number') return x === y;
+    if (x instanceof Date || y instanceof Date) return String(x) === String(y);
+    return String(x === null || x === undefined ? '' : x).toUpperCase() ===
+        String(y === null || y === undefined ? '' : y).toUpperCase();
+}
+
+/**
+ * Evalua una formula de hoja. `ent` = { leerCelda(ref), columna, fila }.
+ * Lanza con .parseError = true ante cualquier problema de sintaxis -- incluida una coma fuera de
+ * comillas, que es la trampa de locale -- y con .valorError ante un error de valor tipo #N/A.
+ */
+function evaluarFormulaHoja(texto, ent) {
+    const SEP = ';';
+    const s = String(texto).replace(/^=/, '');
+    let i = 0;
+    let scope = {};
+    const parseError = (m) => { const e = new Error('parse: ' + m); e.parseError = true; throw e; };
+    const valorError = (v) => { const e = new Error(v); e.valorError = v; throw e; };
+    const saltar = () => { while (i < s.length && s[i] === ' ') i++; };
+
+    function expr() { return comparacion(); }
+    function comparacion() {
+        let v = concatenacion();
+        saltar();
+        while (i < s.length && (s[i] === '=' || s[i] === '<' || s[i] === '>')) {
+            let op = s[i++];
+            if (s[i] === '=' || s[i] === '>') op += s[i++];
+            const d = concatenacion();
+            const ig = igualSheets(v, d);
+            v = (op === '=') ? ig
+                : (op === '<>') ? !ig
+                    : (op === '<') ? numeroDe(v) < numeroDe(d)
+                        : (op === '>') ? numeroDe(v) > numeroDe(d)
+                            : (op === '<=') ? numeroDe(v) <= numeroDe(d)
+                                : numeroDe(v) >= numeroDe(d);
+            saltar();
+        }
+        return v;
+    }
+    function concatenacion() {
+        let v = aditivo();
+        saltar();
+        while (s[i] === '&') { i++; v = textoDe(v) + textoDe(aditivo()); saltar(); }
+        return v;
+    }
+    function aditivo() {
+        let v = multiplicativo();
+        saltar();
+        while (s[i] === '+' || s[i] === '-') {
+            const op = s[i++];
+            const d = multiplicativo();
+            v = op === '+' ? numeroDe(v) + numeroDe(d) : numeroDe(v) - numeroDe(d);
+            saltar();
+        }
+        return v;
+    }
+    function multiplicativo() {
+        let v = unario();
+        saltar();
+        while (s[i] === '*' || s[i] === '/') {
+            const op = s[i++];
+            const d = unario();
+            v = op === '*' ? numeroDe(v) * numeroDe(d) : numeroDe(v) / numeroDe(d);
+            saltar();
+        }
+        return v;
+    }
+    function unario() { saltar(); if (s[i] === '-') { i++; return -numeroDe(unario()); } return primario(); }
+    function primario() {
+        saltar();
+        if (i >= s.length) parseError('fin de formula inesperado');
+        if (s[i] === '(') { i++; const v = expr(); saltar(); if (s[i] !== ')') parseError('falta ")"'); i++; return v; }
+        if (s[i] === '"') {
+            i++;
+            let out = '';
+            while (i < s.length) {
+                if (s[i] === '"') { if (s[i + 1] === '"') { out += '"'; i += 2; continue; } i++; return out; }
+                out += s[i++];
+            }
+            parseError('comilla sin cerrar');
+        }
+        if (/[0-9]/.test(s[i])) {
+            let j = i;
+            while (j < s.length && /[0-9.]/.test(s[j])) j++;
+            const n = parseFloat(s.slice(i, j));
+            i = j;
+            return n;
+        }
+        if (s[i] === '$' || /[A-Za-z_]/.test(s[i])) {
+            let j = i;
+            while (j < s.length && /[A-Za-z0-9_$]/.test(s[j])) j++;
+            const tok = s.slice(i, j);
+            i = j;
+            saltar();
+            if (s[i] === '(') {
+                i++;
+                if (tok.toUpperCase() === 'LET') return evaluarLet();
+                const args = [];
+                saltar();
+                if (s[i] === ')') {
+                    i++;
+                } else {
+                    for (;;) {
+                        args.push(expr());
+                        saltar();
+                        if (s[i] === SEP) { i++; continue; }
+                        if (s[i] === ')') { i++; break; }
+                        parseError('separador inesperado ' + JSON.stringify(s[i] || 'EOF') + ' en ' + tok);
+                    }
+                }
+                return llamar(tok.toUpperCase(), args);
+            }
+            if (/^\$?[A-Za-z]+\$?[0-9]+$/.test(tok)) {
+                // Las referencias viajan ENVUELTAS: COLUMN($K$7) necesita la referencia, no su valor.
+                const env = {};
+                env[REF_ENVUELTA] = true;
+                env.ref = tok.replace(/\$/g, '').toUpperCase();
+                env.v = ent.leerCelda(env.ref);
+                return env;
+            }
+            if (Object.prototype.hasOwnProperty.call(scope, tok)) return scope[tok];
+            parseError('identificador desconocido "' + tok + '"');
+        }
+        parseError('token inesperado ' + JSON.stringify(s[i]));
+    }
+    function evaluarLet() {
+        const previo = scope;
+        scope = Object.assign({}, scope);
+        for (;;) {
+            saltar();
+            let j = i;
+            while (j < s.length && /[A-Za-z0-9_]/.test(s[j])) j++;
+            const nombre = s.slice(i, j);
+            let k = j;
+            while (k < s.length && s[k] === ' ') k++;
+            if (!nombre || s[k] !== SEP) break;   // no es "nombre;valor": es la expresion final
+            i = k + 1;
+            const valor = expr();
+            scope[nombre] = valor;
+            saltar();
+            if (s[i] !== SEP) parseError('LET: falta el separador tras el valor de ' + nombre);
+            i++;
+        }
+        const final = expr();
+        saltar();
+        if (s[i] !== ')') parseError('LET sin cerrar');
+        i++;
+        scope = previo;
+        return final;
+    }
+    function comoArray(x) {
+        const v = desenvolver(x);
+        return Array.isArray(v) ? v : [v];
+    }
+    function llamar(n, a) {
+        switch (n) {
+            case 'MATCH': {
+                const arr = comoArray(a[1]);
+                for (let k = 0; k < arr.length; k++) if (igualSheets(arr[k], a[0])) return k + 1;
+                valorError('#N/A');
+                break;
+            }
+            case 'SPLIT': return textoDe(a[0]).split(textoDe(a[1]));
+            case 'INDEX': {
+                const arr = comoArray(a[0]);
+                const idx = a.length > 2 ? numeroDe(a[2]) : numeroDe(a[1]);
+                if (idx < 1 || idx > arr.length) valorError('#REF!');
+                return arr[idx - 1];
+            }
+            case 'DATE': return new Date(Date.UTC(numeroDe(a[0]), numeroDe(a[1]) - 1, numeroDe(a[2])));
+            case 'EDATE': {
+                const d = fechaDe(a[0]);
+                return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + numeroDe(a[1]), d.getUTCDate()));
+            }
+            case 'MONTH': return fechaDe(a[0]).getUTCMonth() + 1;
+            case 'YEAR': return fechaDe(a[0]).getUTCFullYear();
+            case 'PROPER': return textoDe(a[0]).toLowerCase()
+                .replace(/(^|[^A-Za-z\u00c0-\u024f])([a-z\u00e0-\u024f])/g, (_m, p, c) => p + c.toUpperCase());
+            case 'UPPER': return textoDe(a[0]).toUpperCase();
+            case 'RIGHT': { const t = textoDe(a[0]); const k = a.length > 1 ? numeroDe(a[1]) : 1; return t.slice(t.length - k); }
+            case 'LEFT': { const t = textoDe(a[0]); const k = a.length > 1 ? numeroDe(a[1]) : 1; return t.slice(0, k); }
+            case 'IF': return desenvolver(a[0]) ? desenvolver(a[1]) : desenvolver(a[2]);
+            case 'COLUMN': {
+                if (!a.length) return ent.columna;
+                if (!a[0] || !a[0][REF_ENVUELTA]) parseError('COLUMN espera una referencia');
+                return A1PARSE(a[0].ref).col;
+            }
+            case 'ROW': {
+                if (!a.length) return ent.fila;
+                if (!a[0] || !a[0][REF_ENVUELTA]) parseError('ROW espera una referencia');
+                return A1PARSE(a[0].ref).fila;
+            }
+            default: parseError('funcion no soportada por el doble: ' + n);
+        }
+    }
+
+    const resultado = expr();
+    saltar();
+    if (i < s.length) parseError('sobra texto tras la expresion: ' + JSON.stringify(s.slice(i, i + 12)));
+    return desenvolver(resultado);
+}
+
+// ---- Doble de la planilla ----
+const FORMATO_GENERAL = '0.###############';
+const ALINEACIONES_VALIDAS = ['left', 'center', 'right', 'normal'];
+
+/**
+ * @param {Object} [cfg] variantes de la corrida: rotuloC11, rotuloC13, k7Vacia, anioComoTexto,
+ *   formatoG7 (ej. '@'), insertChartLanza, distorsionarRangos, graficoPrevio
+ */
+function dobleDeMirada(cfg) {
+    const o = cfg || {};
+    const celdas = {};
+    const escrituras = [];
+    const avisos = [];
+    const alertas = [];
+    const logs = { info: [], error: [], success: [] };
+    const alineacionesRecibidas = [];
+    const charts = [];
+    let proximoId = 500;
+
+    const cel = (ref) => {
+        if (!celdas[ref]) {
+            celdas[ref] = { formula: '', valor: '', formato: FORMATO_GENERAL, alin: null, color: null, evaluar: true };
+        }
+        return celdas[ref];
+    };
+    const poner = (ref, campos) => Object.assign(cel(ref), campos);
+    const entornoDe = (ref) => {
+        const p = A1PARSE(ref);
+        return { columna: p.col, fila: p.fila, leerCelda: (otra) => (otra === ref ? '' : valorDe(otra)) };
+    };
+    const valorDe = (ref) => {
+        const c = cel(ref);
+        if (c.formula && c.evaluar) {
+            // La formula PARSEA y la celda devuelve igual un error de valor: es el caso que
+            // ningun cambio de separador arregla (un #REF! por una hoja renombrada, por ejemplo).
+            if (o.errorEnG7 && ref === 'G7') return '#REF!';
+            try { return evaluarFormulaHoja(c.formula, entornoDe(ref)); }
+            catch (e) { return e.parseError ? '#ERROR!' : (e.valorError || '#VALUE!'); }
+        }
+        return c.valor;
+    };
+    const displayDe = (ref) => {
+        const v = valorDe(ref);
+        if (v === null || v === undefined) return '';
+        if (v instanceof Date) return v.toISOString().slice(0, 10);
+        return String(v);
+    };
+    const alineacionDe = (ref) => {
+        const c = cel(ref);
+        if (c.alin) return c.alin;
+        // Sin alineacion explicita Sheets devuelve 'general-left' / 'general-right' segun el tipo.
+        return typeof valorDe(ref) === 'number' ? 'general-right' : 'general-left';
+    };
+
+    // ---- Geometria medida en vivo el 2026-09-07 ----
+    poner('I2', { valor: 'Mayo' });
+    poner('I3', o.anioComoTexto ? { valor: '2026', formato: '@' } : { valor: 2026 });
+    poner('I4', { valor: 'ARS' });
+    poner('C7', { valor: 'Resultados.' });
+    poner('E7', { valor: 'Interanual.' });
+    poner('K7', o.k7Vacia ? { alin: 'center', color: '#2c4e40' } : { formula: '=I2', alin: 'center', color: '#2c4e40' });
+    poner('C8', { valor: 'Ingresos' });
+    poner('C9', { valor: 'Gastos Fijos' });
+    poner('C10', { valor: 'Gastos Variables' });
+    poner('C11', { valor: o.rotuloC11 || 'Capitalizaci\u00f3n' });
+    poner('C13', { valor: o.rotuloC13 || 'Evoluci\u00f3n de Tendencias' });
+    // G8:R11: la formula REAL del gemelo mas un valor. El doble no las evalua (la entrada de menu
+    // no las toca): son el bloque que la hoja ya tiene calculado.
+    celdasDelRango('G8:R11').forEach((filaRefs, fi) => filaRefs.forEach((ref, ci) => {
+        poner(ref, { formula: F[ref] || '', valor: (fi + 1) * 1000 + ci, formato: '#,##0.00', evaluar: false });
+    }));
+    if (o.formatoG7) poner('G7', { formato: o.formatoG7 });
+
+    const anchoCol = (c) => 60 + 5 * c;        // deterministas y distintos entre si: el banco
+    const altoFila = (f) => 20 + (f % 7);      // recalcula las sumas por su cuenta
+
+    function rangoDe(a1) {
+        const refs = celdasDelRango(a1);
+        const ultima = refs[refs.length - 1][refs[0].length - 1];
+        const norm = (refs.length === 1 && refs[0].length === 1) ? refs[0][0] : refs[0][0] + ':' + ultima;
+        const mapa = (fn) => refs.map((f) => f.map(fn));
+        const r = {
+            __a1: norm,
+            getA1Notation: () => norm,
+            getNumRows: () => refs.length,
+            getNumColumns: () => refs[0].length,
+            getFormulas: () => mapa((ref) => cel(ref).formula),
+            getValues: () => mapa((ref) => valorDe(ref)),
+            getDisplayValues: () => mapa((ref) => displayDe(ref)),
+            getNumberFormats: () => mapa((ref) => cel(ref).formato),
+            getHorizontalAlignments: () => mapa((ref) => alineacionDe(ref)),
+            getValue: () => valorDe(refs[0][0]),
+            getDisplayValue: () => displayDe(refs[0][0]),
+            getHorizontalAlignment: () => alineacionDe(refs[0][0]),
+            setFormula: (f) => {
+                const ref = refs[0][0];
+                escrituras.push({ op: 'setFormula', a1: ref, valor: f });
+                // Celda en "Texto sin formato": Sheets guarda la formula como TEXTO y la muestra
+                // tal cual, sin error y sin evaluarla nunca.
+                if (cel(ref).formato === '@') poner(ref, { formula: '', valor: String(f) });
+                else poner(ref, { formula: String(f), valor: '' });
+                return r;
+            },
+            setValues: (m) => {
+                escrituras.push({ op: 'setValues', a1: norm });
+                refs.forEach((f, fi) => f.forEach((ref, ci) => {
+                    const v = m[fi][ci];
+                    if (typeof v === 'string' && v.charAt(0) === '=' && cel(ref).formato !== '@') poner(ref, { formula: v, valor: '' });
+                    else poner(ref, { formula: '', valor: v });
+                }));
+                return r;
+            },
+            setNumberFormat: (patron) => {
+                escrituras.push({ op: 'setNumberFormat', a1: norm, valor: patron });
+                refs.forEach((f) => f.forEach((ref) => poner(ref, { formato: patron })));
+                return r;
+            },
+            setNumberFormats: (m) => {
+                escrituras.push({ op: 'setNumberFormats', a1: norm });
+                refs.forEach((f, fi) => f.forEach((ref, ci) => poner(ref, { formato: m[fi][ci] })));
+                return r;
+            },
+            setHorizontalAlignment: (v) => {
+                alineacionesRecibidas.push(v);
+                if (v !== null && v !== undefined && ALINEACIONES_VALIDAS.indexOf(v) < 0) {
+                    throw new Error('The parameters (String) don\'t match the method signature for ' +
+                        'SpreadsheetApp.Range.setHorizontalAlignment (valor fuera de dominio: ' + String(v) + ')');
+                }
+                escrituras.push({ op: 'setHorizontalAlignment', a1: norm, valor: v });
+                refs.forEach((f) => f.forEach((ref) => poner(ref, { alin: (v === null || v === 'normal') ? null : v })));
+                return r;
+            },
+            setHorizontalAlignments: (m) => {
+                const planos = [].concat.apply([], m);
+                planos.forEach((v) => alineacionesRecibidas.push(v));
+                planos.forEach((v) => {
+                    if (v !== null && v !== undefined && ALINEACIONES_VALIDAS.indexOf(v) < 0) {
+                        throw new Error('The parameters (String[][]) don\'t match the method signature for ' +
+                            'SpreadsheetApp.Range.setHorizontalAlignments (valor fuera de dominio: ' + String(v) + ')');
+                    }
+                });
+                escrituras.push({ op: 'setHorizontalAlignments', a1: norm });
+                refs.forEach((f, fi) => f.forEach((ref, ci) => {
+                    const v = m[fi][ci];
+                    poner(ref, { alin: (v === null || v === undefined || v === 'normal') ? null : v });
+                }));
+                return r;
+            },
+            copyTo: (destino, tipo) => {
+                escrituras.push({ op: 'copyTo', a1: norm, destino: destino.__a1, tipo: tipo });
+                if (tipo !== 'CopyPasteType.PASTE_FORMULA') {
+                    throw new Error('el doble solo modela PASTE_FORMULA (recibio ' + String(tipo) + ')');
+                }
+                const origen = refs[0][0];
+                const p0 = A1PARSE(origen);
+                const f0 = cel(origen).formula;
+                celdasDelRango(destino.__a1).forEach((f) => f.forEach((ref) => {
+                    const p = A1PARSE(ref);
+                    // PASTE_FORMULA: SOLO la formula. Formato numerico, alineacion y color quedan.
+                    poner(ref, { formula: trasladarFormula(f0, p.col - p0.col, p.fila - p0.fila), valor: '', evaluar: true });
+                }));
+                return r;
+            }
+        };
+        return r;
+    }
+
+    function chartDe(est) {
+        const ch = {
+            __est: est,
+            __id: null,
+            getChartId: () => ch.__id,
+            getRanges: () => est.rangos.map((a1) => rangoDe(a1)),
+            getContainerInfo: () => ({ getAnchorRow: () => est.ancla.fila, getAnchorColumn: () => est.ancla.col }),
+            getOptions: () => ({ get: (k) => est.opciones[k] })
+        };
+        return ch;
+    }
+    function builderGrabador() {
+        const est = { rangos: [], opciones: {}, tipo: null, merge: null, transponer: null, encabezados: null, ancla: null };
+        const b = {
+            setChartType: (t) => { est.tipo = t; return b; },
+            addRange: (rg) => { est.rangos.push(rg.getA1Notation()); return b; },
+            setMergeStrategy: (m) => { est.merge = m; return b; },
+            setTransposeRowsAndColumns: (v) => { est.transponer = v; return b; },
+            setNumHeaders: (n) => { est.encabezados = n; return b; },
+            setPosition: (f, c, ox, oy) => { est.ancla = { fila: f, col: c, ox: ox, oy: oy }; return b; },
+            setOption: (k, v) => { est.opciones[k] = v; return b; },
+            build: () => chartDe(est)
+        };
+        return b;
+    }
+
+    const hojaMirada = {
+        getName: () => 'Mirada Interanual',
+        getMaxRows: () => 883,
+        getMaxColumns: () => 20,
+        getRange: rangoDe,
+        getColumnWidth: anchoCol,
+        getRowHeight: altoFila,
+        newChart: builderGrabador,
+        getCharts: () => charts.slice(),
+        insertChart: (ch) => {
+            if (o.insertChartLanza) throw new Error('Se produjo un error inesperado al insertar el grafico.');
+            ch.__id = proximoId++;
+            if (o.distorsionarRangos) ch.__est.rangos = ['A1:B2'];
+            charts.push(ch);
+        },
+        removeChart: (ch) => {
+            const k = charts.indexOf(ch);
+            if (k < 0) throw new Error('El grafico no pertenece a esta hoja.');
+            charts.splice(k, 1);
+        }
+    };
+    const hojaRegistros = {
+        getName: () => 'Registros',
+        getMaxRows: () => 2903,
+        getMaxColumns: () => 13
+    };
+    if (o.graficoPrevio) {
+        const previo = chartDe({
+            rangos: ['C7:C11', 'G7:R11'], opciones: {}, tipo: 'ChartType.LINE',
+            merge: 'ChartMergeStrategy.MERGE_COLUMNS', transponer: true, encabezados: 1,
+            ancla: { fila: 14, col: 3, ox: 0, oy: 0 }
+        });
+        previo.__id = proximoId++;
+        charts.push(previo);
+    }
+
+    const ss = {
+        getSheetByName: (n) => (n === 'Mirada Interanual' ? hojaMirada : (n === 'Registros' ? hojaRegistros : null)),
+        toast: (mensaje, titulo) => avisos.push({ titulo: titulo, mensaje: mensaje })
+    };
+    const SpreadsheetAppDoble = {
+        getActiveSpreadsheet: () => ss,
+        flush: () => {},
+        getUi: () => ({ alert: (m) => alertas.push(m) }),
+        CopyPasteType: { PASTE_FORMULA: 'CopyPasteType.PASTE_FORMULA', PASTE_NORMAL: 'CopyPasteType.PASTE_NORMAL' }
+    };
+
+    return {
+        SpreadsheetApp: SpreadsheetAppDoble, escrituras, avisos, alertas, logs, alineacionesRecibidas,
+        anchoCol, altoFila, charts,
+        display: displayDe,
+        celda: cel,
+        fotoDe: (a1) => celdasDelRango(a1).map((f) => f.map((ref) => JSON.stringify({
+            formula: cel(ref).formula, valor: valorDe(ref), formato: cel(ref).formato,
+            alin: alineacionDe(ref), color: cel(ref).color
+        }))).join('|')
+    };
+}
+
+/** Corre inicializarMesesYGraficoMirada() del contexto dado contra un doble (nuevo o reusado). */
+function correrEntradaMirada(ctx, cfgODoble) {
+    const doble = (cfgODoble && cfgODoble.escrituras) ? cfgODoble : dobleDeMirada(cfgODoble);
+    const previo = {
+        SpreadsheetApp: ctx.SpreadsheetApp, logInfo: ctx.logInfo, logError: ctx.logError, logSuccess: ctx.logSuccess
+    };
+    ctx.SpreadsheetApp = doble.SpreadsheetApp;
+    ctx.logInfo = (m) => doble.logs.info.push(String(m));
+    ctx.logError = (m) => doble.logs.error.push(String(m));
+    ctx.logSuccess = (m) => doble.logs.success.push(String(m));
+    let excepcion = null;
+    try { ctx.inicializarMesesYGraficoMirada(); } catch (e) { excepcion = e; }
+    Object.assign(ctx, previo);
+    return { doble: doble, excepcion: excepcion };
+}
+
+const ETIQUETAS_MAYO_2026 = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+    'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const FILA_MESES_A1 = 'G7:R7';
+// Lo que el usuario ve, por los tres canales. El toast se recorta a 180 caracteres, asi que el
+// mensaje COMPLETO es el del alert: los tres se concatenan para no medir contra un texto podado.
+const textoAvisos = (d) => d.avisos.map((a) => a.titulo + ': ' + a.mensaje).join(' || ') +
+    ' || ' + d.alertas.join(' || ') + ' || ' + d.logs.error.join(' || ');
+const displaysFila = (d) => celdasDelRango(FILA_MESES_A1)[0].map((ref) => d.display(ref));
+const fueraDeDominio = (d) => d.alineacionesRecibidas.filter((v) => v !== null && v !== undefined && ALINEACIONES_VALIDAS.indexOf(v) < 0);
+
+// ---- (a) el camino verde ----
+function chequearT8a(ctx) {
+    const detalle = [];
+    let todoOk = true;
+    const linea = (c, m) => { detalle.push((c ? '' : 'FALLA: ') + m); if (!c) todoOk = false; };
+    const corrida = correrEntradaMirada(ctx, {});
+    const doble = corrida.doble;
+    if (corrida.excepcion) { linea(false, '(a) la entrada de menu LANZO: ' + corrida.excepcion.message); return { ok: false, detalle }; }
+    const vistos = displaysFila(doble);
+    linea(vistos.join('|') === ETIQUETAS_MAYO_2026.join('|'),
+        '(a) G7:R7 muestra los doce meses con I2="Mayo" e I3=2026: [' + vistos.join(', ') + ']');
+    linea(doble.logs.success.length === 1, '(a) se llamo a logSuccess exactamente una vez (' + doble.logs.success.length + ')');
+    linea(doble.avisos.length >= 1 && doble.avisos[doble.avisos.length - 1].titulo === 'Listo',
+        '(a) el ultimo aviso es "Listo" (' + (doble.avisos.length ? doble.avisos[doble.avisos.length - 1].titulo : 'ninguno') + ')');
+    linea(doble.charts.length === 1, '(a) queda exactamente UN grafico (' + doble.charts.length + ')');
+    if (doble.charts.length === 1) {
+        const ch = doble.charts[0];
+        const info = ch.getContainerInfo();
+        linea(info.getAnchorRow() === 14 && info.getAnchorColumn() === 3,
+            '(a) el grafico quedo anclado en (14, 3) = C14 (leido ' + info.getAnchorRow() + ', ' + info.getAnchorColumn() + ')');
+        const rangos = ch.getRanges().map((r) => r.getA1Notation()).sort();
+        const spec = ctx._especificacionGraficoMirada();
+        linea(rangos.join('|') === spec.rangos.slice().sort().join('|'),
+            '(a) rangos del grafico = [' + spec.rangos.join(', ') + '] (leidos [' + rangos.join(', ') + '])');
+        let anchoEsp = 0;
+        for (let c = 3; c <= 18; c++) anchoEsp += doble.anchoCol(c);
+        let altoEsp = 0;
+        for (let f = 14; f <= 21; f++) altoEsp += doble.altoFila(f);
+        linea(ch.getOptions().get('width') === anchoEsp && ch.getOptions().get('height') === altoEsp,
+            '(a) tamano = anchos C..R por altos 14..21 MEDIDOS en la hoja (' + anchoEsp + 'x' + altoEsp + ')');
+    }
+    linea(fueraDeDominio(doble).length === 0,
+        '(a) todo lo que llego a setHorizontalAlignment(s) esta en el dominio del setter (' +
+        JSON.stringify(doble.alineacionesRecibidas) + ')');
+    linea(doble.celda('K7').color === '#2c4e40' && doble.celda('K7').formato === FORMATO_GENERAL,
+        '(a) K7 conserva el color del resaltado y su formato numerico (la replicacion no los piso)');
+    linea(doble.escrituras.some((e) => e.op === 'copyTo' && e.tipo === 'CopyPasteType.PASTE_FORMULA'),
+        '(a) la replicacion a la fila se hizo con PASTE_FORMULA');
+    return { ok: todoOk, detalle };
+}
+
+// ---- (b) idempotencia: dos corridas, UN grafico ----
+function chequearT8b(ctx) {
+    const detalle = [];
+    let todoOk = true;
+    const linea = (c, m) => { detalle.push((c ? '' : 'FALLA: ') + m); if (!c) todoOk = false; };
+    const primera = correrEntradaMirada(ctx, {});
+    if (primera.excepcion) { linea(false, '(b) la primera corrida LANZO: ' + primera.excepcion.message); return { ok: false, detalle }; }
+    const segunda = correrEntradaMirada(ctx, primera.doble);
+    if (segunda.excepcion) { linea(false, '(b) la segunda corrida LANZO: ' + segunda.excepcion.message); return { ok: false, detalle }; }
+    linea(primera.doble.charts.length === 1,
+        '(b) dos corridas seguidas dejan UN solo grafico, no dos (' + primera.doble.charts.length + ')');
+    linea(primera.doble.logs.success.length === 2, '(b) las dos corridas declararon exito (' + primera.doble.logs.success.length + ')');
+    linea(displaysFila(primera.doble).join('|') === ETIQUETAS_MAYO_2026.join('|'),
+        '(b) la fila de meses sigue correcta despues de la segunda corrida');
+    return { ok: todoOk, detalle };
+}
+
+// ---- (c) preflight en rojo: CERO escrituras y la causa con nombre ----
+const CASOS_PREFLIGHT = [
+    ['rotulo C11 cambiado', { rotuloC11: 'Capitalizacion Neta' }, /C11/],
+    ['banda C13 cambiada', { rotuloC13: 'Tendencias' }, /C13/],
+    ['K7 vacia', { k7Vacia: true }, /K7/],
+    ['I3 como texto', { anioComoTexto: true }, /I3/]
+];
+function chequearT8c(ctx) {
+    const detalle = [];
+    let todoOk = true;
+    const linea = (c, m) => { detalle.push((c ? '' : 'FALLA: ') + m); if (!c) todoOk = false; };
+    CASOS_PREFLIGHT.forEach((caso) => {
+        const nombre = caso[0];
+        const corrida = correrEntradaMirada(ctx, caso[1]);
+        const doble = corrida.doble;
+        if (corrida.excepcion) { linea(false, '(c) ' + nombre + ': la entrada LANZO ' + corrida.excepcion.message); return; }
+        linea(doble.escrituras.length === 0,
+            '(c) ' + nombre + ': CERO escrituras (' + doble.escrituras.length + (doble.escrituras.length
+                ? ': ' + doble.escrituras.map((e) => e.op + ' ' + e.a1).join(', ') : '') + ')');
+        linea(doble.logs.success.length === 0, '(c) ' + nombre + ': no se declaro exito');
+        linea(doble.charts.length === 0, '(c) ' + nombre + ': no se inserto ningun grafico');
+        linea(caso[2].test(textoAvisos(doble)), '(c) ' + nombre + ': el aviso nombra la causa (' + caso[2] + ')');
+    });
+    return { ok: todoOk, detalle };
+}
+
+// ---- (d) G7 en "Texto sin formato" (@) ----
+/**
+ * El invariante es UNO y no admite grises: la fila nunca puede terminar mostrando el TEXTO de la
+ * formula, y nunca se canta exito sobre eso. Como se llega ahi es una decision del modulo y hay
+ * dos salidas legitimas: neutralizar el formato antes de escribir (lo que hace la funcion hermana
+ * inicializarMiradaInteranual) o abortar nombrando el formato y restaurar. El chequeo exige el
+ * invariante siempre, y ademas lo que corresponda a la salida que el modulo haya elegido.
+ */
+function chequearT8d(ctx) {
+    const detalle = [];
+    let todoOk = true;
+    const linea = (c, m) => { detalle.push((c ? '' : 'FALLA: ') + m); if (!c) todoOk = false; };
+    const doble = dobleDeMirada({ formatoG7: '@' });
+    const antes = doble.fotoDe(FILA_MESES_A1);
+    const corrida = correrEntradaMirada(ctx, doble);
+    if (corrida.excepcion) { linea(false, '(d) la entrada LANZO: ' + corrida.excepcion.message); return { ok: false, detalle }; }
+    const texto = textoAvisos(doble);
+    const vistos = displaysFila(doble);
+    const exito = doble.logs.success.length > 0;
+    // Invariante duro, valga la salida que valga.
+    linea(!vistos.some((v) => String(v).charAt(0) === '='),
+        '(d) ninguna celda de G7:R7 quedo mostrando el TEXTO de la formula: [' + vistos.join(', ') + ']');
+    linea(vistos.join('|') === ETIQUETAS_MAYO_2026.join('|') || doble.fotoDe(FILA_MESES_A1) === antes,
+        '(d) la fila termina o con los doce meses correctos o EXACTAMENTE como estaba: nunca a medio escribir');
+    if (exito) {
+        linea(vistos.join('|') === ETIQUETAS_MAYO_2026.join('|'),
+            '(d) el modulo neutralizo el formato "@" y la fila muestra los doce meses');
+        linea(doble.celda('G7').formato !== '@',
+            '(d) G7 dejo de estar en "Texto sin formato" (' + doble.celda('G7').formato + ')');
+        linea(doble.escrituras.some((e) => e.op === 'setNumberFormat' || e.op === 'setNumberFormats'),
+            '(d) el formato se fijo con una escritura explicita, no por casualidad');
+    } else {
+        linea(doble.charts.length === 0, '(d) sin exito no se inserto ningun grafico');
+        linea(doble.fotoDe(FILA_MESES_A1) === antes,
+            '(d) G7:R7 queda EXACTAMENTE como estaba (formula, valor, formato numerico y alineacion)');
+        linea(/formato|texto sin formato|TEXTO|@/i.test(texto),
+            '(d) el aviso nombra el formato como causa: ' + texto.slice(0, 170));
+    }
+    console.log('  (d) salida elegida por el modulo: ' + (exito
+        ? 'neutraliza el formato y escribe' : 'aborta y restaura'));
+    linea(fueraDeDominio(doble).length === 0,
+        '(d) todo lo que llego a setHorizontalAlignment(s) esta en el dominio del setter (' +
+        JSON.stringify(doble.alineacionesRecibidas) + ')');
+    return { ok: todoOk, detalle };
+}
+
+// ---- (g) la celda devuelve un error de VALOR: se restaura y no se toca el grafico ----
+/**
+ * Es el unico camino que ejerce la RESTAURACION completa de la fila, y por eso es el que le da
+ * guard al fix de alineacion de la ronda anterior (T7, M30): reponer la matriz CRUDA de
+ * getHorizontalAlignments manda 'general-left' al setter, que en el doble lanza igual que el real.
+ * Un '#REF!' parsea: cambiar el separador no lo arregla y declarar exito seria mentir.
+ */
+function chequearT8g(ctx) {
+    const detalle = [];
+    let todoOk = true;
+    const linea = (c, m) => { detalle.push((c ? '' : 'FALLA: ') + m); if (!c) todoOk = false; };
+    const doble = dobleDeMirada({ errorEnG7: true, graficoPrevio: true });
+    const antes = doble.fotoDe(FILA_MESES_A1);
+    const corrida = correrEntradaMirada(ctx, doble);
+    if (corrida.excepcion) { linea(false, '(g) la entrada LANZO: ' + corrida.excepcion.message); return { ok: false, detalle }; }
+    const texto = textoAvisos(doble);
+    linea(doble.logs.success.length === 0, '(g) con la celda en "#REF!" NO se canta exito');
+    linea(doble.fotoDe(FILA_MESES_A1) === antes,
+        '(g) G7:R7 vuelve EXACTAMENTE a como estaba: formula, valor, formato numerico y alineacion');
+    linea(doble.charts.length === 1 && doble.charts[0].__est.rangos.join('+') === 'C7:C11+G7:R11',
+        '(g) el grafico previo no se toco (' + doble.charts.length + ')');
+    linea(/#REF!|ERROR_VALOR|no se pudo escribir/i.test(texto), '(g) el aviso nombra el estado de la celda: ' + texto.slice(0, 170));
+    linea(/restaur/i.test(texto), '(g) el aviso dice que se restauro');
+    // H-2: el guard del fix de alineacion vive aca.
+    linea(fueraDeDominio(doble).length === 0,
+        '(g) la restauracion mando a setHorizontalAlignments solo valores del dominio (' +
+        JSON.stringify(doble.alineacionesRecibidas) + ')');
+    linea(!/alineacion horizontal NO se pudo reponer/i.test(texto),
+        '(g) no hubo que reportar una alineacion sin reponer: la restauracion fue completa');
+    return { ok: todoOk, detalle };
+}
+
+// ---- (e) insertChart lanza: la fila queda, los graficos previos sobreviven ----
+function chequearT8e(ctx) {
+    const detalle = [];
+    let todoOk = true;
+    const linea = (c, m) => { detalle.push((c ? '' : 'FALLA: ') + m); if (!c) todoOk = false; };
+    const corrida = correrEntradaMirada(ctx, { insertChartLanza: true, graficoPrevio: true });
+    const doble = corrida.doble;
+    if (corrida.excepcion) { linea(false, '(e) la entrada LANZO en vez de reportar: ' + corrida.excepcion.message); return { ok: false, detalle }; }
+    const texto = textoAvisos(doble);
+    linea(displaysFila(doble).join('|') === ETIQUETAS_MAYO_2026.join('|'),
+        '(e) la fila de meses queda ESCRITA y correcta aunque el grafico falle');
+    linea(doble.logs.success.length === 0, '(e) no se declara exito');
+    linea(/grafico NO|no quedo insertado|no se inserto/i.test(texto), '(e) el aviso dice que el grafico no se inserto: ' + texto.slice(0, 170));
+    linea(doble.charts.length === 1 && doble.charts[0].__est.ancla.fila === 14,
+        '(e) el grafico PREVIO SOBREVIVE (' + doble.charts.length + ' grafico(s) en la hoja)');
+    linea(/previo/i.test(texto), '(e) el aviso dice que los previos se conservan');
+    return { ok: todoOk, detalle };
+}
+
+// ---- (f) el chart insertado sale con rangos equivocados: se retira EL NUEVO ----
+function chequearT8f(ctx) {
+    const detalle = [];
+    let todoOk = true;
+    const linea = (c, m) => { detalle.push((c ? '' : 'FALLA: ') + m); if (!c) todoOk = false; };
+    const corrida = correrEntradaMirada(ctx, { distorsionarRangos: true, graficoPrevio: true });
+    const doble = corrida.doble;
+    if (corrida.excepcion) { linea(false, '(f) la entrada LANZO: ' + corrida.excepcion.message); return { ok: false, detalle }; }
+    const texto = textoAvisos(doble);
+    const rangosVivos = doble.charts.map((c) => c.__est.rangos.join('+'));
+    linea(doble.logs.success.length === 0, '(f) no se declara exito con un grafico de rangos equivocados');
+    linea(doble.charts.length === 1, '(f) queda UN solo grafico (' + doble.charts.length + ': ' + rangosVivos.join(' / ') + ')');
+    linea(rangosVivos.indexOf('A1:B2') < 0, '(f) el grafico con rangos equivocados NO quedo en la hoja: se retiro EL NUEVO');
+    linea(rangosVivos.indexOf('C7:C11+G7:R11') > -1, '(f) el grafico PREVIO, con los rangos buenos, quedo intacto');
+    linea(/no es el esperado|rangos/i.test(texto), '(f) el aviso nombra el problema de rangos: ' + texto.slice(0, 170));
+    return { ok: todoOk, detalle };
+}
+
+seccion('T8. inicializarMesesYGraficoMirada() EJECUTADA contra un doble de hoja, en siete direcciones');
+{
+    // El interprete del doble es la vara de medir: se prueba a si mismo antes de usarse.
+    const ent = { columna: 11, fila: 7, leerCelda: (r) => ({ I2: 'Mayo', I3: 2026 }[r]) };
+    ok(evaluarFormulaHoja('=$I$2', ent) === 'Mayo', 'interprete: una referencia devuelve el valor de la celda');
+    ok(evaluarFormulaHoja('=PROPER("SEPTIEMBRE")', ent) === 'Septiembre', 'interprete: PROPER("SEPTIEMBRE") = "Septiembre"');
+    ok(evaluarFormulaHoja('=YEAR(EDATE(DATE(2026;12;1);1))', ent) === 2027, 'interprete: EDATE cruza el fin de anio');
+    ok(evaluarFormulaHoja('=MATCH("mayo";SPLIT("ENERO,FEBRERO,MARZO,ABRIL,MAYO";",");0)', ent) === 5,
+        'interprete: MATCH sobre SPLIT es insensible a mayusculas');
+    ok(evaluarFormulaHoja('=COLUMN()-COLUMN($K$7)', ent) === 0,
+        'interprete: COLUMN() usa la columna de la celda y COLUMN(ref) la de la referencia');
+    ok(evaluarFormulaHoja('="x"&RIGHT(YEAR(DATE(2027;1;1));2)', ent) === 'x27', 'interprete: concatenacion y RIGHT');
+    let parseo = null;
+    try { evaluarFormulaHoja('=MATCH($I$2,SPLIT("A,B";","),0)', ent); } catch (e) { parseo = e; }
+    ok(parseo && parseo.parseError === true, 'interprete: una coma fuera de comillas es PARSE ERROR (trampa de locale es_AR)');
+    ok(evaluarFormulaHoja(M.construirFormulaMesMirada(';'),
+        { columna: 7, fila: 7, leerCelda: (r) => ({ I2: 'Mayo', I3: 2026 }[r]) }) === 'Enero',
+        'interprete: la formula REAL del modulo con ";" evaluada en la columna G da "Enero"');
+
+    [['a', chequearT8a], ['b', chequearT8b], ['c', chequearT8c], ['d', chequearT8d],
+        ['e', chequearT8e], ['f', chequearT8f], ['g', chequearT8g]]
+        .forEach((par) => {
+            const r = par[1](M);
+            r.detalle.forEach((d) => ok(!/^FALLA: /.test(d), d.replace(/^FALLA: /, '')));
+            ok(r.ok, 'T8 (' + par[0] + ') en conjunto');
+        });
+}
+
+// ============================================
 // T7: el banco se prueba a si mismo (un guard que no dispara no protege nada)
 // ============================================
 /** Aplica un reemplazo literal y exige que haya cambiado el texto (si no, el sabotaje no ocurrio). */
@@ -673,6 +1498,46 @@ seccion('T7. Sabotaje en memoria: cada chequeo tiene que FALLAR sobre el modulo 
     if (C12) {
         const col = chequearColoresPorSerie(C12);
         ok(!col.ok, 'T4 (colores por serie) FALLA sobre M12 (' + (col.detalle.find(d => /tiene el color/.test(d)) || 'sin diff') + ')');
+    }
+
+    // 7e. M30: el fix de alineacion de la ronda anterior revertido a su forma buggy (la matriz
+    //     CRUDA de getHorizontalAlignments va derecho al setter, con sus 'general-left'). Sin
+    //     este sabotaje el fix no tenia guard: revertirlo dejaba los chequeos en verde y
+    //     _alineacionRestaurableMirada como codigo muerto. T8 (g) es el camino que ejerce la
+    //     restauracion de la fila, y ahi tiene que caer.
+    const m30 = sabotear(fuenteModulo, [['fila.map(_alineacionRestaurableMirada)', 'fila']]);
+    ok(m30.noAplicados.length === 0, 'M30 aplicado (la restauracion repone la alineacion CRUDA, sin traducir)');
+    let C30 = null;
+    try { C30 = cargarModulo(m30.fuente); } catch (e) { ok(false, 'M30: la copia saboteada no carga: ' + e.message); }
+    if (C30) {
+        const t8g = chequearT8g(C30);
+        ok(!t8g.ok, 'T8 (g) FALLA sobre M30 (' + (t8g.detalle.find(d => /^FALLA/.test(d)) || 'sin falla') + ')');
+    }
+
+    // 7f. M31: el preflight deja de bloquear (su resultado se fuerza a ok sin tocar la llamada).
+    //     Es el sabotaje que le da guard al "no se escribio ninguna celda": sin el, T8 (c) podria
+    //     estar contando cero escrituras por cualquier otra razon.
+    const m31 = sabotear(fuenteModulo, [[
+        'const pre = _verificarPrecondicionesMesesGraficoMirada(ss, sheet);',
+        '_verificarPrecondicionesMesesGraficoMirada(ss, sheet);\n    const pre = { ok: true, problemas: [], observado: {} };'
+    ]]);
+    ok(m31.noAplicados.length === 0, 'M31 aplicado (el preflight de la entrada deja de bloquear)');
+    let C31 = null;
+    try { C31 = cargarModulo(m31.fuente); } catch (e) { ok(false, 'M31: la copia saboteada no carga: ' + e.message); }
+    if (C31) {
+        const t8c = chequearT8c(C31);
+        ok(!t8c.ok, 'T8 (c) FALLA sobre M31 (' + (t8c.detalle.find(d => /^FALLA/.test(d)) || 'sin falla') + ')');
+    }
+
+    // 7g. M32: el retiro de los graficos previos desaparece. La entrada deja de ser idempotente y
+    //     dos clics dejan DOS graficos apilados sobre C14, cantando exito los dos. T8 (b) cae.
+    const m32 = sabotear(fuenteModulo, [['            sheet.removeChart(ch);\n', '']]);
+    ok(m32.noAplicados.length === 0, 'M32 aplicado (no se retiran los graficos previos)');
+    let C32 = null;
+    try { C32 = cargarModulo(m32.fuente); } catch (e) { ok(false, 'M32: la copia saboteada no carga: ' + e.message); }
+    if (C32) {
+        const t8b = chequearT8b(C32);
+        ok(!t8b.ok, 'T8 (b) FALLA sobre M32 (' + (t8b.detalle.find(d => /^FALLA/.test(d)) || 'sin falla') + ')');
     }
 }
 

@@ -10,8 +10,14 @@
  *   gastos fijos, variables y la capitalizacion. Todo como linea de rectas y que simule la
  *   informacion que aparece en G8:R11. Por ahora, esas dos cosas deberia tener la mirada
  *   interanual."
- * - QUE SE MIDIO EN VIVO (export de Drive del 2026-09-07, cruzado celda por celda con el
- *   gemelo docs/permanente/celdas.tsv del 2026-08-18; coinciden): C2:F4 titulo; G2:H2 "Mes de
+ * - QUE SE MIDIO EN VIVO (export de Drive del 2026-09-07, cruzado celda por celda con el gemelo
+ *   docs/permanente/celdas.tsv del 2026-08-18. La ESTRUCTURA coincide -- las mismas celdas en
+ *   los mismos lugares, con las mismas formulas en G8:R11 --, pero el CONTENIDO no coincide del
+ *   todo y las dos diferencias importan: en vivo el selector I2 dice "Mayo" y en el gemelo dice
+ *   "Agosto", y en vivo G7:J7 y L7:R7 estan VACIAS mientras el gemelo guarda ahi los numeros
+ *   1..12 (Franco los borro entre agosto y hoy). Por eso el gemelo NO sirve como referencia de
+ *   valores de la fila 7 -- se usa solo para las formulas de G8:R11 y los rotulos --, y por eso
+ *   la fila de meses es trabajo nuevo y no una reparacion): C2:F4 titulo; G2:H2 "Mes de
  *   Referencia" con selector I2 ("Mayo", texto capitalizado) e I3 (2026, numerico); G4:H4
  *   "Moneda" con selector I4 ("ARS"); K2/L2 "Proyecto"/"Todos" decorativo (ninguna formula lo
  *   usa, no se toca). Fila 7 = encabezado: C7 "Resultados.", E7 "Interanual.", K7 =I2 (la
@@ -78,9 +84,18 @@
  *   (1-indexed) y setOption (no valida la opcion para el tipo) se confirmo por WebFetch de la
  *   referencia oficial de EmbeddedChartBuilder y quedo citada en la decision inline de
  *   _construirGraficoMirada. Las opciones se cotejaron contra la referencia de opciones de
- *   charts embebidos de Apps Script: todas figuran salvo vAxis.format, que se envia igual como
- *   cinturon (no dana) y se confirma mirando el eje en vivo; 'useFirstColumnAsDomain' tambien
- *   como cinturon (setOption no falla por opcion desconocida).
+ *   charts embebidos de Apps Script (WebFetch del 2026-09-07). Correccion de la ronda de
+ *   cobertura, porque la version anterior de esta entrada decia lo contrario de lo que dice la
+ *   referencia: useFirstColumnAsDomain SI figura ahi ("If set to true, the chart will treat the
+ *   column as the domain"), igual que legend.position, backgroundColor, colors, series, width y
+ *   height. La UNICA que NO figura es vAxis.format: para vAxis la referencia lista solo
+ *   direction, gridlines, logScale, maxValue, minValue, minorGridlines, textPosition, textStyle,
+ *   title, titleTextStyle y viewWindow. vAxis.format se envia igual como cinturon (no dana y los
+ *   datos de G8:R11 ya estan en #,##0.00) y es ESA la que se confirma mirando el eje en vivo, no
+ *   useFirstColumnAsDomain. La decision inline de _construirGraficoMirada ya lo decia bien; los
+ *   que mentian eran el changelog dual y HISTORIAL_DESARROLLO.md, y quedan corregidos. Una
+ *   contradiccion entre el codigo y su changelog no es cosmetica: el changelog es lo que se lee
+ *   dentro de seis meses para decidir si una opcion se puede sacar.
  * + ENTRADA DE MENU inicializarMesesYGraficoMirada() (aridad cero), con el contrato de escritura
  *   del modulo: (1) preflight por ROTULO: verificarPrecondicionesMirada re-alineado MAS C13 =
  *   titulo del grafico, K7 no vacia (la simulacion), grid hasta la fila 21 y la columna R, I3
@@ -97,14 +112,15 @@
  *   del contenido. (3) Escritura: se copia la
  *   alineacion horizontal de K7 al resto de G7:R7 (via _alineacionAplicableMirada, porque
  *   getHorizontalAlignment puede devolver 'general-right' y setHorizontalAlignment no lo
- *   acepta), se escribe G7 con _escribirFormulaMiradaVerificada (prueba "," y ";") y se replica
+ *   acepta), se escribe G7 con _escribirFormulaMiradaVerificada (prueba ";" primero -- el
+ *   separador medido -- y "," de reintento; ver la ronda de robustez) y se replica
  *   con copyTo PASTE_FORMULA -- decision inline: copyTo a secas pegaria el formato de G7 sobre
  *   K7, que lleva el color del resaltado del mes de referencia. (4) Verificacion de VALOR:
  *   getDisplayValues de G7:R7 celda a celda contra _etiquetasMesesEsperadasMirada(I2, I3);
  *   cualquier diferencia o estado no OK restaura el respaldo, verifica la restauracion, avisa
  *   con la primera diferencia y NO sigue con el grafico. (5) Grafico idempotente: primero se
  *   inserta el nuevo y SOLO si quedo insertado y verificado (rangos C7:C11 + G7:R11 y ancla
- *   14/3 releidos de sheet.getCharts()) se retiran los previos anclados en C14; nunca al reves.
+ *   14/3 releidos de sheet.getCharts()) se retiran los previos (propios por ancla o por contenido); nunca al reves.
  *   El nuevo se reconoce por getChartId (fallback documentado al ultimo anclado solo si la
  *   cantidad crecio en exactamente uno); si el nuevo tiene rangos o ancla equivocados se retira
  *   EL NUEVO y los previos sobreviven. (6) Si el grafico no aparece se dice con todas las
@@ -154,7 +170,8 @@
  *   _alineacionRestaurableMirada solo devuelve left / center / right / normal / null. T5:
  *   coherencia geometrica de las constantes y rotulos del gemelo en C8:C11 y C13. T6:
  *   MENU_CONFIG wirea la funcion nueva primero y las tres del submenu tienen aridad cero. T7:
- *   EL BANCO SE PRUEBA A SI MISMO con siete sabotajes en memoria, confirmados sobre los VALORES
+ *   EL BANCO SE PRUEBA A SI MISMO con diez sabotajes en memoria (siete en la ronda de revision,
+ *   tres mas en la de cobertura: M30, M31 y M32), confirmados sobre los VALORES
  *   que ve el modulo cargado y no sobre el texto (un "= 10;" tambien matchea otra constante):
  *   geometria pre-Fix (I2 -> E4, fila de Ingresos 8 -> 10, sufijo en false: T1 detecta el diff
  *   en $E$4 vs $I$2 y $C10/$K$10 vs $C8/$K$8, T2 detecta 'Enero' donde debia decir 'Enero 27');
@@ -162,7 +179,101 @@
  *   sobre el constructor (transponer false, ancla 13, sin rango de rotulos: T4b cae); M12 (swap
  *   de colores Ingresos <-> Capitalizacion dentro de la lista blanca: T4 cae). Un guard que no
  *   dispara no protege nada. Codigo del banco solo ASCII (acentos como escape unicode), con
- *   @lastModified. Resultado: 171 chequeos OK, 0 fallas, exit 0.
+ *   @lastModified. Resultado tras la ronda de cobertura (T8 incluido): 244 chequeos OK, 0 fallas,
+ *   exit 0.
+ * - RONDA DE ROBUSTEZ (2026-09-07), seis correcciones sobre src/07_MiradaInteranual.js, cada una
+ *   con su decision inline fechada. Ninguna cambia el contrato: todas cierran un modo de falla
+ *   silencioso. (1) FORMATO ANTES DE LA FORMULA. Se fija el formato numerico de G7:R7
+ *   (MIRADA_FORMATO_MESES = '0.###############', el patron con el que Sheets representa
+ *   "Automatico", canonico con punto decimal) ANTES del setFormula, exactamente como ya hacia la
+ *   funcion hermana inicializarMiradaInteranual. Esas celdas tenian los numeros 1..12 y Franco
+ *   los borro: su formato pudo quedar en "Texto sin formato", donde Sheets guarda la formula
+ *   como TEXTO y la muestra tal cual SIN dar error -- la cicatriz mas silenciosa que hay. Es
+ *   reversible: el respaldo ya congelo los formatos previos y _restaurarRespaldoMirada los
+ *   repone. Y si aun asi el estado queda en TEXTO, el aviso nombra la causa y el arreglo exacto
+ *   ("Formato > Numero > Automatico" sobre G7:R7) arriba de todo, en vez del generico
+ *   "TEXTO: =LET(...", que no le dice nada a nadie. (2) ORDEN DE SEPARADORES.
+ *   _escribirFormulaMiradaVerificada prueba ";" primero y "," de reintento, al reves de antes:
+ *   ";" es el
+ *   separador MEDIDO en esta planilla (las 36 formulas del gemelo lo usan), y arrancar por ","
+ *   gastaba una escritura de prueba y dejaba un logError GARANTIZADO en cada corrida sana --
+ *   ruido que ensena a ignorar el log, que es donde se leen los fallos de verdad. El contrato no
+ *   cambia (los dos separadores se prueban, el exito se declara solo por display, los dos
+ *   llamadores leen el ganador de intento.sep y no de una constante). (3) GUARD DE
+ *   mergeStrategy. Era la unica clave de la spec sin validar, y es la que se indexa contra el
+ *   enum: una clave equivocada no lanza, da undefined, y setMergeStrategy(undefined) pega los
+ *   dos rangos con el default sin decir una palabra -- las series saldrian cambiadas sin ningun
+ *   error visible. Se valida en _especificacionGraficoMirada contra MIRADA_GRAFICO_MERGE_VALIDOS
+ *   (los dos unicos miembros del enum) y otra vez en _construirGraficoMirada antes de usar el
+ *   miembro resuelto. (4) IDENTIDAD DEL GRAFICO PROPIO. _graficosPropiosMirada lo reconoce por
+ *   ancla O por contenido (los dos rangos de la spec). Un grafico se arrastra con el mouse: por
+ *   ancla sola, si Franco corria la entrada, movia el grafico y la volvia a correr, la segunda
+ *   pasada no lo reconocia, insertaba otro sobre C14 y cantaba exito con DOS graficos de la
+ *   misma cosa. getRanges() se lee dentro de un try: un grafico ajeno que no los exponga
+ *   significa "no es el propio", no un fallo. (5) restaurarFila NO LANZA. Repone alineacion y
+ *   contenido en dos try separados y devuelve siempre las dos verdades. Antes la alineacion iba
+ *   despues del contenido: si _restaurarRespaldoMirada lanzaba, el catch del llamador armaba el
+ *   objeto de fallo con alineacionNoRepuesta: null, que en el resto del codigo significa
+ *   "repuesta bien" -- un verde sobre algo que ni se habia intentado. Los dos catch del llamador
+ *   quedan como cinturon y ahora dicen "estado desconocido". (6) ETAPA DEL GRAFICO EN DOS TRY
+ *   (preparar / insertar). Con uno solo, una excepcion al armar la spec o al medir dimensiones
+ *   -- antes de haber leido un solo grafico de la hoja -- se reportaba igual como "EXCEPCION al
+ *   insertar" y el aviso afirmaba "No habia grafico previo" sin haber mirado ninguno: un rojo
+ *   que nombra mal la causa y ademas afirma de mas. previos === null es ahora un tercer estado,
+ *   distinto de cero, y el aviso lo dice ("No se llego a mirar si habia un grafico previo").
+ * + RONDA DE COBERTURA (2026-09-07). T8 del banco: la ENTRADA DE MENU ENTERA, ejecutada contra
+ *   un DOBLE de hoja en memoria, en SIETE direcciones. Era el hueco mas grande que quedaba: las
+ *   PIEZAS estaban probadas (formulas, spec, constructor) y la ORQUESTACION -- preflight,
+ *   respaldo, escritura, verificacion de valor, restauracion, grafico -- no tenia un solo
+ *   chequeo. El doble reproduce la geometria medida (I2 "Mayo", I3 2026 numerico, I4 "ARS", K7
+ *   con =I2, G7:J7 y L7:R7 vacias, C7/E7, rotulos C8:C11 y banda C13, G8:R11 con la formula del
+ *   gemelo y su valor, grid 883 x 20, mas la hoja Registros) y hace tres cosas que lo vuelven
+ *   una prueba y no un decorado: (i) EVALUA las formulas con un mini-interprete propio (LET,
+ *   MATCH, SPLIT, INDEX, DATE, EDATE, MONTH, YEAR, PROPER, RIGHT, IF, COLUMN, referencias y
+ *   operadores) que acepta UNICAMENTE ";" -- una coma fuera de comillas es parse error y la
+ *   celda queda en "#ERROR!", o sea la trampa de locale de verdad --, asi lo que se verifica es
+ *   el VALOR de la celda y nunca el texto de la formula; el interprete no reutiliza una linea
+ *   del modulo y se prueba a si mismo (ocho casos) antes de usarse como vara de medir; (ii)
+ *   modela la celda en "@" guardando la formula como TEXTO sin error y sin evaluarla; (iii) hace
+ *   LANZAR a setHorizontalAlignment(s) ante cualquier valor fuera de left/center/right/normal/
+ *   null, como el setter real. Ademas REGISTRA toda mutacion, para que "no se escribio nada" sea
+ *   una medicion y no una suposicion. Las siete direcciones: (a) verde -- los doce meses en
+ *   G7:R7 con I2 "Mayo", un chart anclado en (14,3) con los dos rangos esperados y el tamano =
+ *   suma de anchos por suma de altos MEDIDOS, logSuccess exactamente una vez, y K7 conservando
+ *   su color de resaltado y su formato (la prueba de que la replicacion fue PASTE_FORMULA);
+ *   (b) dos corridas seguidas dejan UN grafico; (c) preflight en rojo por cuatro causas
+ *   distintas (rotulo C11, banda C13, K7 vacia, I3 como texto) con CERO escrituras medidas, sin
+ *   grafico y con la causa nombrada en el aviso; (d) G7 en "Texto sin formato": el invariante
+ *   duro es que la fila nunca queda mostrando el texto de la formula ni se canta exito sobre
+ *   eso, y se acepta cualquiera de las dos salidas legitimas -- neutralizar el formato y
+ *   escribir (la que el modulo eligio en la ronda de robustez) o abortar nombrando el formato y
+ *   restaurar; (e) insertChart lanza: la fila queda escrita y verificada, el aviso dice que el
+ *   grafico no se inserto y los graficos previos SOBREVIVEN; (f) el chart insertado sale con
+ *   rangos equivocados: se retira EL NUEVO y el previo queda intacto; (g) la celda devuelve
+ *   #REF! (un error que parsea, o sea que ningun separador arregla): no se canta exito, G7:R7
+ *   vuelve EXACTAMENTE a como estaba -- formula, valor, formato y alineacion -- y el grafico
+ *   previo no se toca.
+ * + Tres sabotajes nuevos en T7, uno por cada comportamiento que T8 estrena, porque un chequeo
+ *   sin sabotaje no esta probado: M30 revierte el fix de alineacion de la ronda anterior a su
+ *   forma cruda (la matriz de getHorizontalAlignments va derecho al setter) y T8 (g) cae; M31
+ *   fuerza a ok el resultado del preflight sin tocar la llamada y T8 (c) cae con las escrituras
+ *   contadas; M32 quita el retiro de los graficos previos y T8 (b) cae con dos graficos. El de
+ *   alineacion era el que faltaba de verdad: sin guard, revertir su unico callsite dejaba los
+ *   171 chequeos en verde y _alineacionRestaurableMirada como codigo muerto que nadie extranaba.
+ *   Banco en 244 chequeos OK, 0 fallas, exit 0. devtools/probar_mirada_meses_grafico.js sube a
+ *   @version 1.2.0.
+ * * PODA DEL LITERAL DE 01_Version.js, otra vez a UN solo bloque. El merge con la sesion
+ *   paralela lo habia dejado con CINCO (v0.68.0, v0.67.1, v0.66.2, v0.66.1, v0.66.0), rompiendo
+ *   sin que nadie lo decidiera el invariante que v0.66.0 establecio y que el docstring del
+ *   propio literal promete ("solo refleja el release vigente"), bajo una decision inline que
+ *   explica por que se habia podado a uno. La poda NO pierde nada y esta MEDIDA: devtools/
+ *   verificar_cobertura_changelog.py comprobo los cinco bloques contra este archivo -- misma
+ *   version, misma fecha, cuerpo real; 0 sin cobertura, 0 flacos -- ANTES de sacarlos, que es
+ *   exactamente el uso para el que se escribio. Queda una segunda decision inline explicando que
+ *   la acumulacion vino del merge y no de una eleccion.
+ * - En el literal de v0.68.0, el PENDIENTE dejaba de usar el marcador "!" (que la leyenda del
+ *   propio docstring define como "Breaking change") y pasa a "*". No hay ningun breaking change
+ *   en este release: la entrada de menu es nueva y las dos existentes no cambiaron de firma.
  * - VERIFICACION EN SECO, todos con exit 0 medido sin pipe: node
  *   devtools/probar_mirada_meses_grafico.js; python3 devtools/verificar_sintaxis.py (46 archivos
  *   parsean, cero emojis, version coherente en las 4 fuentes, @lastModified 2026-09-07 en los

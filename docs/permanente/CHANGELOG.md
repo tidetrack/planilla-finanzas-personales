@@ -17,8 +17,14 @@ un grafico que muestre la evolucion de los ingresos, gastos fijos, variables y l
 capitalizacion. Todo como linea de rectas y que simule la informacion que aparece en G8:R11."
 
 **El modulo vuelve a apuntar a la hoja real.** `07_MiradaInteranual.js` (v0.6.0) se re-alineo a
-la geometria medida en vivo el 2026-09-07 (export de Drive del dia, coincidente con el gemelo
-`celdas.tsv` del 2026-08-18): selectores I2/I3/I4 (antes E4/F4/R4), fila de meses 7 (nueva),
+la geometria medida en vivo el 2026-09-07 (export de Drive del dia). Contra el gemelo
+`celdas.tsv` del 2026-08-18 la **estructura** coincide -- las mismas celdas en los mismos
+lugares, con las mismas formulas en G8:R11 --, pero el **contenido no coincide del todo**, y las
+dos diferencias importan: en vivo el selector I2 dice "Mayo" y en el gemelo dice "Agosto", y en
+vivo G7:J7 y L7:R7 estan **vacias** mientras el gemelo guarda ahi los numeros 1..12 (Franco los
+borro entre agosto y hoy). Por eso el gemelo no sirve como referencia de valores de la fila 7
+-- se usa solo para las formulas de G8:R11 y los rotulos -- y por eso la fila de meses es
+trabajo nuevo y no una reparacion. Lo re-alineado: selectores I2/I3/I4 (antes E4/F4/R4), fila de meses 7 (nueva),
 rotulos C8:C11 (antes C10:C12), Capitalizacion en la fila 11 (antes 14), offset contra `$K$8`
 (antes `$K$10`), banda de titulo C13 y zona del grafico C14:R21. Cada constante lleva "MEDIDO
 EN VIVO 2026-09-07" y queda dentro del modulo, como recomendo el diagnostico de v0.66.1. Con
@@ -50,25 +56,73 @@ C7:C11 y G7:R11 lado a lado como una grilla de 5 x 13 antes de transponer. La se
 modulo: preflight por rotulo (mas C11, C13, K7 no vacia, grid hasta R21, I3 numerico), respaldo
 verificado de G7:R7 (con la alineacion horizontal, repuesta via `_alineacionRestaurableMirada`:
 `general*` vuelve como `null` = reset, y una alineacion no repuesta se informa como aviso aparte,
-no como restauracion no verificada), escritura probando `,` y `;`, replicacion
+no como restauracion no verificada), escritura probando `;` y, de reintento, `,`, replicacion
 con PASTE_FORMULA para no pisar el resaltado de K7, verificacion de valor celda a celda con
 restauracion verificada ante cualquier diferencia, y grafico idempotente: primero se inserta
 el nuevo y solo si quedo insertado y verificado (rangos y ancla releidos) se retiran los
-previos anclados en C14. Si la insercion falla, el grafico anterior sobrevive. Submenu
+previos propios por ancla o por contenido. Si la insercion falla, el grafico anterior sobrevive. Submenu
 reordenado: "1. Meses y grafico (G7:R7 + C14:R21)", "2. Reescribir formulas G8:R11 (hoy
 identicas)", "Diagnosticar (hoja DEBUG)" (que ahora vuelca tambien la fila de meses, las 12
 etiquetas esperadas y la formula de mes en ambos separadores).
 
-**Verificacion en seco.** Nuevo `devtools/probar_mirada_meses_grafico.js` (171 chequeos, T1-T7
+**Verificacion en seco.** Nuevo `devtools/probar_mirada_meses_grafico.js` (244 chequeos, T1-T8
 con T4b y T4c): formulas del modulo identicas al gemelo, etiquetas en cinco casos mas seis
 entradas invalidas, formula de mes identica caracter a caracter a la dorada de la spec en ambos
 separadores, especificacion del grafico contra la PALETA extraida de `probar_shell.js` y con un
 color esperado por nombre de serie, `_construirGraficoMirada` ejecutado con un builder grabador
 (rangos, merge, transponer, encabezados, ancla y opciones iguales a la spec), dominio de la
-alineacion restaurable, coherencia geometrica, menu, y siete sabotajes en memoria que exigen
+alineacion restaurable, coherencia geometrica, menu, y diez sabotajes en memoria que exigen
 que el chequeo que protege cada cosa falle sobre el modulo roto. Los cinco gates existentes (`verificar_sintaxis`,
 `verificar_cobertura_changelog`, `probar_carga_apps_script`, `probar_claves_duplicadas`,
 `verificar_menu_mirada`) en exit 0.
+
+**Ronda de robustez.** Seis correcciones sobre el modulo, cada una con su decision inline, y
+ninguna cambia el contrato: todas cierran un modo de falla silencioso.
+
+1. **El formato numerico de G7:R7 se fija antes de la formula**, como ya hacia la funcion
+   hermana. Esas celdas tenian los numeros 1..12 y Franco los borro: si el formato quedo en
+   "Texto sin formato", Sheets guarda la formula como texto y la muestra tal cual *sin dar
+   error*. Y si aun asi el estado queda en TEXTO, el aviso nombra la causa y el arreglo exacto.
+2. **El orden de separadores pasa a `;` primero y `,` de reintento.** `;` es el medido en esta
+   planilla; arrancar por `,` gastaba una escritura de prueba y dejaba un `logError` garantizado
+   en cada corrida sana: ruido que ensena a ignorar el log.
+3. **Guard de `mergeStrategy`.** Era la unica clave de la spec sin validar, y se indexa contra el
+   enum: una clave equivocada da `undefined`, y `setMergeStrategy(undefined)` pega los rangos con
+   el default sin decir nada. Se valida en la spec y otra vez antes de usarla.
+4. **El grafico propio se reconoce por ancla O por contenido.** Un grafico se arrastra con el
+   mouse: por ancla sola, moverlo y volver a correr la entrada insertaba un segundo grafico de la
+   misma cosa y cantaba exito.
+5. **`restaurarFila` ya no lanza:** repone alineacion y contenido en dos `try` separados. Antes,
+   si la restauracion del contenido lanzaba, el objeto de fallo decia `alineacionNoRepuesta:
+   null`, que en el resto del codigo significa "repuesta bien" -- un verde sobre algo que ni se
+   habia intentado.
+6. **La etapa del grafico se parte en dos `try` (preparar / insertar).** Con uno solo, una
+   excepcion al armar la spec se reportaba como "EXCEPCION al insertar" y el aviso afirmaba "No
+   habia grafico previo" sin haber mirado ninguno. `previos === null` es ahora un tercer estado.
+
+**Ronda de cobertura.** El hueco mas grande del banco era que nunca ejecutaba la entrada de menu:
+las piezas estaban probadas y la orquestacion no. **T8** la corre entera contra un **doble de
+hoja en memoria** que reproduce la geometria medida, **evalua** las formulas con un
+mini-interprete que acepta unicamente `;` (una coma fuera de comillas es parse error: la trampa
+de locale de verdad, y asi lo que se verifica es el *valor* de la celda y no el texto de la
+formula), modela la celda en `@` guardando la formula como texto sin error, hace **lanzar** a
+`setHorizontalAlignment(s)` fuera de su dominio como el setter real, y **registra toda mutacion**
+para que "no se escribio nada" sea una medicion. Siete direcciones: (a) verde; (b) dos corridas,
+un solo grafico; (c) preflight en rojo por cuatro causas con cero escrituras medidas; (d) G7 en
+"Texto sin formato"; (e) `insertChart` lanza y los graficos previos sobreviven; (f) el chart sale
+con rangos equivocados y se retira el nuevo; (g) la celda devuelve `#REF!` y la fila vuelve
+exactamente a como estaba. Y tres sabotajes nuevos (M30, M31, M32), porque un chequeo sin
+sabotaje no esta probado: el de la alineacion era el que faltaba de verdad -- sin el, revertir su
+unico callsite dejaba los 171 chequeos en verde y el helper como codigo muerto.
+
+**Dos correcciones de documentacion.** (1) `useFirstColumnAsDomain` **si** figura en la
+referencia oficial de opciones de charts de Apps Script (verificado el 2026-09-07); la que **no**
+figura es `vAxis.format`, y es esa la que se confirma mirando el eje en vivo. La decision inline
+del modulo ya lo decia bien; los que mentian eran el changelog y `HISTORIAL_DESARROLLO.md`.
+(2) El literal `changelog` de `01_Version.js` habia vuelto a acumular cinco bloques por el merge
+con la sesion paralela, rompiendo el invariante de v0.66.0. Se poda de nuevo a uno solo, y la
+poda no pierde nada: `verificar_cobertura_changelog.py` comprobo los cinco contra
+`ZZ_Changelog.js` -- misma version, misma fecha, cuerpo real -- antes de sacarlos.
 
 **Pendiente: ejecucion en vivo.** La hoja no cambia hasta que, tras el deploy, se corra
 Tidetrack Dev > Mirada Interanual > "1. Meses y grafico (G7:R7 + C14:R21)". Ese boton pisa la
