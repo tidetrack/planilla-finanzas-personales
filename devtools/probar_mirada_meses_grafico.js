@@ -1,6 +1,6 @@
 /**
  * devtools/probar_mirada_meses_grafico.js
- * Banco de pruebas de v0.67.0 "Mirada Interanual: meses con nombre y grafico de tendencias"
+ * Banco de pruebas de v0.68.0 "Mirada Interanual: meses con nombre y grafico de tendencias"
  * (src/07_MiradaInteranual.js). Node puro: sin red, sin SpreadsheetApp.
  *
  * [CONCEPTO DE NEGOCIO]
@@ -254,7 +254,7 @@ seccion('T2. _etiquetasMesesEsperadasMirada: la gemela en JS de la formula de me
 // T3: la formula de mes, las dos variantes de separador, contra la formula DORADA de la spec
 // ============================================
 /**
- * Formula dorada: el texto de la especificacion B de v0.67.0, armado aca desde las referencias
+ * Formula dorada: el texto de la especificacion B de v0.68.0, armado aca desde las referencias
  * derivadas de las constantes del modulo y MIRADA_MESES. Es una expectativa de la spec (lo que
  * Franco pidio), no una copia del modulo: si el modulo cambia el orden de un argumento, el IF
  * del sufijo o el offset, esto lo dice con el diff de caracteres.
@@ -349,7 +349,7 @@ seccion('T3. construirFormulaMesMirada: formula dorada, balance, referencias, se
 // ============================================
 // T4: especificacion pura del grafico
 // ============================================
-// Expectativa de la spec C.5 (y del changelog v0.67.0): un color por NOMBRE de serie. La
+// Expectativa de la spec C.5 (y del changelog v0.68.0): un color por NOMBRE de serie. La
 // pertenencia a la PALETA no alcanza: un swap Ingresos <-> Capitalizacion (ambos en la lista
 // blanca) deja la leyenda contradiciendo la documentacion sin que nada lo diga (mutacion M12).
 const COLOR_ESPERADO_POR_SERIE = {

@@ -3,7 +3,7 @@
  * ===================================== * Historial descendente de cambios sincronizados al entorno Apps Script.
  * (Añadir nuevos registros arriba)
  *
- * [2026-09-07] v0.67.0 - Mirada Interanual: meses con nombre y grafico de tendencias.
+ * [2026-09-07] v0.68.0 - Mirada Interanual: meses con nombre y grafico de tendencias.
  * - QUE SE PIDIO (textual Franco, 2026-09-07): "1. En G7:R7 deberian ir los nombres de los
  *   meses que contemplen el periodo referenciado en base a lo que se haya elegido en I2, y
  *   simulado en K7. 2. En C14:R21 va un grafico que muestre la evolucion de los ingresos,
@@ -195,6 +195,89 @@
  *   modulo esta desalineado y apunta a I2/I3/I4, C8:C11 y $K$8; FUNCIONALIDADES.md ubica el
  *   filtro Proyecto en K2/L2. Lo que no cambia: el contrato de escritura, las formulas, los
  *   rangos del grafico ni el menu.
+ * - NUMERO DE RELEASE: este trabajo nacio como v0.67.0 y la sesion paralela lo dejo reservado
+ *   a proposito (ver su entrada de v0.67.1). Sube a v0.68.0 igual, y no por tramite: la rama de
+ *   Mirada se mergeo CON origin/main, asi que lo que se despliega contiene tambien v0.66.2 y
+ *   v0.67.1. Un artefacto que incluye v0.67.1 no puede rotularse v0.67.0 sin mentir, y la
+ *   planilla ya corria 0.67.1: el numero habria BAJADO. La cicatriz de la casa es exactamente
+ *   esa -- dos codigos distintos con el mismo rotulo, o un rotulo que no describe lo que hay.
+ *
+ * [2026-09-07] v0.67.1 - Plasmar avisa mejor, y llega el limpiador de Monto a Proyectar.
+ * - RENOMBRE DE LOS DOS ROTULOS, decision de Franco: "no se entiende bien cuando utilizar el
+ *   registrar y cuando el plasmar". Eran guardar y recuperar sobre la misma hoja y ninguno de
+ *   los dos nombres decia la direccion. Ahora la dicen:
+ *     "Presupuesto: guardar proyeccion del mes"   (hoja -> base)
+ *     "Presupuesto: traer proyeccion guardada"    (base -> hoja)
+ *   El renombre alcanza al menu, a los mensajes de los dos modulos, al hint del shell y a los
+ *   bancos que cruzan las rutas contra MENU_CONFIG. Lo cazo el propio banco del shell: el
+ *   primer pase renombro los .js y se olvido de UI_Shell.html, y probar_shell.js se puso rojo
+ *   porque verifica la ruta contra MENU_CONFIG en vez de contra una copia. Funciono el guard.
+ * - EL SINTOMA REAL: Franco conecto el boton de plasmar y le salio "Ninguna cuenta de
+ *   'Presupuesto' tiene un total plasmable para Agosto 2026. No se escribio nada." Correcto
+ *   pero inutil -- verificado: agosto SI tenia 64 filas en "Proyeccion" (presupuesto base
+ *   historico), pero NINGUNA de origen 'guardado' (Franco nunca corrio "Guardar Proyeccion"
+ *   para ese mes), y el mensaje no lo decia.
+ * - MENSAJE DIAGNOSTICO: cuando no hay nada plasmable, ahora distingue "el mes no tiene
+ *   ninguna fila en Proyeccion" de "el mes tiene filas, pero de otro origen" (shell,
+ *   recurrentes, presupuesto base, otros -- clasificador _origenNotaPa de
+ *   DEVTOOL_ProyeccionAbm.js). En el segundo caso cuenta por origen y nombra la ruta REAL de
+ *   menu ("tidetrack Dev > Presupuesto: guardar proyeccion del mes > 2. Aplicar", verificada TAL CUAL
+ *   contra MENU_CONFIG por el banco, no una copia) para generar lo que falta. Aplica tanto al
+ *   camino "1. Ver estado" como al de "2. Aplicar".
+ * - LA CONFIRMACION YA NO CORRE DERECHO SIN DIALOGO cuando no hay nada que pisar (pedido de
+ *   Franco, textual: "si no tiene nada, cargarlo sin problema", pero "deberia... advertir").
+ *   La confirmacion NO SE ELIMINA -- sigue pidiendo confirmar antes de escribir en la hoja --
+ *   pero deja de hablar de sobreescritura o de perdida cuando no hay ninguna: dice cuantas
+ *   celdas se van a llenar y pide "Continuar?".
+ * - BOTON NUEVO: "Presupuesto: limpiar Monto a Proyectar" (aplicarPresupuestoLimpiar, SIN
+ *   parametros, pensada para asignarse a un dibujo de la hoja "Presupuesto"). Pedido textual
+ *   de Franco: "deberia existir un boton que limpie los montos a proyectar." Vacia TODAS las
+ *   celdas de K/O/S que tengan contenido; antes de borrar cuenta cuantas celdas y por cuanto
+ *   y pide confirmacion explicita (borrar trabajo manual sin avisar seria el peor defecto
+ *   posible); verifica por relectura y "3. Revertir" repone el estado previo exacto,
+ *   protegiendo una edicion manual posterior -- mismo patron que Sembrar y Plasmar. Modulo
+ *   nuevo: src/DEVTOOL_PresupuestoLimpiar.js.
+ * - RESPALDO DEL LIMPIADOR: PropertiesService, celda suelta (PL_PROP_PREVIOS), NO la boveda de
+ *   18_RespaldoService.js -- el mismo argumento, verbatim, que ya dejo por escrito Plasmar:
+ *   la boveda esta atada a la geometria de RANGES.REGISTROS (una banda contigua de 12
+ *   columnas por fila) y "Monto a Proyectar" son tres columnas sueltas sin esa forma. Queda
+ *   dejado explicito en la cabecera del modulo nuevo como una desviacion consciente del
+ *   pedido original, que nombraba la boveda.
+ * - Preflight del limpiador MAS ANGOSTO que el de Sembrar/Plasmar a proposito: no valida
+ *   PM_SELECTORES ni los rotulos de cuenta (no los lee); SI valida el titulo de la hoja, los
+ *   tres titulos "Monto a Proyectar" (K7/O7/S7) y que la zona K/O/S este libre de formulas --
+ *   si encuentra una, aborta sin tocar nada.
+ * - Bancos: devtools/probar_presupuesto_plasmar.js extendido (13 secciones: el mensaje
+ *   diagnostico en sus dos casos, la confirmacion breve sin dialogo eliminado, y la ruta de
+ *   menu cruzada contra MENU_CONFIG) y devtools/probar_presupuesto_limpiar.js nuevo (mes sin
+ *   nada que limpiar, limpiar con celdas ocupadas, revertir protegiendo una edicion
+ *   posterior, revertir con la hoja ya vacia, preflight).
+ *
+ * [2026-09-07] v0.66.2 - Plasmar: la proyeccion guardada vuelve a las columnas manuales.
+ * - La operacion INVERSA de aplicarGuardarProyeccion, pedida por Franco: trae de la hoja-BD
+ *   Proyeccion lo del mes elegido y lo escribe en las columnas "Monto a proyectar" (K/O/S).
+ *   Modulo propio src/DEVTOOL_PresupuestoPlasmar.js; funcion asignable a un dibujo:
+ *   aplicarPresupuestoPlasmar.
+ * - DECISION DE FRANCO, textual: "Solo lo manual. Lo proyectado no." Se trae UNICAMENTE el
+ *   origen 'guardado'. La primera version traia los cinco y el se lo corrigio.
+ * - Y no es circular, que era MI objecion y estaba mal: plasmar lo guardado es RESTAURAR y
+ *   COPIAR HACIA ADELANTE -- recuperar la hoja despues de limpiarla, o arrancar septiembre
+ *   desde lo presupuestado en agosto y editar la diferencia. Por eso el mes lo elige el
+ *   operador y no es siempre el corriente.
+ * - El criterio de fondo es de producto y es de Franco: K/O/S son su superficie de trabajo
+ *   MANUAL. Volcar ahi lo que el sistema infirio (recurrentes, presupuesto base) borraria la
+ *   linea entre lo que el decidio y lo que se dedujo, y despues no habria como distinguirlos.
+ *   Los recurrentes ya se ven en Proyecciones Elaboradas.
+ * - SU CORRECCION ELIMINO UN MODO DE FALLA, no solo simplifico. Con los cinco origenes,
+ *   "Guardar Proyeccion" no retira lo ajeno: replasmar y volver a guardar contaba esa porcion
+ *   DOS VECES en el Tablero, y hubo que documentarlo como advertencia. Con solo 'guardado',
+ *   re-guardar retira exactamente esas filas y la clase de bug desaparece. El aviso de doble
+ *   conteo se retiro entero por quedar sin sentido.
+ * - La advertencia que pidio Franco: antes de escribir cuenta cuantas celdas de K/O/S YA
+ *   tienen monto, dice cuanto se pierde y cuanto va a quedar valiendo, pide SI/NO y respalda
+ *   por la boveda (nunca una hoja por operacion). Sin conversion silenciosa de monedas: si
+ *   una cuenta mezcla monedas o difiere de la del presupuesto, esa celda NO se escribe y se
+ *   reporta como anomalia.
  *
  * [2026-09-07] v0.66.1 - El menu Dev deja de ofrecer dos botones que revientan al clic.
  * - verificarPrecondicionesMirada(ss, sheet) y auditarBalanceFormulaMirada(formula) exigian
@@ -315,6 +398,46 @@
  * - Nuevo devtools/verificar_menu_mirada.js: banco de regresion (node, sin stubs de
  *   SpreadsheetApp) que fija esta correccion -- falla si alguna de las dos vuelve a wireearse
  *   directo al menu, o si cualquier funcion que quede en el submenu deja de tener aridad cero.
+ * [2026-09-07] v0.66.0 - Plasmar trae la proyeccion elaborada de vuelta a Monto a Proyectar.
+ * - DEVTOOL_PresupuestoPlasmar.js (nuevo): la VUELTA de "Guardar Proyeccion". Encargo textual
+ *   de Franco: aplicarGuardarProyeccion ya lleva K/O/S ("Monto a Proyectar") a la BD
+ *   "Proyeccion"; faltaba el camino inverso, plasmar en K/O/S lo que ya quedo elaborado en la
+ *   BD para el periodo vivo de J2/J3, con advertencia si hay informacion que se pueda
+ *   sobreescribir.
+ * - DECISION DE PRODUCTO, CORREGIDA POR FRANCO EL MISMO DIA, TEXTUAL: "Solo lo manual. Lo
+ *   proyectado no." Se trae UNICAMENTE el origen 'guardado' -- lo que ya salio de estas mismas
+ *   columnas K/O/S via aplicarGuardarProyeccion. NO recurrentes, NO presupuesto base, NO
+ *   proyecciones sueltas del shell, NO origen no reconocido. La primera version de esta misma
+ *   tarde habia elegido sumar los CINCO origenes que DEVTOOL_ProyeccionAbm.js distingue
+ *   (guardado, shell, recurrentes, base, otros), leyendo el pedido como "traer todo lo
+ *   proyectado"; Franco corrigio la lectura: plasmar solo el guardado NO es circular, es
+ *   RESTAURAR y COPIAR HACIA ADELANTE (recuperar la hoja tras limpiarla, o arrancar un mes
+ *   desde lo presupuestado el anterior y editar la diferencia), y "Monto a Proyectar" (K/O/S)
+ *   es la superficie de trabajo MANUAL de Franco -- volcar ahi lo que el sistema infirio
+ *   borraria la linea entre lo decidido y lo deducido.
+ * - LA CORRECCION ELIMINA UN MODO DE FALLA, no solo simplifica: la version de los cinco
+ *   origenes necesitaba un aviso de "riesgo de doble conteo" porque "Guardar Proyeccion" nunca
+ *   retira shell/recurrentes/otros de la BD, y volver a guardar un mes ya plasmado los hubiera
+ *   contado dos veces en el Tablero. Con solo 'guardado', "Guardar Proyeccion" retira
+ *   EXACTAMENTE esas filas al re-guardar el mismo mes (su propia decision 4) -- la clase de bug
+ *   desaparece en vez de mitigarse. El aviso (_avisoDobleConteoPp) se retira entero del modulo.
+ * - MONEDA SIN CONVERSION SILENCIOSA (sigue vigente con un solo origen): si una cuenta mezcla
+ *   monedas -- por ejemplo, dos guardados del mismo mes con J4 distinto -- o esta en una moneda
+ *   distinta de la del presupuesto (J4), esa celda no se escribe -- se reporta como anomalia.
+ * - La advertencia central del encargo: la confirmacion cuenta EXACTO cuantas celdas ya tienen
+ *   monto, cuanto se pierde y cuanto van a quedar valiendo, y solo aparece si hay algo real que
+ *   sobreescribir.
+ * - Mismo patron de escritura que DEVTOOL_PresupuestoSembrar.js (valores nunca formulas,
+ *   verificacion por relectura, reversion de un nivel que protege una edicion manual
+ *   posterior), reimplementado en modulo propio: la fuente de datos es la BD "Proyeccion"
+ *   clasificada por DEVTOOL_ProyeccionAbm.js, de otra familia que J/N/R en vivo.
+ * - MENU_CONFIG.DEV_ITEMS suma "Presupuesto: traer proyeccion guardada".
+ * - devtools/probar_presupuesto_plasmar.js (nuevo, reescrito tras la correccion): mutaciones
+ *   dirigidas sobre suma dentro de 'guardado' por cuenta, celdas ya cargadas, cuenta con dos
+ *   guardados en monedas distintas, moneda distinta, cuenta inexistente, filas de
+ *   shell/recurrentes/base/otros presentes en la BD del mes que NO entran al plan ni a los
+ *   totales, mes vacio, confirmacion condicionada, verificacion con reversion de lote y el
+ *   deshacer protegiendo ediciones manuales posteriores.
  *
  * [2026-09-07] v0.65.1 - El texto funcional mas chico sube al piso de legibilidad.
  * - Cuatro rotulos del shell vivian en 10px: la pastilla de estado de una tarjeta, la unidad
@@ -771,7 +894,7 @@
  *   comentario de MENU_CONFIG lo dice ("por ahora en tidetrack dev, luego va a tener su
  *   boton"). Y es el mensaje que mas se lee de toda la vista, porque "todo base, cero
  *   guardado" es el estado real de produccion. Ahora dicen la ruta literal y viva: menu
- *   tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar. Es el mismo defecto que
+ *   tidetrack Dev > Presupuesto: guardar proyeccion del mes > 2. Aplicar. Es el mismo defecto que
  *   esta version acababa de arreglar en el toast de 14_EventHandlers.js.
  * - EL ACORDEON Y LA EDICION DE MONTO NO SE PODIAN OPERAR CON TECLADO. La cabecera de cada
  *   periodo era un <div onclick> y el monto editable un <span onclick>: sin tabindex, sin
@@ -1790,7 +1913,7 @@
  *   (PC_TITULO_PROYECTAR, la MISMA constante de DEVTOOL_PresupuestoResumen.js -- nunca una
  *   segunda con un valor "parecido", la leccion de v0.46.0), sin celdas en error en la banda de
  *   datos, y que K8/O8/S8/W8 tengan formula.
- * + Solo menu tidetrack Dev ("Presupuesto: guardar proyeccion": estado/aplicar/revertir), CERO
+ * + Solo menu tidetrack Dev ("Presupuesto: guardar proyeccion del mes": estado/aplicar/revertir), CERO
  *   botones en la hoja "Presupuesto" -- pedido explicito de Franco: "por ahora... luego va a
  *   tener su boton".
  * + devtools/probar_presupuesto_guardar.js (nuevo, banco 13): siete secciones. La mas importante

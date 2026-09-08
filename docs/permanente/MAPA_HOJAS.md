@@ -26,7 +26,7 @@ Registro canonico de todas las hojas de la planilla con su proposito y layout.
 | Presupuesto | Presupuesto por composicion (historico + presupuestado) | Esqueleto sin motor (ver FUNCIONALIDADES 03) |
 | Cargas | Carga de movimientos en lotes de 15 + vista ultimos 15 | Produccion |
 | Plan de Cuentas | Catalogo maestro: 5 bloques + columna S de consolidacion | Produccion |
-| Mirada Interanual | Matriz conceptos x 12 meses (ventana movil) + fila de meses con nombre + grafico de tendencias | Funciona; script re-alineado en v0.67.0, fila de meses y grafico pendientes de ejecutar en vivo (ver FUNCIONALIDADES 06) |
+| Mirada Interanual | Matriz conceptos x 12 meses (ventana movil) + fila de meses con nombre + grafico de tendencias | Funciona; script re-alineado en v0.68.0, fila de meses y grafico pendientes de ejecutar en vivo (ver FUNCIONALIDADES 06) |
 | Registros | BD transaccional de movimientos (ledger) | Produccion |
 | Tipos de Cambio | BD de cotizaciones diarias (4 monedas) | Produccion (FX sin filas desde 2026-08-13: diagnosticar) |
 

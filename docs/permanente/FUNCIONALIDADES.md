@@ -219,22 +219,22 @@ Resumen de categorias con vision interanual y tendencias.
 decorativo; medido en vivo 2026-09-07, antes documentado aca como M2); tabla
 C7:R11 (conceptos x 12 meses; columna E = total interanual por concepto; fila 11 =
 Capitalizacion). Fila 7 = nombres de mes de cada columna, generados por script desde I2/I3
-(v0.67.0: formula LET en G7:R7 con offset contra K7, sufijo " YY" cuando el anio difiere de
+(v0.68.0: formula LET en G7:R7 con offset contra K7, sufijo " YY" cuando el anio difiere de
 I3; hoy K7 tiene la simulacion `=I2` y el resto esta vacio hasta correr el boton). Banda de
 titulo C13:R13 ("Evolucion de Tendencias") y zona de grafico C14:R21, generada por script
-(v0.67.0: grafico de lineas rectas con las cuatro series de G8:R11).
+(v0.68.0: grafico de lineas rectas con las cuatro series de G8:R11).
 
 | Funcionalidad | Estado | Detalle |
 |---|---|---|
 | 1. Resumen de categorias en 12 meses | FUNCIONA | 36 formulas LET/SUMPRODUCT sobre Registros. OJO: la ventana NO es anio calendario sino movil (mes de referencia -4 a +7, columna K = mes seleccionado). |
 | 2. Capitalizacion | PARCIAL | NO se suma del ledger: es el residual Ingresos - Gastos Fijos - Gastos Variables (puede dar negativa). Es "capacidad de capitalizacion", no capitalizacion efectiva. |
-| 3. Tendencias (graficos) | CODIGO LISTO, PENDIENTE EN VIVO | v0.67.0: el script inserta en C14:R21 un grafico de lineas rectas (Ingresos, Gastos Fijos, Gastos Variables, Capitalizacion) sobre C7:C11 + G7:R11, idempotente. Los exports no incluyen charts: se verifica mirando la hoja despues de correr el boton 1. |
+| 3. Tendencias (graficos) | CODIGO LISTO, PENDIENTE EN VIVO | v0.68.0: el script inserta en C14:R21 un grafico de lineas rectas (Ingresos, Gastos Fijos, Gastos Variables, Capitalizacion) sobre C7:C11 + G7:R11, idempotente. Los exports no incluyen charts: se verifica mirando la hoja despues de correr el boton 1. |
 | 4. Filtro por periodo | FUNCIONA | I2/I3 mueven la ventana. |
 | 5. Filtro por moneda | NO VERIFICADO | I4 existe y la arquitectura de formula incluye conversion, pero el tramo quedo truncado en el export. |
 | 6. Filtro por proyecto | PENDIENTE | K2/L2 (Proyecto / 'Todos') es decorativo: ninguna formula lo referencia. |
 
 **Relacion con el script**: es la unica hoja GENERADA por script
-(`07_MiradaInteranual.js`). En v0.67.0 el modulo quedo RE-ALINEADO a la geometria real medida
+(`07_MiradaInteranual.js`). En v0.68.0 el modulo quedo RE-ALINEADO a la geometria real medida
 en vivo el 2026-09-07 (selectores I2/I3/I4, rotulos C8:C11, fila de meses 7, banda C13, zona
 de grafico C14:R21) y su preflight vuelve a pasar. Las formulas de G8:R11 que la hoja guarda
 son IDENTICAS a las que construye el modulo (probado por `devtools/probar_mirada_meses_grafico.js`,
@@ -359,7 +359,7 @@ silencio). En orden sugerido:
 3. **Presupuesto**: cablear monto historico promedio (contrato del 2026-08-13 en los
    DEVTOOL), poblar cuentas desde el Plan, conectar los selectores, decidir la base de los
    porcentajes (E16 vs $E$9), y recien despues conectar Inicio (D19:G22) y Tablero (N9:N11).
-4. **Mirada Interanual**: constantes MIRADA_* re-alineadas en v0.67.0 (HECHO). Queda:
+4. **Mirada Interanual**: constantes MIRADA_* re-alineadas en v0.68.0 (HECHO). Queda:
    ejecutar en vivo "1. Meses y grafico (G7:R7 + C14:R21)" tras el deploy y mirar G7:R7, K7 y
    el grafico; cablear o quitar el filtro Proyecto (K2/L2, decorativo; la contradiccion con la
    version anterior de este doc, que decia M2, se cerro el 2026-09-07 a favor del gemelo y de la

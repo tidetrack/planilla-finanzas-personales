@@ -80,7 +80,7 @@ Modulos de `src/` (17 archivos):
 | `02_Utils.js` | Logging (logError, logInfo, logSuccess), helpers |
 | `03_SheetManager.js` | Capa de acceso a datos: getTableData, appendRow, updateRow, deleteRow |
 | `06_RegistrosService.js` | Pipeline de procesamiento batch (procesarCargas, appendMassive) |
-| `07_MiradaInteranual.js` | Fila de meses (G7:R7), formulas LET/SUMPRODUCT (G8:R11) y grafico de tendencias (C14:R21) de la hoja Mirada Interanual + diagnostico. Release v0.8.2 en produccion el 2026-06-22 (entonces G10:R14); se adopto al repo en Fase 0; re-alineado a la geometria real en v0.67.0 |
+| `07_MiradaInteranual.js` | Fila de meses (G7:R7), formulas LET/SUMPRODUCT (G8:R11) y grafico de tendencias (C14:R21) de la hoja Mirada Interanual + diagnostico. Release v0.8.2 en produccion el 2026-06-22 (entonces G10:R14); se adopto al repo en Fase 0; re-alineado a la geometria real en v0.68.0 |
 | `11_UIService.js` | Endpoints para google.script.run (ABM forms) |
 | `12_MenuService.js` | Menu personalizado "Tidetrack" |
 | `13_NavigationService.js` | Navegacion entre hojas con toast |
@@ -183,7 +183,7 @@ El resolver de alias de `00_Config.js` sigue vigente: `SHEETS.TIPOS_CAMBIO` acep
 4. Registros finales se appendean a "Registros" (B:M, datos desde fila 7) con TCs congelados y la hoja se ordena por fecha descendente.
 5. Las vistas (Inicio, Tablero, Cargas, Mirada Interanual) agregan directo sobre Registros via QUERY, cruzando el Medio contra Plan de Cuentas L:N y P:Q. (Las hojas motor CALCU/ANUAL de la era v0.3 ya no existen.)
 
-**Mirada Interanual (07_MiradaInteranual.js):** escribia por codigo las formulas LET/SUMPRODUCT de la hoja "Mirada Interanual". Trampa de locale documentada en el modulo: la planilla esta en espanol (separador `;`), por eso las formulas se construyen en sintaxis en-US con SPLIT de string en vez de arrays literales (que `setFormula` no traduce). **Re-alineado en v0.67.0** (selectores I2/I3/I4, rotulos C8:C11, offset `$K$8`): las constantes MIRADA_* viven dentro del modulo, cada una con "MEDIDO EN VIVO 2026-09-07"; el preflight vuelve a pasar sobre la hoja real y las formulas de G8:R11 que la hoja guarda son identicas a las que construye el modulo (banco `devtools/probar_mirada_meses_grafico.js`, T1). La fila de meses G7:R7 y el grafico C14:R21 se generan con Tidetrack Dev > Mirada Interanual > "1. Meses y grafico (G7:R7 + C14:R21)", pendiente de ejecucion en vivo (FUNCIONALIDADES.md, seccion 06).
+**Mirada Interanual (07_MiradaInteranual.js):** escribia por codigo las formulas LET/SUMPRODUCT de la hoja "Mirada Interanual". Trampa de locale documentada en el modulo: la planilla esta en espanol (separador `;`), por eso las formulas se construyen en sintaxis en-US con SPLIT de string en vez de arrays literales (que `setFormula` no traduce). **Re-alineado en v0.68.0** (selectores I2/I3/I4, rotulos C8:C11, offset `$K$8`): las constantes MIRADA_* viven dentro del modulo, cada una con "MEDIDO EN VIVO 2026-09-07"; el preflight vuelve a pasar sobre la hoja real y las formulas de G8:R11 que la hoja guarda son identicas a las que construye el modulo (banco `devtools/probar_mirada_meses_grafico.js`, T1). La fila de meses G7:R7 y el grafico C14:R21 se generan con Tidetrack Dev > Mirada Interanual > "1. Meses y grafico (G7:R7 + C14:R21)", pendiente de ejecucion en vivo (FUNCIONALIDADES.md, seccion 06).
 
 ## Decisiones Arquitectonicas Vigentes (ADRs)
 

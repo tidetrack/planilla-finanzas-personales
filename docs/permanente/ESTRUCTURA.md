@@ -146,7 +146,7 @@ planilla-finanzas-personales/
 │ ├── diff_snapshots.py # Prueba de no-daño: compara dos snapshots y falla si cambió una fórmula
 │ ├── verificar_cobertura_changelog.py # Gate del historial, cableado en sync_targets.command (corre en cada despliegue junto a verificar_sintaxis.py): todo release del changelog embebido de 01_Version.js tiene que existir en ZZ_Changelog.js con la misma versión y fecha, y con cuerpo real (no un stub). Su verde fue la licencia para podar el literal en v0.66.0
 │ ├── probar_formulerio.js # Banco de pruebas: corre las transformaciones del formulerío contra las fórmulas reales del gemelo ANTES de deployar
-│ ├── probar_mirada_meses_grafico.js # Banco de Mirada Interanual (v0.67.0): fórmulas del módulo idénticas al gemelo, etiquetas de mes, fórmula de mes idéntica a la dorada de la spec en ambos separadores, especificación del gráfico contra la PALETA y por nombre de serie, constructor del chart ejecutado con stubs grabadores, dominio de la alineación restaurable, menú; se prueba a sí mismo con siete sabotajes del módulo en memoria
+│ ├── probar_mirada_meses_grafico.js # Banco de Mirada Interanual (v0.68.0): fórmulas del módulo idénticas al gemelo, etiquetas de mes, fórmula de mes idéntica a la dorada de la spec en ambos separadores, especificación del gráfico contra la PALETA y por nombre de serie, constructor del chart ejecutado con stubs grabadores, dominio de la alineación restaurable, menú; se prueba a sí mismo con siete sabotajes del módulo en memoria
 │ ├── probar_riqueza.js # Banco de pruebas de la lista blanca de riqueza y la columna Tipo
 │ └── probar_stock_flujo.js # Banco de pruebas de las fórmulas de saldo y del Flujo Cotidiano
 │
@@ -205,7 +205,7 @@ El pipeline estándar para cerrar cualquier feature:
 | `02_Utils.js` | Activo | v0.1.0 |
 | `03_SheetManager.js` | Activo - optimizado en v0.4.9 | v0.1.0 |
 | `06_RegistrosService.js` | Activo - pipeline batch procesarCargas() | v0.5.0 |
-| `07_MiradaInteranual.js` | Activo - re-alineado a la hoja real en v0.67.0: fila de meses, fórmulas G8:R11 y gráfico de tendencias, con contrato de escritura (preflight por rótulo, respaldo verificado, verificación de valor) | v0.8.2 |
+| `07_MiradaInteranual.js` | Activo - re-alineado a la hoja real en v0.68.0: fila de meses, fórmulas G8:R11 y gráfico de tendencias, con contrato de escritura (preflight por rótulo, respaldo verificado, verificación de valor) | v0.8.2 |
 | `11_UIService.js` | Activo - endpoints ABM en v0.4.7 | v0.4.0 |
 | `12_MenuService.js` | Activo | v0.4.0 |
 | `13_NavigationService.js` | Activo | v0.4.0 |

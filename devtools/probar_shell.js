@@ -1402,8 +1402,8 @@ ok(!/<th>Categoria<\/th>/.test(HTML),
 // verifica contra el submenu vivo, no contra el texto de memoria.
 {
     const subGuardar = ctx.MENU_CONFIG.DEV_ITEMS.filter(
-        (x) => x.submenu === 'Presupuesto: guardar proyeccion')[0];
-    ok(!!subGuardar, 'el submenu "Presupuesto: guardar proyeccion" existe en MENU_CONFIG');
+        (x) => x.submenu === 'Presupuesto: guardar proyeccion del mes')[0];
+    ok(!!subGuardar, 'el submenu "Presupuesto: guardar proyeccion del mes" existe en MENU_CONFIG');
     const rutaViva = ctx.MENU_CONFIG.DEV_MENU + ' > ' + subGuardar.submenu + ' > ' +
         subGuardar.items.filter((i) => /Aplicar/.test(i.name || ''))[0].name;
     ok(HTML.indexOf(rutaViva) !== -1,

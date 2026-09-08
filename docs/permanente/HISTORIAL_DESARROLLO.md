@@ -6,7 +6,7 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
-## 2026-09-07 - Mirada Interanual: meses con nombre y grafico de tendencias (v0.67.0)
+## 2026-09-07 - Mirada Interanual: meses con nombre y grafico de tendencias (v0.68.0)
 
 ### Que se pidio
 
@@ -179,6 +179,101 @@ FUNCIONALIDADES.md dejan de contradecir al codigo (tabla de modulos, seccion 5, 
 @see devtools/probar_mirada_meses_grafico.js
 @see docs/permanente/FUNCIONALIDADES.md (seccion 06)
 @see docs/permanente/celdas.tsv
+### Nota sobre el numero de release
+
+Este trabajo nacio como v0.67.0 y la sesion paralela dejo ese numero reservado a proposito
+(lo dice su propia entrada de v0.67.1). Sube igual a **v0.68.0**, y no por tramite: la rama de
+Mirada se mergeo con `origin/main`, de modo que el artefacto que se despliega contiene tambien
+v0.66.2 y v0.67.1. Rotular v0.67.0 a un codigo que incluye v0.67.1 seria mentir, y ademas la
+planilla ya corria 0.67.1: el numero habria bajado. Es la cicatriz conocida del repo -- dos
+codigos distintos con el mismo rotulo, o un rotulo que no describe lo que hay.
+
+## 2026-09-07 - Plasmar avisa por que no hay nada, y llega el limpiador de Monto a Proyectar (v0.67.1)
+
+### Que se pidio
+
+Franco conecto el boton de "Plasmar" (`aplicarPresupuestoPlasmar`, v0.66.2) y le salio:
+"Ninguna cuenta de 'Presupuesto' tiene un total plasmable para Agosto 2026. No se escribio
+nada." El mensaje era correcto pero inutil -- verificado: agosto SI tenia proyecciones en la
+hoja-BD "Proyeccion" (64 filas del presupuesto base), pero NINGUNA de origen 'guardado', que es
+lo unico que Plasmar trae desde la correccion de Franco del release anterior ("Solo lo manual.
+Lo proyectado no."). El mensaje no distinguia esas dos situaciones. Tres pedidos textuales:
+(1) "la plasmada deberia auditar si ya existe una proyeccion y si existe advertir que se
+modifica"; (2) "si no tiene nada, cargarlo sin problema"; (3) "deberia existir un boton que
+limpie los montos a proyectar."
+
+### El diagnostico y las tres decisiones
+
+**Mensaje diagnostico (pedido 1).** `_lineasNadaQuePlasmarPp` (nueva, compartida por
+`estadoPresupuestoPlasmar` y `aplicarPresupuestoPlasmar`) distingue, cuando no hay nada
+plasmable: (a) el mes no tiene NINGUNA fila en "Proyeccion" para ese periodo -- se dice eso y
+listo -- de (b) el mes SI tiene filas, pero de otro origen (shell/recurrentes/presupuesto
+base/otros, el clasificador `_origenNotaPa` de `DEVTOOL_ProyeccionAbm.js`, que ya los
+distingue). En el caso (b) se cuenta por origen y se nombra, LITERAL, la ruta de menu para
+generar lo que falta: "tidetrack Dev > Presupuesto: guardar proyeccion > 2. Aplicar" -- sale de
+`MENU_CONFIG`, no de una copia; `devtools/probar_presupuesto_plasmar.js` la cruza contra el
+config real, mismo criterio que ya usa `devtools/probar_proyeccion_abm.js` para
+`PA_MSJ_NO_EDITABLE` ("un banco con su propia copia de una ruta miente").
+
+**Confirmacion que ya no desaparece (pedido 2).** Se verifico el flujo real: cuando ninguna
+celda de K/O/S tenia contenido previo, `aplicarPresupuestoPlasmar()` corria DERECHO, sin
+ningun dialogo -- el codigo NO se adaptaba, corria de largo. Se cambia a que la confirmacion
+SIGA apareciendo (nunca se elimina: la operacion sigue escribiendo en la hoja de Franco), pero
+deja de hablar de sobreescritura o de perdida cuando no hay ninguna: dice cuantas celdas se
+van a llenar y pide "Continuar?". Sembrar y Guardar (los modulos hermanos) NO se tocan: siguen
+corriendo derecho en su caso simetrico, a proposito -- el pedido de Franco fue puntual sobre
+Plasmar.
+
+**El limpiador (pedido 3).** Modulo nuevo, `DEVTOOL_PresupuestoLimpiar.js`, con
+`aplicarPresupuestoLimpiar()` SIN PARAMETROS (pensada para asignarse a un dibujo de la hoja
+"Presupuesto"). Vacia toda celda de K/O/S que tenga contenido; antes de borrar cuenta cuantas
+celdas y por cuanto suman, por bloque, y pide confirmacion explicita SIEMPRE que haya algo que
+borrar (a diferencia de Plasmar, aca toda celda del plan por definicion tiene un valor: no
+existe el caso "sin perdida"). Preflight angosto -- mismos rotulos que Sembrar/Plasmar, cero
+formulas en la zona -- y respaldo/reversion con el mismo patron de celda suelta que sus dos
+hermanos (`PropertiesService`, `{celda, valorPrevio}`, protege una edicion manual posterior).
+
+DESVIACION DEL ENCARGO ORIGINAL, dejada explicita: el pedido nombraba la boveda de
+`18_RespaldoService.js` como mecanismo de respaldo. Se evaluo y se descarto por el mismo motivo
+que ya documento Plasmar al tomar la misma decision: `guardarRespaldoFilas` (la unica funcion
+publica de esa boveda) esta atada a la geometria de `RANGES.REGISTROS` -- una banda contigua de
+12 columnas por numero de fila --, y "Monto a Proyectar" son tres columnas sueltas (K/O/S) en
+tres bloques de filas independientes, sin esa forma. Forzarla exigiria inventar una nocion de
+"fila" que no corresponde a nada real. El patron de celda suelta que ya usan Sembrar y Plasmar
+cumple igual el fondo del pedido -- nunca crear una hoja por operacion -- y es, ademas, el
+precedente YA establecido en el repo para esta clase exacta de escritura.
+
+### Que se escribio
+
+- `src/DEVTOOL_PresupuestoPlasmar.js`: `_otrosOrigenesPeriodoPp` (cuenta filas por origen
+  distinto de 'guardado'), `_lineasNadaQuePlasmarPp` (mensaje compartido), `PP_ETIQUETA_ORIGEN`
+  (rotulos legibles). `aplicarPresupuestoPlasmar()` gana una rama `else` que muestra la
+  confirmacion breve cuando `aPisar.length === 0`. Version del modulo: 0.67.1.
+- `src/DEVTOOL_PresupuestoLimpiar.js` (nuevo): `estadoPresupuestoLimpiar()`,
+  `aplicarPresupuestoLimpiar()`, `revertirPresupuestoLimpiar()`, `_preflightPl`,
+  `_planLimpiarPl`, `_monedaVivaPl`.
+- `MENU_CONFIG.DEV_ITEMS` (`00_Config.js`) suma "Presupuesto: limpiar Monto a Proyectar" al
+  lado de "Presupuesto: plasmar proyeccion elaborada"; se corrigio ademas un comentario
+  desactualizado en la entrada de Plasmar que todavia describia la primera version descartada
+  (sumar los cinco origenes) en vez del comportamiento real desplegado (solo 'guardado').
+- `devtools/probar_presupuesto_plasmar.js`: extendido a 13 secciones -- el mensaje diagnostico
+  en sus dos casos (con conteo por origen), la confirmacion breve reemplazando el "sin dialogo"
+  anterior (incluido el camino de cancelar), y la ruta de menu cruzada contra `MENU_CONFIG`.
+- `devtools/probar_presupuesto_limpiar.js` (nuevo, 9 secciones): preflight, plan que ignora
+  celdas vacias, hoja ya vacia sin dialogo, confirmacion con numeros exactos, cancelar sin
+  borrar, aplicar feliz con respaldo, verificacion que falla revierte el lote, revertir
+  protegiendo una edicion posterior, moneda informativa sin abortar.
+- Version: v0.67.1 (v0.67.0 quedo reservada para el trabajo en paralelo de Mirada Interanual).
+
+### Que NO hace
+
+El limpiador no toca J/N/R, la columna V/W, las tablas resumen, el selector de Modo, "Guardar
+Proyeccion" ni la hoja-BD "Proyeccion" -- nunca la abre. No convierte ni valida moneda: el
+total que muestra es informativo. No limpia una celda que ya esta vacia. Plasmar sigue sin
+traer shell/recurrentes/presupuesto base/otros (eso no se reabrio: es la correccion de Franco
+del release anterior). No se toco `src/07_MiradaInteranual.js` ni el submenu de Mirada en
+`00_Config.js`: otra sesion los esta editando en paralelo. No se deployo: cambio de codigo
+puro, pendiente de `sync_targets.command` por pedido explicito de Franco.
 
 ---
 
@@ -278,6 +373,76 @@ verde antes de commitear.
 @see devtools/verificar_menu_mirada.js
 @see docs/permanente/FUNCIONALIDADES.md (seccion 06)
 @see docs/permanente/celdas.tsv
+## 2026-09-07 - "Plasmar": la BD de Proyeccion vuelve a Monto a Proyectar (v0.66.0)
+
+### Que se pidio
+
+Franco, textual: "aplicarGuardarProyeccion deberia guardar la informacion registrada
+manualmente en las columnas de 'Monto a proyectar' y registra todo en la BD. Luego, cuando
+colocamos Proyecciones Elaboradas, estaria buenisimo poder 'plasmar' los montos proyectados en
+estas columnas mas 'manuales'. Obvio, deberia haber una advertencia a ejecutar esa funcion dado
+a que si ya hay informacion cargada, podria sobreescribirse esa informacion." La mitad
+"K/O/S -> BD" ya existia (`DEVTOOL_PresupuestoGuardar.js`, v0.50.0); faltaba la vuelta.
+
+### La decision de producto
+
+Se evaluaron tres lecturas: (a) traer solo el grupo "guardado a mano" (circular: es lo mismo
+que salio de esas columnas), (b) sumar por cuenta TODO lo proyectado del mes a traves de los
+cinco origenes que `DEVTOOL_ProyeccionAbm.js` ya distingue (guardado, shell, recurrentes,
+presupuesto base, otros), o (c) dejar elegir origenes. Se eligio (b): los RECURRENTES se
+proyectan solos a la BD "Proyeccion" y nunca aparecen en la hoja de trabajo -- sumarlos ahi los
+hace visibles por primera vez, que es el beneficio real que Franco buscaba. La totalizacion
+por cuenta replica el mismo criterio que `_totalesPorBloquePa` (ProyeccionAbm.js): se suma el
+monto crudo agrupado por el bloque que deriva `tipoCuenta`, sin aplicar el signo por tipo que
+usa el ledger real -- no se inventa una tercera regla de totalizado.
+
+Moneda: "Monto a Proyectar" es una sola moneda por hoja (el selector J4). Si una cuenta mezcla
+monedas para el periodo, o esta proyectada en una moneda distinta de la del presupuesto, esa
+celda directamente NO se escribe -- se reporta como anomalia con cuenta y montos. Nunca se
+inventa una conversion.
+
+La advertencia que Franco pidio como corazon del encargo: antes de escribir se cuenta cuantas
+celdas K/O/S YA tienen valor entre las que se van a plasmar, y la confirmacion (`ui.alert`
+YES_NO) muestra numeros concretos -- cuantas celdas, cuanto se pierde, cuanto van a quedar
+valiendo -- y solo aparece si hay algo real que sobreescribir. Un aviso adicional, informativo
+y no bloqueante, senala cuando lo plasmado trae shell/recurrentes/otros: si despues se vuelve a
+correr "Guardar Proyeccion" para el mismo mes, esa porcion se contaria dos veces en el Tablero,
+porque Guardar nunca retira esos tres origenes (decision 4 de su propia cabecera).
+
+### Que se escribio
+
+- `src/DEVTOOL_PresupuestoPlasmar.js` (nuevo): `estadoPresupuestoPlasmar()`,
+  `aplicarPresupuestoPlasmar()` (la funcion asignable a un boton/dibujo, sin parametros) y
+  `revertirPresupuestoPlasmar()`. Modulo PROPIO, no una funcion mas de
+  `DEVTOOL_PresupuestoSembrar.js`: la fuente de datos (la BD "Proyeccion" clasificada por los
+  cinco origenes de `DEVTOOL_ProyeccionAbm.js`, mas `_preflightPb`/`_periodoDesdeSelectoresPg`/
+  `_claveMesPg` de `DEVTOOL_PresupuestoGuardar.js`) es de otra familia que la de Sembrar (J/N/R
+  en vivo, intra-hoja); solo se reusa el PATRON de escritura (confirmar-solo-si-pisa, verificar
+  releyendo, revertir a un nivel protegiendo una edicion manual posterior), reimplementado
+  angosto, no importado.
+- Respaldo por `PropertiesService` (mismo formato que `PS_PROP_PREVIOS` de Sembrar): por celda,
+  `{celda, valorEscrito, pisa, valorPrevio}`. NO usa la boveda de `18_RespaldoService.js` -- esa
+  respalda FILAS con la geometria de Registros/Proyeccion; este modulo escribe celdas sueltas
+  de "Presupuesto", igual que Sembrar.
+- `MENU_CONFIG.DEV_ITEMS` (`00_Config.js`) suma "Presupuesto: plasmar proyeccion elaborada" al
+  lado de "Presupuesto: sembrar Monto a Proyectar".
+- `devtools/probar_presupuesto_plasmar.js` (nuevo): mutaciones dirigidas sobre las cuatro
+  poblaciones sumando por cuenta, celdas ya cargadas (pisa con conteo exacto), cuenta con dos
+  monedas (mezcla, no escribe), moneda distinta de la del presupuesto (no escribe), cuenta que
+  ya no existe en el Plan vivo (no escribe), mes vacio (nada que hacer, sin dialogo),
+  confirmacion condicionada a que haya algo que pisar, verificacion por relectura con reversion
+  de lote completo ante una escritura que no verifica, y el deshacer protegiendo una edicion
+  manual posterior a la corrida.
+- Version: v0.66.0. `src/01_Version.js` se toco SOLO para el bump (numero, releaseDate,
+  releaseName, entrada de changelog embebido) -- otra tarea en paralelo esta recortando ese
+  archivo; si el merge choca, es en esa zona.
+
+### Que NO hace
+
+No escribe nunca en "Proyeccion" (es de solo lectura para este modulo). No convierte moneda.
+No toca J/N/R, la columna V/W, las tablas resumen ni el selector de Modo. No deja elegir
+origenes: siempre trae los cinco. No se deployo: cambio de codigo puro, pendiente de
+`sync_targets.command` por pedido explicito de Franco.
 
 ---
 

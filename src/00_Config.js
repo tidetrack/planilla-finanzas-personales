@@ -3,7 +3,7 @@
  * Configuración global del sistema Tidetrack
  * Define constantes, rangos de columnas, y enums
  *
- * @version 0.11.4
+ * @version 0.11.6
  * @since 0.1.0
  * @lastModified 2026-09-07
  */
@@ -717,7 +717,7 @@ const MENU_CONFIG = {
             // luego va a tener su boton" -- por eso NO hay boton nuevo en la hoja "Presupuesto".
             // @see DEVTOOL_PresupuestoGuardar.js
             // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
-            submenu: 'Presupuesto: guardar proyeccion', items: [
+            submenu: 'Presupuesto: guardar proyeccion del mes', items: [
                 { name: '1. Ver estado (no escribe nada)', function: 'estadoGuardarProyeccion' },
                 { name: '2. Aplicar', function: 'aplicarGuardarProyeccion' },
                 { separator: true },
@@ -739,6 +739,46 @@ const MENU_CONFIG = {
                 { name: '2. Aplicar', function: 'aplicarPresupuestoSembrar' },
                 { separator: true },
                 { name: '3. Revertir (usa el respaldo)', function: 'revertirPresupuestoSembrar' }
+            ]
+        },
+        {
+            // La VUELTA de "Presupuesto: guardar proyeccion del mes": plasma en K/O/S el total por cuenta
+            // de lo que ya quedo GUARDADO (origen 'guardado', DEVTOOL_ProyeccionAbm.js) en la BD
+            // "Proyeccion" para el periodo vivo de J2/J3. Pedido textual de Franco (2026-09-07):
+            // "estaria buenisimo poder 'plasmar' los montos proyectados en estas columnas mas
+            // manuales", con advertencia explicita si hay informacion que se pueda sobreescribir.
+            // CORRECCION del mismo dia, TEXTUAL: "Solo lo manual. Lo proyectado no." -- NO suma
+            // shell/recurrentes/presupuesto base/otros (una primera version si lo hacia; se
+            // descarto, ver decision de producto 1 en la cabecera del modulo). Cuando el mes no
+            // tiene ninguna fila 'guardado', el mensaje distingue "no hay ninguna fila" de "hay
+            // filas, pero de otro origen" y nombra por donde generarlas. No convierte moneda: si
+            // una cuenta mezcla monedas o esta en una moneda distinta de la del presupuesto, no
+            // la escribe y lo avisa.
+            // @see DEVTOOL_PresupuestoPlasmar.js
+            // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
+            submenu: 'Presupuesto: traer proyeccion guardada', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoPresupuestoPlasmar' },
+                { name: '2. Aplicar', function: 'aplicarPresupuestoPlasmar' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirPresupuestoPlasmar' }
+            ]
+        },
+        {
+            // Limpia TODAS las celdas de "Monto a Proyectar" (K/O/S) que tengan contenido: el
+            // complemento de Sembrar y Plasmar (que ESCRIBEN ahi). Pedido textual de Franco
+            // (2026-09-07): "deberia existir un boton que limpie los montos a proyectar." Antes
+            // de borrar cuenta cuantas celdas tienen monto y por cuanto, pide confirmacion
+            // explicita con esos numeros, y "3. Revertir" repone el estado previo exacto
+            // (protegiendo una edicion manual posterior), mismo patron que sus hermanos.
+            // aplicarPresupuestoLimpiar() no toma parametros: es la funcion pensada para
+            // asignarse a un dibujo de la hoja "Presupuesto".
+            // @see DEVTOOL_PresupuestoLimpiar.js
+            // @see docs/permanente/DISENO_HOJA_PRESUPUESTO.md
+            submenu: 'Presupuesto: limpiar Monto a Proyectar', items: [
+                { name: '1. Ver estado (no escribe nada)', function: 'estadoPresupuestoLimpiar' },
+                { name: '2. Aplicar (borra lo cargado)', function: 'aplicarPresupuestoLimpiar' },
+                { separator: true },
+                { name: '3. Revertir (usa el respaldo)', function: 'revertirPresupuestoLimpiar' }
             ]
         },
         {
@@ -887,7 +927,7 @@ const MENU_CONFIG = {
         // esa salida con menos detalle. Las dos funciones seguian existiendo enteras en
         // 07_MiradaInteranual.js (las sigue llamando diagnosticarMiradaInteranual): no se borro
         // logica, se retiro el gatillo que no podia dispararlas bien.
-        // decision Franco 2026-09-07 (v0.67.0): el orden del submenu sigue el estado real de la
+        // decision Franco 2026-09-07 (v0.68.0): el orden del submenu sigue el estado real de la
         // hoja. El boton 1 es lo que FALTA (la fila de meses G7:R7 y el grafico C14:R21, pedido
         // textual de Franco); el boton 2 reescribe G8:R11, que hoy ya guarda formulas identicas
         // a las que construye el modulo (devtools/probar_mirada_meses_grafico.js, T1): es un

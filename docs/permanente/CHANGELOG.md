@@ -9,7 +9,7 @@ Historial de versiones y cambios significativos del proyecto.
 
 ---
 
-## v0.67.0 - Mirada Interanual: meses con nombre y grafico de tendencias (2026-09-07)
+## v0.68.0 - Mirada Interanual: meses con nombre y grafico de tendencias (2026-09-07)
 
 Pedido textual de Franco: "En G7:R7 deberian ir los nombres de los meses que contemplen el
 periodo referenciado en base a lo que se haya elegido en I2, y simulado en K7. En C14:R21 va
@@ -76,6 +76,47 @@ simulacion `=I2` de K7 con la formula real (K7 sigue mostrando el mes de referen
 tiene que mirar despues: G7:R7 con los 12 nombres, K7 igual al selector, y en C14:R21 cuatro
 lineas con la leyenda Ingresos / Gastos Fijos / Gastos Variables / Capitalizacion sobre los
 meses; si la orientacion sale al reves, el ajuste es una linea en `_construirGraficoMirada`.
+
+
+---
+
+## Los rotulos dicen la direccion (2026-09-07)
+
+Parte de v0.67.1. Franco: *"no se entiende bien cuando utilizar el registrar y cuando el
+plasmar"*. Eran **guardar y recuperar** sobre la misma hoja, y ninguno de los dos nombres decia
+cual llevaba a cual:
+
+| Antes | Ahora | Direccion |
+|---|---|---|
+| Presupuesto: guardar proyeccion | **Presupuesto: guardar proyeccion del mes** | hoja -> base |
+| Presupuesto: plasmar proyeccion elaborada | **Presupuesto: traer proyeccion guardada** | base -> hoja |
+
+Lo cazo el propio banco: el primer pase renombro los `.js` y se olvido de `UI_Shell.html`, y
+`probar_shell.js` se puso rojo porque verifica la ruta contra `MENU_CONFIG` y no contra una
+copia propia.
+
+---
+
+## v0.67.1 - Plasmar avisa mejor, y llega el limpiador de Monto a Proyectar (2026-09-07)
+
+**El sintoma real de Franco.** Conecto el boton de "Plasmar" y le salio "Ninguna cuenta de
+'Presupuesto' tiene un total plasmable para Agosto 2026" -- correcto pero inutil: agosto SI
+tenia 64 filas en "Proyeccion" (presupuesto base historico), pero ninguna de origen 'guardado',
+que es lo unico que Plasmar trae. El mensaje no distinguia "no hay nada" de "hay algo, pero de
+otro origen".
+
+**Tres cambios.** (1) El mensaje ahora distingue esas dos situaciones y, en la segunda, cuenta
+por origen y nombra la ruta REAL de menu para generar lo que falta. (2) La confirmacion de
+Plasmar ya NO corre derecho sin dialogo cuando no pisa nada: sigue pidiendo confirmar, pero
+deja de hablar de sobreescritura o de perdida cuando no hay ninguna. (3) Boton nuevo,
+"Presupuesto: limpiar Monto a Proyectar" (`aplicarPresupuestoLimpiar`, sin parametros,
+asignable a un dibujo): vacia K/O/S, cuenta celdas y monto antes de borrar, verifica por
+relectura y revierte protegiendo una edicion posterior -- modulo nuevo
+`DEVTOOL_PresupuestoLimpiar.js`.
+
+Ver el detalle completo (la desviacion consciente respecto de usar la boveda de
+`18_RespaldoService.js` incluida) en `docs/permanente/HISTORIAL_DESARROLLO.md` y en
+`src/ZZ_Changelog.js`.
 
 ---
 
@@ -172,6 +213,54 @@ TypeError sin ningun mensaje util. Los dos items salen del menu sin wrapper, por
 detalle completo en la hoja DEBUG — un wrapper solo habria duplicado esa salida con menos
 informacion. Las funciones siguen enteras en el modulo. Nuevo
 `devtools/verificar_menu_mirada.js`: banco de regresion que fija la correccion.
+
+---
+
+## v0.66.0 - Plasmar trae la proyeccion elaborada de vuelta a Monto a Proyectar (2026-09-07)
+
+`DEVTOOL_PresupuestoPlasmar.js` (nuevo) es la **vuelta** de "Guardar Proyeccion": donde
+`aplicarGuardarProyeccion` ya llevaba "Monto a Proyectar" (K/O/S) a la BD `Proyeccion`, este
+modulo hace el camino inverso — plasma en K/O/S el total por cuenta de lo que ya quedo
+elaborado en la BD para el periodo vivo de la hoja Presupuesto (J2/J3). Encargo textual de
+Franco: *"estaria buenisimo poder 'plasmar' los montos proyectados en estas columnas mas
+manuales"*, con advertencia si hay informacion que se pueda sobreescribir.
+
+**Decision de producto, corregida por Franco el mismo dia, textual:** *"Solo lo manual. Lo
+proyectado no."* Se trae UNICAMENTE el origen 'guardado' — lo que ya salio de estas mismas
+columnas K/O/S via `aplicarGuardarProyeccion`. NO recurrentes, NO presupuesto base, NO
+proyecciones sueltas del shell, NO origen no reconocido. La primera version de esta misma tarde
+habia elegido sumar los cinco origenes que el ABM de Proyecciones Elaboradas distingue (guardado,
+shell, recurrentes, base, otros), leyendo el pedido como "traer todo lo proyectado"; Franco
+corrigio la lectura: plasmar solo el guardado **no es circular**, es **restaurar y copiar hacia
+adelante** (recuperar la hoja tras limpiarla, o arrancar un mes desde lo presupuestado el
+anterior y editar la diferencia), y "Monto a Proyectar" (K/O/S) es la superficie de trabajo
+**manual** de Franco — volcar ahi lo que el sistema infirio borraria la linea entre lo decidido y
+lo deducido.
+
+**La correccion elimina un modo de falla, no solo simplifica:** la version de los cinco origenes
+necesitaba un aviso de "riesgo de doble conteo" porque "Guardar Proyeccion" nunca retira
+shell/recurrentes/otros de la BD, y volver a guardar un mes ya plasmado los hubiera contado dos
+veces en el Tablero. Con solo 'guardado', "Guardar Proyeccion" retira exactamente esas filas al
+re-guardar el mismo mes (su propia decision 4) — la clase de bug desaparece en vez de mitigarse.
+El aviso se retira entero del modulo.
+
+**Moneda, sin conversion silenciosa (sigue vigente con un solo origen):** "Monto a Proyectar" es
+una sola moneda por hoja. Si una cuenta mezcla monedas para el periodo — por ejemplo, dos
+guardados del mismo mes con la moneda de la hoja cambiada entre uno y otro — o esta proyectada en
+una moneda distinta de la del presupuesto, esa celda no se escribe: se cuenta y se reporta como
+anomalia, nunca se inventa una tasa de conversion.
+
+**La advertencia central del encargo:** antes de escribir se cuentan las celdas que ya tienen
+monto entre las que se van a plasmar, y la confirmacion muestra numeros concretos — cuantas
+celdas, cuanto se pierde, cuanto van a quedar valiendo. Solo pide confirmar si hay algo real
+que sobreescribir.
+
+Mismo patron de escritura que `DEVTOOL_PresupuestoSembrar.js` (valores nunca formulas,
+verificacion por relectura, reversion de un nivel que protege una edicion manual posterior),
+reimplementado en modulo propio porque la fuente de datos (la BD "Proyeccion" clasificada por
+cinco origenes) es de otra familia que la de Sembrar (J/N/R en vivo, intra-hoja).
+
+Menu: `tidetrack Dev > Presupuesto: plasmar proyeccion elaborada`.
 
 ---
 
