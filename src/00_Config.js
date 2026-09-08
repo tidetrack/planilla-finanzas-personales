@@ -3,9 +3,9 @@
  * Configuración global del sistema Tidetrack
  * Define constantes, rangos de columnas, y enums
  *
- * @version 0.11.3
+ * @version 0.11.4
  * @since 0.1.0
- * @lastModified 2026-08-30
+ * @lastModified 2026-09-07
  */
 
 // [CONCEPTO DE NEGOCIO] Single Source of Truth de nombres de hoja y rangos; ningun modulo hardcodea posiciones.
@@ -887,9 +887,17 @@ const MENU_CONFIG = {
         // esa salida con menos detalle. Las dos funciones seguian existiendo enteras en
         // 07_MiradaInteranual.js (las sigue llamando diagnosticarMiradaInteranual): no se borro
         // logica, se retiro el gatillo que no podia dispararlas bien.
+        // decision Franco 2026-09-07 (v0.67.0): el orden del submenu sigue el estado real de la
+        // hoja. El boton 1 es lo que FALTA (la fila de meses G7:R7 y el grafico C14:R21, pedido
+        // textual de Franco); el boton 2 reescribe G8:R11, que hoy ya guarda formulas identicas
+        // a las que construye el modulo (devtools/probar_mirada_meses_grafico.js, T1): es un
+        // no-op seguro y queda como camino de reparacion si alguien pisa el bloque a mano. Las
+        // tres funciones tienen aridad cero (menu.addItem invoca sin argumentos; lo fija
+        // devtools/verificar_menu_mirada.js).
         {
             submenu: 'Mirada Interanual', items: [
-                { name: '1. Inicializar formulas', function: 'inicializarMiradaInteranual' },
+                { name: '1. Meses y grafico (G7:R7 + C14:R21)', function: 'inicializarMesesYGraficoMirada' },
+                { name: '2. Reescribir formulas G8:R11 (hoy identicas)', function: 'inicializarMiradaInteranual' },
                 { separator: true },
                 { name: 'Diagnosticar (hoja DEBUG)', function: 'diagnosticarMiradaInteranual' }
             ]

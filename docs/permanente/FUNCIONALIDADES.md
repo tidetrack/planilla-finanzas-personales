@@ -215,25 +215,34 @@ los 4 bloques, fuente del dropdown de Cuenta en Cargas (espeja la columna Y del 
 
 Resumen de categorias con vision interanual y tendencias.
 
-**Layout**: titulo C2; filtros G2:I4 (I2 mes, I3 anio, I4 moneda) y M2 (proyecto); tabla
+**Layout**: titulo C2; filtros G2:I4 (I2 mes, I3 anio, I4 moneda) y K2/L2 (Proyecto / Todos,
+decorativo; medido en vivo 2026-09-07, antes documentado aca como M2); tabla
 C7:R11 (conceptos x 12 meses; columna E = total interanual por concepto; fila 11 =
-Capitalizacion); zona de graficos desde C13.
+Capitalizacion). Fila 7 = nombres de mes de cada columna, generados por script desde I2/I3
+(v0.67.0: formula LET en G7:R7 con offset contra K7, sufijo " YY" cuando el anio difiere de
+I3; hoy K7 tiene la simulacion `=I2` y el resto esta vacio hasta correr el boton). Banda de
+titulo C13:R13 ("Evolucion de Tendencias") y zona de grafico C14:R21, generada por script
+(v0.67.0: grafico de lineas rectas con las cuatro series de G8:R11).
 
 | Funcionalidad | Estado | Detalle |
 |---|---|---|
 | 1. Resumen de categorias en 12 meses | FUNCIONA | 36 formulas LET/SUMPRODUCT sobre Registros. OJO: la ventana NO es anio calendario sino movil (mes de referencia -4 a +7, columna K = mes seleccionado). |
 | 2. Capitalizacion | PARCIAL | NO se suma del ledger: es el residual Ingresos - Gastos Fijos - Gastos Variables (puede dar negativa). Es "capacidad de capitalizacion", no capitalizacion efectiva. |
-| 3. Tendencias (graficos) | NO VERIFICABLE | Los exports no incluyen charts; solo existe el rotulo C13. |
+| 3. Tendencias (graficos) | CODIGO LISTO, PENDIENTE EN VIVO | v0.67.0: el script inserta en C14:R21 un grafico de lineas rectas (Ingresos, Gastos Fijos, Gastos Variables, Capitalizacion) sobre C7:C11 + G7:R11, idempotente. Los exports no incluyen charts: se verifica mirando la hoja despues de correr el boton 1. |
 | 4. Filtro por periodo | FUNCIONA | I2/I3 mueven la ventana. |
 | 5. Filtro por moneda | NO VERIFICADO | I4 existe y la arquitectura de formula incluye conversion, pero el tramo quedo truncado en el export. |
-| 6. Filtro por proyecto | PENDIENTE | M2 ('Todos') es decorativo: ninguna formula lo referencia. |
+| 6. Filtro por proyecto | PENDIENTE | K2/L2 (Proyecto / 'Todos') es decorativo: ninguna formula lo referencia. |
 
-**Relacion con el script**: esta era la unica hoja GENERADA por script
-(`07_MiradaInteranual.js`). Las formulas de la Fix son las del modulo, pero la hoja movio
-selectores y filas (el script espera E4/F4/R4 y rotulos C10:C12; la Fix usa I2/I3/I4+M2 y
-C8:C10). El preflight del modulo bloquea sin escribir; re-alinear las constantes MIRADA_* es
-parte del formulerio. Los rangos estan cerrados en la fila 883 (verificar en vivo; dejar
-abiertos al regenerar).
+**Relacion con el script**: es la unica hoja GENERADA por script
+(`07_MiradaInteranual.js`). En v0.67.0 el modulo quedo RE-ALINEADO a la geometria real medida
+en vivo el 2026-09-07 (selectores I2/I3/I4, rotulos C8:C11, fila de meses 7, banda C13, zona
+de grafico C14:R21) y su preflight vuelve a pasar. Las formulas de G8:R11 que la hoja guarda
+son IDENTICAS a las que construye el modulo (probado por `devtools/probar_mirada_meses_grafico.js`,
+T1): el boton "2. Reescribir formulas G8:R11" es un no-op seguro. Lo NUEVO -- la fila de meses
+G7:R7 y el grafico -- esta PENDIENTE DE EJECUCION EN VIVO: se genera al correr Tidetrack Dev >
+Mirada Interanual > "1. Meses y grafico (G7:R7 + C14:R21)" tras el deploy. Los rangos de
+Registros en el texto de formula del gemelo estan abiertos (`$H$7:$H`), igual que los arma el
+modulo; la nota previa de "cerrados en 883" no se confirmo en el gemelo.
 
 ---
 
@@ -350,9 +359,12 @@ silencio). En orden sugerido:
 3. **Presupuesto**: cablear monto historico promedio (contrato del 2026-08-13 en los
    DEVTOOL), poblar cuentas desde el Plan, conectar los selectores, decidir la base de los
    porcentajes (E16 vs $E$9), y recien despues conectar Inicio (D19:G22) y Tablero (N9:N11).
-4. **Mirada Interanual**: re-alinear las constantes MIRADA_* del script con la hoja nueva
-   (o regenerar la hoja desde el script); abrir los rangos cerrados en 883; decidir el rotulo
-   Capitalizacion vs Resultados; cablear o quitar el filtro Proyecto.
+4. **Mirada Interanual**: constantes MIRADA_* re-alineadas en v0.67.0 (HECHO). Queda:
+   ejecutar en vivo "1. Meses y grafico (G7:R7 + C14:R21)" tras el deploy y mirar G7:R7, K7 y
+   el grafico; cablear o quitar el filtro Proyecto (K2/L2, decorativo; la contradiccion con la
+   version anterior de este doc, que decia M2, se cerro el 2026-09-07 a favor del gemelo y de la
+   medicion en vivo). El rotulo de C11 es "Capitalizacion" (medido en vivo) y el modulo lo
+   verifica por preflight.
 5. **Calendarios** (Inicio y Tablero): derivarlos del periodo seleccionado.
 6. **Cargas**: rango abierto en la vista de ultimos 15; typo M2; formato de fecha R7:R21.
 7. **FX**: diagnosticar el trigger del actualizador (sin filas desde 2026-08-13).

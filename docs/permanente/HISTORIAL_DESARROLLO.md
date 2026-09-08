@@ -6,6 +6,182 @@ Registro cronologico de la evolucion del proyecto y decisiones importantes.
 
 ---
 
+## 2026-09-07 - Mirada Interanual: meses con nombre y grafico de tendencias (v0.67.0)
+
+### Que se pidio
+
+Textual de Franco: "1. En G7:R7 deberian ir los nombres de los meses que contemplen el periodo
+referenciado en base a lo que se haya elegido en I2, y simulado en K7. 2. En C14:R21 va un
+grafico que muestre la evolucion de los ingresos, gastos fijos, variables y la capitalizacion.
+Todo como linea de rectas y que simule la informacion que aparece en G8:R11. Por ahora, esas
+dos cosas deberia tener la mirada interanual."
+
+Implica ejecutar el plan de realineacion que dejo el diagnostico v0.66.1 (paso 1) y sumar dos
+cosas nuevas sobre el modulo re-alineado. Se trabajo en un worktree aislado
+(`worktree-mirada-interanual`, base v0.66.1) porque otra sesion opera el clon principal.
+
+### Que se midio en vivo
+
+Export de Drive del 2026-09-07, cruzado celda por celda con el gemelo `celdas.tsv` del
+2026-08-18 (coinciden; la verificacion es por rotulo, no por coordenada memorizada):
+
+- C2:F4 combinada, titulo. G2:H2 "Mes de Referencia", I2 = selector de mes ("Mayo", texto
+  capitalizado; MATCH es insensible a mayusculas), I3 = selector de anio (2026, numerico).
+  G4:H4 "Moneda", I4 = "ARS". K2/L2 "Proyecto"/"Todos" decorativo: ninguna formula lo usa.
+- Fila 7 = encabezado: C7 "Resultados.", E7 "Interanual.", **K7 = `=I2`** (la simulacion de
+  Franco de lo que quiere en toda la fila); G7:J7 y L7:R7 vacias (el gemelo de agosto tenia
+  1..12; Franco los borro). Estilos: fondo `#eff2f9`, texto `#34475d`, negrita 15, K7 en
+  `#2c4e40` (resaltado del mes de referencia).
+- C8 "Ingresos", C9 "Gastos Fijos", C10 "Gastos Variables", C11 "Capitalizacion" (con acento
+  en la hoja). E8:E11 = SUM(G:R). G8:R10 = 36 LET/SUMPRODUCT que **ya funcionan** (valores
+  reales), con `;`, selectores `$I$2/$I$3/$I$4` y offset `COLUMN()-COLUMN($K$8)`. G11:R11 =
+  G8-G9-G10.
+- C13:R13 combinada = banda "Evolucion de Tendencias" (fondo `#34475d`, texto `#eff2f9`).
+  Filas 14 en adelante vacias. Grid 883 x 20.
+
+### Que se hizo
+
+**Re-alineacion de `07_MiradaInteranual.js` (v0.6.0).** Una sola tabla de constantes, todo lo
+que el preflight exige declarado con nombre y cada valor con "MEDIDO EN VIVO 2026-09-07":
+`MIRADA_FILA_MESES = 7` (nueva), filas 8/9/10/11, `MIRADA_ROTULO_RESULTADO = 'Capitalizacion'`
+(verificado en el preflight porque es nombre de serie del grafico), selectores I2/I3/I4,
+`MIRADA_CELDA_TITULO_GRAFICO = 'C13'` con su rotulo, zona del grafico filas 14-21 y columnas
+C-R. Las constantes quedan dentro del modulo y no en `00_Config.js`, como recomendo el
+diagnostico v0.66.1. Los docstrings que nombraban G10:R14, E4/F4/R4 o la fila 14 se
+corrigieron o quedaron marcados como historia del layout pre-Fix. Se extrajeron helpers puros
+(`_argumentosFormulaDatosMirada`, `_formulasResultadoMirada`, `_filaMesesMirada`,
+`_anioSelectorMirada`) para que el banco pruebe lo que corre y no una copia.
+
+**Formula de mes.** `construirFormulaMesMirada(sep)` devuelve, con las referencias derivadas de
+las constantes, el equivalente de
+`=LET(mes_num;MATCH($I$2;SPLIT("ENERO,...,DICIEMBRE";",");0);f_obj;EDATE(DATE($I$3;mes_num;1);COLUMN()-COLUMN($K$7));nom_mes;PROPER(INDEX(SPLIT(...);1;MONTH(f_obj)));IF(YEAR(f_obj)=$I$3;nom_mes;nom_mes&" "&RIGHT(YEAR(f_obj);2)))`.
+La lista de meses es `MIRADA_MESES`, la misma de la formula de datos (una sola verdad). Nombres
+de LET que no colisionan con funciones de Sheets; sin array literals. Decision de Franco
+(`MIRADA_MESES_SUFIJO_ANIO = true`, decision inline): la ventana movil casi siempre cruza dos
+anios calendario y un "Enero" bajo un selector que dice 2026 seria ambiguo, asi que cuando el
+anio del mes difiere de I3 se agrega "YY" ("Enero 27"). En false emite solo el nombre. Su
+gemela pura `_etiquetasMesesEsperadasMirada(mesRef, anioRef)` devuelve las 12 etiquetas
+esperadas (offset derivado de la posicion de K en `MIRADA_COLS_VISTA`; insensible a mayusculas;
+lanza ante mes o anio invalidos) y es la referencia para verificar el **valor** de cada celda.
+
+**Grafico.** `_especificacionGraficoMirada()` es pura (objeto plano: rangos C7:C11 + G7:R11,
+ancla 14/3, fin 21/R, 4 series por fila con nombre = rotulo, transponer true, 1 encabezado,
+fondo, formato de eje, curva, leyenda) y lanza si la tabla de colores no cubre exactamente las
+filas 8..11 en orden (las series son posicionales: un color sobre la serie equivocada no da
+error visible). `_construirGraficoMirada` la consume: `Charts.ChartType.LINE`, `curveType
+'none'`, leyenda arriba, sin titulo interno, `setPosition(14, 3, 0, 0)`, tamano = suma de
+`getColumnWidth` C..R por suma de `getRowHeight` 14..21 medido al correr. Colores solo de la
+lista blanca del brandbook Ed.03: Ingresos `#1D6A4F`, Gastos Fijos `#B84A3E`, Gastos Variables
+`#6B4A18`, Capitalizacion `#182040` con `lineWidth 4` (el resto 2). Fondo `#FFFFFF`, eje `#,##0`.
+La semantica de `addRange` / `setMergeStrategy` / `setTransposeRowsAndColumns` / `setNumHeaders`
+/ `setPosition` (1-indexed) / `setOption` se confirmo por WebFetch de la referencia oficial de
+`EmbeddedChartBuilder`; quedo citada en la decision inline. `setMergeStrategy(MERGE_COLUMNS)` se
+fija explicito (es el default, pero es el unico parametro que decide como se pegan los dos
+rangos: C7:C11 y G7:R11 lado a lado como 5 x 13; transpuesta, la primera FILA es C7:C11 y la
+primera COLUMNA la fila 7 de la hoja). Las opciones se cotejaron contra la referencia de
+opciones de charts embebidos de Apps Script: todas figuran salvo `vAxis.format`, que se envia
+igual como cinturon (no dana) y se confirma mirando el eje en vivo. `useFirstColumnAsDomain`
+tambien como cinturon.
+
+**Entrada de menu `inicializarMesesYGraficoMirada()`** (aridad cero), con el contrato de
+escritura del modulo: preflight por rotulo (el de la vista mas C13 = titulo, K7 no vacia, grid
+hasta R21, I3 numerico; las 12 etiquetas esperadas se calculan antes de tocar la hoja);
+respaldo verificado de G7:R7 mas la alineacion horizontal, guardada aparte y repuesta via
+`_alineacionRestaurableMirada` (`general*`, la celda sin alineacion explicita, vuelve como `null`
+= reset; lo demas con el mismo mapeo de la ida) -- sin eso la restauracion devolvia al setter
+valores fuera de su dominio y podia cantar "NO verificada" sobre una fila cuyo contenido si lo
+estaba; la alineacion no repuesta se informa ahora como aviso separado, no como fallo del
+contenido; copia de la alineacion de K7 al resto de la fila (via `_alineacionAplicableMirada`,
+porque `getHorizontalAlignment` puede devolver `general-right`); escritura de G7 probando `,` y `;`;
+replicacion con `copyTo PASTE_FORMULA` (decision inline: `copyTo` a secas pegaria el formato de
+G7 sobre K7 y pisaria el color del resaltado); verificacion de valor con `getDisplayValues`
+celda a celda contra las etiquetas esperadas, con restauracion verificada ante cualquier
+diferencia y sin seguir al grafico. Grafico idempotente: primero se inserta el nuevo y solo si
+quedo insertado y verificado (rangos y ancla releidos de `sheet.getCharts()`) se retiran los
+previos anclados en C14; el nuevo se reconoce por `getChartId` (fallback documentado al ultimo
+anclado solo si la cantidad crecio en exactamente uno); si el nuevo tiene rangos o ancla
+equivocados se retira el nuevo y los previos sobreviven. Toast y `logSuccess` solo con lo
+verificado; todo fallo por `logError` con detalle y `_avisarMirada` con alert.
+
+**Menu** (`00_Config.js` v0.11.4, decision inline 2026-09-07): "1. Meses y grafico (G7:R7 +
+C14:R21)" -> `inicializarMesesYGraficoMirada`; "2. Reescribir formulas G8:R11 (hoy identicas)"
+-> `inicializarMiradaInteranual` (no-op seguro, probado por T1; camino de reparacion si alguien
+pisa el bloque a mano); separador; "Diagnosticar (hoja DEBUG)" (suma la fila de meses actual,
+las 12 etiquetas esperadas en JS y la formula de mes en ambos separadores).
+
+### Como se verifico
+
+Nuevo `devtools/probar_mirada_meses_grafico.js` (node, sin red, sin SpreadsheetApp; RAIZ desde
+`__dirname`; el modulo se carga del archivo real con `vm.runInContext`; las coordenadas salen
+de las constantes del modulo, nunca como literal del banco): 171 chequeos, exit 0.
+
+- T1: `construirFormulaMirada('$C8', 'COLUMN()-COLUMN($K$8)', '', ';')` es identica a G8 del
+  gemelo tras normalizar las comillas del nombre de hoja (`'Registros'!` -> `Registros!`, en
+  ese sentido porque es la unica direccion determinista); idem $C9/G9 y $C10/G10; la fila 11
+  arma `=G8-G9-G10`. Si falla, muestra el diff de caracteres.
+- T2: etiquetas para (Mayo, 2026), (Agosto, 2026), (Enero, 2026), (Diciembre, 2026) y
+  (MAYO, 2026); seis entradas invalidas lanzan.
+- T3: formula de mes en `,` y `;` IDENTICA, caracter a caracter, a la formula dorada de la spec
+  (armada en el banco desde las constantes: es lo que Franco pidio, no una copia del modulo);
+  ademas balance, referencias derivadas ($I$2, $I$3, $K$7) y ninguna vieja ($E$4, $F$4, $R$4,
+  $K$10), sin `{`, sin el otro separador fuera de comillas, nombres de LET fuera de una lista
+  de 45 funciones de Sheets, los 12 meses presentes, PROPER y sufijo.
+- T4: especificacion del grafico con la PALETA extraida por regex de `devtools/probar_shell.js`
+  Y un color esperado POR NOMBRE de serie (la pertenencia a la paleta no detecta un swap).
+- T4b: `_construirGraficoMirada` EJECUTADO con un sheet y un builder grabadores: `addRange`
+  recibe exactamente [C7:C11, G7:R11] en ese orden, `setMergeStrategy(MERGE_COLUMNS)` despues del
+  segundo `addRange`, `setTransposeRowsAndColumns` / `setNumHeaders` / `setPosition` con los
+  valores de la spec, cada `setOption` igual a la spec y a las dimensiones medidas en el stub.
+- T4c: `_alineacionRestaurableMirada` solo devuelve `left` / `center` / `right` / `normal` / `null`.
+- T5: coherencia geometrica y rotulos del gemelo en C8:C11 y C13.
+- T6: `MENU_CONFIG` wirea la funcion nueva primero; las tres del submenu con aridad cero.
+- T7: el banco se prueba a si mismo con siete sabotajes en memoria, confirmados sobre los
+  VALORES que ve el modulo cargado (no sobre el texto): geometria pre-Fix (T1 y T2 caen), M13 y
+  M14 sobre la formula de mes (sufijo contra el selector de mes, offset +1: T3 cae), M26/M27/M29
+  sobre el constructor (transponer false, ancla 13, sin rango de rotulos: T4b cae) y M12 (swap
+  de colores dentro de la lista blanca: T4 cae). Un guard que no dispara no protege nada.
+
+Gates existentes, todos exit 0 medido sin pipe, y en verde tambien ANTES de tocar nada (linea
+base): `verificar_sintaxis.py`, `verificar_cobertura_changelog.py`,
+`probar_carga_apps_script.js`, `probar_claves_duplicadas.js`, `verificar_menu_mirada.js`.
+
+### Pendiente
+
+1. **Ejecutar en la planilla real**, despues del deploy por `sync_targets.command`: Tidetrack
+   Dev > Mirada Interanual > "1. Meses y grafico (G7:R7 + C14:R21)". Hasta entonces la hoja no
+   cambia. Avisos: pisa la simulacion `=I2` de K7 con la formula real (K7 sigue mostrando el mes
+   de referencia; si Franco queria conservar `=I2`, decirlo antes); cualquier grafico anclado a
+   mano en C14 se retira, solo despues de que el nuevo quedo insertado y verificado; I3 tiene
+   que ser numerico (hoy lo es).
+2. **Lo que Franco tiene que mirar despues:** G7:R7 con los 12 nombres (con "Mayo"/2026:
+   Enero..Diciembre sin sufijo), K7 igual al selector I2, y en C14:R21 un grafico con cuatro
+   lineas rectas, leyenda arriba con Ingresos / Gastos Fijos / Gastos Variables /
+   Capitalizacion y los meses en el eje X. La orientacion no se puede probar sin
+   SpreadsheetApp: si sale al reves, el ajuste es una linea (`setTransposeRowsAndColumns` /
+   `setNumHeaders`) en `_construirGraficoMirada`.
+3. Cerrado en la ronda de revision: el filtro "Proyecto" vive en K2/L2 (gemelo y medicion en
+   vivo coinciden); FUNCIONALIDADES.md decia M2 y se corrigio. Es decorativo.
+
+### Ronda de revision (2026-09-07, cuatro revisores independientes)
+
+Aplicado: restauracion de la alineacion de G7:R7 por `_alineacionRestaurableMirada` (antes
+reinyectaba `general*` crudo y podia marcar como no verificada una restauracion correcta);
+`setMergeStrategy(MERGE_COLUMNS)` explicito y citado; la decision inline del constructor describe
+bien la orientacion tras transponer y deja dicho que `vAxis.format` no figura en la referencia
+de Apps Script; docstrings de `_refColumnaRegistrosMirada` ($H$7 / grid de agosto fechado) y del
+preflight ("nadie habia verificado", en pasado) corregidos; el banco pasa de 105 a 171 chequeos
+(T3 dorada, colores por nombre, T4b con builder grabador, T4c, T7 con siete sabotajes y guard
+sobre valores cargados, acentos como escape unicode, `@lastModified`); CLAUDE.md y
+FUNCIONALIDADES.md dejan de contradecir al codigo (tabla de modulos, seccion 5, K2/L2).
+
+@see src/07_MiradaInteranual.js
+@see src/00_Config.js (MENU_CONFIG, submenu Mirada Interanual)
+@see devtools/probar_mirada_meses_grafico.js
+@see docs/permanente/FUNCIONALIDADES.md (seccion 06)
+@see docs/permanente/celdas.tsv
+
+---
+
 ## 2026-09-07 - Mirada Interanual: diagnostico completo + el menu Dev deja de ofrecer dos botones que revientan al clic (v0.66.1)
 
 ### Que se pidio

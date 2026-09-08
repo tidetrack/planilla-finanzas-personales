@@ -7,13 +7,75 @@ Historial de versiones y cambios significativos del proyecto.
 > Nota: el historial canonico y completo vive en `src/ZZ_Changelog.js`.
 > Este archivo refleja los releases principales para lectura humana rapida.
 
+---
 
+## v0.67.0 - Mirada Interanual: meses con nombre y grafico de tendencias (2026-09-07)
 
+Pedido textual de Franco: "En G7:R7 deberian ir los nombres de los meses que contemplen el
+periodo referenciado en base a lo que se haya elegido en I2, y simulado en K7. En C14:R21 va
+un grafico que muestre la evolucion de los ingresos, gastos fijos, variables y la
+capitalizacion. Todo como linea de rectas y que simule la informacion que aparece en G8:R11."
 
+**El modulo vuelve a apuntar a la hoja real.** `07_MiradaInteranual.js` (v0.6.0) se re-alineo a
+la geometria medida en vivo el 2026-09-07 (export de Drive del dia, coincidente con el gemelo
+`celdas.tsv` del 2026-08-18): selectores I2/I3/I4 (antes E4/F4/R4), fila de meses 7 (nueva),
+rotulos C8:C11 (antes C10:C12), Capitalizacion en la fila 11 (antes 14), offset contra `$K$8`
+(antes `$K$10`), banda de titulo C13 y zona del grafico C14:R21. Cada constante lleva "MEDIDO
+EN VIVO 2026-09-07" y queda dentro del modulo, como recomendo el diagnostico de v0.66.1. Con
+eso el preflight que bloqueaba desde el rediseno Fix vuelve a pasar, y el boton de reescribir
+G8:R11 pasa a ser un no-op **probado**: el banco nuevo demuestra que lo que construye el
+modulo es identico, caracter a caracter, a lo que la hoja ya guarda.
 
+**Fila de meses.** `construirFormulaMesMirada(sep)` arma un LET (`mes_num` / `f_obj` /
+`nom_mes`, nombres que no colisionan con funciones de Sheets, sin array literals) que resuelve
+el mes de cada columna con la misma lista `MIRADA_MESES` de la formula de datos, EDATE contra
+`$K$7` y PROPER del nombre ("Septiembre", el estilo del selector). Decision de Franco: cuando el
+anio del mes difiere del selector I3 se agrega el anio en dos digitos ("Enero 27"), porque la
+ventana movil casi siempre cruza dos anios calendario; `MIRADA_MESES_SUFIJO_ANIO = true`, facil
+de invertir. Su gemela en JS, `_etiquetasMesesEsperadasMirada`, es la referencia contra la que
+se verifica el **valor** de cada celda despues de escribir, nunca el texto de la formula.
 
+**Grafico de tendencias.** `_especificacionGraficoMirada()` (pura, probada sin SpreadsheetApp)
+fija C7:C11 + G7:R11 transpuestos con un encabezado, ancla C14, fin R21, y las cuatro series
+con colores solo de la lista blanca del brandbook Ed.03: Ingresos verde `#1D6A4F`, Gastos Fijos
+rojo `#B84A3E`, Gastos Variables ambar `#6B4A18`, Capitalizacion navy `#182040` con la linea mas
+gruesa. Lineas rectas (`curveType none`), leyenda arriba, sin titulo interno (la banda C13 ya
+lo es), eje vertical `#,##0` (enviado como cinturon: `vAxis.format` no figura en la referencia
+de opciones de Apps Script, se confirma mirando el eje en vivo), tamano medido en la hoja al
+correr. `setMergeStrategy(MERGE_COLUMNS)` explicito: es el default, pero es el parametro que pone
+C7:C11 y G7:R11 lado a lado como una grilla de 5 x 13 antes de transponer. La semantica del
+`EmbeddedChartBuilder` se confirmo en la referencia oficial y quedo citada en la decision inline.
 
+**Entrada de menu nueva** `inicializarMesesYGraficoMirada()` con el contrato de escritura del
+modulo: preflight por rotulo (mas C11, C13, K7 no vacia, grid hasta R21, I3 numerico), respaldo
+verificado de G7:R7 (con la alineacion horizontal, repuesta via `_alineacionRestaurableMirada`:
+`general*` vuelve como `null` = reset, y una alineacion no repuesta se informa como aviso aparte,
+no como restauracion no verificada), escritura probando `,` y `;`, replicacion
+con PASTE_FORMULA para no pisar el resaltado de K7, verificacion de valor celda a celda con
+restauracion verificada ante cualquier diferencia, y grafico idempotente: primero se inserta
+el nuevo y solo si quedo insertado y verificado (rangos y ancla releidos) se retiran los
+previos anclados en C14. Si la insercion falla, el grafico anterior sobrevive. Submenu
+reordenado: "1. Meses y grafico (G7:R7 + C14:R21)", "2. Reescribir formulas G8:R11 (hoy
+identicas)", "Diagnosticar (hoja DEBUG)" (que ahora vuelca tambien la fila de meses, las 12
+etiquetas esperadas y la formula de mes en ambos separadores).
 
+**Verificacion en seco.** Nuevo `devtools/probar_mirada_meses_grafico.js` (171 chequeos, T1-T7
+con T4b y T4c): formulas del modulo identicas al gemelo, etiquetas en cinco casos mas seis
+entradas invalidas, formula de mes identica caracter a caracter a la dorada de la spec en ambos
+separadores, especificacion del grafico contra la PALETA extraida de `probar_shell.js` y con un
+color esperado por nombre de serie, `_construirGraficoMirada` ejecutado con un builder grabador
+(rangos, merge, transponer, encabezados, ancla y opciones iguales a la spec), dominio de la
+alineacion restaurable, coherencia geometrica, menu, y siete sabotajes en memoria que exigen
+que el chequeo que protege cada cosa falle sobre el modulo roto. Los cinco gates existentes (`verificar_sintaxis`,
+`verificar_cobertura_changelog`, `probar_carga_apps_script`, `probar_claves_duplicadas`,
+`verificar_menu_mirada`) en exit 0.
+
+**Pendiente: ejecucion en vivo.** La hoja no cambia hasta que, tras el deploy, se corra
+Tidetrack Dev > Mirada Interanual > "1. Meses y grafico (G7:R7 + C14:R21)". Ese boton pisa la
+simulacion `=I2` de K7 con la formula real (K7 sigue mostrando el mes de referencia). Franco
+tiene que mirar despues: G7:R7 con los 12 nombres, K7 igual al selector, y en C14:R21 cuatro
+lineas con la leyenda Ingresos / Gastos Fijos / Gastos Variables / Capitalizacion sobre los
+meses; si la orientacion sale al reves, el ajuste es una linea en `_construirGraficoMirada`.
 
 ---
 
